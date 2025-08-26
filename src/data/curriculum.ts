@@ -322,6 +322,498 @@ export const curriculum: Day[] = [
         }
       ]
     }
+  },
+  // Day 2
+  {
+    day: 2,
+    completed: false,
+    mathLesson: {
+      id: 'math-day2',
+      title: 'Fractions and Decimal Conversions',
+      subject: 'math',
+      concept: 'Converting between fractions, decimals, and percentages, and performing operations with fractions',
+      examples: [
+        '3/4 = 0.75 = 75%',
+        '2/3 + 1/6 = 4/6 + 1/6 = 5/6',
+        'To divide fractions: 2/3 ÷ 1/4 = 2/3 × 4/1 = 8/3'
+      ],
+      practiceQuestions: [
+        {
+          id: 'p2m1',
+          question: 'What is 5/8 as a decimal?',
+          options: ['0.525', '0.625', '0.725', '0.825'],
+          correctAnswer: 1,
+          explanation: '5 ÷ 8 = 0.625',
+          difficulty: 'easy'
+        },
+        {
+          id: 'p2m2',
+          question: 'Calculate: 2/3 + 1/4',
+          options: ['3/7', '8/12', '11/12', '3/12'],
+          correctAnswer: 2,
+          explanation: '2/3 + 1/4 = 8/12 + 3/12 = 11/12',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p2m3',
+          question: 'What is 0.375 as a fraction in lowest terms?',
+          options: ['3/8', '375/1000', '15/40', '6/16'],
+          correctAnswer: 0,
+          explanation: '0.375 = 375/1000 = 3/8 when simplified',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p2m4',
+          question: 'Calculate: 3/4 × 2/5',
+          options: ['5/9', '6/20', '3/10', '6/9'],
+          correctAnswer: 2,
+          explanation: '3/4 × 2/5 = 6/20 = 3/10',
+          difficulty: 'easy'
+        },
+        {
+          id: 'p2m5',
+          question: 'What is 1 2/3 as an improper fraction?',
+          options: ['5/3', '6/3', '7/3', '8/3'],
+          correctAnswer: 0,
+          explanation: '1 2/3 = (3×1 + 2)/3 = 5/3',
+          difficulty: 'easy'
+        }
+      ],
+      quiz: [
+        {
+          id: 'q2m1',
+          question: 'Convert 7/16 to a decimal.',
+          options: ['0.4375', '0.5625', '0.6875', '0.7125'],
+          correctAnswer: 0,
+          explanation: '7 ÷ 16 = 0.4375',
+          difficulty: 'easy'
+        },
+        {
+          id: 'q2m2',
+          question: 'Calculate: 5/6 - 1/3',
+          options: ['4/3', '1/2', '2/3', '1/3'],
+          correctAnswer: 1,
+          explanation: '5/6 - 1/3 = 5/6 - 2/6 = 3/6 = 1/2',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q2m3',
+          question: 'What is 2.75 as a mixed number?',
+          options: ['2 3/4', '2 1/4', '2 2/3', '2 1/2'],
+          correctAnswer: 0,
+          explanation: '2.75 = 2 + 0.75 = 2 + 3/4 = 2 3/4',
+          difficulty: 'easy'
+        },
+        {
+          id: 'q2m4',
+          question: 'Calculate: 1 1/2 ÷ 3/4',
+          options: ['1', '2', '3', '4'],
+          correctAnswer: 1,
+          explanation: '1 1/2 ÷ 3/4 = 3/2 × 4/3 = 12/6 = 2',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q2m5',
+          question: 'Which is largest: 3/4, 0.8, or 85%?',
+          options: ['3/4', '0.8', '85%', 'They are equal'],
+          correctAnswer: 2,
+          explanation: '3/4 = 0.75 = 75%, 0.8 = 80%, 85% = 0.85. So 85% is largest.',
+          difficulty: 'medium'
+        }
+      ]
+    },
+    englishLesson: {
+      id: 'english-day2',
+      title: 'Comma Rules and Usage',
+      subject: 'english',
+      concept: 'Understanding when and how to use commas correctly in sentences',
+      examples: [
+        'Series: I bought apples, oranges, and bananas.',
+        'Before coordinating conjunctions: I wanted to go, but it was raining.',
+        'After introductory elements: After the game, we went home.',
+        'Around non-essential information: My brother, who lives in Texas, is visiting.'
+      ],
+      practiceQuestions: [
+        {
+          id: 'p2e1',
+          question: 'Which sentence uses commas correctly?',
+          options: [
+            'I need to buy bread, milk and, eggs.',
+            'I need to buy bread, milk, and eggs.',
+            'I need to buy bread milk, and eggs.',
+            'I need to buy, bread, milk, and eggs.'
+          ],
+          correctAnswer: 1,
+          explanation: 'Use commas to separate items in a series, including the Oxford comma',
+          difficulty: 'easy'
+        },
+        {
+          id: 'p2e2',
+          question: 'Where should commas be placed? "The teacher who was very patient helped me understand."',
+          options: [
+            'No commas needed',
+            'The teacher, who was very patient, helped me understand.',
+            'The teacher who was very patient, helped me understand.',
+            'The teacher, who was very patient helped me understand.'
+          ],
+          correctAnswer: 0,
+          explanation: 'The clause "who was very patient" is essential to identify which teacher, so no commas.',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p2e3',
+          question: 'Which sentence is punctuated correctly?',
+          options: [
+            'Before leaving the house I checked my keys.',
+            'Before leaving the house, I checked my keys.',
+            'Before leaving, the house I checked my keys.',
+            'Before leaving the house I, checked my keys.'
+          ],
+          correctAnswer: 1,
+          explanation: 'Use a comma after an introductory phrase',
+          difficulty: 'easy'
+        },
+        {
+          id: 'p2e4',
+          question: 'Choose the correct sentence:',
+          options: [
+            'The book that I borrowed, is overdue.',
+            'The book, that I borrowed is overdue.',
+            'The book that I borrowed is overdue.',
+            'The book, that I borrowed, is overdue.'
+          ],
+          correctAnswer: 2,
+          explanation: '"That I borrowed" is essential information, so no commas are needed',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p2e5',
+          question: 'Which uses commas correctly with a coordinating conjunction?',
+          options: [
+            'I wanted to go but, it was raining.',
+            'I wanted to go, but it was raining.',
+            'I wanted to go but it was, raining.',
+            'I wanted, to go but it was raining.'
+          ],
+          correctAnswer: 1,
+          explanation: 'Use a comma before coordinating conjunctions joining independent clauses',
+          difficulty: 'easy'
+        }
+      ],
+      quiz: [
+        {
+          id: 'q2e1',
+          question: 'Which sentence needs commas?',
+          options: [
+            'My sister who lives in California is a doctor.',
+            'The car that I drive is red.',
+            'Students who study hard succeed.',
+            'All of the above need commas.'
+          ],
+          correctAnswer: 0,
+          explanation: 'Only the first sentence needs commas because "who lives in California" is non-essential information',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q2e2',
+          question: 'Where do commas go? "After we finished dinner we watched a movie."',
+          options: [
+            'After we finished, dinner we watched a movie.',
+            'After we finished dinner, we watched a movie.',
+            'After, we finished dinner we watched a movie.',
+            'No commas needed.'
+          ],
+          correctAnswer: 1,
+          explanation: 'Use a comma after the introductory clause "After we finished dinner"',
+          difficulty: 'easy'
+        },
+        {
+          id: 'q2e3',
+          question: 'Which sentence is correct?',
+          options: [
+            'Yes I will attend the meeting.',
+            'Yes, I will attend the meeting.',
+            'Yes I will, attend the meeting.',
+            'Yes I, will attend the meeting.'
+          ],
+          correctAnswer: 1,
+          explanation: 'Use a comma after "yes" when it begins a sentence',
+          difficulty: 'easy'
+        },
+        {
+          id: 'q2e4',
+          question: 'Choose the correctly punctuated sentence:',
+          options: [
+            'The company which was founded in 1995 is successful.',
+            'The company, which was founded in 1995, is successful.',
+            'The company which was founded in 1995, is successful.',
+            'The company, which was founded in 1995 is successful.'
+          ],
+          correctAnswer: 1,
+          explanation: '"Which was founded in 1995" is non-essential, so it needs commas around it',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q2e5',
+          question: 'Which uses commas correctly in a list?',
+          options: [
+            'I visited Paris France, London England, and Rome Italy.',
+            'I visited Paris, France, London, England, and Rome, Italy.',
+            'I visited Paris, France; London, England; and Rome, Italy.',
+            'Both B and C are correct.'
+          ],
+          correctAnswer: 3,
+          explanation: 'Both options B and C are correct ways to punctuate lists with internal commas',
+          difficulty: 'hard'
+        }
+      ]
+    }
+  },
+  // Day 3
+  {
+    day: 3,
+    completed: false,
+    mathLesson: {
+      id: 'math-day3',
+      title: 'Advanced Ratios and Proportions',
+      subject: 'math',
+      concept: 'Solving complex ratio problems and understanding proportional relationships',
+      examples: [
+        'If a:b = 3:4 and b:c = 2:5, then a:b:c = 6:8:20',
+        'Cross multiplication: 3/x = 5/15, so 3×15 = 5×x, x = 9',
+        'Scale problems: 1 inch = 50 miles, so 3.5 inches = 175 miles'
+      ],
+      practiceQuestions: [
+        {
+          id: 'p3m1',
+          question: 'If 3 pizzas cost $27, how much do 5 pizzas cost?',
+          options: ['$40', '$45', '$50', '$55'],
+          correctAnswer: 1,
+          explanation: 'Set up proportion: 3/27 = 5/x. Cross multiply: 3x = 135, x = 45',
+          difficulty: 'easy'
+        },
+        {
+          id: 'p3m2',
+          question: 'A recipe calls for 2 cups flour to 3 cups sugar. How much flour for 9 cups sugar?',
+          options: ['4 cups', '5 cups', '6 cups', '7 cups'],
+          correctAnswer: 2,
+          explanation: '2/3 = x/9. Cross multiply: 3x = 18, x = 6',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p3m3',
+          question: 'If a:b = 4:5 and a:c = 2:3, what is b:c?',
+          options: ['8:15', '10:12', '8:12', '10:15'],
+          correctAnswer: 1,
+          explanation: 'Make a consistent: a:b:c = 4:5:6, so b:c = 5:6 = 10:12',
+          difficulty: 'hard'
+        },
+        {
+          id: 'p3m4',
+          question: 'A car travels 120 miles in 2 hours. At this rate, how far in 5 hours?',
+          options: ['250 miles', '280 miles', '300 miles', '320 miles'],
+          correctAnswer: 2,
+          explanation: 'Rate = 120/2 = 60 mph. Distance = 60 × 5 = 300 miles',
+          difficulty: 'easy'
+        },
+        {
+          id: 'p3m5',
+          question: 'The ratio of boys to girls is 3:5. If there are 15 boys, how many total students?',
+          options: ['24', '25', '40', '48'],
+          correctAnswer: 3,
+          explanation: 'If 3 parts = 15 boys, then 1 part = 5. Total = 8 parts = 40 students',
+          difficulty: 'medium'
+        }
+      ],
+      quiz: [
+        {
+          id: 'q3m1',
+          question: 'If 4 workers can complete a job in 6 days, how many days for 3 workers?',
+          options: ['4.5 days', '7 days', '8 days', '9 days'],
+          correctAnswer: 2,
+          explanation: 'Total work = 4×6 = 24 worker-days. For 3 workers: 24÷3 = 8 days',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q3m2',
+          question: 'On a map, 2 cm represents 5 km. What distance does 7 cm represent?',
+          options: ['14 km', '17.5 km', '20 km', '25 km'],
+          correctAnswer: 1,
+          explanation: '2/5 = 7/x. Cross multiply: 2x = 35, x = 17.5',
+          difficulty: 'easy'
+        },
+        {
+          id: 'q3m3',
+          question: 'If x:y = 2:7 and y:z = 3:4, what is x:z?',
+          options: ['6:28', '2:4', '6:7', '3:14'],
+          correctAnswer: 0,
+          explanation: 'Make y consistent: x:y:z = 6:21:28, so x:z = 6:28',
+          difficulty: 'hard'
+        },
+        {
+          id: 'q3m4',
+          question: 'A machine produces 150 items in 5 hours. How many items in 8 hours?',
+          options: ['200', '240', '280', '300'],
+          correctAnswer: 1,
+          explanation: 'Rate = 150/5 = 30 items/hour. In 8 hours: 30×8 = 240 items',
+          difficulty: 'easy'
+        },
+        {
+          id: 'q3m5',
+          question: 'The ratio of cats to dogs to birds is 2:3:5. If there are 30 birds, how many cats?',
+          options: ['6', '10', '12', '18'],
+          correctAnswer: 2,
+          explanation: 'If 5 parts = 30 birds, then 1 part = 6. Cats = 2 parts = 12',
+          difficulty: 'medium'
+        }
+      ]
+    },
+    englishLesson: {
+      id: 'english-day3',
+      title: 'Punctuation Rules',
+      subject: 'english',
+      concept: 'Proper use of semicolons, colons, and apostrophes',
+      examples: [
+        'Semicolon: I love reading; it relaxes me.',
+        'Colon for lists: Buy these items: milk, bread, and eggs.',
+        'Colon for explanation: She had one goal: to graduate.',
+        'Apostrophe possessive: The dog\'s toy was lost.'
+      ],
+      practiceQuestions: [
+        {
+          id: 'p3e1',
+          question: 'Which sentence uses a semicolon correctly?',
+          options: [
+            'I like apples; oranges, and bananas.',
+            'I like apples; however, I prefer oranges.',
+            'I like; apples and oranges.',
+            'I like apples and; oranges.'
+          ],
+          correctAnswer: 1,
+          explanation: 'Semicolons connect independent clauses, especially with transitional words',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p3e2',
+          question: 'Where should the colon be placed? "I need three things for the recipe flour sugar and eggs."',
+          options: [
+            'I need three things for the recipe: flour, sugar, and eggs.',
+            'I need: three things for the recipe flour, sugar, and eggs.',
+            'I need three things: for the recipe flour, sugar, and eggs.',
+            'I need three things for the recipe flour: sugar, and eggs.'
+          ],
+          correctAnswer: 0,
+          explanation: 'Use a colon before a list when preceded by a complete sentence',
+          difficulty: 'easy'
+        },
+        {
+          id: 'p3e3',
+          question: 'Which shows correct apostrophe usage?',
+          options: [
+            'The cats toy was lost.',
+            'The cat\'s toy was lost.',
+            'The cats\' toy was lost.',
+            'The cat\'s toys were lost.'
+          ],
+          correctAnswer: 1,
+          explanation: 'For singular possessive, add \'s to the noun',
+          difficulty: 'easy'
+        },
+        {
+          id: 'p3e4',
+          question: 'Choose the correct sentence:',
+          options: [
+            'Its a beautiful day outside.',
+            'It\'s a beautiful day outside.',
+            'Its\' a beautiful day outside.',
+            'It\'s\' a beautiful day outside.'
+          ],
+          correctAnswer: 1,
+          explanation: 'It\'s is the contraction for "it is"',
+          difficulty: 'easy'
+        },
+        {
+          id: 'p3e5',
+          question: 'Which sentence uses punctuation correctly?',
+          options: [
+            'The students\' books were on the desk.',
+            'The student\'s books were on the desk.',
+            'The students books\' were on the desk.',
+            'The students book\'s were on the desk.'
+          ],
+          correctAnswer: 0,
+          explanation: 'For plural possessive, add an apostrophe after the s',
+          difficulty: 'medium'
+        }
+      ],
+      quiz: [
+        {
+          id: 'q3e1',
+          question: 'Which sentence needs a semicolon?',
+          options: [
+            'I love to read books are my passion.',
+            'I love to read, books are my passion.',
+            'I love to read; books are my passion.',
+            'I love to read books, they are my passion.'
+          ],
+          correctAnswer: 2,
+          explanation: 'Use a semicolon to connect two related independent clauses',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q3e2',
+          question: 'Where does the colon belong? "She had one dream to become a teacher."',
+          options: [
+            'She had: one dream to become a teacher.',
+            'She had one dream: to become a teacher.',
+            'She had one dream to become: a teacher.',
+            'She had one dream to: become a teacher.'
+          ],
+          correctAnswer: 1,
+          explanation: 'Use a colon to introduce an explanation or elaboration',
+          difficulty: 'easy'
+        },
+        {
+          id: 'q3e3',
+          question: 'Which is correct for multiple students owning one book?',
+          options: [
+            'The student\'s book',
+            'The students book',
+            'The students\' book',
+            'The students book\''
+          ],
+          correctAnswer: 2,
+          explanation: 'For plural possessive, add apostrophe after the s',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q3e4',
+          question: 'Choose the correct contraction:',
+          options: [
+            'Whos going to the party?',
+            'Who\'s going to the party?',
+            'Whose going to the party?',
+            'Whos\' going to the party?'
+          ],
+          correctAnswer: 1,
+          explanation: 'Who\'s is the contraction for "who is"',
+          difficulty: 'easy'
+        },
+        {
+          id: 'q3e5',
+          question: 'Which sentence uses a semicolon correctly?',
+          options: [
+            'I studied hard; therefore I passed the test.',
+            'I studied hard; therefore, I passed the test.',
+            'I studied hard, therefore; I passed the test.',
+            'I studied hard therefore; I passed the test.'
+          ],
+          correctAnswer: 1,
+          explanation: 'Use semicolon before and comma after transitional words between clauses',
+          difficulty: 'hard'
+        }
+      ]
+    }
   }
-  // Additional days would follow the same pattern...
+  // Additional days 4-11 would follow the same pattern...
 ];
