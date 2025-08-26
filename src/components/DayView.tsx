@@ -1,0 +1,306 @@
+import { useState } from 'react';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, Calculator, BookOpen, Timer, CheckCircle } from 'lucide-react';
+import { Day } from '@/types';
+import { LessonComponent } from './LessonComponent';
+import { DrillComponent } from './DrillComponent';
+import { mathDrills, englishDrills } from '@/data/curriculum';
+
+interface DayViewProps {
+  day: Day;
+  onBack: () => void;
+  onDayComplete: (dayNumber: number) => void;
+  onUpdateScore: (lessonId: string, practiceScore: number, quizScore: number, wrongAnswers: any[]) => void;
+}
+
+export const DayView = ({ day, onBack, onDayComplete, onUpdateScore }: DayViewProps) => {
+  const [activeLesson, setActiveLesson] = useState<'math' | 'english' | 'drill' | null>(null);
+  const [activeDrillType, setActiveDrillType] = useState<'math' | 'english'>('math');
+  const [mathCompleted, setMathCompleted] = useState(false);
+  const [englishCompleted, setEnglishCompleted] = useState(false);
+  const [drillsCompleted, setDrillsCompleted] = useState({ math: false, english: false });
+
+  const handleLessonComplete = (lessonId: string, practiceScore: number, quizScore: number, wrongAnswers: any[]) => {
+    onUpdateScore(lessonId, practiceScore, quizScore, wrongAnswers);
+    
+    if (lessonId === day.mathLesson.id) {
+      setMathCompleted(true);
+    } else if (lessonId === day.englishLesson.id) {
+      setEnglishCompleted(true);
+    }
+    
+    setActiveLesson(null);
+  };
+
+  const handleDrillComplete = (drillType: 'math' | 'english') => {
+    setDrillsCompleted(prev => ({ ...prev, [drillType]: true }));
+    setActiveLesson(null);
+  };
+
+  const handleCompleteDayClicked = () => {
+    onDayComplete(day.day);
+    onBack();
+  };
+
+  const allCompleted = mathCompleted && englishCompleted;
+  const bothDrillsCompleted = drillsCompleted.math && drillsCompleted.english;
+
+  if (activeLesson === 'math') {
+    return (
+      <LessonComponent
+        lesson={day.mathLesson}
+        onComplete={handleLessonComplete}
+        onBack={() => setActiveLesson(null)}
+      />
+    );
+  }
+
+  if (activeLesson === 'english') {
+    return (
+      <LessonComponent
+        lesson={day.englishLesson}
+        onComplete={handleLessonComplete}
+        onBack={() => setActiveLesson(null)}
+      />
+    );
+  }
+
+  if (activeLesson === 'drill') {
+    const drill = activeDrillType === 'math' ? mathDrills[0] : englishDrills[0];
+    return (
+      <DrillComponent
+        drill={drill}
+        onComplete={() => handleDrillComplete(activeDrillType)}
+        onBack={() => setActiveLesson(null)}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={onBack}>
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold">Day {day.day}</h1>
+          <p className="text-muted-foreground">
+            Complete both lessons to finish today's study session
+          </p>
+        </div>
+        {allCompleted && (
+          <div className="px-4 py-2 bg-success/10 text-success text-sm font-medium rounded-full flex items-center gap-2">
+            <CheckCircle className="w-4 h-4" />
+            Day Complete
+          </div>
+        )}
+      </div>
+
+      {/* Progress Overview */}
+      <Card className="p-6 shadow-soft">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center gap-3">
+              <Calculator className="w-5 h-5 text-secondary" />
+              <span className="font-medium">Math Lesson</span>
+            </div>
+            {mathCompleted ? (
+              <CheckCircle className="w-5 h-5 text-success" />
+            ) : (
+              <div className="w-3 h-3 bg-muted rounded-full" />
+            )}
+          </div>
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center gap-3">
+              <BookOpen className="w-5 h-5 text-accent" />
+              <span className="font-medium">English Lesson</span>
+            </div>
+            {englishCompleted ? (
+              <CheckCircle className="w-5 h-5 text-success" />
+            ) : (
+              <div className="w-3 h-3 bg-muted rounded-full" />
+            )}
+          </div>
+        </div>
+      </Card>
+
+      {/* Lessons */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Math Lesson */}
+        <Card className="p-6 shadow-medium">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-secondary/10 rounded-lg">
+                <Calculator className="w-6 h-6 text-secondary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg">{day.mathLesson.title}</h3>
+                <p className="text-sm text-muted-foreground">Math Lesson</p>
+              </div>
+              {mathCompleted && (
+                <CheckCircle className="w-5 h-5 text-success ml-auto" />
+              )}
+            </div>
+            
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {day.mathLesson.concept}
+            </p>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span>Practice Questions</span>
+                <span className="text-muted-foreground">{day.mathLesson.practiceQuestions.length} questions</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span>Quiz</span>
+                <span className="text-muted-foreground">{day.mathLesson.quiz.length} questions</span>
+              </div>
+            </div>
+
+            <Button 
+              className="w-full" 
+              onClick={() => setActiveLesson('math')}
+              variant={mathCompleted ? "outline" : "default"}
+            >
+              {mathCompleted ? 'Review Math Lesson' : 'Start Math Lesson'}
+            </Button>
+          </div>
+        </Card>
+
+        {/* English Lesson */}
+        <Card className="p-6 shadow-medium">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-accent/10 rounded-lg">
+                <BookOpen className="w-6 h-6 text-accent" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg">{day.englishLesson.title}</h3>
+                <p className="text-sm text-muted-foreground">English Lesson</p>
+              </div>
+              {englishCompleted && (
+                <CheckCircle className="w-5 h-5 text-success ml-auto" />
+              )}
+            </div>
+            
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {day.englishLesson.concept}
+            </p>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span>Practice Questions</span>
+                <span className="text-muted-foreground">{day.englishLesson.practiceQuestions.length} questions</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span>Quiz</span>
+                <span className="text-muted-foreground">{day.englishLesson.quiz.length} questions</span>
+              </div>
+            </div>
+
+            <Button 
+              className="w-full" 
+              onClick={() => setActiveLesson('english')}
+              variant={englishCompleted ? "outline" : "default"}
+            >
+              {englishCompleted ? 'Review English Lesson' : 'Start English Lesson'}
+            </Button>
+          </div>
+        </Card>
+      </div>
+
+      {/* Drill Section */}
+      <Card className="p-6 shadow-medium border-primary/20">
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Timer className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg">Timed Drills</h3>
+              <p className="text-sm text-muted-foreground">
+                Quick practice to reinforce fundamentals
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 border rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Math Basics</p>
+                  <p className="text-sm text-muted-foreground">60 seconds • 5 questions</p>
+                </div>
+                {drillsCompleted.math && (
+                  <CheckCircle className="w-5 h-5 text-success" />
+                )}
+              </div>
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="w-full"
+                onClick={() => {
+                  setActiveDrillType('math');
+                  setActiveLesson('drill');
+                }}
+              >
+                {drillsCompleted.math ? 'Retry Math Drill' : 'Start Math Drill'}
+              </Button>
+            </div>
+
+            <div className="p-4 border rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Grammar Rules</p>
+                  <p className="text-sm text-muted-foreground">90 seconds • 3 questions</p>
+                </div>
+                {drillsCompleted.english && (
+                  <CheckCircle className="w-5 h-5 text-success" />
+                )}
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+                onClick={() => {
+                  setActiveDrillType('english');
+                  setActiveLesson('drill');
+                }}
+              >
+                {drillsCompleted.english ? 'Retry Grammar Drill' : 'Start Grammar Drill'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Complete Day Button */}
+      {allCompleted && (
+        <Card className="p-6 shadow-strong border-success/50">
+          <div className="text-center space-y-4">
+            <div className="mx-auto w-12 h-12 bg-gradient-success rounded-full flex items-center justify-center">
+              <CheckCircle className="w-6 h-6 text-success-foreground" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg">Excellent Work!</h3>
+              <p className="text-muted-foreground">
+                You've completed all lessons for Day {day.day}
+                {bothDrillsCompleted && ' and both drill sessions'}
+              </p>
+            </div>
+            <Button 
+              variant="success" 
+              size="lg" 
+              onClick={handleCompleteDayClicked}
+              className="px-8"
+            >
+              Complete Day {day.day}
+            </Button>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+};
