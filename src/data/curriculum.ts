@@ -110,11 +110,15 @@ export const curriculum: Day[] = [
       id: 'math-day1',
       title: 'Percentages and Basic Ratios',
       subject: 'math',
-      concept: 'Understanding percentages as parts of 100 and basic ratio relationships',
+      concept: 'Percentages represent parts of 100 and are crucial for the ACT. They appear in word problems, data analysis, and coordinate geometry. Ratios express relationships between quantities and are foundational for proportions, similar figures, and probability. Master these concepts by understanding three key conversions: fraction ↔ decimal ↔ percentage, and by recognizing that ratios create proportional relationships.',
       examples: [
-        '25% = 25/100 = 1/4 = 0.25',
-        'To find 30% of 60: 0.30 × 60 = 18',
-        'Ratio 2:3 means for every 2 of one thing, there are 3 of another'
+        'Percentage conversions: 25% = 25/100 = 1/4 = 0.25',
+        'Finding percentages: To find 30% of 60, multiply 0.30 × 60 = 18',
+        'Percentage increase: If a price goes from $20 to $25, the increase is (25-20)/20 × 100% = 25%',
+        'Basic ratios: 2:3 means for every 2 of one item, there are 3 of another',
+        'Ratio to fraction: 2:3 = 2/(2+3) = 2/5 of the total is the first quantity',
+        'Proportion solving: If 2:3 = x:15, then 3x = 30, so x = 10',
+        'Real ACT example: In a class of 24 students, if the ratio of boys to girls is 5:3, there are 5×3=15 boys and 3×3=9 girls'
       ],
       practiceQuestions: [
         {
@@ -203,14 +207,18 @@ export const curriculum: Day[] = [
     },
     englishLesson: {
       id: 'english-day1',
-      title: 'Subject-Verb Agreement Basics',
+      title: 'Subject-Verb Agreement Fundamentals',
       subject: 'english',
-      concept: 'Ensuring subjects and verbs match in number (singular/plural)',
+      concept: 'Subject-verb agreement is one of the most tested grammar concepts on the ACT. The basic rule is simple: singular subjects take singular verbs, plural subjects take plural verbs. However, the ACT tests tricky situations where the subject is separated from the verb, compound subjects, collective nouns, and indefinite pronouns. Mastering these patterns will significantly improve your English score.',
       examples: [
-        'Singular: The cat runs quickly.',
-        'Plural: The cats run quickly.',
-        'Collective noun: The team is playing well. (team = one unit)',
-        'Compound subject: John and Mary are coming.'
+        'Basic agreement: The cat runs (singular) vs. The cats run (plural)',
+        'Prepositional phrase interference: The books [on the shelf] are dusty (ignore "shelf")',
+        'Collective nouns: The team is playing well (team = one unit, use singular)',
+        'Compound subjects with "and": John and Mary are coming (always plural)',
+        'Compound subjects with "or/nor": Either John or his sisters are coming (agree with closest)',
+        'Indefinite pronouns: Everyone has finished (everyone = singular), Few have arrived (few = plural)',
+        'Tricky plurals: The news is good (news looks plural but is singular)',
+        'Inverted order: There are many reasons (subject "reasons" comes after verb)'
       ],
       practiceQuestions: [
         {
@@ -329,13 +337,18 @@ export const curriculum: Day[] = [
     completed: false,
     mathLesson: {
       id: 'math-day2',
-      title: 'Fractions and Decimal Conversions',
+      title: 'Fractions, Decimals, and Operations',
       subject: 'math',
-      concept: 'Converting between fractions, decimals, and percentages, and performing operations with fractions',
+      concept: 'Fraction operations and conversions are fundamental ACT skills that appear in algebra, geometry, and word problems. You must be fluent in converting between fractions, decimals, and percentages, and performing all four operations with fractions. The key strategies are: find common denominators for addition/subtraction, multiply straight across for multiplication, and remember that dividing by a fraction means multiplying by its reciprocal.',
       examples: [
-        '3/4 = 0.75 = 75%',
-        '2/3 + 1/6 = 4/6 + 1/6 = 5/6',
-        'To divide fractions: 2/3 ÷ 1/4 = 2/3 × 4/1 = 8/3'
+        'Triple conversion: 3/4 = 0.75 = 75% (memorize common fractions)',
+        'Addition with different denominators: 2/3 + 1/6 = 4/6 + 1/6 = 5/6',
+        'Subtraction: 5/6 - 1/3 = 5/6 - 2/6 = 3/6 = 1/2',
+        'Multiplication: 3/4 × 2/5 = 6/20 = 3/10 (multiply numerators and denominators)',
+        'Division (key concept): 2/3 ÷ 1/4 = 2/3 × 4/1 = 8/3',
+        'Mixed numbers: 1 2/3 = 5/3 (multiply whole by denominator, add numerator)',
+        'Decimal to fraction: 0.375 = 375/1000 = 3/8 (simplify by dividing by GCD)',
+        'Word problem application: If 3/4 of students passed and there are 20 students, then 3/4 × 20 = 15 students passed'
       ],
       practiceQuestions: [
         {
@@ -424,14 +437,18 @@ export const curriculum: Day[] = [
     },
     englishLesson: {
       id: 'english-day2',
-      title: 'Comma Rules and Usage',
+      title: 'Comma Rules and Advanced Usage',
       subject: 'english',
-      concept: 'Understanding when and how to use commas correctly in sentences',
+      concept: 'Comma usage is heavily tested on the ACT English section. Students must master six key comma rules: items in a series (Oxford comma), before coordinating conjunctions joining independent clauses, after introductory words/phrases/clauses, around non-essential information, between coordinate adjectives, and in addresses/dates. The ACT will often present sentences where commas are missing, unnecessary, or incorrectly placed.',
       examples: [
-        'Series: I bought apples, oranges, and bananas.',
-        'Before coordinating conjunctions: I wanted to go, but it was raining.',
-        'After introductory elements: After the game, we went home.',
-        'Around non-essential information: My brother, who lives in Texas, is visiting.'
+        'Series (Oxford comma): I bought apples, oranges, and bananas',
+        'Coordinating conjunction: I wanted to go, but it was raining (two complete thoughts)',
+        'Introductory elements: After the game, we went home (phrase); Surprisingly, he passed (word)',
+        'Non-essential clauses: My brother, who lives in Texas, is visiting (extra info)',
+        'Essential vs. non-essential: Students who study hard succeed (no commas - essential)',
+        'Coordinate adjectives: It was a long, difficult test (both describe "test" equally)',
+        'Addresses: I live in Austin, Texas, and love it here',
+        'Common mistake: No comma needed when "and" joins phrases without separate subjects'
       ],
       practiceQuestions: [
         {
@@ -670,14 +687,18 @@ export const curriculum: Day[] = [
     },
     englishLesson: {
       id: 'english-day3',
-      title: 'Punctuation Rules',
+      title: 'Advanced Punctuation: Semicolons, Colons, and Apostrophes',
       subject: 'english',
-      concept: 'Proper use of semicolons, colons, and apostrophes',
+      concept: 'Advanced punctuation rules distinguish strong ACT English students. Semicolons connect independent clauses and separate complex list items. Colons introduce lists, explanations, or examples after complete sentences. Apostrophes show possession (never for plurals) and form contractions. These punctuation marks are frequently tested, and incorrect usage will lower your score.',
       examples: [
-        'Semicolon: I love reading; it relaxes me.',
-        'Colon for lists: Buy these items: milk, bread, and eggs.',
-        'Colon for explanation: She had one goal: to graduate.',
-        'Apostrophe possessive: The dog\'s toy was lost.'
+        'Semicolon connecting clauses: I love reading; it relaxes me after long days',
+        'Semicolon with transitional words: I studied hard; however, the test was still difficult',
+        'Semicolon in complex lists: I visited Paris, France; London, England; and Rome, Italy',
+        'Colon introducing lists: Buy these items: milk, bread, eggs, and cheese',
+        'Colon for explanations: She had one clear goal: to graduate with honors',
+        'Singular possessive: The dog\'s toy, James\'s book (add \'s even after s)',
+        'Plural possessive: The dogs\' toys, the students\' papers (apostrophe after s)',
+        'Contractions: It\'s (it is), you\'re (you are), who\'s (who is) vs. whose (possessive)'
       ],
       practiceQuestions: [
         {
