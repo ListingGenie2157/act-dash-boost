@@ -150,7 +150,15 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
             <p className="text-sm text-muted-foreground">
               Practice with timed rapid-fire questions
             </p>
-            <Button variant="secondary" className="w-full">
+            <Button 
+              variant="secondary" 
+              className="w-full"
+              onClick={() => {
+                console.log("Math drill button clicked from Dashboard");
+                // For now, we'll direct them to Day 1 where drills are available
+                onStartDay(1);
+              }}
+            >
               Start Math Drill (60s)
             </Button>
           </div>
@@ -165,7 +173,15 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
             <p className="text-sm text-muted-foreground">
               Quick grammar rules practice
             </p>
-            <Button variant="outline" className="w-full">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => {
+                console.log("Grammar drill button clicked from Dashboard");
+                // For now, we'll direct them to Day 1 where drills are available
+                onStartDay(1);
+              }}
+            >
               Start Grammar Drill (90s)
             </Button>
           </div>
