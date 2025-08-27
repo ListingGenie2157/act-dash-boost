@@ -17,15 +17,16 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 215 25% 15%;
 
-    --primary: 213 78% 52%;
+    /* Updated color palette for a more engaging look */
+    --primary: 270 70% 55%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 213 78% 65%;
+    --primary-glow: 270 70% 65%;
 
-    --secondary: 190 65% 45%;
+    --secondary: 200 80% 60%;
     --secondary-foreground: 0 0% 100%;
 
-    --accent: 142 71% 45%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 46 95% 60%;
+    --accent-foreground: 0 0% 15%;
 
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
@@ -95,17 +96,18 @@ All colors MUST be HSL.
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
+    /* Adjust dark mode primary color for better contrast */
+    --primary: 270 70% 70%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 200 80% 40%;
+    --secondary-foreground: 0 0% 100%;
 
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 46 95% 45%;
+    --accent-foreground: 0 0% 15%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
@@ -135,6 +137,13 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+  @apply bg-background text-foreground;
+  /* Use a more engaging sans-serif font throughout the app */
+  font-family: 'Trebuchet MS', 'Helvetica Neue', sans-serif;
+  }
+
+  /* Ensure headings also use the new typeface for consistency */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Trebuchet MS', 'Helvetica Neue', sans-serif;
   }
 }

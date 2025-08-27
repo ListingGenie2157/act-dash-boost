@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle, XCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import { Question } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
 interface QuizComponentProps {
   questions: Question[];
@@ -18,12 +19,22 @@ export const QuizComponent = ({ questions, title, onComplete, onBack }: QuizComp
   const [showResults, setShowResults] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  // Toast API for immediate feedback on answer selection.
+  const { toast } = useToast();
+
   const handleAnswerSelect = (answerIndex: number) => {
     if (submitted) return;
     
     const newAnswers = [...answers];
     newAnswers[currentQuestion] = answerIndex;
     setAnswers(newAnswers);
+
+    // Show immediate feedback. Notify the user if their selection is correct or not.
+    const isCorrect = answerIndex === questions[currentQuestion].correctAnswer;
+    toast({
+      title: isCorrect ? 'Correct!' : 'Incorrect',
+      description: isCorrect ? undefined : 'Keep going!',
+    });
   };
 
   const handleNext = () => {

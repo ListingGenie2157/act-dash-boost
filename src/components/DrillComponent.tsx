@@ -5,6 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { Timer, Play, Pause, RotateCcw, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
 import { DrillSession } from '@/types';
 import { useTimer } from '@/hooks/useTimer';
+import { useToast } from '@/hooks/use-toast';
 
 interface DrillComponentProps {
   drill: DrillSession;
@@ -19,6 +20,9 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
   const [hasStarted, setHasStarted] = useState(false);
   
   const { timeLeft, isActive, isCompleted, startTimer, pauseTimer, resetTimer, formatTime } = useTimer(drill.timeLimit);
+
+  // Toast API for immediate feedback during drills.
+  const { toast } = useToast();
 
   useEffect(() => {
     if (isCompleted && hasStarted) {
@@ -37,6 +41,13 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
     const newAnswers = [...answers];
     newAnswers[currentQuestion] = answerIndex;
     setAnswers(newAnswers);
+
+    // Provide immediate feedback on the selected answer.
+    const isCorrect = answerIndex === drill.questions[currentQuestion].correctAnswer;
+    toast({
+      title: isCorrect ? 'Correct!' : 'Incorrect',
+      description: isCorrect ? undefined : 'Keep going!',
+    });
     
     // Auto-advance to next question
     if (currentQuestion < drill.questions.length - 1) {

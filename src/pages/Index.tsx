@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dashboard } from '@/components/Dashboard';
 import { DayView } from '@/components/DayView';
 import { curriculum } from '@/data/curriculum';
 import { useProgress } from '@/hooks/useProgress';
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 type View = 'dashboard' | 'day' | 'review';
 
@@ -10,6 +12,19 @@ const Index = () => {
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const { progress, updateProgress, addWrongAnswer, updateWeakAreas, completeDay } = useProgress();
+  const navigate = useNavigate();
+
+  // On mount, verify the user has an active session. If not, redirect
+  // to the login page. This ensures the study dashboard is protected.
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        navigate('/login');
+      }
+    };
+    checkAuth();
+  }, [navigate]);
 
   const handleStartDay = (dayNumber: number) => {
     setSelectedDay(dayNumber);

@@ -5,7 +5,8 @@ export const mathDrills: DrillSession[] = [
     id: 'math-basics',
     subject: 'math',
     title: 'Math Basics Rapid Fire',
-    timeLimit: 60,
+    // Increased time limit to allow for a deeper set of questions
+    timeLimit: 90,
     questions: [
       {
         id: 'mb1',
@@ -47,6 +48,40 @@ export const mathDrills: DrillSession[] = [
         explanation: '2x² = 2(3)² = 2(9) = 18',
         difficulty: 'easy'
       }
+      ,
+      // Additional drill questions to provide more depth and challenge
+      {
+        id: 'mb6',
+        question: 'Solve for x: 3x - 7 = 2',
+        options: ['1', '3', '2', '5'],
+        correctAnswer: 2,
+        explanation: '3x - 7 = 2 → 3x = 9 → x = 3',
+        difficulty: 'medium'
+      },
+      {
+        id: 'mb7',
+        question: 'What is log₁₀(1000)?',
+        options: ['2', '3', '4', '5'],
+        correctAnswer: 1,
+        explanation: 'log base 10 of 1000 equals 3 because 10³ = 1000',
+        difficulty: 'medium'
+      },
+      {
+        id: 'mb8',
+        question: 'Simplify (x² - y²) / (x - y)',
+        options: ['x + y', 'x - y', 'x² + y', 'xy'],
+        correctAnswer: 0,
+        explanation: 'x² - y² factors to (x - y)(x + y); dividing by (x - y) leaves x + y',
+        difficulty: 'medium'
+      },
+      {
+        id: 'mb9',
+        question: 'Solve the inequality: 2x + 5 ≤ 11',
+        options: ['x ≤ 3', 'x ≥ 3', 'x ≤ -3', 'x ≥ -3'],
+        correctAnswer: 0,
+        explanation: '2x + 5 ≤ 11 → 2x ≤ 6 → x ≤ 3',
+        difficulty: 'medium'
+      }
     ]
   }
 ];
@@ -56,7 +91,8 @@ export const englishDrills: DrillSession[] = [
     id: 'grammar-basics',
     subject: 'english',
     title: 'Grammar Rules Rapid Fire',
-    timeLimit: 90,
+    // Extended the time limit to accommodate a richer set of questions
+    timeLimit: 120,
     questions: [
       {
         id: 'gb1',
@@ -96,6 +132,34 @@ export const englishDrills: DrillSession[] = [
         correctAnswer: 1,
         explanation: '"It\'s" is the contraction for "it is"',
         difficulty: 'easy'
+      }
+      ,
+      // Additional drill questions for deeper grammar practice
+      {
+        id: 'gb4',
+        question: 'Identify the sentence with correct comma usage.',
+        options: [
+          'After the game we went out for pizza.',
+          'After the game, we went out for pizza.',
+          'After, the game we went out for pizza.',
+          'After the game we went, out for pizza.'
+        ],
+        correctAnswer: 1,
+        explanation: 'Introductory phrases should be followed by a comma.',
+        difficulty: 'medium'
+      },
+      {
+        id: 'gb5',
+        question: 'Choose the correctly punctuated sentence.',
+        options: [
+          'She enjoys reading writing and skiing.',
+          'She enjoys reading, writing and skiing.',
+          'She enjoys reading, writing, and skiing.',
+          'She enjoys, reading, writing, and skiing.'
+        ],
+        correctAnswer: 2,
+        explanation: 'Use commas to separate all items in a series (Oxford comma optional but recommended).',
+        difficulty: 'medium'
       }
     ]
   }
