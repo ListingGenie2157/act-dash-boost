@@ -120,8 +120,8 @@ export const LessonComponent = ({ lesson, onComplete, onBack }: LessonComponentP
                 </h3>
                 <div className="space-y-3">
                   {lesson.examples.map((example, index) => (
-                    <div key={index} className="p-4 bg-gradient-to-r from-primary/5 to-secondary/5 border border-primary/10 rounded-lg">
-                      <code className="text-sm font-mono font-medium text-foreground leading-relaxed whitespace-pre-wrap">{example}</code>
+                    <div key={index} className="p-4 bg-[hsl(var(--example-bg))] border border-[hsl(var(--example-border))] rounded-lg">
+                      <code className="text-sm font-mono font-medium text-[hsl(var(--example-text))] leading-relaxed whitespace-pre-wrap">{example}</code>
                     </div>
                   ))}
                 </div>
