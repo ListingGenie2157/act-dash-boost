@@ -95,7 +95,7 @@ export const LessonComponent = ({ lesson, onComplete, onBack }: LessonComponentP
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="concept">Concept</TabsTrigger>
-          <TabsTrigger value="practice" disabled={activeTab === 'concept'}>
+          <TabsTrigger value="practice">
             Practice
           </TabsTrigger>
           <TabsTrigger value="quiz" disabled={practiceScore === null}>
@@ -120,8 +120,8 @@ export const LessonComponent = ({ lesson, onComplete, onBack }: LessonComponentP
                 </h3>
                 <div className="space-y-3">
                   {lesson.examples.map((example, index) => (
-                    <div key={index} className="p-4 bg-muted rounded-lg">
-                      <code className="text-sm">{example}</code>
+                    <div key={index} className="p-4 bg-gradient-to-r from-primary/5 to-secondary/5 border border-primary/10 rounded-lg">
+                      <code className="text-sm font-mono font-medium text-foreground leading-relaxed whitespace-pre-wrap">{example}</code>
                     </div>
                   ))}
                 </div>
