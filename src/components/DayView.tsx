@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Calculator, BookOpen, Timer, CheckCircle } from 'lucide-react';
-import { Day } from '@/types';
+import { Day, DrillSession } from '@/types';
 import { LessonComponent } from './LessonComponent';
 import { DrillComponent } from './DrillComponent';
 import { mathDrills, englishDrills } from '@/data/curriculum';
@@ -46,6 +46,31 @@ export const DayView = ({ day, onBack, onDayComplete, onUpdateScore }: DayViewPr
   const allCompleted = mathCompleted && englishCompleted;
   const bothDrillsCompleted = drillsCompleted.math && drillsCompleted.english;
 
+  /**
+   * Helper to select a random subset of questions from a larger pool.
+   * This ensures that each drill attempt presents a fresh mix of questions.
+   *
+   * @param questions - The full list of questions for the drill.
+   * @param count - How many questions to include in the drill.
+   * @returns A new array containing `count` randomly selected questions.
+   */
+  function getRandomSubset<T>(questions: T[], count: number): T[] {
+    const shuffled = [...questions];
+    // Fisher–Yates shuffle for unbiased randomization
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled.slice(0, count);
+  }
+
+  // Define how many questions each drill should include.  These values
+  // control both the random selection and the UI labels below.  Adjust
+  // these counts to change the length of each drill without touching
+  // the underlying question pools defined in the curriculum.
+  const MATH_QUESTIONS_COUNT = 5;
+  const ENGLISH_QUESTIONS_COUNT = 5;
+
   if (activeLesson === 'math') {
     return (
       <LessonComponent
@@ -67,7 +92,14 @@ export const DayView = ({ day, onBack, onDayComplete, onUpdateScore }: DayViewPr
   }
 
   if (activeLesson === 'drill') {
-    const drill = activeDrillType === 'math' ? mathDrills[0] : englishDrills[0];
+    // Clone the appropriate drill and inject a random subset of questions.
+    const baseDrill = activeDrillType === 'math' ? mathDrills[0] : englishDrills[0];
+    const questionCount = activeDrillType === 'math' ? MATH_QUESTIONS_COUNT : ENGLISH_QUESTIONS_COUNT;
+    const selectedQuestions = getRandomSubset(baseDrill.questions, questionCount);
+    const drill: DrillSession = {
+      ...baseDrill,
+      questions: selectedQuestions
+    };
     return (
       <DrillComponent
         drill={drill}
@@ -231,7 +263,10 @@ export const DayView = ({ day, onBack, onDayComplete, onUpdateScore }: DayViewPr
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Math Basics</p>
-                  <p className="text-sm text-muted-foreground">60 seconds • 5 questions</p>
+                  {/* Dynamically reflect the time limit and number of questions for math drills */}
+                  <p className="text-sm text-muted-foreground">
+                    {mathDrills[0].timeLimit} seconds • {MATH_QUESTIONS_COUNT} questions
+                  </p>
                 </div>
                 {drillsCompleted.math && (
                   <CheckCircle className="w-5 h-5 text-success" />
@@ -254,7 +289,10 @@ export const DayView = ({ day, onBack, onDayComplete, onUpdateScore }: DayViewPr
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Grammar Rules</p>
-                  <p className="text-sm text-muted-foreground">90 seconds • 3 questions</p>
+                  {/* Dynamically reflect the time limit and number of questions for grammar drills */}
+                  <p className="text-sm text-muted-foreground">
+                    {englishDrills[0].timeLimit} seconds • {ENGLISH_QUESTIONS_COUNT} questions
+                  </p>
                 </div>
                 {drillsCompleted.english && (
                   <CheckCircle className="w-5 h-5 text-success" />
