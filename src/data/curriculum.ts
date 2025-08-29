@@ -198,11 +198,11 @@ export const englishDrills: DrillSession[] = [
         options: [
           'Its a beautiful day outside.',
           "It's a beautiful day outside.",
-          'Its\\' a beautiful day outside.',
-          'It\\'s a beautiful day outside.'
+          "Its' a beautiful day outside.",
+          "It's a beautiful day outside."
         ],
         correctAnswer: 1,
-        explanation: '\"It\\'s\" is the contraction for "it is"',
+        explanation: '"It\'s" is the contraction for "it is"',
         difficulty: 'easy'
       },
       // Additional drill questions for deeper grammar practice
