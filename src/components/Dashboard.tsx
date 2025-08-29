@@ -151,7 +151,7 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
               Practice with timed rapid-fire questions
             </p>
             <Button 
-              variant="secondary" 
+              variant="drill" 
               className="w-full"
               onClick={() => {
                 console.log("Math drill button clicked from Dashboard");
@@ -159,7 +159,7 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
                 onStartDay(1);
               }}
             >
-              Start Math Drill (60s)
+              🔢 Start Math Drill (60s)
             </Button>
           </div>
         </Card>
@@ -174,7 +174,7 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
               Quick grammar rules practice
             </p>
             <Button 
-              variant="outline" 
+              variant="success" 
               className="w-full"
               onClick={() => {
                 console.log("Grammar drill button clicked from Dashboard");
@@ -182,7 +182,7 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
                 onStartDay(1);
               }}
             >
-              Start Grammar Drill (90s)
+              ✏️ Start Grammar Drill (90s)
             </Button>
           </div>
         </Card>

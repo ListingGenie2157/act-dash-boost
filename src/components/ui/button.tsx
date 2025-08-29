@@ -23,6 +23,7 @@ const buttonVariants = cva(
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         hero: "bg-gradient-primary text-primary-foreground hover:shadow-strong transform hover:scale-105",
+        drill: "bg-gradient-secondary text-secondary-foreground hover:shadow-medium transform hover:scale-105 font-semibold",
         quiz: "border-2 border-border bg-card hover:border-primary hover:bg-primary/5 text-card-foreground text-left h-auto p-4",
       },
       size: {
