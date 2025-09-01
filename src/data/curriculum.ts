@@ -1733,5 +1733,1110 @@ export const curriculum: Day[] = [
         }
       ]
     }
+  },
+  // DAY 9: NUMBER & QUANTITY FOUNDATIONS
+  {
+    day: 9,
+    mathLesson: {
+      id: 'm9',
+      title: 'Percentages & Proportions',
+      subject: 'math',
+      concept: `**Core Concept: Percentages**
+- Percent = part/whole × 100
+- Decimal to percent: multiply by 100
+- Percent to decimal: divide by 100
+
+**Three Types of Percent Problems:**
+1. Find the percent: "What percent is 15 of 60?" → 15/60 × 100 = 25%
+2. Find the part: "What is 30% of 80?" → 0.30 × 80 = 24
+3. Find the whole: "15 is 25% of what?" → 15 ÷ 0.25 = 60
+
+**Percent Change Formula:**
+- Increase: New = Original × (1 + rate)
+- Decrease: New = Original × (1 - rate)
+- Finding change: (New - Old)/Old × 100
+
+**Example 1: Multi-step Percent**
+A shirt costs $40. It's marked up 25%, then put on sale for 20% off.
+- After markup: $40 × 1.25 = $50
+- After discount: $50 × 0.80 = $40
+- Final price equals original (not always the case!)
+
+**Example 2: Reverse Percent**
+After a 15% discount, an item costs $51. Original price?
+- Let x = original price
+- x × 0.85 = 51
+- x = 51 ÷ 0.85 = $60
+
+**Setting Up Ratios:**
+- Part:Part:Part = Total
+- Each "part" represents one unit
+
+**Example: Complex Ratio**
+Three partners split profits in ratio 2:3:5. Total profit is $50,000.
+- Total parts = 2 + 3 + 5 = 10
+- Value per part = $50,000 ÷ 10 = $5,000
+- Partner A: 2 × $5,000 = $10,000
+- Partner B: 3 × $5,000 = $15,000
+- Partner C: 5 × $5,000 = $25,000`,
+      examples: [
+        'A $80 jacket is 35% off. Sale price = $80 × 0.65 = $52',
+        'After 20% tax, bill is $72. Original = $72 ÷ 1.20 = $60',
+        'Percent increase from 40 to 56: (56-40)/40 × 100 = 40%',
+        'Ratio 4:5, if 20 boys, girls = 20 × 5/4 = 25'
+      ],
+      practiceQuestions: [
+        {
+          id: 'p9m1',
+          question: 'A $80 jacket is 35% off. What is the sale price?',
+          options: ['$48', '$52', '$56', '$60'],
+          correctAnswer: 1,
+          explanation: '$80 × 0.65 = $52',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p9m2',
+          question: 'After 20% tax, the bill is $72. What was the original amount?',
+          options: ['$55', '$60', '$65', '$70'],
+          correctAnswer: 1,
+          explanation: '$72 ÷ 1.20 = $60',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p9m3',
+          question: 'What percent increase is it from 40 to 56?',
+          options: ['35%', '40%', '45%', '50%'],
+          correctAnswer: 1,
+          explanation: '(56-40)/40 × 100 = 40%',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p9m4',
+          question: 'If the ratio of boys to girls is 4:5 and there are 20 boys, how many girls are there?',
+          options: ['20', '25', '30', '35'],
+          correctAnswer: 1,
+          explanation: '20 × 5/4 = 25 girls',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p9m5',
+          question: 'Split $180 in the ratio 2:3:4. What is the largest share?',
+          options: ['$60', '$70', '$80', '$90'],
+          correctAnswer: 2,
+          explanation: 'Total parts = 9, so $180 ÷ 9 = $20 per part. Largest = 4 × $20 = $80',
+          difficulty: 'hard'
+        }
+      ],
+      quiz: [
+        {
+          id: 'q9m1',
+          question: 'What is 35% of 240?',
+          options: ['74', '84', '94', '104'],
+          correctAnswer: 1,
+          explanation: '0.35 × 240 = 84',
+          difficulty: 'easy'
+        },
+        {
+          id: 'q9m2',
+          question: 'After a 25% discount, the price is $45. What was the original price?',
+          options: ['$50', '$55', '$60', '$65'],
+          correctAnswer: 2,
+          explanation: '$45 ÷ 0.75 = $60',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q9m3',
+          question: 'In a ratio of 3:7, if the smaller part is 12, what is the larger part?',
+          options: ['24', '26', '28', '30'],
+          correctAnswer: 2,
+          explanation: 'If 3 parts = 12, then 1 part = 4. So 7 parts = 28',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q9m4',
+          question: 'What is the percent increase from 80 to 100?',
+          options: ['20%', '25%', '30%', '35%'],
+          correctAnswer: 1,
+          explanation: '(100-80)/80 × 100 = 25%',
+          difficulty: 'easy'
+        },
+        {
+          id: 'q9m5',
+          question: '45 is 30% of what number?',
+          options: ['135', '140', '145', '150'],
+          correctAnswer: 3,
+          explanation: '45 ÷ 0.30 = 150',
+          difficulty: 'medium'
+        }
+      ]
+    },
+    englishLesson: {
+      id: 'e9',
+      title: 'Grammar Review',
+      subject: 'english',
+      concept: `Review of essential grammar concepts from previous lessons.
+
+**Key Areas to Review:**
+1. Subject-verb agreement
+2. Pronoun usage
+3. Verb tenses
+4. Modifier placement
+5. Parallel structure`,
+      examples: [
+        'Subject-verb agreement: "The team of players IS ready"',
+        'Pronoun clarity: "John told Mike that HE needed to study"',
+        'Verb tense consistency: "She walked to school and BOUGHT lunch"',
+        'Parallel structure: "She likes reading, writing, and PAINTING"'
+      ],
+      practiceQuestions: [
+        {
+          id: 'p9e1',
+          question: 'Choose the correct verb: "The committee (has/have) made its decision."',
+          options: ['has', 'have', 'had', 'having'],
+          correctAnswer: 0,
+          explanation: 'Committee is a singular collective noun',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p9e2',
+          question: 'Choose the correct pronoun: "Everyone must bring (their/his or her) ID."',
+          options: ['their', 'his or her', 'there', 'they\'re'],
+          correctAnswer: 1,
+          explanation: 'Everyone is singular and requires singular pronouns',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p9e3',
+          question: 'Fix the parallel structure: "She likes running, swimming, and to bike."',
+          options: ['She likes running, swimming, and biking.', 'She likes to run, swim, and bike.', 'She likes running, to swim, and biking.', 'No change needed.'],
+          correctAnswer: 0,
+          explanation: 'All items in the list should use -ing form',
+          difficulty: 'medium'
+        }
+      ],
+      quiz: [
+        {
+          id: 'q9e1',
+          question: 'Each of the boys ___ ready.',
+          options: ['is', 'are', 'were', 'been'],
+          correctAnswer: 0,
+          explanation: 'Each is singular',
+          difficulty: 'easy'
+        },
+        {
+          id: 'q9e2',
+          question: 'The team of players ___ practicing.',
+          options: ['is', 'are', 'were', 'been'],
+          correctAnswer: 0,
+          explanation: 'Team is a singular collective noun',
+          difficulty: 'medium'
+        }
+      ]
+    },
+    completed: false
+  },
+  // DAY 10: ALGEBRA ESSENTIALS
+  {
+    day: 10,
+    mathLesson: {
+      id: 'm10',
+      title: 'Linear Equations & Systems',
+      subject: 'math',
+      concept: `**Solving Linear Equations:**
+1. Distribute/expand
+2. Combine like terms
+3. Isolate variable
+4. Check answer
+
+**Example: Multi-step**
+3(2x - 4) = 4x + 8
+- Distribute: 6x - 12 = 4x + 8
+- Subtract 4x: 2x - 12 = 8
+- Add 12: 2x = 20
+- Divide: x = 10
+
+**Systems of Equations:**
+Method 1 - Substitution:
+- y = 2x + 3
+- 3x + y = 13
+- Substitute: 3x + (2x + 3) = 13
+- Solve: 5x + 3 = 13, x = 2, y = 7
+
+Method 2 - Elimination:
+- 2x + 3y = 12
+- 4x - 3y = 6
+- Add equations: 6x = 18, x = 3
+
+**Exponent Rules:**
+- x^a × x^b = x^(a+b)
+- (x^a)^b = x^(ab)
+- x^a ÷ x^b = x^(a-b)
+- x^0 = 1
+- x^(-a) = 1/x^a
+- (xy)^a = x^a × y^a
+
+**Radicals:**
+- √(ab) = √a × √b
+- √(a/b) = √a/√b
+- √x^2 = |x|
+
+**Example: Complex Exponent**
+Simplify: (2x^3)^2 × 4x^(-2)
+- = 4x^6 × 4x^(-2)
+- = 16x^4`,
+      examples: [
+        'Solve: 4(x - 3) = 2x + 6 → 4x - 12 = 2x + 6 → 2x = 18 → x = 9',
+        'System: x + y = 10, x - y = 4 → Add: 2x = 14 → x = 7, y = 3',
+        'Simplify: 3^4 × 3^(-2) = 3^(4-2) = 3^2 = 9',
+        'Simplify: (2^3)^2 = 2^6 = 64'
+      ],
+      practiceQuestions: [
+        {
+          id: 'p10m1',
+          question: 'Solve: 4(x - 3) = 2x + 6',
+          options: ['x = 7', 'x = 8', 'x = 9', 'x = 10'],
+          correctAnswer: 2,
+          explanation: '4x - 12 = 2x + 6, so 2x = 18, x = 9',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p10m2',
+          question: 'Solve the system: x + y = 10, x - y = 4. Find x.',
+          options: ['x = 6', 'x = 7', 'x = 8', 'x = 9'],
+          correctAnswer: 1,
+          explanation: 'Add equations: 2x = 14, so x = 7',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p10m3',
+          question: 'Simplify: 3^4 × 3^(-2)',
+          options: ['3', '9', '27', '81'],
+          correctAnswer: 1,
+          explanation: '3^(4-2) = 3^2 = 9',
+          difficulty: 'easy'
+        },
+        {
+          id: 'p10m4',
+          question: 'If 2^x = 32, find x',
+          options: ['4', '5', '6', '7'],
+          correctAnswer: 1,
+          explanation: '2^5 = 32, so x = 5',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p10m5',
+          question: 'Solve: 3(2x + 1) = 4(x - 2) + 5',
+          options: ['x = -3', 'x = -2', 'x = -1', 'x = 0'],
+          correctAnswer: 0,
+          explanation: '6x + 3 = 4x - 8 + 5, so 6x + 3 = 4x - 3, 2x = -6, x = -3',
+          difficulty: 'hard'
+        }
+      ],
+      quiz: [
+        {
+          id: 'q10m1',
+          question: 'Solve: 3(x - 2) = 2x + 4',
+          options: ['x = 8', 'x = 9', 'x = 10', 'x = 11'],
+          correctAnswer: 2,
+          explanation: '3x - 6 = 2x + 4, so x = 10',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q10m2',
+          question: 'Simplify: 2^5 × 2^3',
+          options: ['128', '256', '512', '1024'],
+          correctAnswer: 1,
+          explanation: '2^(5+3) = 2^8 = 256',
+          difficulty: 'easy'
+        },
+        {
+          id: 'q10m3',
+          question: 'System: x + 2y = 8, x - y = 2. Find y.',
+          options: ['1', '2', '3', '4'],
+          correctAnswer: 1,
+          explanation: 'Subtract equations: 3y = 6, so y = 2',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q10m4',
+          question: 'Simplify: (3x^2)^3',
+          options: ['9x^6', '27x^5', '27x^6', '81x^6'],
+          correctAnswer: 2,
+          explanation: '(3x^2)^3 = 3^3 × (x^2)^3 = 27x^6',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q10m5',
+          question: 'Solve: 2x/5 + 3 = 7',
+          options: ['x = 8', 'x = 10', 'x = 12', 'x = 14'],
+          correctAnswer: 1,
+          explanation: '2x/5 = 4, so 2x = 20, x = 10',
+          difficulty: 'medium'
+        }
+      ]
+    },
+    englishLesson: {
+      id: 'e10',
+      title: 'Punctuation Rules',
+      subject: 'english',
+      concept: `**Comma Rules:**
+1. Before FANBOYS joining complete sentences
+2. After introductory elements
+3. Around non-essential info
+4. Between items in series
+
+**Semicolon:**
+- Joins two complete, related sentences
+- Used with however, therefore, consequently
+
+**Colon:**
+- Introduces list or explanation
+- Must have complete sentence before it
+
+**Apostrophes:**
+- Possession: Bob's car
+- Contractions: don't, won't
+- Its = possessive, It's = it is`,
+      examples: [
+        'Comma: "Running late, Maria grabbed her keys and rushed out."',
+        'Semicolon: "The test was hard; however, I passed."',
+        'Apostrophe: "It\'s been a long day." (It is = It\'s)',
+        'Possession: "The dog\'s tail wagged happily."'
+      ],
+      practiceQuestions: [
+        {
+          id: 'p10e1',
+          question: 'Fix: "Running late Maria grabbed her keys and rushed out"',
+          options: [
+            'Running late, Maria grabbed her keys and rushed out.',
+            'Running, late Maria grabbed her keys and rushed out.',
+            'Running late Maria, grabbed her keys and rushed out.',
+            'No change needed.'
+          ],
+          correctAnswer: 0,
+          explanation: 'Comma needed after introductory phrase',
+          difficulty: 'easy'
+        },
+        {
+          id: 'p10e2',
+          question: 'Fix: "The test was hard however I passed"',
+          options: [
+            'The test was hard, however I passed.',
+            'The test was hard; however, I passed.',
+            'The test was hard: however I passed.',
+            'The test was hard however, I passed.'
+          ],
+          correctAnswer: 1,
+          explanation: 'Semicolon before conjunctive adverb, comma after',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p10e3',
+          question: 'Choose correct: (Its/It\'s) been a long day.',
+          options: ['Its', 'It\'s', 'Its\'', 'I\'ts'],
+          correctAnswer: 1,
+          explanation: 'It\'s = it is (contraction)',
+          difficulty: 'easy'
+        }
+      ],
+      quiz: [
+        {
+          id: 'q10e1',
+          question: 'Fix: "The car broke down however we made it"',
+          options: [
+            'down, however',
+            'down; however,',
+            'down: however',
+            'down however,'
+          ],
+          correctAnswer: 1,
+          explanation: 'Semicolon before conjunctive adverb, comma after',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q10e2',
+          question: '___ going to rain tomorrow.',
+          options: ['Its', 'It\'s', 'Its\'', 'I\'ts'],
+          correctAnswer: 1,
+          explanation: 'It\'s = it is',
+          difficulty: 'easy'
+        }
+      ]
+    },
+    completed: false
+  },
+  // DAY 11: GEOMETRY & FUNCTIONS
+  {
+    day: 11,
+    mathLesson: {
+      id: 'm11',
+      title: 'Essential Geometry & Functions',
+      subject: 'math',
+      concept: `**Triangle Properties:**
+- Sum of angles = 180°
+- Area = ½bh
+- Perimeter = sum of all sides
+
+**Special Right Triangles:**
+- 3-4-5 (and multiples: 6-8-10, 9-12-15)
+- 5-12-13
+- 45-45-90: legs are x, x, hypotenuse is x√2
+- 30-60-90: sides are x, x√3, 2x
+
+**Circle Formulas:**
+- Circumference = 2πr
+- Area = πr²
+- Arc length = (θ/360) × 2πr
+
+**Coordinate Geometry:**
+- Distance: d = √[(x₂-x₁)² + (y₂-y₁)²]
+- Midpoint: ((x₁+x₂)/2, (y₁+y₂)/2)
+- Slope: m = (y₂-y₁)/(x₂-x₁)
+
+**Function Notation:**
+- f(x) means "function of x"
+- To evaluate f(3), substitute 3 for x
+
+**Linear Functions:**
+- Form: f(x) = mx + b
+- m = slope, b = y-intercept
+- Parallel lines: same slope
+- Perpendicular: slopes multiply to -1
+
+**Quadratic Functions:**
+- Form: f(x) = ax² + bx + c
+- Vertex form: f(x) = a(x - h)² + k
+- Vertex at (h, k)`,
+      examples: [
+        'Right triangle with legs 5 and 12: hypotenuse = √(5² + 12²) = √169 = 13',
+        'Circle with area 49π: r² = 49, so r = 7',
+        'Distance from (1,2) to (4,6): √[(4-1)² + (6-2)²] = √[9+16] = 5',
+        'If f(x) = 3x - 7, then f(4) = 3(4) - 7 = 5'
+      ],
+      practiceQuestions: [
+        {
+          id: 'p11m1',
+          question: 'A right triangle has legs of 5 and 12. What is the hypotenuse?',
+          options: ['11', '12', '13', '14'],
+          correctAnswer: 2,
+          explanation: 'Use Pythagorean theorem: √(5² + 12²) = √169 = 13',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p11m2',
+          question: 'A circle has area 49π. What is the radius?',
+          options: ['6', '7', '8', '9'],
+          correctAnswer: 1,
+          explanation: 'Area = πr², so 49π = πr², r² = 49, r = 7',
+          difficulty: 'easy'
+        },
+        {
+          id: 'p11m3',
+          question: 'What is the distance from (1,2) to (4,6)?',
+          options: ['4', '5', '6', '7'],
+          correctAnswer: 1,
+          explanation: 'Distance = √[(4-1)² + (6-2)²] = √[9+16] = 5',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p11m4',
+          question: 'If f(x) = 3x - 7, find f(4)',
+          options: ['3', '4', '5', '6'],
+          correctAnswer: 2,
+          explanation: 'f(4) = 3(4) - 7 = 12 - 7 = 5',
+          difficulty: 'easy'
+        },
+        {
+          id: 'p11m5',
+          question: 'In a 45-45-90 triangle with leg = 5, what is the hypotenuse?',
+          options: ['5', '5√2', '10', '5√3'],
+          correctAnswer: 1,
+          explanation: 'In 45-45-90 triangle, hypotenuse = leg × √2',
+          difficulty: 'medium'
+        }
+      ],
+      quiz: [
+        {
+          id: 'q11m1',
+          question: 'A right triangle has legs 8 and 15. What is the hypotenuse?',
+          options: ['16', '17', '18', '19'],
+          correctAnswer: 1,
+          explanation: '√(8² + 15²) = √(64 + 225) = √289 = 17',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q11m2',
+          question: 'A circle has radius 6. What is the area?',
+          options: ['24π', '30π', '36π', '42π'],
+          correctAnswer: 2,
+          explanation: 'Area = πr² = π(6²) = 36π',
+          difficulty: 'easy'
+        },
+        {
+          id: 'q11m3',
+          question: 'What is the distance from (0,0) to (3,4)?',
+          options: ['4', '5', '6', '7'],
+          correctAnswer: 1,
+          explanation: 'Distance = √(3² + 4²) = √25 = 5',
+          difficulty: 'easy'
+        },
+        {
+          id: 'q11m4',
+          question: 'If f(x) = 2x² - 3x + 1, find f(2)',
+          options: ['3', '4', '5', '6'],
+          correctAnswer: 0,
+          explanation: 'f(2) = 2(4) - 3(2) + 1 = 8 - 6 + 1 = 3',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q11m5',
+          question: 'What is the slope of the line through (1,3) and (3,7)?',
+          options: ['1', '2', '3', '4'],
+          correctAnswer: 1,
+          explanation: 'Slope = (7-3)/(3-1) = 4/2 = 2',
+          difficulty: 'easy'
+        }
+      ]
+    },
+    englishLesson: {
+      id: 'e11',
+      title: 'Advanced Grammar',
+      subject: 'english',
+      concept: `**Subject-Verb Agreement:**
+- Singular subjects → singular verbs
+- Plural subjects → plural verbs
+- Intervening phrases don't change agreement
+- "The team of players IS ready" (team is singular)
+
+**Tricky Cases:**
+- Either/neither = singular
+- Each/every = singular
+- Collective nouns (team, group) = usually singular
+- "And" makes plural, "or" follows closer subject
+
+**Pronoun Agreement:**
+- Must match in number and gender
+- "Everyone brought THEIR book" is technically wrong
+- ACT prefers: "Everyone brought his or her book"`,
+      examples: [
+        'The committee has made its decision. (committee = singular)',
+        'Neither of the students was prepared. (neither = singular)',
+        'Everyone must bring his or her ID. (everyone = singular)',
+        'Either John or his friends are responsible. (follows "friends")'
+      ],
+      practiceQuestions: [
+        {
+          id: 'p11e1',
+          question: 'The committee (has/have) made its decision.',
+          options: ['has', 'have', 'had', 'having'],
+          correctAnswer: 0,
+          explanation: 'Committee is a singular collective noun',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p11e2',
+          question: 'Neither of the students (was/were) prepared.',
+          options: ['was', 'were', 'is', 'are'],
+          correctAnswer: 0,
+          explanation: 'Neither is singular',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p11e3',
+          question: 'Everyone must bring (their/his or her) ID.',
+          options: ['their', 'his or her', 'there', 'they\'re'],
+          correctAnswer: 1,
+          explanation: 'Everyone is singular',
+          difficulty: 'medium'
+        }
+      ],
+      quiz: [
+        {
+          id: 'q11e1',
+          question: 'The team of players ___ practicing.',
+          options: ['is', 'are', 'were', 'been'],
+          correctAnswer: 0,
+          explanation: 'Team is singular',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q11e2',
+          question: 'Neither the teacher nor the students ___ happy.',
+          options: ['is', 'was', 'are', 'has been'],
+          correctAnswer: 2,
+          explanation: 'With "neither...nor", verb agrees with closer subject (students)',
+          difficulty: 'hard'
+        }
+      ]
+    },
+    completed: false
+  },
+  // DAY 12: WORD PROBLEMS & STATISTICS
+  {
+    day: 12,
+    mathLesson: {
+      id: 'm12',
+      title: 'Word Problems & Statistics',
+      subject: 'math',
+      concept: `**Key Translations:**
+- "is" = equals (=)
+- "of" = multiply (×)
+- "per" = divide (÷)
+- "more than" = add (+)
+- "less than" = subtract (-)
+- "twice/double" = 2×
+- "half" = ÷2 or ×0.5
+
+**Setup Strategy:**
+1. Define variables clearly
+2. Translate sentence by sentence
+3. Solve systematically
+4. Check: does answer make sense?
+
+**Example: Complex Word Problem**
+"Tom has 3 more than twice as many marbles as Jerry. Together they have 39 marbles. How many does Tom have?"
+- Let J = Jerry's marbles
+- Tom = 2J + 3
+- Together: J + (2J + 3) = 39
+- 3J + 3 = 39
+- 3J = 36
+- J = 12, Tom = 27
+
+**Statistics:**
+- Mean = average (sum/count)
+- Median = middle value when ordered
+- Mode = most frequent value
+
+**Probability:**
+- P(event) = favorable outcomes/total outcomes
+- P(A and B) = P(A) × P(B) if independent
+- P(A or B) = P(A) + P(B) - P(A and B)`,
+      examples: [
+        'Jane is 4 years older than twice Bill\'s age. Jane is 22. Bill = (22-4)÷2 = 9',
+        'Mean of 5, 8, 11, 12, 14 = (5+8+11+12+14)÷5 = 10',
+        'Median of 3, 7, 9, 12, 15, 18 = (9+12)÷2 = 10.5',
+        'Probability of rolling even on die = 3/6 = 1/2'
+      ],
+      practiceQuestions: [
+        {
+          id: 'p12m1',
+          question: 'Jane is 4 years older than twice Bill\'s age. If Jane is 22, how old is Bill?',
+          options: ['7', '8', '9', '10'],
+          correctAnswer: 2,
+          explanation: 'Let B = Bill\'s age. 22 = 2B + 4, so 2B = 18, B = 9',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p12m2',
+          question: 'What is the mean of 5, 8, 11, 12, 14?',
+          options: ['9', '10', '11', '12'],
+          correctAnswer: 1,
+          explanation: '(5+8+11+12+14) ÷ 5 = 50 ÷ 5 = 10',
+          difficulty: 'easy'
+        },
+        {
+          id: 'p12m3',
+          question: '40% of a number plus 30 equals 50. Find the number.',
+          options: ['40', '45', '50', '55'],
+          correctAnswer: 2,
+          explanation: '0.4x + 30 = 50, so 0.4x = 20, x = 50',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p12m4',
+          question: 'What is the probability of rolling an even number on a standard die?',
+          options: ['1/6', '1/3', '1/2', '2/3'],
+          correctAnswer: 2,
+          explanation: 'Even numbers: 2, 4, 6. So 3/6 = 1/2',
+          difficulty: 'easy'
+        },
+        {
+          id: 'p12m5',
+          question: 'Three consecutive integers sum to 48. Find the largest.',
+          options: ['15', '16', '17', '18'],
+          correctAnswer: 2,
+          explanation: 'Let x, x+1, x+2. Then 3x+3=48, 3x=45, x=15. Largest = 17',
+          difficulty: 'hard'
+        }
+      ],
+      quiz: [
+        {
+          id: 'q12m1',
+          question: 'Sam is 3 less than three times Joe\'s age. If Sam is 18, how old is Joe?',
+          options: ['5', '6', '7', '8'],
+          correctAnswer: 2,
+          explanation: 'Let J = Joe\'s age. 18 = 3J - 3, so 3J = 21, J = 7',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q12m2',
+          question: 'What is the mean of 4, 7, 9, 12?',
+          options: ['7', '8', '9', '10'],
+          correctAnswer: 1,
+          explanation: '(4+7+9+12) ÷ 4 = 32 ÷ 4 = 8',
+          difficulty: 'easy'
+        },
+        {
+          id: 'q12m3',
+          question: 'After a 30% markup, the price is $91. What was the original price?',
+          options: ['$60', '$65', '$70', '$75'],
+          correctAnswer: 2,
+          explanation: 'Let x = original. 1.3x = 91, so x = 70',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q12m4',
+          question: 'What is P(rolling 3 or higher on a die)?',
+          options: ['1/3', '1/2', '2/3', '3/4'],
+          correctAnswer: 2,
+          explanation: 'Numbers 3,4,5,6 = 4 outcomes. 4/6 = 2/3',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q12m5',
+          question: 'What is the median of 2, 5, 8, 10, 15?',
+          options: ['7', '8', '9', '10'],
+          correctAnswer: 1,
+          explanation: 'Middle value of ordered set is 8',
+          difficulty: 'easy'
+        }
+      ]
+    },
+    englishLesson: {
+      id: 'e12',
+      title: 'Reading Comprehension Strategies',
+      subject: 'english',
+      concept: `**Active Reading Strategies:**
+1. Read the question first
+2. Skim the passage for main ideas
+3. Look for transition words
+4. Identify author's tone and purpose
+
+**Question Types:**
+- Main idea: What is the passage mainly about?
+- Detail: According to the passage...
+- Inference: The author suggests that...
+- Vocabulary: As used in line X, the word means...
+
+**Common Transitions:**
+- However, but, yet = contrast
+- Therefore, thus, consequently = cause/effect
+- Furthermore, moreover = additional support
+- For example, such as = illustration`,
+      examples: [
+        'Main idea questions ask for the central theme of the entire passage',
+        'Detail questions can be answered by finding specific information in the text',
+        'Inference questions require you to read between the lines',
+        'Always eliminate obviously wrong answers first'
+      ],
+      practiceQuestions: [
+        {
+          id: 'p12e1',
+          question: 'When approaching a reading passage, you should first:',
+          options: [
+            'Read the entire passage carefully',
+            'Read the questions first',
+            'Take notes on every paragraph',
+            'Look up unfamiliar words'
+          ],
+          correctAnswer: 1,
+          explanation: 'Reading questions first helps you know what to look for',
+          difficulty: 'easy'
+        },
+        {
+          id: 'p12e2',
+          question: 'The word "however" in a passage typically signals:',
+          options: [
+            'Additional support',
+            'An example',
+            'A contrast',
+            'A conclusion'
+          ],
+          correctAnswer: 2,
+          explanation: 'However indicates a contrast or opposing idea',
+          difficulty: 'easy'
+        },
+        {
+          id: 'p12e3',
+          question: 'Inference questions require you to:',
+          options: [
+            'Find information stated directly in the passage',
+            'Read between the lines',
+            'Memorize the passage',
+            'Ignore the passage and use prior knowledge'
+          ],
+          correctAnswer: 1,
+          explanation: 'Inference questions ask you to draw conclusions not explicitly stated',
+          difficulty: 'medium'
+        }
+      ],
+      quiz: [
+        {
+          id: 'q12e1',
+          question: 'What should you do first when approaching a reading passage?',
+          options: [
+            'Read every word carefully',
+            'Read the questions first',
+            'Make an outline',
+            'Check the time'
+          ],
+          correctAnswer: 1,
+          explanation: 'Reading questions first helps focus your reading',
+          difficulty: 'easy'
+        },
+        {
+          id: 'q12e2',
+          question: 'The transition "therefore" typically indicates:',
+          options: [
+            'Contrast',
+            'Example',
+            'Cause and effect',
+            'Time sequence'
+          ],
+          correctAnswer: 2,
+          explanation: 'Therefore shows a cause-and-effect relationship',
+          difficulty: 'easy'
+        }
+      ]
+    },
+    completed: false
+  },
+  // DAY 13: COMPREHENSIVE REVIEW
+  {
+    day: 13,
+    mathLesson: {
+      id: 'm13',
+      title: 'Comprehensive Math Review',
+      subject: 'math',
+      concept: `**Review of All Key Topics:**
+
+**Percentages & Ratios:**
+- Percent = part/whole × 100
+- Percent change = (new - old)/old × 100
+- Ratios: distribute total proportionally
+
+**Algebra:**
+- Solve equations systematically
+- Systems: substitution or elimination
+- Exponent rules: x^a × x^b = x^(a+b)
+
+**Geometry:**
+- Triangle angles sum to 180°
+- Pythagorean theorem: a² + b² = c²
+- Circle: A = πr², C = 2πr
+
+**Functions:**
+- f(x) notation: substitute value for x
+- Linear: f(x) = mx + b
+- Quadratic: f(x) = ax² + bx + c
+
+**Word Problems:**
+- Define variables clearly
+- Translate words to math
+- Check answers for reasonableness
+
+**Statistics:**
+- Mean = sum/count
+- Median = middle value
+- Mode = most frequent
+- Probability = favorable/total`,
+      examples: [
+        'Mixed review covering all topics from previous days',
+        'Focus on most common ACT question types',
+        'Practice speed and accuracy',
+        'Review any weak areas identified'
+      ],
+      practiceQuestions: [
+        {
+          id: 'p13m1',
+          question: 'A store marks up items 40% then offers 25% off. If final price is $42, what was the original cost?',
+          options: ['$35', '$40', '$45', '$50'],
+          correctAnswer: 1,
+          explanation: 'Let x = original. x(1.4)(0.75) = 42, so 1.05x = 42, x = 40',
+          difficulty: 'hard'
+        },
+        {
+          id: 'p13m2',
+          question: 'If f(x) = x² - 4x + 3, what is f(5)?',
+          options: ['6', '7', '8', '9'],
+          correctAnswer: 2,
+          explanation: 'f(5) = 25 - 20 + 3 = 8',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p13m3',
+          question: 'A right triangle has legs in ratio 3:4. If the hypotenuse is 15, what is the longer leg?',
+          options: ['9', '10', '12', '15'],
+          correctAnswer: 2,
+          explanation: 'If legs are 3x and 4x, then (3x)² + (4x)² = 15². So 25x² = 225, x = 3. Longer leg = 4(3) = 12',
+          difficulty: 'hard'
+        },
+        {
+          id: 'p13m4',
+          question: 'The mean of five numbers is 12. If four of them are 8, 10, 14, 16, what is the fifth?',
+          options: ['10', '11', '12', '13'],
+          correctAnswer: 2,
+          explanation: 'Total = 5 × 12 = 60. Known sum = 48. Fifth number = 60 - 48 = 12',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p13m5',
+          question: 'Solve: 2(3x - 4) = 5x + 7',
+          options: ['x = 15', 'x = 16', 'x = 17', 'x = 18'],
+          correctAnswer: 0,
+          explanation: '6x - 8 = 5x + 7, so x = 15',
+          difficulty: 'medium'
+        }
+      ],
+      quiz: [
+        {
+          id: 'q13m1',
+          question: 'A number decreased by 15% is 68. What is the original number?',
+          options: ['75', '80', '85', '90'],
+          correctAnswer: 1,
+          explanation: '0.85x = 68, so x = 80',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q13m2',
+          question: 'In a 30-60-90 triangle with hypotenuse 10, what is the shortest side?',
+          options: ['3', '4', '5', '6'],
+          correctAnswer: 2,
+          explanation: 'In 30-60-90, sides are x, x√3, 2x. If 2x = 10, then x = 5',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q13m3',
+          question: 'What is the distance between points (2,1) and (6,4)?',
+          options: ['4', '5', '6', '7'],
+          correctAnswer: 1,
+          explanation: 'Distance = √[(6-2)² + (4-1)²] = √[16+9] = 5',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q13m4',
+          question: 'If 3^(x+1) = 27, what is x?',
+          options: ['1', '2', '3', '4'],
+          correctAnswer: 1,
+          explanation: '3^(x+1) = 3³, so x+1 = 3, x = 2',
+          difficulty: 'medium'
+        },
+        {
+          id: 'q13m5',
+          question: 'A bag contains 3 red, 4 blue, and 5 green marbles. What is P(red or blue)?',
+          options: ['7/12', '7/11', '5/12', '1/2'],
+          correctAnswer: 0,
+          explanation: 'P(red or blue) = 7/12 (7 favorable out of 12 total)',
+          difficulty: 'easy'
+        }
+      ]
+    },
+    englishLesson: {
+      id: 'e13',
+      title: 'Comprehensive English Review',
+      subject: 'english',
+      concept: `**Grammar Review:**
+- Subject-verb agreement (collective nouns, indefinite pronouns)
+- Pronoun agreement and clarity
+- Verb tenses and consistency
+- Parallel structure
+
+**Punctuation Review:**
+- Commas: FANBOYS, introductory elements, non-essential info
+- Semicolons: joining sentences, with conjunctive adverbs
+- Colons: introducing lists/explanations
+- Apostrophes: possession vs. contractions
+
+**Sentence Structure:**
+- Run-on sentences and fragments
+- Modifier placement
+- Transitions and flow
+- Conciseness and clarity
+
+**Reading Strategies:**
+- Read questions first
+- Identify main ideas and supporting details
+- Recognize author's tone and purpose
+- Make inferences based on evidence`,
+      examples: [
+        'Review all grammar rules covered in previous days',
+        'Practice identifying common error patterns',
+        'Focus on most frequently tested concepts',
+        'Build confidence with comprehensive practice'
+      ],
+      practiceQuestions: [
+        {
+          id: 'p13e1',
+          question: 'The group of students (was/were) excited about the field trip.',
+          options: ['was', 'were', 'are', 'is'],
+          correctAnswer: 0,
+          explanation: 'Group is a singular collective noun',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p13e2',
+          question: 'Fix the punctuation: "The meeting was long therefore we ordered pizza"',
+          options: [
+            'long, therefore',
+            'long; therefore,',
+            'long: therefore',
+            'long therefore,'
+          ],
+          correctAnswer: 1,
+          explanation: 'Semicolon before conjunctive adverb, comma after',
+          difficulty: 'medium'
+        },
+        {
+          id: 'p13e3',
+          question: 'Choose the best revision: "The book that I read yesterday which was very interesting."',
+          options: [
+            'The book that I read yesterday, which was very interesting.',
+            'The book that I read yesterday was very interesting.',
+            'The book, that I read yesterday, which was very interesting.',
+            'No change needed.'
+          ],
+          correctAnswer: 1,
+          explanation: 'Complete the sentence properly',
+          difficulty: 'medium'
+        }
+      ],
+      quiz: [
+        {
+          id: 'q13e1',
+          question: 'Everyone in the class (has/have) finished the assignment.',
+          options: ['has', 'have', 'had', 'having'],
+          correctAnswer: 0,
+          explanation: 'Everyone is singular',
+          difficulty: 'easy'
+        },
+        {
+          id: 'q13e2',
+          question: 'Fix: "She enjoys reading writing and painting"',
+          options: [
+            'reading, writing, and painting',
+            'reading writing, and painting',
+            'reading, writing and painting',
+            'No change needed'
+          ],
+          correctAnswer: 0,
+          explanation: 'Commas needed between items in a series',
+          difficulty: 'easy'
+        },
+        {
+          id: 'q13e3',
+          question: 'Which shows correct parallel structure?',
+          options: [
+            'He likes swimming, running, and to bike.',
+            'He likes swimming, running, and biking.',
+            'He likes to swim, running, and biking.',
+            'He likes swimming, to run, and biking.'
+          ],
+          correctAnswer: 1,
+          explanation: 'All items should use the same form (-ing)',
+          difficulty: 'medium'
+        }
+      ]
+    },
+    completed: false
   }
 ];
