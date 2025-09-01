@@ -1,8 +1,9 @@
-import { Calendar, Target, TrendingUp, AlertCircle, Clock, CheckCircle } from 'lucide-react';
+import { Target, TrendingUp, AlertCircle, Clock, CheckCircle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useProgress } from '@/hooks/useProgress';
+import { FiveDayCalendar } from './FiveDayCalendar';
 
 interface DashboardProps {
   onStartDay: (day: number) => void;
@@ -12,8 +13,9 @@ interface DashboardProps {
 export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
   const { progress } = useProgress();
   
-  const daysUntilTest = Math.max(0, 11 - progress.currentDay);
-  const completionPercentage = (progress.completedDays.length / 11) * 100;
+  const daysUntilTest = 5; // Fixed 5 days until test
+  const totalDays = 5; // Total days in the intensive plan
+  const completionPercentage = (progress.completedDays.filter(day => day >= 9 && day <= 13).length / totalDays) * 100;
   
   const topWeakAreas = progress.weakAreas
     .sort((a, b) => b.errorCount - a.errorCount)
@@ -27,20 +29,23 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
           ACT Prep Dashboard
         </h1>
         <p className="text-muted-foreground">
-          Test Date: September 6 • {daysUntilTest} days of prep remaining
+          Test Date: September 6 • {daysUntilTest} days intensive prep
         </p>
       </div>
+
+      {/* 5-Day Calendar */}
+      <FiveDayCalendar progress={progress} onSelectDay={onStartDay} />
 
       {/* Progress Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-6 shadow-soft">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/10 rounded-lg">
-              <Calendar className="w-5 h-5 text-primary" />
+              <Target className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Current Day</p>
-              <p className="text-2xl font-bold">{progress.currentDay}/11</p>
+              <p className="text-sm text-muted-foreground">Days Completed</p>
+              <p className="text-2xl font-bold">{progress.completedDays.filter(day => day >= 9 && day <= 13).length}/{totalDays}</p>
             </div>
           </div>
         </Card>
@@ -74,36 +79,42 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
       <Card className="p-6 shadow-soft">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold">Overall Progress</h3>
+            <h3 className="font-semibold">5-Day Progress</h3>
             <span className="text-sm text-muted-foreground">
-              {progress.completedDays.length} of 11 days completed
+              {progress.completedDays.filter(day => day >= 9 && day <= 13).length} of {totalDays} days completed
             </span>
           </div>
           <Progress value={completionPercentage} className="h-3" />
         </div>
       </Card>
 
-      {/* Current Day Action */}
-      {progress.currentDay <= 11 && (
-        <Card className="p-6 shadow-medium border-primary/20">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <h3 className="font-semibold text-lg">Day {progress.currentDay} Ready</h3>
-              <p className="text-muted-foreground">
-                Continue your ACT prep journey
-              </p>
-            </div>
-            <Button 
-              variant="hero" 
-              size="lg"
-              onClick={() => onStartDay(progress.currentDay)}
-              className="px-8"
-            >
-              Start Day {progress.currentDay}
-            </Button>
-          </div>
-        </Card>
-      )}
+      {/* Next Day Suggestion */}
+      {(() => {
+        const nextDay = progress.completedDays.filter(day => day >= 9 && day <= 13).length + 9;
+        if (nextDay <= 13) {
+          return (
+            <Card className="p-6 shadow-medium border-primary/20">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h3 className="font-semibold text-lg">Day {nextDay} Ready</h3>
+                  <p className="text-muted-foreground">
+                    Continue your intensive ACT prep
+                  </p>
+                </div>
+                <Button 
+                  variant="hero" 
+                  size="lg"
+                  onClick={() => onStartDay(nextDay)}
+                  className="px-8"
+                >
+                  Start Day {nextDay}
+                </Button>
+              </div>
+            </Card>
+          );
+        }
+        return null;
+      })()}
 
       {/* Weak Areas */}
       {topWeakAreas.length > 0 && (
@@ -155,8 +166,8 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
               className="w-full"
               onClick={() => {
                 console.log("Math drill button clicked from Dashboard");
-                // For now, we'll direct them to Day 1 where drills are available
-                onStartDay(1);
+                // Direct to Day 9 where new drills are available
+                onStartDay(9);
               }}
             >
               🔢 Start Math Drill (60s)
@@ -178,8 +189,8 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
               className="w-full"
               onClick={() => {
                 console.log("Grammar drill button clicked from Dashboard");
-                // For now, we'll direct them to Day 1 where drills are available
-                onStartDay(1);
+                // Direct to Day 9 where new drills are available
+                onStartDay(9);
               }}
             >
               ✏️ Start Grammar Drill (90s)

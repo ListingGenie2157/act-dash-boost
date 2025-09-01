@@ -62,8 +62,9 @@ export const useProgress = () => {
   const completeDay = (day: number) => {
     setProgress(prev => ({
       ...prev,
-      completedDays: [...prev.completedDays, day],
-      currentDay: Math.min(day + 1, 11)
+      completedDays: prev.completedDays.includes(day) 
+        ? prev.completedDays 
+        : [...prev.completedDays, day]
     }));
   };
 
@@ -72,12 +73,26 @@ export const useProgress = () => {
     localStorage.removeItem('act-prep-progress');
   };
 
+  const updateScore = (lessonId: string, practiceScore: number, quizScore: number) => {
+    setProgress(prev => ({
+      ...prev,
+      scores: {
+        ...prev.scores,
+        [lessonId]: {
+          practiceScore,
+          quizScore
+        }
+      }
+    }));
+  };
+
   return {
     progress,
     updateProgress,
     addWrongAnswer,
     updateWeakAreas,
     completeDay,
+    updateScore,
     resetProgress
   };
 };

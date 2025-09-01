@@ -29,9 +29,9 @@ export default {
 				'medium': 'var(--shadow-medium)',
 				'strong': 'var(--shadow-strong)',
 			},
-			transitionProperty: {
-				'smooth': 'var(--transition-smooth)',
-				'fast': 'var(--transition-fast)',
+			transitionTimingFunction: {
+				'smooth': 'cubic-bezier(0.4, 0, 0.2, 1)',
+				'fast': 'ease-out',
 			},
 			colors: {
 				border: 'hsl(var(--border))',
