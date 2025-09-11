@@ -1,11 +1,11 @@
 import { Target, TrendingUp, AlertCircle, Clock, CheckCircle, Brain } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useProgress } from '@/hooks/useProgress';
 import { FiveDayCalendar } from './FiveDayCalendar';
-import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
 interface DashboardProps {
@@ -254,17 +254,24 @@ export const Dashboard = ({ onStartDay, onViewReview, onStudyNow }: DashboardPro
             <p className="text-sm text-muted-foreground">
               Quick grammar rules practice
             </p>
-            <Button 
-              variant="success" 
-              className="w-full"
-              onClick={() => {
-                console.log("Grammar drill button clicked from Dashboard");
-                // Direct to Day 9 where new drills are available
-                onStartDay(9);
-              }}
-            >
-              ✏️ Start Grammar Drill (90s)
-            </Button>
+            <div className="space-y-2">
+              <Button 
+                variant="success" 
+                className="w-full"
+                onClick={() => {
+                  console.log("Grammar drill button clicked from Dashboard");
+                  // Direct to Day 9 where new drills are available
+                  onStartDay(9);
+                }}
+              >
+                ✏️ Start Grammar Drill (90s)
+              </Button>
+              <Link to="/sim-english">
+                <Button variant="outline" size="sm" className="w-full">
+                  Start English SIM
+                </Button>
+              </Link>
+            </div>
           </div>
         </Card>
       </div>

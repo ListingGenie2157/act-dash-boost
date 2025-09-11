@@ -7,6 +7,11 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import Diagnostic from "./pages/Diagnostic";
+import SimEnglish from "./pages/SimEnglish";
+import EnglishCheatsheet from "./pages/Cheatsheets/English";
+import MathCheatsheet from "./pages/Cheatsheets/Math";
+import ReadingCheatsheet from "./pages/Cheatsheets/Reading";
+import ScienceCheatsheet from "./pages/Cheatsheets/Science";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +27,13 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           {/* Diagnostic assessment route */}
           <Route path="/diagnostic" element={<Diagnostic />} />
+          {/* Simulation routes */}
+          <Route path="/sim-english" element={<SimEnglish />} />
+          {/* Cheatsheet routes */}
+          <Route path="/cheatsheets/english" element={<EnglishCheatsheet />} />
+          <Route path="/cheatsheets/math" element={<MathCheatsheet />} />
+          <Route path="/cheatsheets/reading" element={<ReadingCheatsheet />} />
+          <Route path="/cheatsheets/science" element={<ScienceCheatsheet />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

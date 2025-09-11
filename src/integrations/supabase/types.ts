@@ -229,6 +229,39 @@ export type Database = {
           },
         ]
       }
+      sim_results: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          raw_score: number
+          section: string
+          started_at: string
+          time_stats_json: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          raw_score: number
+          section: string
+          started_at?: string
+          time_stats_json?: Json | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          raw_score?: number
+          section?: string
+          started_at?: string
+          time_stats_json?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       skills: {
         Row: {
           cluster: string

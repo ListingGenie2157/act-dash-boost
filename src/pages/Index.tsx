@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Dashboard } from '@/components/Dashboard';
 import { DayView } from '@/components/DayView';
 import { CountdownHeader } from '@/components/CountdownHeader';
 import { StudyNow } from '@/components/StudyNow';
+import { Button } from '@/components/ui/button';
 import { curriculum } from '@/data/curriculum';
 import { useProgress } from '@/hooks/useProgress';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
 
 type View = 'dashboard' | 'day' | 'review' | 'study';
 
@@ -84,6 +85,25 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <CountdownHeader />
+      
+      {/* Navigation Header */}
+      <div className="border-b bg-card/50">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+          <div className="flex gap-4">
+            <Link to="/sim-english">
+              <Button variant="outline" size="sm">
+                Start English SIM
+              </Button>
+            </Link>
+            <Link to="/cheatsheets/english">
+              <Button variant="outline" size="sm">
+                Cheatsheets
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+      
       <div className="container max-w-4xl mx-auto px-4 py-6">
         {currentView === 'dashboard' && (
           <div className="space-y-8">
