@@ -8,9 +8,10 @@ import { FiveDayCalendar } from './FiveDayCalendar';
 interface DashboardProps {
   onStartDay: (day: number) => void;
   onViewReview: () => void;
+  onStudyNow?: () => void;
 }
 
-export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
+export const Dashboard = ({ onStartDay, onViewReview, onStudyNow }: DashboardProps) => {
   const { progress } = useProgress();
   
   const daysUntilTest = 5; // Fixed 5 days until test

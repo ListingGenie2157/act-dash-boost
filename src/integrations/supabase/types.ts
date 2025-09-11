@@ -302,7 +302,37 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vw_user_skill_stats: {
+        Row: {
+          accuracy_percentage: number | null
+          cluster: string | null
+          combined_accuracy: number | null
+          correct: number | null
+          effective_median_time_ms: number | null
+          last_seen_progress: string | null
+          last_task_date: string | null
+          mastery_level: number | null
+          progress_median_time_ms: number | null
+          recent_avg_accuracy: number | null
+          recent_avg_time_ms: number | null
+          recent_completed_tasks: number | null
+          recent_tasks_count: number | null
+          seen: number | null
+          skill_id: string | null
+          skill_name: string | null
+          subject: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "progress_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       [_ in never]: never

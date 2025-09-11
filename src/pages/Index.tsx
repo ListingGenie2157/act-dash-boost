@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { Dashboard } from '@/components/Dashboard';
 import { DayView } from '@/components/DayView';
 import { CountdownHeader } from '@/components/CountdownHeader';
+import { StudyNow } from '@/components/StudyNow';
 import { curriculum } from '@/data/curriculum';
 import { useProgress } from '@/hooks/useProgress';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 
-type View = 'dashboard' | 'day' | 'review';
+type View = 'dashboard' | 'day' | 'review' | 'study';
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<View>('dashboard');
@@ -38,6 +39,10 @@ const Index = () => {
 
   const handleViewReview = () => {
     setCurrentView('review');
+  };
+
+  const handleStudyNow = () => {
+    setCurrentView('study');
   };
 
   const handleDayComplete = (dayNumber: number) => {
@@ -81,12 +86,30 @@ const Index = () => {
       <CountdownHeader />
       <div className="container max-w-4xl mx-auto px-4 py-6">
         {currentView === 'dashboard' && (
-          <Dashboard 
-            onStartDay={handleStartDay}
-            onViewReview={handleViewReview}
-          />
+          <div className="space-y-8">
+            <Dashboard 
+              onStartDay={handleStartDay}
+              onViewReview={handleViewReview}
+            />
+            <StudyNow />
+          </div>
         )}
         
+        {currentView === 'study' && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={handleBackToDashboard}
+                className="p-2 hover:bg-muted rounded-lg transition-colors"
+              >
+                ←
+              </button>
+              <h1 className="text-2xl font-bold">Study Session</h1>
+            </div>
+            <StudyNow />
+          </div>
+        )}
+
         {currentView === 'day' && selectedDayData && (
           <DayView
             day={selectedDayData}

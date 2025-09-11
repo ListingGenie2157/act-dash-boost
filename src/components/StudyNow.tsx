@@ -291,7 +291,10 @@ function TaskRunner({ task, onComplete }: TaskRunnerProps) {
             .limit(task.size);
 
           if (questionsError) throw questionsError;
-          setQuestions(questionsData || []);
+          setQuestions((questionsData || []).map(q => ({
+            ...q,
+            answer: q.answer as 'A' | 'B' | 'C' | 'D'
+          })));
         }
 
         setTimeStarted(Date.now());
