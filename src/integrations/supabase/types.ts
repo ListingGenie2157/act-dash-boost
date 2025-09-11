@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      diagnostics: {
+        Row: {
+          block: number
+          completed_at: string | null
+          id: string
+          responses: Json | null
+          score: number | null
+          section: string
+          started_at: string | null
+          user_id: string
+        }
+        Insert: {
+          block: number
+          completed_at?: string | null
+          id?: string
+          responses?: Json | null
+          score?: number | null
+          section: string
+          started_at?: string | null
+          user_id: string
+        }
+        Update: {
+          block?: number
+          completed_at?: string | null
+          id?: string
+          responses?: Json | null
+          score?: number | null
+          section?: string
+          started_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       error_bank: {
         Row: {
           last_missed_at: string
