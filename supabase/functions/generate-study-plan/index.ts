@@ -94,6 +94,37 @@ function getStudyMode(daysLeft: number | null): StudyMode {
   }
 }
 
+// Test week special scheduling
+function getTestWeekTasks(daysLeft: number, userId: string, dateStr: string): any[] {
+  const tasks: any[] = [];
+  
+  if (daysLeft === 7 || daysLeft === 5 || daysLeft === 3) {
+    // T-7, T-5, T-3: English SIM
+    tasks.push({
+      type: 'SIM',
+      section: 'english',
+      size: 75,
+      estimated_mins: 45
+    });
+  } else if (daysLeft === 2) {
+    // T-2: Only REVIEW tasks
+    tasks.push({
+      type: 'REVIEW',
+      size: 10,
+      estimated_mins: 20
+    });
+  } else if (daysLeft === 1) {
+    // T-1: 15-minute warmup
+    tasks.push({
+      type: 'WARMUP',
+      size: 5,
+      estimated_mins: 15
+    });
+  }
+  
+  return tasks;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -178,6 +209,53 @@ serve(async (req) => {
     const mode = getStudyMode(daysLeft);
 
     console.log(`Study mode: ${mode.name}, Days left: ${daysLeft}, Time cap: ${dailyTimeCap}mins`);
+
+    // Check for test week special scheduling
+    if (daysLeft !== null && daysLeft <= 7) {
+      const specialTasks = getTestWeekTasks(daysLeft, user.id, todayStr);
+      if (specialTasks.length > 0) {
+        // Save special test week plan
+        const { error: planError } = await supabase
+          .from('study_plan_days')
+          .upsert({
+            user_id: user.id,
+            the_date: todayStr,
+            tasks_json: specialTasks,
+            generated_at: new Date().toISOString()
+          });
+
+        if (planError) {
+          console.error('Error saving test week plan:', planError);
+        } else {
+          // Create study tasks for special schedule
+          const studyTasks = specialTasks.map((task: any) => ({
+            user_id: user.id,
+            the_date: todayStr,
+            type: task.type,
+            skill_id: task.skill_id || null,
+            size: task.size,
+            status: 'PENDING',
+            reward_cents: task.type === 'SIM' ? 50 : task.type === 'REVIEW' ? 10 : 25
+          }));
+
+          if (studyTasks.length > 0) {
+            await supabase.from('study_tasks').upsert(studyTasks, { 
+              onConflict: 'user_id,the_date,type,skill_id',
+              ignoreDuplicates: false 
+            });
+          }
+
+          return new Response(JSON.stringify({
+            the_date: todayStr,
+            tasks: specialTasks,
+            mode: 'TEST_WEEK',
+            days_left: daysLeft
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+    }
 
     // Get due reviews
     const { data: dueReviews } = await supabase

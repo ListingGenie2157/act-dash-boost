@@ -4,6 +4,7 @@ import { Dashboard } from '@/components/Dashboard';
 import { DayView } from '@/components/DayView';
 import { CountdownHeader } from '@/components/CountdownHeader';
 import { StudyNow } from '@/components/StudyNow';
+import { TestWeekBanner } from '@/components/TestWeekBanner';
 import { Button } from '@/components/ui/button';
 import { curriculum } from '@/data/curriculum';
 import { useProgress } from '@/hooks/useProgress';
@@ -107,6 +108,7 @@ const Index = () => {
       <div className="container max-w-4xl mx-auto px-4 py-6">
         {currentView === 'dashboard' && (
           <div className="space-y-8">
+            <TestWeekBanner />
             <Dashboard 
               onStartDay={handleStartDay}
               onViewReview={handleViewReview}
