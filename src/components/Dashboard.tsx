@@ -1,9 +1,12 @@
-import { Target, TrendingUp, AlertCircle, Clock, CheckCircle } from 'lucide-react';
+import { Target, TrendingUp, AlertCircle, Clock, CheckCircle, Brain } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 import { useProgress } from '@/hooks/useProgress';
 import { FiveDayCalendar } from './FiveDayCalendar';
+import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 
 interface DashboardProps {
   onStartDay: (day: number) => void;
@@ -13,6 +16,15 @@ interface DashboardProps {
 
 export const Dashboard = ({ onStartDay, onViewReview, onStudyNow }: DashboardProps) => {
   const { progress } = useProgress();
+  const navigate = useNavigate();
+  const [diagnosticResults, setDiagnosticResults] = useState<any>(null);
+
+  useEffect(() => {
+    const results = localStorage.getItem('diagnostic-results');
+    if (results) {
+      setDiagnosticResults(JSON.parse(results));
+    }
+  }, []);
   
   const daysUntilTest = 5; // Fixed 5 days until test
   const totalDays = 5; // Total days in the intensive plan
@@ -33,6 +45,63 @@ export const Dashboard = ({ onStartDay, onViewReview, onStudyNow }: DashboardPro
           Test Date: September 6 • {daysUntilTest} days intensive prep
         </p>
       </div>
+
+      {/* Diagnostic Results or Call to Action */}
+      {diagnosticResults ? (
+        <Card className="p-6 shadow-medium border-success/20 bg-gradient-to-r from-success/5 to-primary/5">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Brain className="w-6 h-6 text-success" />
+                <h3 className="text-xl font-semibold">Your Personalized Plan</h3>
+              </div>
+              <p className="text-muted-foreground">
+                Based on your diagnostic: <span className="font-semibold">{diagnosticResults.predicted_section_score}% predicted English score</span>
+              </p>
+              <div className="flex gap-2 mt-3">
+                {diagnosticResults.top_5_weak_skills?.slice(0, 3).map((skill: any, index: number) => (
+                  <Badge key={index} variant="outline" className="text-xs">
+                    {skill.skill.replace('english-', '').replace('-', ' ')} ({Math.round(skill.accuracy)}%)
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            <Button 
+              variant="hero" 
+              size="lg"
+              onClick={() => {
+                localStorage.removeItem('diagnostic-results');
+                setDiagnosticResults(null);
+              }}
+              className="px-6"
+            >
+              Got it!
+            </Button>
+          </div>
+        </Card>
+      ) : (
+        <Card className="p-6 shadow-medium border-primary/20 bg-gradient-to-r from-primary/5 to-secondary/5">
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Brain className="w-6 h-6 text-primary" />
+                <h3 className="text-xl font-semibold">Start with a Diagnostic</h3>
+              </div>
+              <p className="text-muted-foreground">
+                Take a quick assessment to create your personalized study plan
+              </p>
+            </div>
+            <Button 
+              variant="hero" 
+              size="lg"
+              onClick={() => navigate('/diagnostic')}
+              className="px-6"
+            >
+              Take Diagnostic
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* 5-Day Calendar */}
       <FiveDayCalendar progress={progress} onSelectDay={onStartDay} />
