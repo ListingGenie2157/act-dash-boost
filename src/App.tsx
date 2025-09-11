@@ -12,6 +12,7 @@ import EnglishCheatsheet from "./pages/Cheatsheets/English";
 import MathCheatsheet from "./pages/Cheatsheets/Math";
 import ReadingCheatsheet from "./pages/Cheatsheets/Reading";
 import ScienceCheatsheet from "./pages/Cheatsheets/Science";
+import Analytics from "./pages/Analytics";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,8 @@ const App = () => (
           <Route path="/cheatsheets/math" element={<MathCheatsheet />} />
           <Route path="/cheatsheets/reading" element={<ReadingCheatsheet />} />
           <Route path="/cheatsheets/science" element={<ScienceCheatsheet />} />
+          {/* Analytics route */}
+          <Route path="/analytics" element={<Analytics />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

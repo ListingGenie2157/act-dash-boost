@@ -101,6 +101,11 @@ const Index = () => {
                 Cheatsheets
               </Button>
             </Link>
+            <Link to="/analytics">
+              <Button variant="outline" size="sm">
+                Analytics
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
