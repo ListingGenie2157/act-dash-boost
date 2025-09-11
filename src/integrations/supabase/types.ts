@@ -14,7 +14,292 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      error_bank: {
+        Row: {
+          last_missed_at: string
+          miss_count: number | null
+          question_id: string
+          user_id: string
+        }
+        Insert: {
+          last_missed_at?: string
+          miss_count?: number | null
+          question_id: string
+          user_id: string
+        }
+        Update: {
+          last_missed_at?: string
+          miss_count?: number | null
+          question_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "error_bank_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          daily_time_cap_mins: number | null
+          id: string
+          test_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          daily_time_cap_mins?: number | null
+          id: string
+          test_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          daily_time_cap_mins?: number | null
+          id?: string
+          test_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      progress: {
+        Row: {
+          correct: number | null
+          mastery_level: number | null
+          median_time_ms: number | null
+          seen: number | null
+          skill_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          correct?: number | null
+          mastery_level?: number | null
+          median_time_ms?: number | null
+          seen?: number | null
+          skill_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          correct?: number | null
+          mastery_level?: number | null
+          median_time_ms?: number | null
+          seen?: number | null
+          skill_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "progress_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      questions: {
+        Row: {
+          answer: string
+          choice_a: string
+          choice_b: string
+          choice_c: string
+          choice_d: string
+          created_at: string | null
+          difficulty: number
+          explanation: string | null
+          id: string
+          skill_id: string
+          stem: string
+          time_limit_secs: number | null
+        }
+        Insert: {
+          answer: string
+          choice_a: string
+          choice_b: string
+          choice_c: string
+          choice_d: string
+          created_at?: string | null
+          difficulty: number
+          explanation?: string | null
+          id?: string
+          skill_id: string
+          stem: string
+          time_limit_secs?: number | null
+        }
+        Update: {
+          answer?: string
+          choice_a?: string
+          choice_b?: string
+          choice_c?: string
+          choice_d?: string
+          created_at?: string | null
+          difficulty?: number
+          explanation?: string | null
+          id?: string
+          skill_id?: string
+          stem?: string
+          time_limit_secs?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questions_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_queue: {
+        Row: {
+          created_at: string | null
+          due_at: string
+          ease: number | null
+          interval_days: number
+          lapses: number | null
+          question_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          due_at: string
+          ease?: number | null
+          interval_days: number
+          lapses?: number | null
+          question_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          due_at?: string
+          ease?: number | null
+          interval_days?: number
+          lapses?: number | null
+          question_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_queue_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      skills: {
+        Row: {
+          cluster: string
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          order_index: number
+          prereq_skill_ids: string[] | null
+          subject: string
+        }
+        Insert: {
+          cluster: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          order_index: number
+          prereq_skill_ids?: string[] | null
+          subject: string
+        }
+        Update: {
+          cluster?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          order_index?: number
+          prereq_skill_ids?: string[] | null
+          subject?: string
+        }
+        Relationships: []
+      }
+      study_plan_days: {
+        Row: {
+          generated_at: string | null
+          tasks_json: Json | null
+          the_date: string
+          user_id: string
+        }
+        Insert: {
+          generated_at?: string | null
+          tasks_json?: Json | null
+          the_date: string
+          user_id: string
+        }
+        Update: {
+          generated_at?: string | null
+          tasks_json?: Json | null
+          the_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      study_tasks: {
+        Row: {
+          accuracy: number | null
+          created_at: string | null
+          id: string
+          median_time_ms: number | null
+          reward_cents: number | null
+          size: number
+          skill_id: string | null
+          status: string | null
+          the_date: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          accuracy?: number | null
+          created_at?: string | null
+          id?: string
+          median_time_ms?: number | null
+          reward_cents?: number | null
+          size: number
+          skill_id?: string | null
+          status?: string | null
+          the_date: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          accuracy?: number | null
+          created_at?: string | null
+          id?: string
+          median_time_ms?: number | null
+          reward_cents?: number | null
+          size?: number
+          skill_id?: string | null
+          status?: string | null
+          the_date?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_tasks_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
