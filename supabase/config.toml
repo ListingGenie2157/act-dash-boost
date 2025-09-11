@@ -1,1 +1,13 @@
 project_id = "hhbkmxrzxcswwokmbtbz"
+
+[functions.generate-study-plan]
+verify_jwt = true
+
+[functions.cron-daily]
+verify_jwt = false
+
+[functions.days-left]
+verify_jwt = true
+
+[functions.set-test-date]
+verify_jwt = true
