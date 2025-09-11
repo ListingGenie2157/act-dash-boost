@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Dashboard } from '@/components/Dashboard';
 import { DayView } from '@/components/DayView';
+import { CountdownHeader } from '@/components/CountdownHeader';
 import { curriculum } from '@/data/curriculum';
 import { useProgress } from '@/hooks/useProgress';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,6 +78,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <CountdownHeader />
       <div className="container max-w-4xl mx-auto px-4 py-6">
         {currentView === 'dashboard' && (
           <Dashboard 
