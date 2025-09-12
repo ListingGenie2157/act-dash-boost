@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 
 export const AdminCronButton = () => {
   const [loading, setLoading] = useState(false);
-  const [lastResult, setLastResult] = useState<any>(null);
+  const [lastResult, setLastResult] = useState<{ successful: number; failed: number; errors: string[] } | null>(null);
 
   const runCronDaily = async () => {
     setLoading(true);

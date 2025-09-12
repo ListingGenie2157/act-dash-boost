@@ -3,13 +3,13 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle, XCircle, ArrowRight, ArrowLeft } from 'lucide-react';
-import { Question } from '@/types';
+import { Question, QuizAnswers } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
 interface QuizComponentProps {
   questions: Question[];
   title: string;
-  onComplete: (score: number, wrongAnswers: { questionId: string; question: Question; userAnswer: number }[]) => void;
+  onComplete: (score: number, wrongAnswers: QuizAnswers) => void;
   onBack?: () => void;
 }
 

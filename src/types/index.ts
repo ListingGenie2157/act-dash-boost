@@ -70,3 +70,40 @@ export interface TimerState {
   isActive: boolean;
   isCompleted: boolean;
 }
+
+export interface DrillResult {
+  questionId: string;
+  correct: boolean;
+  elapsedMs: number;
+}
+
+export type DrillResults = DrillResult[];
+
+export interface QuizAnswer {
+  questionId: string;
+  question: Question;
+  userAnswer: number;
+}
+
+export type QuizAnswers = QuizAnswer[];
+
+export interface DiagnosticResults {
+  score: number;
+  section: string;
+  completedAt: string;
+  weakSkills?: WeakArea[];
+}
+
+export interface StudyTask {
+  id: string;
+  user_id: string;
+  type: string; // This comes from the database as string
+  skill_id: string;
+  the_date: string;
+  status: string;
+  size: number;
+  accuracy: number;
+  median_time_ms: number;
+  reward_cents: number;
+  created_at: string;
+}

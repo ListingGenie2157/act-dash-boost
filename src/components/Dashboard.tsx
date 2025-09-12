@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useProgress } from '@/hooks/useProgress';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { DiagnosticResults, StudyTask } from '@/types';
 
 interface DashboardProps {
   onStartDay: (day: number) => void;
@@ -17,9 +18,9 @@ interface DashboardProps {
 export const Dashboard = ({ onStartDay, onViewReview, onStudyNow }: DashboardProps) => {
   const { progress } = useProgress();
   const navigate = useNavigate();
-  const [diagnosticResults, setDiagnosticResults] = useState<any>(null);
+  const [diagnosticResults, setDiagnosticResults] = useState<DiagnosticResults | null>(null);
   const [daysLeft, setDaysLeft] = useState<number | null>(null);
-  const [todaysTasks, setTodaysTasks] = useState<any[]>([]);
+  const [todaysTasks, setTodaysTasks] = useState<StudyTask[]>([]);
 
   useEffect(() => {
     const results = localStorage.getItem('diagnostic-results');
