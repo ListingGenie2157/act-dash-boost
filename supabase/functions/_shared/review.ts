@@ -1,10 +1,38 @@
 // Shared review system utilities for spaced repetition learning
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 
 export type StudyMode = 'MASTERY' | 'CRASH';
 
-export interface SupabaseClientLike {
-  from: (table: string) => any;
-  auth: any;
+export type Choice = 'A' | 'B' | 'C' | 'D';
+
+export interface WrongAnswer {
+  questionId: string;
+  chosen: Choice;
+  elapsedMs: number;
+}
+
+export interface ReviewMode { 
+  name: 'CRASH' | 'ACCEL' | 'MASTERY';
+}
+
+interface ReviewQueueEntry {
+  user_id: string;
+  question_id: string;
+  due_at: string;
+  interval_days: number;
+  ease: number;
+  lapses: number;
+  created_at?: string;
+}
+
+interface UpdateReviewResponse {
+  success: boolean;
+  data?: ReviewQueueEntry;
+  interval_days?: number;
+  due_at?: string;
+  ease?: number;
+  lapses?: number;
+  error?: string;
 }
 
 /**
@@ -72,12 +100,12 @@ export function nextInterval(mode: StudyMode, prevInterval: number, lapse: boole
  * @returns Promise with the updated review queue entry
  */
 export async function updateReviewQueueOnAnswer(
-  supabase: SupabaseClientLike,
+  supabase: SupabaseClient,
   userId: string,
   questionId: string,
   correct: boolean,
-  mode: StudyMode
-) {
+  mode: ReviewMode
+): Promise<UpdateReviewResponse> {
   try {
     // Get current review queue entry
     const { data: currentEntry, error: fetchError } = await supabase
@@ -98,7 +126,7 @@ export async function updateReviewQueueOnAnswer(
     const currentEase = currentEntry?.ease || 250; // Default ease factor (2.5)
 
     // Calculate next interval
-    const nextIntervalDays = nextInterval(mode, currentInterval, !correct);
+    const nextIntervalDays = nextInterval(mode.name, currentInterval, !correct);
     
     // Calculate new due date
     const dueAt = new Date(now);
