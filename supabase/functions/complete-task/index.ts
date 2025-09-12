@@ -208,6 +208,16 @@ serve(async (req) => {
       }
     }
 
+    // Calculate rewards after task completion
+    try {
+      await supabase.functions.invoke('calculate-rewards', {
+        body: { user_id: user.id, task_id: task_id }
+      });
+    } catch (error) {
+      console.error('Error calculating rewards:', error);
+      // Don't fail the task completion for rewards calculation failure
+    }
+
     const response = {
       ...updatedTask,
       message: 'Task completed successfully',

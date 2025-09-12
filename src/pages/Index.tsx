@@ -137,10 +137,7 @@ const Index = () => {
           <div className="space-y-8">
             <TestWeekBanner />
             <StudyNow />
-            <Dashboard 
-              onStartDay={handleStartDay}
-              onViewReview={handleViewReview}
-            />
+            {/* Today's tasks list already shown in StudyNow component */}
           </div>
         )}
         
