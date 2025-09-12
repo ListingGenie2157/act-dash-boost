@@ -18,7 +18,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
 });
 
 async function smokeTest() {
-  console.log('🚀 Starting smoke test...\n');
+  console.log('🚀 Starting comprehensive smoke test...\n');
 
   try {
     // Step 1: Create or get test user
@@ -45,60 +45,65 @@ async function smokeTest() {
 
     console.log('✅ Test user ready:', testUser.id);
 
-    // Step 2: Test set-test-date function
-    console.log('\n2️⃣ Testing set-test-date function...');
-    const testDate = '2024-03-15';
+    // Step 2: Test set-test-date function with tomorrow's date
+    console.log('\n2️⃣ Testing set-test-date function with tomorrow...');
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const testDate = tomorrow.toISOString().split('T')[0]; // YYYY-MM-DD format
     
+    // Create JWT token for the test user
+    const { data: { session }, error: sessionError } = await supabase.auth.admin.generateLink({
+      type: 'magiclink',
+      email: testEmail
+    });
+
+    if (sessionError) {
+      throw new Error(`Session generation error: ${sessionError.message}`);
+    }
+
+    const token = session?.access_token;
+    if (!token) {
+      throw new Error('No access token generated');
+    }
+
     const { data: setDateResult, error: setDateError } = await supabase.functions.invoke('set-test-date', {
-      body: { test_date: testDate },
-      headers: { Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` }
+      body: { testDate },
+      headers: { Authorization: `Bearer ${token}` }
     });
 
     if (setDateError) {
       throw new Error(`set-test-date error: ${setDateError.message}`);
     }
 
-    console.log('✅ set-test-date response shape:', {
-      hasSuccess: 'success' in setDateResult,
-      hasMessage: 'message' in setDateResult
+    console.log('✅ set-test-date response:', {
+      hasTestDate: 'test_date' in setDateResult,
+      testDate: setDateResult.test_date
     });
 
-    // Step 3: Test days-left function
-    console.log('\n3️⃣ Testing days-left function...');
-    
-    const { data: daysLeftResult, error: daysLeftError } = await supabase.functions.invoke('days-left', {
-      headers: { Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` }
-    });
-
-    if (daysLeftError) {
-      throw new Error(`days-left error: ${daysLeftError.message}`);
-    }
-
-    console.log('✅ days-left response shape:', {
-      hasDaysLeft: 'days_left' in daysLeftResult,
-      hasTestDate: 'test_date' in daysLeftResult,
-      daysLeftValue: daysLeftResult.days_left
-    });
-
-    // Step 4: Test generate-study-plan function
-    console.log('\n4️⃣ Testing generate-study-plan function...');
+    // Step 3: Test generate-study-plan function
+    console.log('\n3️⃣ Testing generate-study-plan function...');
     
     const { data: studyPlanResult, error: studyPlanError } = await supabase.functions.invoke('generate-study-plan', {
-      headers: { Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` }
+      headers: { Authorization: `Bearer ${token}` }
     });
 
     if (studyPlanError) {
       throw new Error(`generate-study-plan error: ${studyPlanError.message}`);
     }
 
-    console.log('✅ generate-study-plan response shape:', {
+    console.log('✅ generate-study-plan response:', {
       hasSuccess: 'success' in studyPlanResult,
-      hasPlansGenerated: 'plans_generated' in studyPlanResult,
-      hasMessage: 'message' in studyPlanResult
+      hasTasks: 'tasks' in studyPlanResult,
+      tasksLength: studyPlanResult.tasks?.length || 0
     });
 
-    // Step 5: Get a DRILL task and mark it DONE
-    console.log('\n5️⃣ Testing complete-task function...');
+    // Assert tasks.length > 0
+    if (!studyPlanResult.tasks || studyPlanResult.tasks.length === 0) {
+      throw new Error('Expected tasks.length > 0, but got 0 tasks');
+    }
+
+    // Step 4: Get a DRILL task and mark it DONE
+    console.log('\n4️⃣ Testing complete-task and calculate-rewards functions...');
     
     // First, get available drill tasks
     const { data: tasks } = await supabase
@@ -114,31 +119,90 @@ async function smokeTest() {
     } else {
       const testTask = tasks[0];
       
+      // Mark task as DONE with high accuracy (≥85%)
       const { data: completeResult, error: completeError } = await supabase.functions.invoke('complete-task', {
         body: {
           task_id: testTask.id,
-          accuracy: 85.5,
-          time_taken_ms: 45000,
+          accuracy: 87.5, // Above 85% threshold
+          time_taken_ms: 40000, // Under 45s threshold
           answers: [
-            { question_id: 'test-q1', correct: true, time_ms: 22500 },
-            { question_id: 'test-q2', correct: false, time_ms: 22500 }
+            { question_id: 'test-q1', correct: true, time_ms: 20000 },
+            { question_id: 'test-q2', correct: true, time_ms: 20000 }
           ]
         },
-        headers: { Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (completeError) {
         throw new Error(`complete-task error: ${completeError.message}`);
       }
 
-      console.log('✅ complete-task response shape:', {
+      console.log('✅ complete-task response:', {
         hasSuccess: 'success' in completeResult,
-        hasMessage: 'message' in completeResult,
-        taskId: testTask.id
+        taskId: testTask.id,
+        accuracy: 87.5
+      });
+
+      // Step 5: Test calculate-rewards function
+      console.log('\n5️⃣ Testing calculate-rewards function...');
+      
+      const { data: rewardsResult, error: rewardsError } = await supabase.functions.invoke('calculate-rewards', {
+        body: {
+          taskId: testTask.id,
+          taskType: 'DRILL'
+        },
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (rewardsError) {
+        throw new Error(`calculate-rewards error: ${rewardsError.message}`);
+      }
+
+      console.log('✅ calculate-rewards response:', {
+        hasSuccess: 'success' in rewardsResult,
+        hasRewardsEarned: 'rewardsEarned' in rewardsResult,
+        rewardsEarned: rewardsResult.rewardsEarned || 0
+      });
+
+      // Check if ledger incremented (may be 0 if no parent rules exist)
+      const { data: ledgerEntries } = await supabase
+        .from('rewards_ledger')
+        .select('*')
+        .eq('student_id', testUser.id)
+        .order('earned_at', { ascending: false })
+        .limit(1);
+
+      console.log('✅ Ledger check:', {
+        hasEntries: ledgerEntries && ledgerEntries.length > 0,
+        latestEntry: ledgerEntries?.[0] || null
       });
     }
 
+    // Step 6: Test days-left function
+    console.log('\n6️⃣ Testing days-left function...');
+    
+    const { data: daysLeftResult, error: daysLeftError } = await supabase.functions.invoke('days-left', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (daysLeftError) {
+      throw new Error(`days-left error: ${daysLeftError.message}`);
+    }
+
+    console.log('✅ days-left response:', {
+      hasDaysLeft: 'days_left' in daysLeftResult,
+      hasTestDate: 'test_date' in daysLeftResult,
+      daysLeftValue: daysLeftResult.days_left
+    });
+
     console.log('\n🎉 All smoke tests passed! Edge functions are working correctly.');
+    console.log('\n📋 Summary:');
+    console.log('  ✅ User authentication and profiles');
+    console.log('  ✅ Test date setting with tomorrow\'s date');
+    console.log('  ✅ Study plan generation with tasks > 0');
+    console.log('  ✅ Task completion with high accuracy');
+    console.log('  ✅ Rewards calculation for qualifying performance');
+    console.log('  ✅ Days calculation from test date');
 
   } catch (error) {
     console.error('\n💥 Smoke test failed:', error);

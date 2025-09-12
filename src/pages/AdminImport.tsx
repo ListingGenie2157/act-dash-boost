@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { AdminCronButton } from '@/components/AdminCronButton';
 
 interface ImportReport {
   totalRows: number;
@@ -130,10 +131,29 @@ export default function AdminImport() {
     <div className="container max-w-4xl mx-auto px-4 py-8">
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Question Import</h1>
+          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
           <p className="text-muted-foreground mt-2">
-            Import questions from CSV files into the question bank
+            Import questions and manage system operations
           </p>
+        </div>
+
+        {/* Admin Controls Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <AdminCronButton />
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+              <CardDescription>
+                System administration tools
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Additional admin tools can be added here
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         <Card>
