@@ -31,9 +31,16 @@ export const Dashboard = ({ onStartDay, onViewReview, onStudyNow }: DashboardPro
   
   const fetchDaysLeft = async () => {
     try {
-      const { data } = await supabase.functions.invoke('days-left');
-      if (data?.days_left !== null) {
+      const { data, error } = await supabase.functions.invoke('days-left');
+      if (error) {
+        console.error('Error fetching days left:', error);
+        setDaysLeft(5); // fallback
+        return;
+      }
+      if (data && typeof data.days_left === 'number') {
         setDaysLeft(data.days_left);
+      } else {
+        setDaysLeft(null);
       }
     } catch (error) {
       console.error('Error fetching days left:', error);

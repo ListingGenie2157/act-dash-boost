@@ -39,8 +39,8 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Only allow GET requests
-  if (req.method !== 'GET') {
+  // Allow GET and POST requests (Supabase functions.invoke uses POST)
+  if (req.method !== 'GET' && req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -81,7 +81,7 @@ serve(async (req) => {
       .from('profiles')
       .select('test_date')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     if (profileError) {
       console.error('Error fetching profile:', profileError);
