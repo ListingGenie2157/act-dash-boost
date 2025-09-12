@@ -12,6 +12,14 @@ interface AnalyticsData {
   accuracyByCluster: { cluster: string; accuracy: number; count: number }[];
   medianTime: number;
   carelessRate: number;
+  baselineVsLatest: {
+    section: string;
+    baseline: number;
+    latest: number;
+    delta: number;
+    baselineSource: string;
+    latestSource: string;
+  }[];
 }
 
 const Analytics = () => {
@@ -45,6 +53,14 @@ const Analytics = () => {
         .from('sim_results')
         .select('*')
         .eq('user_id', userId);
+
+      // Fetch diagnostics for baseline vs latest comparison
+      const { data: diagnostics } = await supabase
+        .from('diagnostics')
+        .select('section, score, source, completed_at')
+        .eq('user_id', userId)
+        .not('completed_at', 'is', null)
+        .order('completed_at', { ascending: true });
 
       // Fetch skill data for cluster mapping
       const { data: skills } = await supabase
@@ -119,12 +135,42 @@ const Analytics = () => {
         ? (carelessTasks.length / studyTasks.length) * 100 
         : 0;
 
+      // Calculate baseline vs latest scores
+      const baselineVsLatest: AnalyticsData['baselineVsLatest'] = [];
+      if (diagnostics && diagnostics.length > 0) {
+        const sections = ['math', 'english', 'reading', 'science'];
+        
+        sections.forEach(section => {
+          const sectionDiagnostics = diagnostics.filter(d => d.section === section);
+          if (sectionDiagnostics.length > 0) {
+            const first = sectionDiagnostics[0];
+            const last = sectionDiagnostics[sectionDiagnostics.length - 1];
+            
+            if (first && last) {
+              const baseline = (first.score || 0) * 100;
+              const latest = (last.score || 0) * 100;
+              const delta = latest - baseline;
+              
+              baselineVsLatest.push({
+                section: section.charAt(0).toUpperCase() + section.slice(1),
+                baseline,
+                latest,
+                delta,
+                baselineSource: first.source || 'diagnostic',
+                latestSource: last.source || 'diagnostic'
+              });
+            }
+          }
+        });
+      }
+
       setAnalyticsData({
         studyStreak: streak,
         totalQuestions,
         accuracyByCluster,
         medianTime: Math.round(medianTime / 1000), // Convert to seconds
-        carelessRate
+        carelessRate,
+        baselineVsLatest
       });
     } catch (error) {
       console.error('Error fetching analytics:', error);
@@ -275,6 +321,45 @@ const Analytics = () => {
                 </div>
               )}
             </Card>
+
+            {/* Baseline vs Latest Scores */}
+            {analyticsData.baselineVsLatest.length > 0 && (
+              <Card className="p-6 shadow-soft">
+                <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5" />
+                  Baseline vs Latest Scores
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {analyticsData.baselineVsLatest.map((item) => (
+                    <div key={item.section} className="p-4 border border-border rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium">{item.section}</h4>
+                        <Badge 
+                          variant={item.delta >= 0 ? "default" : "destructive"}
+                          className={item.delta >= 0 ? "bg-success/10 text-success border-success/20" : ""}
+                        >
+                          {item.delta >= 0 ? "+" : ""}{item.delta.toFixed(1)}%
+                        </Badge>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Baseline ({item.baselineSource}):</span>
+                          <span className="font-medium">{item.baseline.toFixed(1)}%</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Latest ({item.latestSource}):</span>
+                          <span className="font-medium">{item.latest.toFixed(1)}%</span>
+                        </div>
+                        <Progress 
+                          value={item.latest} 
+                          className="h-2"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
 
             {/* Performance Insights */}
             <Card className="p-6 shadow-soft">

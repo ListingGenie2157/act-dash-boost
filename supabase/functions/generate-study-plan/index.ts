@@ -125,6 +125,33 @@ function getTestWeekTasks(daysLeft: number, userId: string, dateStr: string): an
   return tasks;
 }
 
+// Helper function for choosing weak skills from baseline
+function chooseWeakSkills(baseline: any[], progress: any[], allSkills: any[]): string[] {
+  const weakSkillIds: string[] = [];
+  
+  baseline.forEach(diagnostic => {
+    if (diagnostic.score < 0.6) { // If less than 60% accuracy
+      const sectionSkills = allSkills.filter(s => s.subject === diagnostic.section);
+      const clusterGroups: { [cluster: string]: string[] } = {};
+      
+      // Group skills by cluster
+      sectionSkills.forEach(skill => {
+        if (!clusterGroups[skill.cluster]) clusterGroups[skill.cluster] = [];
+        clusterGroups[skill.cluster].push(skill.id);
+      });
+      
+      // Pick skills from the first two clusters (assume ordered by difficulty)
+      const clusters = Object.keys(clusterGroups).slice(0, 2);
+      clusters.forEach(cluster => {
+        const clusterSkillIds = clusterGroups[cluster].slice(0, 2); // Max 2 skills per cluster
+        weakSkillIds.push(...clusterSkillIds);
+      });
+    }
+  });
+  
+  return weakSkillIds.slice(0, 5); // Return max 5 skills
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -303,33 +330,28 @@ serve(async (req) => {
         .select('id, subject, cluster, name')
         .order('order_index', { ascending: true });
 
-      // For each diagnostic section, find bottom two clusters if score is low
-      for (const [section, diagnostic] of Object.entries(diagnosticsBySection)) {
-        if (diagnostic.score < 0.6) { // If less than 60% accuracy
-          const sectionSkills = allSkills?.filter(s => s.subject === section) || [];
-          const clusterScores: { [cluster: string]: string[] } = {};
-          
-          // Group skills by cluster
-          sectionSkills.forEach(skill => {
-            if (!clusterScores[skill.cluster]) clusterScores[skill.cluster] = [];
-            clusterScores[skill.cluster].push(skill.id);
-          });
-          
-          // Pick skills from the first two clusters (assume ordered by difficulty)
-          const clusters = Object.keys(clusterScores).slice(0, 2);
-          clusters.forEach(cluster => {
-            const clusterSkillIds = clusterScores[cluster].slice(0, 2); // Max 2 skills per cluster
-            clusterSkillIds.forEach(skillId => {
-              baselineSeededSkills.push({
-                skill_id: skillId,
-                mastery_level: 0,
-                correct: 0,
-                seen: 0
-              });
-            });
-          });
-        }
-      }
+      // Use helper function to choose weak skills
+      const baselineDiagnostics = Object.entries(diagnosticsBySection).map(([section, data]) => ({
+        section,
+        score: data.score,
+        source: data.source
+      }));
+      
+      const progressData = sparseProgress.map(p => ({
+        skill_id: p.skill_id,
+        seen: p.seen,
+        mastery_level: p.mastery_level,
+        correct: p.correct
+      }));
+
+      const weakSkillIds = chooseWeakSkills(baselineDiagnostics, progressData, allSkills || []);
+      
+      baselineSeededSkills = weakSkillIds.map(skillId => ({
+        skill_id: skillId,
+        mastery_level: 0,
+        correct: 0,
+        seen: 0
+      }));
     }
 
     // Combine actual weak skills with baseline seeded skills
