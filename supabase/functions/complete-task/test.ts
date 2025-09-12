@@ -1,5 +1,12 @@
 import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
+// Proper stub example for WrongAnswer interface
+interface WrongAnswer {
+  questionId: string;
+  chosen: 'A' | 'B' | 'C' | 'D';
+  elapsedMs: number;
+}
+
 // Test the expected request/response payload shapes
 Deno.test("CompleteTaskRequest - valid payload structure", () => {
   const validPayload = {
@@ -95,26 +102,40 @@ Deno.test("CompleteTaskResponse - expected structure", () => {
 Deno.test("Answer validation - valid answer choices", () => {
   const validChoices = ['A', 'B', 'C', 'D'] as const;
   
-  validChoices.forEach(choice => {
+  for (const choice of validChoices) {
     assertEquals(validChoices.includes(choice), true);
-  });
+  }
   
   // Test invalid choices
   const invalidChoices = ['E', 'F', '1', '2', 'a', 'b'];
-  invalidChoices.forEach(choice => {
-    assertEquals(validChoices.includes(choice as typeof validChoices[number]), false);
-  });
+  for (const choice of invalidChoices) {
+    assertEquals(['A', 'B', 'C', 'D'].includes(choice), false);
+  }
 });
 
 Deno.test("Accuracy bounds validation", () => {
   const validAccuracies = [0, 0.25, 0.5, 0.75, 1.0];
   const invalidAccuracies = [-0.1, 1.1, -1, 2];
   
-  validAccuracies.forEach(accuracy => {
+  for (const accuracy of validAccuracies) {
     assertEquals(accuracy >= 0 && accuracy <= 1, true);
-  });
+  }
   
-  invalidAccuracies.forEach(accuracy => {
+  for (const accuracy of invalidAccuracies) {
     assertEquals(accuracy >= 0 && accuracy <= 1, false);
-  });
+  }
+});
+
+Deno.test("WrongAnswer stub - proper typing example", () => {
+  // ✅ GOOD: Precise stub with proper typing
+  const wrong: WrongAnswer = { 
+    questionId: 'q1', 
+    chosen: 'B', 
+    elapsedMs: 32000 
+  };
+  
+  assertEquals(typeof wrong.questionId, "string");
+  assertEquals(['A', 'B', 'C', 'D'].includes(wrong.chosen), true);
+  assertEquals(typeof wrong.elapsedMs, "number");
+  assertEquals(wrong.elapsedMs > 0, true);
 });
