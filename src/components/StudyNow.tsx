@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { Play, Clock, CheckCircle, XCircle, Brain, Target, BookOpen, Zap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -69,9 +69,10 @@ export function StudyNow() {
 
       setStudyPlan(data);
       setCurrentTaskIndex(0);
-    } catch (err: any) {
-      console.error('Error loading study plan:', err);
-      setError(err.message || 'Failed to load study plan');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('Error loading study plan:', msg);
+      setError(msg || 'Failed to load study plan');
       toast({
         title: 'Error',
         description: 'Failed to load your study plan. Please try again.',
@@ -111,8 +112,9 @@ export function StudyNow() {
         title: 'Task Completed!',
         description: `Great job! Accuracy: ${Math.round(accuracy * 100)}%`,
       });
-    } catch (err: any) {
-      console.error('Error completing task:', err);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('Error completing task:', msg);
       toast({
         title: 'Error',
         description: 'Failed to save task completion. Please try again.',
@@ -235,7 +237,7 @@ interface TaskRunnerProps {
   onComplete: (taskId: string, accuracy: number, timeMs: number) => void;
 }
 
-function TaskRunner({ task, onComplete }: TaskRunnerProps) {
+const TaskRunner = memo(function TaskRunner({ task, onComplete }: TaskRunnerProps) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [skill, setSkill] = useState<Skill | null>(null);
@@ -493,4 +495,4 @@ function TaskRunner({ task, onComplete }: TaskRunnerProps) {
       </CardContent>
     </Card>
   );
-}
+});

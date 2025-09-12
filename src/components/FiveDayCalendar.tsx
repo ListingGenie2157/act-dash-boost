@@ -3,34 +3,36 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { UserProgress } from '@/types';
+import { memo } from 'react';
 
 interface FiveDayCalendarProps {
   progress: UserProgress;
   onSelectDay: (day: number) => void;
 }
 
-export const FiveDayCalendar = ({ progress, onSelectDay }: FiveDayCalendarProps) => {
-  // Get next 5 days starting from tomorrow
-  const getNext5Days = () => {
+export const FiveDayCalendar = memo(function FiveDayCalendar({ progress, onSelectDay }: FiveDayCalendarProps) {
+  // Get today and tomorrow for performance optimization
+  const getNext2Days = () => {
     const today = new Date();
     const days = [];
     
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 0; i <= 1; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
       days.push({
         date,
-        dayNumber: i + 8, // Days 9-13 for the 5-day intensive
+        dayNumber: i + progress.currentDay, 
         dayOfWeek: date.toLocaleDateString('en-US', { weekday: 'short' }),
         dayOfMonth: date.getDate(),
-        month: date.toLocaleDateString('en-US', { month: 'short' })
+        month: date.toLocaleDateString('en-US', { month: 'short' }),
+        isToday: i === 0
       });
     }
     
     return days;
   };
 
-  const days = getNext5Days();
+  const days = getNext2Days();
 
   const getDayStatus = (dayNumber: number) => {
     if (progress.completedDays.includes(dayNumber)) {
@@ -157,4 +159,4 @@ export const FiveDayCalendar = ({ progress, onSelectDay }: FiveDayCalendarProps)
       </div>
     </Card>
   );
-};
+});
