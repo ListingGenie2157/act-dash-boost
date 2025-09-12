@@ -13,6 +13,8 @@ import MathCheatsheet from "./pages/Cheatsheets/Math";
 import ReadingCheatsheet from "./pages/Cheatsheets/Reading";
 import ScienceCheatsheet from "./pages/Cheatsheets/Science";
 import Analytics from "./pages/Analytics";
+import AdminImport from "./pages/AdminImport";
+import ParentPortal from "./pages/ParentPortal";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +39,10 @@ const App = () => (
           <Route path="/cheatsheets/science" element={<ScienceCheatsheet />} />
           {/* Analytics route */}
           <Route path="/analytics" element={<Analytics />} />
+          {/* Admin route */}
+          <Route path="/admin-import" element={<AdminImport />} />
+          {/* Parent portal route */}
+          <Route path="/parent-portal" element={<ParentPortal />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

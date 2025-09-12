@@ -5,6 +5,7 @@ import { DayView } from '@/components/DayView';
 import { CountdownHeader } from '@/components/CountdownHeader';
 import { StudyNow } from '@/components/StudyNow';
 import { TestWeekBanner } from '@/components/TestWeekBanner';
+import { ParentBanner } from '@/components/ParentBanner';
 import { Button } from '@/components/ui/button';
 import { curriculum } from '@/data/curriculum';
 import { useProgress } from '@/hooks/useProgress';
@@ -86,6 +87,9 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <CountdownHeader />
+      <div className="container mx-auto px-4">
+        <ParentBanner />
+      </div>
       
       {/* Navigation Header */}
       <div className="border-b bg-card/50">
@@ -104,6 +108,11 @@ const Index = () => {
             <Link to="/analytics">
               <Button variant="outline" size="sm">
                 Analytics
+              </Button>
+            </Link>
+            <Link to="/parent-portal">
+              <Button variant="outline" size="sm">
+                Parent Portal
               </Button>
             </Link>
           </div>

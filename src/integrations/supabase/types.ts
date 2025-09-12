@@ -76,6 +76,47 @@ export type Database = {
           },
         ]
       }
+      parent_links: {
+        Row: {
+          parent_id: string
+          student_id: string
+        }
+        Insert: {
+          parent_id: string
+          student_id: string
+        }
+        Update: {
+          parent_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_links_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "parents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parents: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -225,6 +266,76 @@ export type Database = {
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rewards_ledger: {
+        Row: {
+          amount_cents: number
+          earned_at: string | null
+          id: string
+          rule_id: string | null
+          status: string | null
+          student_id: string | null
+        }
+        Insert: {
+          amount_cents: number
+          earned_at?: string | null
+          id?: string
+          rule_id?: string | null
+          status?: string | null
+          student_id?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          earned_at?: string | null
+          id?: string
+          rule_id?: string | null
+          status?: string | null
+          student_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rewards_ledger_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "rewards_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rewards_rules: {
+        Row: {
+          amount_cents: number
+          created_at: string | null
+          id: string
+          parent_id: string | null
+          threshold: Json
+          type: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string | null
+          id?: string
+          parent_id?: string | null
+          threshold: Json
+          type: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string | null
+          id?: string
+          parent_id?: string | null
+          threshold?: Json
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rewards_rules_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "parents"
             referencedColumns: ["id"]
           },
         ]
