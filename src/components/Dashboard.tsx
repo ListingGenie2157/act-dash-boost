@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useProgress } from '@/hooks/useProgress';
 import { FiveDayCalendar } from './FiveDayCalendar';
 import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DashboardProps {
   onStartDay: (day: number) => void;
@@ -18,15 +19,29 @@ export const Dashboard = ({ onStartDay, onViewReview, onStudyNow }: DashboardPro
   const { progress } = useProgress();
   const navigate = useNavigate();
   const [diagnosticResults, setDiagnosticResults] = useState<any>(null);
+  const [daysLeft, setDaysLeft] = useState<number | null>(null);
 
   useEffect(() => {
     const results = localStorage.getItem('diagnostic-results');
     if (results) {
       setDiagnosticResults(JSON.parse(results));
     }
+    fetchDaysLeft();
   }, []);
   
-  const daysUntilTest = 5; // Fixed 5 days until test
+  const fetchDaysLeft = async () => {
+    try {
+      const { data } = await supabase.functions.invoke('days-left');
+      if (data?.days_left !== null) {
+        setDaysLeft(data.days_left);
+      }
+    } catch (error) {
+      console.error('Error fetching days left:', error);
+      setDaysLeft(5); // fallback
+    }
+  };
+
+  const daysUntilTest = daysLeft ?? 5;
   const totalDays = 5; // Total days in the intensive plan
   const completionPercentage = (progress.completedDays.filter(day => day >= 9 && day <= 13).length / totalDays) * 100;
   
@@ -42,7 +57,7 @@ export const Dashboard = ({ onStartDay, onViewReview, onStudyNow }: DashboardPro
           ACT Prep Dashboard
         </h1>
         <p className="text-muted-foreground">
-          Test Date: September 6 • {daysUntilTest} days intensive prep
+          {daysUntilTest > 0 ? `${daysUntilTest} days until test` : daysUntilTest === 0 ? 'Test Day!' : 'Test date passed'} • Intensive prep mode
         </p>
       </div>
 
