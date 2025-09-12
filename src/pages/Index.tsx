@@ -136,11 +136,11 @@ const Index = () => {
         {currentView === 'dashboard' && (
           <div className="space-y-8">
             <TestWeekBanner />
+            <StudyNow />
             <Dashboard 
               onStartDay={handleStartDay}
               onViewReview={handleViewReview}
             />
-            <StudyNow />
           </div>
         )}
         

@@ -266,6 +266,23 @@ serve(async (req) => {
       .order('due_at', { ascending: true })
       .limit(10);
 
+    // Query latest diagnostics per section for baseline seeding
+    const { data: latestDiagnostics } = await supabase
+      .from('diagnostics')
+      .select('section, score, source')
+      .eq('user_id', user.id)
+      .not('completed_at', 'is', null)
+      .order('completed_at', { ascending: false });
+
+    // Process diagnostics to get latest per section, prefer 'diagnostic' over 'self'
+    const diagnosticsBySection: { [key: string]: { score: number; source: string } } = {};
+    latestDiagnostics?.forEach(d => {
+      const current = diagnosticsBySection[d.section];
+      if (!current || (d.source === 'diagnostic' && current.source === 'self')) {
+        diagnosticsBySection[d.section] = { score: d.score || 0, source: d.source || 'diagnostic' };
+      }
+    });
+
     // Get weakest skills (lowest mastery level with some activity)
     const { data: weakestSkills } = await supabase
       .from('progress')
@@ -274,6 +291,49 @@ serve(async (req) => {
       .gt('seen', 0)
       .order('mastery_level', { ascending: true })
       .limit(3);
+
+    // If progress is sparse (seen < 20), seed from baseline diagnostics
+    const sparseProgress = weakestSkills?.filter(s => s.seen < 20) || [];
+    let baselineSeededSkills: any[] = [];
+    
+    if (sparseProgress.length > 0 && Object.keys(diagnosticsBySection).length > 0) {
+      // Get all skills grouped by subject and cluster
+      const { data: allSkills } = await supabase
+        .from('skills')
+        .select('id, subject, cluster, name')
+        .order('order_index', { ascending: true });
+
+      // For each diagnostic section, find bottom two clusters if score is low
+      for (const [section, diagnostic] of Object.entries(diagnosticsBySection)) {
+        if (diagnostic.score < 0.6) { // If less than 60% accuracy
+          const sectionSkills = allSkills?.filter(s => s.subject === section) || [];
+          const clusterScores: { [cluster: string]: string[] } = {};
+          
+          // Group skills by cluster
+          sectionSkills.forEach(skill => {
+            if (!clusterScores[skill.cluster]) clusterScores[skill.cluster] = [];
+            clusterScores[skill.cluster].push(skill.id);
+          });
+          
+          // Pick skills from the first two clusters (assume ordered by difficulty)
+          const clusters = Object.keys(clusterScores).slice(0, 2);
+          clusters.forEach(cluster => {
+            const clusterSkillIds = clusterScores[cluster].slice(0, 2); // Max 2 skills per cluster
+            clusterSkillIds.forEach(skillId => {
+              baselineSeededSkills.push({
+                skill_id: skillId,
+                mastery_level: 0,
+                correct: 0,
+                seen: 0
+              });
+            });
+          });
+        }
+      }
+    }
+
+    // Combine actual weak skills with baseline seeded skills
+    const combinedWeakSkills = [...(weakestSkills || []), ...baselineSeededSkills].slice(0, 5);
 
     // Get skills for learning (no progress yet, prerequisites met)
     const { data: userProgress } = await supabase
@@ -309,7 +369,7 @@ serve(async (req) => {
     });
 
     // 2. DRILL tasks (medium priority)
-    weakestSkills?.forEach((skill, index) => {
+    combinedWeakSkills?.forEach((skill, index) => {
       priorities.push({
         type: 'DRILL',
         skillId: skill.skill_id,

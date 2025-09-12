@@ -1,11 +1,10 @@
-import { Target, TrendingUp, AlertCircle, Clock, CheckCircle, Brain } from 'lucide-react';
+import { Target, TrendingUp, AlertCircle, Clock, CheckCircle, Brain, Play } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useProgress } from '@/hooks/useProgress';
-import { FiveDayCalendar } from './FiveDayCalendar';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -20,6 +19,7 @@ export const Dashboard = ({ onStartDay, onViewReview, onStudyNow }: DashboardPro
   const navigate = useNavigate();
   const [diagnosticResults, setDiagnosticResults] = useState<any>(null);
   const [daysLeft, setDaysLeft] = useState<number | null>(null);
+  const [todaysTasks, setTodaysTasks] = useState<any[]>([]);
 
   useEffect(() => {
     const results = localStorage.getItem('diagnostic-results');
@@ -27,6 +27,7 @@ export const Dashboard = ({ onStartDay, onViewReview, onStudyNow }: DashboardPro
       setDiagnosticResults(JSON.parse(results));
     }
     fetchDaysLeft();
+    fetchTodaysTasks();
   }, []);
   
   const fetchDaysLeft = async () => {
@@ -48,10 +49,25 @@ export const Dashboard = ({ onStartDay, onViewReview, onStudyNow }: DashboardPro
     }
   };
 
+  const fetchTodaysTasks = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('study_tasks')
+        .select('*')
+        .eq('the_date', today)
+        .eq('status', 'PENDING')
+        .order('created_at', { ascending: true });
+      
+      if (!error && data) {
+        setTodaysTasks(data);
+      }
+    } catch (error) {
+      console.error('Error fetching today\'s tasks:', error);
+    }
+  };
+
   const daysUntilTest = daysLeft ?? 5;
-  const totalDays = 5; // Total days in the intensive plan
-  const completionPercentage = (progress.completedDays.filter(day => day >= 9 && day <= 13).length / totalDays) * 100;
-  
   const topWeakAreas = progress.weakAreas
     .sort((a, b) => b.errorCount - a.errorCount)
     .slice(0, 3);
@@ -68,145 +84,41 @@ export const Dashboard = ({ onStartDay, onViewReview, onStudyNow }: DashboardPro
         </p>
       </div>
 
-      {/* Diagnostic Results or Call to Action */}
-      {diagnosticResults ? (
-        <Card className="p-6 shadow-medium border-success/20 bg-gradient-to-r from-success/5 to-primary/5">
-          <div className="flex items-center justify-between">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Brain className="w-6 h-6 text-success" />
-                <h3 className="text-xl font-semibold">Your Personalized Plan</h3>
-              </div>
-              <p className="text-muted-foreground">
-                Based on your diagnostic: <span className="font-semibold">{diagnosticResults.predicted_section_score}% predicted English score</span>
-              </p>
-              <div className="flex gap-2 mt-3">
-                {diagnosticResults.top_5_weak_skills?.slice(0, 3).map((skill: any, index: number) => (
-                  <Badge key={index} variant="outline" className="text-xs">
-                    {skill.skill.replace('english-', '').replace('-', ' ')} ({Math.round(skill.accuracy)}%)
-                  </Badge>
-                ))}
-              </div>
+      {/* Today's Tasks */}
+      {todaysTasks.length > 0 && (
+        <Card className="p-6 shadow-medium border-primary/20">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                <Play className="w-5 h-5 text-primary" />
+                Today's Study Plan
+              </h3>
+              <Badge variant="outline">
+                {todaysTasks.length} task{todaysTasks.length !== 1 ? 's' : ''}
+              </Badge>
             </div>
-            <Button 
-              variant="hero" 
-              size="lg"
-              onClick={() => {
-                localStorage.removeItem('diagnostic-results');
-                setDiagnosticResults(null);
-              }}
-              className="px-6"
-            >
-              Got it!
-            </Button>
-          </div>
-        </Card>
-      ) : (
-        <Card className="p-6 shadow-medium border-primary/20 bg-gradient-to-r from-primary/5 to-secondary/5">
-          <div className="flex items-center justify-between">
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Brain className="w-6 h-6 text-primary" />
-                <h3 className="text-xl font-semibold">Start with a Diagnostic</h3>
-              </div>
-              <p className="text-muted-foreground">
-                Take a quick assessment to create your personalized study plan
-              </p>
+              {todaysTasks.slice(0, 3).map((task, index) => (
+                <div key={task.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${
+                      task.type === 'REVIEW' ? 'bg-primary' : 
+                      task.type === 'DRILL' ? 'bg-secondary' : 'bg-accent'
+                    }`} />
+                    <span className="font-medium capitalize">{task.type.toLowerCase()}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {task.size} question{task.size !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {task.reward_cents || 0}¢
+                  </span>
+                </div>
+              ))}
             </div>
-            <Button 
-              variant="hero" 
-              size="lg"
-              onClick={() => navigate('/diagnostic')}
-              className="px-6"
-            >
-              Take Diagnostic
-            </Button>
           </div>
         </Card>
       )}
-
-      {/* 5-Day Calendar */}
-      <FiveDayCalendar progress={progress} onSelectDay={onStartDay} />
-
-      {/* Progress Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-6 shadow-soft">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Target className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Days Completed</p>
-              <p className="text-2xl font-bold">{progress.completedDays.filter(day => day >= 9 && day <= 13).length}/{totalDays}</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6 shadow-soft">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-success/10 rounded-lg">
-              <CheckCircle className="w-5 h-5 text-success" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Completion</p>
-              <p className="text-2xl font-bold">{Math.round(completionPercentage)}%</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6 shadow-soft">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-warning/10 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-warning" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Wrong Answers</p>
-              <p className="text-2xl font-bold">{progress.wrongAnswers.length}</p>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Progress Bar */}
-      <Card className="p-6 shadow-soft">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold">5-Day Progress</h3>
-            <span className="text-sm text-muted-foreground">
-              {progress.completedDays.filter(day => day >= 9 && day <= 13).length} of {totalDays} days completed
-            </span>
-          </div>
-          <Progress value={completionPercentage} className="h-3" />
-        </div>
-      </Card>
-
-      {/* Next Day Suggestion */}
-      {(() => {
-        const nextDay = progress.completedDays.filter(day => day >= 9 && day <= 13).length + 9;
-        if (nextDay <= 13) {
-          return (
-            <Card className="p-6 shadow-medium border-primary/20">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <h3 className="font-semibold text-lg">Day {nextDay} Ready</h3>
-                  <p className="text-muted-foreground">
-                    Continue your intensive ACT prep
-                  </p>
-                </div>
-                <Button 
-                  variant="hero" 
-                  size="lg"
-                  onClick={() => onStartDay(nextDay)}
-                  className="px-8"
-                >
-                  Start Day {nextDay}
-                </Button>
-              </div>
-            </Card>
-          );
-        }
-        return null;
-      })()}
 
       {/* Weak Areas */}
       {topWeakAreas.length > 0 && (
