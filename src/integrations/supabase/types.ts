@@ -19,9 +19,11 @@ export type Database = {
           block: number
           completed_at: string | null
           id: string
+          notes: string | null
           responses: Json | null
           score: number | null
           section: string
+          source: string | null
           started_at: string | null
           user_id: string
         }
@@ -29,9 +31,11 @@ export type Database = {
           block: number
           completed_at?: string | null
           id?: string
+          notes?: string | null
           responses?: Json | null
           score?: number | null
           section: string
+          source?: string | null
           started_at?: string | null
           user_id: string
         }
@@ -39,9 +43,11 @@ export type Database = {
           block?: number
           completed_at?: string | null
           id?: string
+          notes?: string | null
           responses?: Json | null
           score?: number | null
           section?: string
+          source?: string | null
           started_at?: string | null
           user_id?: string
         }

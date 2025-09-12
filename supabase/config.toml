@@ -20,3 +20,6 @@ verify_jwt = true
 
 [functions.set-test-date]
 verify_jwt = true
+
+[functions.set-baseline]
+verify_jwt = true
