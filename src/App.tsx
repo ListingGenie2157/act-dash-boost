@@ -6,15 +6,18 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
-import Diagnostic from "./pages/Diagnostic";
-import SimEnglish from "./pages/SimEnglish";
-import EnglishCheatsheet from "./pages/Cheatsheets/English";
-import MathCheatsheet from "./pages/Cheatsheets/Math";
-import ReadingCheatsheet from "./pages/Cheatsheets/Reading";
-import ScienceCheatsheet from "./pages/Cheatsheets/Science";
-import Analytics from "./pages/Analytics";
-import AdminImport from "./pages/AdminImport";
-import ParentPortal from "./pages/ParentPortal";
+import { 
+  LazyAnalytics, 
+  LazyAdminImport, 
+  LazyParentPortal,
+  LazyDiagnostic,
+  LazySimEnglish,
+  LazyEnglishCheatsheet,
+  LazyMathCheatsheet,
+  LazyReadingCheatsheet,
+  LazyScienceCheatsheet,
+  LazyLoader
+} from "./components/LazyComponents";
 
 const queryClient = new QueryClient();
 
@@ -29,20 +32,56 @@ const App = () => (
           {/* Login route to handle user authentication. */}
           <Route path="/login" element={<Login />} />
           {/* Diagnostic assessment route */}
-          <Route path="/diagnostic" element={<Diagnostic />} />
+          <Route path="/diagnostic" element={
+            <LazyLoader>
+              <LazyDiagnostic />
+            </LazyLoader>
+          } />
           {/* Simulation routes */}
-          <Route path="/sim-english" element={<SimEnglish />} />
+          <Route path="/sim-english" element={
+            <LazyLoader>
+              <LazySimEnglish />
+            </LazyLoader>
+          } />
           {/* Cheatsheet routes */}
-          <Route path="/cheatsheets/english" element={<EnglishCheatsheet />} />
-          <Route path="/cheatsheets/math" element={<MathCheatsheet />} />
-          <Route path="/cheatsheets/reading" element={<ReadingCheatsheet />} />
-          <Route path="/cheatsheets/science" element={<ScienceCheatsheet />} />
+          <Route path="/cheatsheets/english" element={
+            <LazyLoader>
+              <LazyEnglishCheatsheet />
+            </LazyLoader>
+          } />
+          <Route path="/cheatsheets/math" element={
+            <LazyLoader>
+              <LazyMathCheatsheet />
+            </LazyLoader>
+          } />
+          <Route path="/cheatsheets/reading" element={
+            <LazyLoader>
+              <LazyReadingCheatsheet />
+            </LazyLoader>
+          } />
+          <Route path="/cheatsheets/science" element={
+            <LazyLoader>
+              <LazyScienceCheatsheet />
+            </LazyLoader>
+          } />
           {/* Analytics route */}
-          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/analytics" element={
+            <LazyLoader>
+              <LazyAnalytics />
+            </LazyLoader>
+          } />
           {/* Admin route */}
-          <Route path="/admin-import" element={<AdminImport />} />
+          <Route path="/admin-import" element={
+            <LazyLoader>
+              <LazyAdminImport />
+            </LazyLoader>
+          } />
           {/* Parent portal route */}
-          <Route path="/parent-portal" element={<ParentPortal />} />
+          <Route path="/parent-portal" element={
+            <LazyLoader>
+              <LazyParentPortal />
+            </LazyLoader>
+          } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

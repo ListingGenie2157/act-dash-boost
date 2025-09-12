@@ -3,12 +3,12 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BookOpen, Brain, Target, ArrowLeft } from 'lucide-react';
-import { Lesson } from '@/types';
+import { Lesson, WrongAnswer } from '@/types';
 import { QuizComponent } from './QuizComponent';
 
 interface LessonComponentProps {
   lesson: Lesson;
-  onComplete: (lessonId: string, practiceScore: number, quizScore: number, wrongAnswers: any[]) => void;
+  onComplete: (lessonId: string, practiceScore: number, quizScore: number, wrongAnswers: WrongAnswer[]) => void;
   onBack: () => void;
 }
 
@@ -16,16 +16,16 @@ export const LessonComponent = ({ lesson, onComplete, onBack }: LessonComponentP
   const [activeTab, setActiveTab] = useState('concept');
   const [practiceScore, setPracticeScore] = useState<number | null>(null);
   const [quizScore, setQuizScore] = useState<number | null>(null);
-  const [practiceWrongAnswers, setPracticeWrongAnswers] = useState<any[]>([]);
-  const [quizWrongAnswers, setQuizWrongAnswers] = useState<any[]>([]);
+  const [practiceWrongAnswers, setPracticeWrongAnswers] = useState<WrongAnswer[]>([]);
+  const [quizWrongAnswers, setQuizWrongAnswers] = useState<WrongAnswer[]>([]);
 
-  const handlePracticeComplete = (score: number, wrongAnswers: any[]) => {
+  const handlePracticeComplete = (score: number, wrongAnswers: WrongAnswer[]) => {
     setPracticeScore(score);
     setPracticeWrongAnswers(wrongAnswers);
     setActiveTab('quiz');
   };
 
-  const handleQuizComplete = (score: number, wrongAnswers: any[]) => {
+  const handleQuizComplete = (score: number, wrongAnswers: WrongAnswer[]) => {
     setQuizScore(score);
     setQuizWrongAnswers(wrongAnswers);
     onComplete(lesson.id, practiceScore || 0, score, [...practiceWrongAnswers, ...wrongAnswers]);

@@ -2,6 +2,11 @@
 
 export type StudyMode = 'MASTERY' | 'CRASH';
 
+export interface SupabaseClientLike {
+  from: (table: string) => any;
+  auth: any;
+}
+
 /**
  * Calculate the next review interval based on study mode and previous performance
  * @param mode - Study mode (MASTERY or CRASH)
@@ -67,7 +72,7 @@ export function nextInterval(mode: StudyMode, prevInterval: number, lapse: boole
  * @returns Promise with the updated review queue entry
  */
 export async function updateReviewQueueOnAnswer(
-  supabase: any, // Using any to avoid import dependencies in shared code
+  supabase: SupabaseClientLike,
   userId: string,
   questionId: string,
   correct: boolean,

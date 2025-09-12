@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { curriculum } from '@/data/curriculum';
 import { useProgress } from '@/hooks/useProgress';
 import { supabase } from '@/integrations/supabase/client';
+import { WrongAnswer } from '@/types';
 
 type View = 'dashboard' | 'day' | 'review' | 'study';
 
@@ -52,7 +53,7 @@ const Index = () => {
     completeDay(dayNumber);
   };
 
-  const handleUpdateScore = (lessonId: string, practiceScore: number, quizScore: number, wrongAnswers: any[]) => {
+  const handleUpdateScore = (lessonId: string, practiceScore: number, quizScore: number, wrongAnswers: WrongAnswer[]) => {
     // Update scores
     updateProgress({
       ...progress,
@@ -66,7 +67,7 @@ const Index = () => {
     });
 
     // Add wrong answers and update weak areas
-    wrongAnswers.forEach(wa => {
+    wrongAnswers.forEach((wa: WrongAnswer) => {
       addWrongAnswer(wa.questionId, wa.question, wa.userAnswer);
       
       // Determine topic from lesson

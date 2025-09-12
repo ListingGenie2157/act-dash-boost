@@ -95,7 +95,7 @@ serve(async (req) => {
       const timeMs = skill.effective_median_time_ms || 0;
       const timeSecs = timeMs / 1000;
       
-      let reasons: string[] = [];
+      const reasons: string[] = [];
       let isWeak = false;
 
       // Check mastery gates

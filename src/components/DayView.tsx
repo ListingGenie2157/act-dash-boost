@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Calculator, BookOpen, Timer, CheckCircle } from 'lucide-react';
-import { Day, DrillSession } from '@/types';
+import { Day, DrillSession, WrongAnswer } from '@/types';
 import { LessonComponent } from './LessonComponent';
 import { DrillComponent } from './DrillComponent';
 import { mathDrills, englishDrills } from '@/data/curriculum';
@@ -11,7 +11,7 @@ interface DayViewProps {
   day: Day;
   onBack: () => void;
   onDayComplete: (dayNumber: number) => void;
-  onUpdateScore: (lessonId: string, practiceScore: number, quizScore: number, wrongAnswers: any[]) => void;
+  onUpdateScore: (lessonId: string, practiceScore: number, quizScore: number, wrongAnswers: WrongAnswer[]) => void;
 }
 
 export const DayView = ({ day, onBack, onDayComplete, onUpdateScore }: DayViewProps) => {
@@ -21,7 +21,7 @@ export const DayView = ({ day, onBack, onDayComplete, onUpdateScore }: DayViewPr
   const [englishCompleted, setEnglishCompleted] = useState(false);
   const [drillsCompleted, setDrillsCompleted] = useState({ math: false, english: false });
 
-  const handleLessonComplete = (lessonId: string, practiceScore: number, quizScore: number, wrongAnswers: any[]) => {
+  const handleLessonComplete = (lessonId: string, practiceScore: number, quizScore: number, wrongAnswers: WrongAnswer[]) => {
     onUpdateScore(lessonId, practiceScore, quizScore, wrongAnswers);
     
     if (lessonId === day.mathLesson.id) {

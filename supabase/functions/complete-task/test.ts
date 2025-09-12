@@ -102,7 +102,7 @@ Deno.test("Answer validation - valid answer choices", () => {
   // Test invalid choices
   const invalidChoices = ['E', 'F', '1', '2', 'a', 'b'];
   invalidChoices.forEach(choice => {
-    assertEquals(validChoices.includes(choice as any), false);
+    assertEquals(validChoices.includes(choice as typeof validChoices[number]), false);
   });
 });
 

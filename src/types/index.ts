@@ -42,17 +42,27 @@ export interface UserProgress {
       drillScore?: number;
     };
   };
-  wrongAnswers: {
-    questionId: string;
-    question: Question;
-    userAnswer: number;
-    timestamp: Date;
-  }[];
-  weakAreas: {
-    subject: 'math' | 'english';
-    topic: string;
-    errorCount: number;
-  }[];
+  wrongAnswers: WrongAnswer[];
+  weakAreas: WeakArea[];
+}
+
+export interface WrongAnswer {
+  questionId: string;
+  question: Question;
+  userAnswer: number;
+  timestamp: Date;
+}
+
+export interface WeakArea {
+  subject: 'math' | 'english';
+  topic: string;
+  errorCount: number;
+}
+
+export interface SupabaseClientLike {
+  from: (table: string) => any;
+  auth: any;
+  functions: any;
 }
 
 export interface TimerState {
