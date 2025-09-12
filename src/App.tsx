@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 import { 
   LazyAnalytics, 
@@ -31,6 +32,8 @@ const App = () => (
           <Route path="/" element={<Index />} />
           {/* Login route to handle user authentication. */}
           <Route path="/login" element={<Login />} />
+          {/* Onboarding wizard route */}
+          <Route path="/onboarding" element={<Onboarding />} />
           {/* Diagnostic assessment route */}
           <Route path="/diagnostic" element={
             <LazyLoader>

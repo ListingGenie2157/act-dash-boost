@@ -20,13 +20,25 @@ const Index = () => {
   const { progress, updateProgress, addWrongAnswer, updateWeakAreas, completeDay } = useProgress();
   const navigate = useNavigate();
 
-  // On mount, verify the user has an active session. If not, redirect
-  // to the login page. This ensures the study dashboard is protected.
+  // On mount, verify the user has an active session and completed onboarding.
+  // Redirect to login if no session, or to onboarding if test_date not set.
   useEffect(() => {
     const checkAuth = async () => {
       const { data } = await supabase.auth.getSession();
       if (!data.session) {
         navigate('/login');
+        return;
+      }
+
+      // Check if user has completed onboarding
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('test_date')
+        .eq('id', data.session.user.id)
+        .maybeSingle();
+
+      if (!profile?.test_date) {
+        navigate('/onboarding');
       }
     };
     checkAuth();
