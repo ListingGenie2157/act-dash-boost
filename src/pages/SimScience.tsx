@@ -31,7 +31,7 @@ const SimScience = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(35 * 60); // 35 minutes for Science
+  const [timeLeft, setTimeLeft] = useState(35 * 60); // 35 minutes (2100s) for Science
   const [startTime] = useState(Date.now());
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
   const [isLoading, setIsLoading] = useState(true);

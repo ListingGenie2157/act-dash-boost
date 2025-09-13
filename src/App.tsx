@@ -13,6 +13,7 @@ import {
   LazyParentPortal,
   LazyDiagnostic,
   LazySimEnglish,
+  LazySimMath,
   LazySimReading,
   LazySimScience,
   LazyEnglishCheatsheet,
@@ -46,6 +47,11 @@ const App = () => (
           <Route path="/sim-english" element={
             <LazyLoader>
               <LazySimEnglish />
+            </LazyLoader>
+          } />
+          <Route path="/sim-math" element={
+            <LazyLoader>
+              <LazySimMath />
             </LazyLoader>
           } />
           <Route path="/sim-reading" element={

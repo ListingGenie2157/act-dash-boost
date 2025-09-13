@@ -22,18 +22,17 @@ interface Answer {
   timeSpent: number;
 }
 
-const SimEnglish = () => {
+const SimMath = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(45 * 60); // 45 minutes (2700s) for English
+  const [timeLeft, setTimeLeft] = useState(60 * 60); // 60 minutes (3600s) for Math
   const [startTime] = useState(Date.now());
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [simResultId, setSimResultId] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
   const [score, setScore] = useState(0);
 
@@ -45,7 +44,7 @@ const SimEnglish = () => {
           .from('v_form_section')
           .select('*')
           .eq('form_id', 'A')
-          .eq('section', 'EN')
+          .eq('section', 'MATH')
           .order('ord', { ascending: true });
 
         if (error) throw error;
@@ -150,7 +149,7 @@ const SimEnglish = () => {
         .from('sim_results')
         .insert({
           user_id: user.id,
-          section: 'english',
+          section: 'math',
           raw_score: finalScore,
           ended_at: new Date().toISOString(),
           time_stats_json: {
@@ -166,11 +165,9 @@ const SimEnglish = () => {
         .single();
 
       if (simError) throw simError;
-      setSimResultId(simResult.id);
 
       // Add incorrect answers to error bank and review queue
       for (const questionId of incorrectAnswers) {
-        // Add to error bank
         await supabase
           .from('error_bank')
           .upsert({
@@ -183,13 +180,12 @@ const SimEnglish = () => {
             ignoreDuplicates: false
           });
 
-        // Add to review queue
         await supabase
           .from('review_queue')
           .upsert({
             user_id: user.id,
             question_id: questionId,
-            due_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Due tomorrow
+            due_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
             interval_days: 1
           }, {
             onConflict: 'user_id,question_id',
@@ -226,7 +222,7 @@ const SimEnglish = () => {
         <div className="max-w-4xl mx-auto">
           <div className="print-content bg-white text-black p-8 rounded-lg shadow-lg">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold mb-2">ACT English Simulation Results</h1>
+              <h1 className="text-3xl font-bold mb-2">ACT Math Simulation Results</h1>
               <p className="text-lg text-gray-600">Test completed on {new Date().toLocaleDateString()}</p>
             </div>
             
@@ -234,9 +230,9 @@ const SimEnglish = () => {
               <div className="bg-gray-50 p-6 rounded-lg">
                 <h2 className="text-xl font-semibold mb-4">Score Summary</h2>
                 <div className="space-y-2">
-                  <p><strong>Raw Score:</strong> {score}/75</p>
-                  <p><strong>Percentage:</strong> {Math.round((score / 75) * 100)}%</p>
-                  <p><strong>Questions Answered:</strong> {answers.length}/75</p>
+                  <p><strong>Raw Score:</strong> {score}/{questions.length}</p>
+                  <p><strong>Percentage:</strong> {Math.round((score / questions.length) * 100)}%</p>
+                  <p><strong>Questions Answered:</strong> {answers.length}/{questions.length}</p>
                 </div>
               </div>
               
@@ -246,30 +242,6 @@ const SimEnglish = () => {
                   <p><strong>Total Time:</strong> {formatTime(Math.floor((Date.now() - startTime) / 1000))}</p>
                   <p><strong>Average per Question:</strong> {formatTime(Math.floor((Date.now() - startTime) / (1000 * answers.length)))}</p>
                 </div>
-              </div>
-            </div>
-
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold mb-4">Answer Grid</h2>
-              <div className="grid grid-cols-15 gap-2">
-                {questions.map((question, index) => {
-                  const answer = answers.find(a => a.questionId === question.id);
-                  const isCorrect = answer && question.answer.toLowerCase() === answer.selectedAnswer.toLowerCase();
-                  return (
-                    <div
-                      key={question.id}
-                      className={`w-8 h-8 flex items-center justify-center text-xs font-medium rounded ${
-                        !answer 
-                          ? 'bg-gray-200 text-gray-500' 
-                          : isCorrect 
-                            ? 'bg-green-200 text-green-800' 
-                            : 'bg-red-200 text-red-800'
-                      }`}
-                    >
-                      {index + 1}
-                    </div>
-                  );
-                })}
               </div>
             </div>
 
@@ -283,15 +255,6 @@ const SimEnglish = () => {
             </div>
           </div>
         </div>
-        
-        <style dangerouslySetInnerHTML={{
-          __html: `
-            @media print {
-              .no-print { display: none !important; }
-              .print-content { box-shadow: none !important; }
-            }
-          `
-        }} />
       </div>
     );
   }
@@ -305,8 +268,8 @@ const SimEnglish = () => {
       <div className="bg-card border-b p-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">ACT English Simulation</h1>
-            <p className="text-muted-foreground">Question {currentQuestion + 1} of 75</p>
+            <h1 className="text-2xl font-bold">ACT Math Simulation</h1>
+            <p className="text-muted-foreground">Question {currentQuestion + 1} of {questions.length}</p>
           </div>
           <div className="text-right">
             <div className="text-2xl font-mono font-bold text-primary">
@@ -344,7 +307,7 @@ const SimEnglish = () => {
               <div className="mt-4">
                 <Progress value={progress} className="h-2" />
                 <p className="text-sm text-muted-foreground mt-1">
-                  {answers.length} of 75 answered
+                  {answers.length} of {questions.length} answered
                 </p>
               </div>
             </CardContent>
@@ -420,4 +383,4 @@ const SimEnglish = () => {
   );
 };
 
-export default SimEnglish;
+export default SimMath;
