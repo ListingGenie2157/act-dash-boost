@@ -80,7 +80,95 @@ export type Database = {
             referencedRelation: "questions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "error_bank_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "v_form_section"
+            referencedColumns: ["question_id"]
+          },
         ]
+      }
+      form_questions: {
+        Row: {
+          form_id: string
+          ord: number
+          passage_id: string | null
+          question_id: string
+          section: string
+        }
+        Insert: {
+          form_id: string
+          ord: number
+          passage_id?: string | null
+          question_id: string
+          section: string
+        }
+        Update: {
+          form_id?: string
+          ord?: number
+          passage_id?: string | null
+          question_id?: string
+          section?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_questions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_questions_passage_id_fkey"
+            columns: ["passage_id"]
+            isOneToOne: false
+            referencedRelation: "passages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_questions_passage_id_fkey"
+            columns: ["passage_id"]
+            isOneToOne: false
+            referencedRelation: "v_form_section"
+            referencedColumns: ["passage_id"]
+          },
+          {
+            foreignKeyName: "form_questions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_questions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "v_form_section"
+            referencedColumns: ["question_id"]
+          },
+        ]
+      }
+      forms: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          is_active?: boolean
+          label: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+        }
+        Relationships: []
       }
       parent_links: {
         Row: {
@@ -122,6 +210,44 @@ export type Database = {
           id?: string
         }
         Relationships: []
+      }
+      passages: {
+        Row: {
+          created_at: string
+          form_id: string
+          id: string
+          passage_text: string
+          passage_type: string
+          section: string
+          title: string | null
+        }
+        Insert: {
+          created_at?: string
+          form_id: string
+          id: string
+          passage_text: string
+          passage_type: string
+          section: string
+          title?: string | null
+        }
+        Update: {
+          created_at?: string
+          form_id?: string
+          id?: string
+          passage_text?: string
+          passage_type?: string
+          section?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "passages_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -273,6 +399,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "questions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_queue_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "v_form_section"
+            referencedColumns: ["question_id"]
           },
         ]
       }
@@ -485,6 +618,33 @@ export type Database = {
       }
     }
     Views: {
+      v_form_section: {
+        Row: {
+          answer: string | null
+          choice_a: string | null
+          choice_b: string | null
+          choice_c: string | null
+          choice_d: string | null
+          explanation: string | null
+          form_id: string | null
+          ord: number | null
+          passage_id: string | null
+          passage_text: string | null
+          passage_title: string | null
+          question: string | null
+          question_id: string | null
+          section: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_questions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vw_user_skill_stats: {
         Row: {
           accuracy_percentage: number | null
