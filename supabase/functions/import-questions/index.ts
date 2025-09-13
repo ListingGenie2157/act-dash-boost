@@ -13,31 +13,41 @@ interface ImportReport {
   invalidRows: number;
   errors: string[];
   insertedQuestions?: number;
+  insertedSkills?: number;
+  insertedFormQuestions?: number;
+  insertedPassages?: number;
   dryRun: boolean;
 }
 
-interface QuestionRow {
-  skill_name: string;
-  stem: string;
+interface StagingRow {
+  form_id: string;
+  section: string;
+  ord: number;
+  passage_id?: string;
+  passage_type?: string;
+  passage_title?: string;
+  passage_text?: string;
+  topic?: string;
+  skill_code: string;
+  difficulty: string;
+  question: string;
   choice_a: string;
   choice_b: string;
   choice_c: string;
   choice_d: string;
   answer: string;
   explanation?: string;
-  difficulty: number;
-  time_limit_secs: number;
 }
 
-function parseCSV(csvContent: string): QuestionRow[] {
-  const lines = csvContent.trim().split('\n');
+function parseTSV(tsvContent: string): StagingRow[] {
+  const lines = tsvContent.trim().split('\n');
   if (lines.length === 0) return [];
   
-  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-  const rows: QuestionRow[] = [];
+  const headers = lines[0].split('\t').map(h => h.trim().replace(/"/g, ''));
+  const rows: StagingRow[] = [];
   
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+    const values = lines[i].split('\t').map(v => v.trim().replace(/"/g, ''));
     if (values.length === headers.length) {
       const row: any = {};
       headers.forEach((header, index) => {
@@ -45,21 +55,30 @@ function parseCSV(csvContent: string): QuestionRow[] {
       });
       
       // Convert numeric fields
-      row.difficulty = parseInt(row.difficulty) || 1;
-      row.time_limit_secs = parseInt(row.time_limit_secs) || 45;
+      row.ord = parseInt(row.ord) || 0;
       
-      rows.push(row as QuestionRow);
+      rows.push(row as StagingRow);
     }
   }
   
   return rows;
 }
 
-function validateQuestionRow(row: QuestionRow): string[] {
+function validateStagingRow(row: StagingRow): string[] {
   const errors: string[] = [];
   
-  if (!row.skill_name?.trim()) errors.push('skill_name is required');
-  if (!row.stem?.trim()) errors.push('stem is required');
+  if (!row.form_id?.trim()) errors.push('form_id is required');
+  if (!row.section?.trim()) errors.push('section is required');
+  if (!['EN', 'MATH', 'RD', 'SCI'].includes(row.section)) {
+    errors.push('section must be EN, MATH, RD, or SCI');
+  }
+  if (!row.ord || row.ord < 1) errors.push('ord must be >= 1');
+  if (!row.skill_code?.trim()) errors.push('skill_code is required');
+  if (!row.difficulty?.trim()) errors.push('difficulty is required');
+  if (!['Easy', 'Medium', 'Hard'].includes(row.difficulty)) {
+    errors.push('difficulty must be Easy, Medium, or Hard');
+  }
+  if (!row.question?.trim()) errors.push('question is required');
   if (!row.choice_a?.trim()) errors.push('choice_a is required');
   if (!row.choice_b?.trim()) errors.push('choice_b is required');
   if (!row.choice_c?.trim()) errors.push('choice_c is required');
@@ -69,15 +88,26 @@ function validateQuestionRow(row: QuestionRow): string[] {
     errors.push('answer must be A, B, C, or D');
   }
   
-  if (row.difficulty < 1 || row.difficulty > 5) {
-    errors.push('difficulty must be between 1 and 5');
-  }
-  
-  if (row.time_limit_secs < 1 || row.time_limit_secs > 300) {
-    errors.push('time_limit_secs must be between 1 and 300');
-  }
-  
   return errors;
+}
+
+function mapDifficulty(difficulty: string): number {
+  switch (difficulty) {
+    case 'Easy': return 2;
+    case 'Medium': return 3;
+    case 'Hard': return 4;
+    default: return 3;
+  }
+}
+
+function getSubjectFromSection(section: string): string {
+  switch (section) {
+    case 'EN': return 'English';
+    case 'MATH': return 'Math';
+    case 'RD': return 'Reading';
+    case 'SCI': return 'Science';
+    default: return 'Other';
+  }
 }
 
 serve(async (req) => {
@@ -121,29 +151,49 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { storagePath, dryRun = true } = body;
+    const { dryRun = true, useStaging = false } = body;
 
-    if (!storagePath) {
-      return new Response(JSON.stringify({ error: 'storagePath is required' }), {
+    let rows: StagingRow[] = [];
+
+    if (useStaging) {
+      // Read from staging_items table
+      const { data: stagingData, error: stagingError } = await supabase
+        .from('staging_items')
+        .select('*')
+        .order('staging_id');
+
+      if (stagingError) {
+        return new Response(JSON.stringify({ error: 'Failed to read staging data' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      rows = stagingData?.map(item => ({
+        form_id: item.form_id,
+        section: item.section,
+        ord: item.ord,
+        passage_id: item.passage_id,
+        passage_type: item.passage_type,
+        passage_title: item.passage_title,
+        passage_text: item.passage_text,
+        topic: item.topic,
+        skill_code: item.skill_code,
+        difficulty: item.difficulty,
+        question: item.question,
+        choice_a: item.choice_a,
+        choice_b: item.choice_b,
+        choice_c: item.choice_c,
+        choice_d: item.choice_d,
+        answer: item.answer,
+        explanation: item.explanation
+      })) || [];
+    } else {
+      return new Response(JSON.stringify({ error: 'TSV file upload not implemented in this function. Use staging table.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    // Download file from storage
-    const { data: fileData, error: downloadError } = await supabase.storage
-      .from('question-imports')
-      .download(storagePath);
-
-    if (downloadError || !fileData) {
-      return new Response(JSON.stringify({ error: 'Failed to download file' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const csvContent = await fileData.text();
-    const rows = parseCSV(csvContent);
     
     const report: ImportReport = {
       totalRows: rows.length,
@@ -153,77 +203,144 @@ serve(async (req) => {
       dryRun
     };
 
-    const validQuestions: any[] = [];
+    const validRows: StagingRow[] = [];
 
     // Validate each row
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      const rowErrors = validateQuestionRow(row);
+      const rowErrors = validateStagingRow(row);
       
       if (rowErrors.length > 0) {
         report.invalidRows++;
-        report.errors.push(`Row ${i + 2}: ${rowErrors.join(', ')}`);
+        report.errors.push(`Row ${i + 1}: ${rowErrors.join(', ')}`);
       } else {
         report.validRows++;
-        validQuestions.push(row);
+        validRows.push(row);
       }
     }
 
-    if (!dryRun && validQuestions.length > 0) {
-      // Get all skills to resolve skill names to IDs
-      const { data: skills, error: skillsError } = await supabase
-        .from('skills')
-        .select('id, name');
+    if (!dryRun && validRows.length > 0) {
+      let insertedSkills = 0;
+      let insertedQuestions = 0;
+      let insertedPassages = 0;
+      let insertedFormQuestions = 0;
 
-      if (skillsError) {
-        return new Response(JSON.stringify({ error: 'Failed to fetch skills' }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+      // Group by unique passages
+      const passages = new Map();
+      for (const row of validRows) {
+        if (row.passage_id && row.passage_text) {
+          passages.set(row.passage_id, {
+            id: row.passage_id,
+            form_id: row.form_id,
+            section: row.section,
+            passage_type: row.passage_type || 'General',
+            title: row.passage_title,
+            passage_text: row.passage_text
+          });
+        }
       }
 
-      const skillMap = new Map(skills?.map(s => [s.name.toLowerCase(), s.id]) || []);
-      const questionsToInsert: any[] = [];
+      // Insert passages
+      if (passages.size > 0) {
+        const { error: passageError } = await supabase
+          .from('passages')
+          .upsert(Array.from(passages.values()), { onConflict: 'id' });
 
-      for (const question of validQuestions) {
-        const skillId = skillMap.get(question.skill_name.toLowerCase());
-        if (skillId) {
-          questionsToInsert.push({
-            skill_id: skillId,
-            stem: question.stem,
-            choice_a: question.choice_a,
-            choice_b: question.choice_b,
-            choice_c: question.choice_c,
-            choice_d: question.choice_d,
-            answer: question.answer.toUpperCase(),
-            explanation: question.explanation || null,
-            difficulty: question.difficulty,
-            time_limit_secs: question.time_limit_secs
-          });
+        if (passageError) {
+          console.error('Passage insert error:', passageError);
+          report.errors.push(`Failed to insert passages: ${passageError.message}`);
         } else {
-          report.errors.push(`Skill not found: ${question.skill_name}`);
-          report.invalidRows++;
-          report.validRows--;
+          insertedPassages = passages.size;
         }
       }
 
-      if (questionsToInsert.length > 0) {
-        const { error: insertError } = await supabase
+      // Create skills on the fly
+      const skillsToCreate = new Set();
+      for (const row of validRows) {
+        skillsToCreate.add(row.skill_code);
+      }
+
+      for (const skillCode of skillsToCreate) {
+        const subject = getSubjectFromSection(validRows.find(r => r.skill_code === skillCode)?.section || '');
+        
+        const { error: skillError } = await supabase
+          .from('skills')
+          .upsert({
+            name: skillCode,
+            subject: subject,
+            cluster: 'General',
+            description: `Auto-created skill for ${skillCode}`,
+            order_index: 1
+          }, { onConflict: 'name' });
+
+        if (!skillError) {
+          insertedSkills++;
+        }
+      }
+
+      // Get skill IDs
+      const { data: skills } = await supabase
+        .from('skills')
+        .select('id, name')
+        .in('name', Array.from(skillsToCreate));
+
+      const skillMap = new Map(skills?.map(s => [s.name, s.id]) || []);
+
+      // Insert questions and form_questions
+      for (const row of validRows) {
+        const skillId = skillMap.get(row.skill_code);
+        if (!skillId) {
+          report.errors.push(`Skill not found: ${row.skill_code}`);
+          continue;
+        }
+
+        // Insert question
+        const { data: question, error: questionError } = await supabase
           .from('questions')
-          .insert(questionsToInsert);
+          .insert({
+            skill_id: skillId,
+            stem: row.question,
+            choice_a: row.choice_a,
+            choice_b: row.choice_b,
+            choice_c: row.choice_c,
+            choice_d: row.choice_d,
+            answer: row.answer.toUpperCase(),
+            explanation: row.explanation || null,
+            difficulty: mapDifficulty(row.difficulty),
+            time_limit_secs: 45
+          })
+          .select('id')
+          .single();
 
-        if (insertError) {
-          return new Response(JSON.stringify({ 
-            error: 'Failed to insert questions', 
-            details: insertError.message 
-          }), {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+        if (questionError) {
+          report.errors.push(`Failed to insert question: ${questionError.message}`);
+          continue;
         }
 
-        report.insertedQuestions = questionsToInsert.length;
+        insertedQuestions++;
+
+        // Insert form_question
+        const { error: formQuestionError } = await supabase
+          .from('form_questions')
+          .insert({
+            form_id: row.form_id,
+            section: row.section,
+            ord: row.ord,
+            question_id: question.id,
+            passage_id: row.passage_id || null
+          });
+
+        if (formQuestionError) {
+          report.errors.push(`Failed to insert form question: ${formQuestionError.message}`);
+        } else {
+          insertedFormQuestions++;
+        }
       }
+
+      report.insertedSkills = insertedSkills;
+      report.insertedQuestions = insertedQuestions;
+      report.insertedPassages = insertedPassages;
+      report.insertedFormQuestions = insertedFormQuestions;
     }
 
     return new Response(JSON.stringify(report), {

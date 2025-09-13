@@ -6,6 +6,8 @@ export const LazyAdminImport = lazy(() => import('@/pages/AdminImport'));
 export const LazyParentPortal = lazy(() => import('@/pages/ParentPortal'));
 export const LazyDiagnostic = lazy(() => import('@/pages/Diagnostic'));
 export const LazySimEnglish = lazy(() => import('@/pages/SimEnglish'));
+export const LazySimReading = lazy(() => import('@/pages/SimReading'));
+export const LazySimScience = lazy(() => import('@/pages/SimScience'));
 
 // Reusable loading component
 export const LazyLoader = ({ children }: { children: React.ReactNode }) => (

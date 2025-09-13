@@ -13,6 +13,8 @@ import {
   LazyParentPortal,
   LazyDiagnostic,
   LazySimEnglish,
+  LazySimReading,
+  LazySimScience,
   LazyEnglishCheatsheet,
   LazyMathCheatsheet,
   LazyReadingCheatsheet,
@@ -44,6 +46,16 @@ const App = () => (
           <Route path="/sim-english" element={
             <LazyLoader>
               <LazySimEnglish />
+            </LazyLoader>
+          } />
+          <Route path="/sim-reading" element={
+            <LazyLoader>
+              <LazySimReading />
+            </LazyLoader>
+          } />
+          <Route path="/sim-science" element={
+            <LazyLoader>
+              <LazySimScience />
             </LazyLoader>
           } />
           {/* Cheatsheet routes */}
