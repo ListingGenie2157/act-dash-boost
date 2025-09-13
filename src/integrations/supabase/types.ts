@@ -545,6 +545,69 @@ export type Database = {
         }
         Relationships: []
       }
+      staging_items: {
+        Row: {
+          answer: string
+          choice_a: string
+          choice_b: string
+          choice_c: string
+          choice_d: string
+          difficulty: string
+          explanation: string | null
+          form_id: string
+          ord: number
+          passage_id: string | null
+          passage_text: string | null
+          passage_title: string | null
+          passage_type: string | null
+          question: string
+          section: string
+          skill_code: string
+          staging_id: number
+          topic: string | null
+        }
+        Insert: {
+          answer: string
+          choice_a: string
+          choice_b: string
+          choice_c: string
+          choice_d: string
+          difficulty: string
+          explanation?: string | null
+          form_id: string
+          ord: number
+          passage_id?: string | null
+          passage_text?: string | null
+          passage_title?: string | null
+          passage_type?: string | null
+          question: string
+          section: string
+          skill_code: string
+          staging_id?: number
+          topic?: string | null
+        }
+        Update: {
+          answer?: string
+          choice_a?: string
+          choice_b?: string
+          choice_c?: string
+          choice_d?: string
+          difficulty?: string
+          explanation?: string | null
+          form_id?: string
+          ord?: number
+          passage_id?: string | null
+          passage_text?: string | null
+          passage_title?: string | null
+          passage_type?: string | null
+          question?: string
+          section?: string
+          skill_code?: string
+          staging_id?: number
+          topic?: string | null
+        }
+        Relationships: []
+      }
       study_plan_days: {
         Row: {
           generated_at: string | null
