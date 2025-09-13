@@ -42,24 +42,25 @@ const SimEnglish = () => {
     const loadQuestions = async () => {
       try {
         const { data, error } = await supabase
-          .from('questions')
+          .from('v_form_section')
           .select('*')
-          .eq('skill_id', (await supabase.from('skills').select('id').eq('subject', 'english').limit(75)).data?.[0]?.id)
-          .limit(75);
+          .eq('form_id', 'A')
+          .eq('section', 'EN')
+          .order('ord', { ascending: true });
 
         if (error) throw error;
-        if (data && data.length >= 75) {
-          setQuestions(data.slice(0, 75));
-        } else {
-          // If not enough English questions, get any 75 questions
-          const { data: allData, error: allError } = await supabase
-            .from('questions')
-            .select('*')
-            .limit(75);
-          
-          if (allError) throw allError;
-          setQuestions(allData || []);
-        }
+        
+        const formattedQuestions = data?.map(d => ({
+          id: d.question_id,
+          stem: d.question,
+          choice_a: d.choice_a,
+          choice_b: d.choice_b,
+          choice_c: d.choice_c,
+          choice_d: d.choice_d,
+          answer: d.answer
+        })) || [];
+        
+        setQuestions(formattedQuestions);
       } catch (error) {
         toast({
           title: "Error",
