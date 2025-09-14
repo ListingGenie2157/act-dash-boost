@@ -23,3 +23,9 @@ verify_jwt = true
 
 [functions.set-baseline]
 verify_jwt = true
+
+[functions.import-questions]
+verify_jwt = true
+
+[functions.import-practice-questions]
+verify_jwt = true
