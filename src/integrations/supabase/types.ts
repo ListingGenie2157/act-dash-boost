@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      attempts: {
+        Row: {
+          choice_order: number[]
+          correct_idx: number
+          created_at: string | null
+          form_id: string
+          id: string
+          question_id: string
+          question_ord: number
+          selected_idx: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          choice_order: number[]
+          correct_idx: number
+          created_at?: string | null
+          form_id: string
+          id?: string
+          question_id: string
+          question_ord: number
+          selected_idx?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          choice_order?: number[]
+          correct_idx?: number
+          created_at?: string | null
+          form_id?: string
+          id?: string
+          question_id?: string
+          question_ord?: number
+          selected_idx?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       diagnostics: {
         Row: {
           block: number

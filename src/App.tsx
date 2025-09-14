@@ -22,6 +22,8 @@ import {
   LazyScienceCheatsheet,
   LazyLoader
 } from "./components/LazyComponents";
+import DiagnosticTest from "./pages/DiagnosticTest";
+import DiagnosticResults from "./pages/DiagnosticResults";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +45,9 @@ const App = () => (
               <LazyDiagnostic />
             </LazyLoader>
           } />
+          {/* Diagnostic test routes */}
+          <Route path="/diagnostic-test/:formId" element={<DiagnosticTest />} />
+          <Route path="/diagnostic-results/:formId" element={<DiagnosticResults />} />
           {/* Simulation routes */}
           <Route path="/sim-english" element={
             <LazyLoader>
