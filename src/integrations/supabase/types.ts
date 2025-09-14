@@ -209,6 +209,33 @@ export type Database = {
         }
         Relationships: []
       }
+      mastery: {
+        Row: {
+          avg_time_ms: number
+          correct: number
+          last_updated: string
+          skill_id: string
+          total: number
+          user_id: string
+        }
+        Insert: {
+          avg_time_ms?: number
+          correct?: number
+          last_updated?: string
+          skill_id: string
+          total?: number
+          user_id: string
+        }
+        Update: {
+          avg_time_ms?: number
+          correct?: number
+          last_updated?: string
+          skill_id?: string
+          total?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       parent_links: {
         Row: {
           parent_id: string
@@ -403,6 +430,41 @@ export type Database = {
           },
         ]
       }
+      responses: {
+        Row: {
+          correct: boolean
+          question_id: string
+          selected: string
+          session_id: string
+          submitted_at: string
+          time_ms: number
+        }
+        Insert: {
+          correct: boolean
+          question_id: string
+          selected: string
+          session_id: string
+          submitted_at?: string
+          time_ms: number
+        }
+        Update: {
+          correct?: boolean
+          question_id?: string
+          selected?: string
+          session_id?: string
+          submitted_at?: string
+          time_ms?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "responses_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       review_queue: {
         Row: {
           created_at: string | null
@@ -517,6 +579,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sessions: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          form_id: string
+          id: string
+          mode: string
+          section: string
+          started_at: string
+          time_limit_sec: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          form_id: string
+          id?: string
+          mode: string
+          section: string
+          started_at?: string
+          time_limit_sec: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          form_id?: string
+          id?: string
+          mode?: string
+          section?: string
+          started_at?: string
+          time_limit_sec?: number
+          user_id?: string
+        }
+        Relationships: []
       }
       sim_results: {
         Row: {
