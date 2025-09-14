@@ -88,7 +88,7 @@ const Index = () => {
       );
       if (lesson) {
         const ismath = lesson.mathLesson.id === lessonId;
-        const subject = ismath ? 'math' : 'english';
+        const subject = ismath ? 'Math' : 'English';
         const topic = ismath ? lesson.mathLesson.title : lesson.englishLesson.title;
         updateWeakAreas(subject, topic);
       }

@@ -139,9 +139,9 @@ export const Dashboard = ({ onStartDay, onViewReview, onStudyNow }: DashboardPro
                 <div key={`${area.subject}-${area.topic}`} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center ${
-                      area.subject === 'math' ? 'bg-secondary text-secondary-foreground' : 'bg-accent text-accent-foreground'
+                      area.subject === 'Math' ? 'bg-secondary text-secondary-foreground' : 'bg-accent text-accent-foreground'
                     }`}>
-                      {area.subject === 'math' ? 'M' : 'E'}
+                      {area.subject === 'Math' ? 'M' : 'E'}
                     </div>
                     <span className="font-medium capitalize">{area.topic}</span>
                   </div>

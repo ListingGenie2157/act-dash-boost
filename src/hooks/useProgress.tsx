@@ -38,7 +38,7 @@ export const useProgress = () => {
     }));
   };
 
-  const updateWeakAreas = (subject: 'math' | 'english', topic: string) => {
+  const updateWeakAreas = (subject: 'Math' | 'English', topic: string) => {
     setProgress(prev => {
       const existingArea = prev.weakAreas.find(area => area.subject === subject && area.topic === topic);
       if (existingArea) {

@@ -5,7 +5,7 @@ import { Day, Lesson, DrillSession } from '../types';
 export const mathDrills: DrillSession[] = [
   {
     id: 'math-basics',
-    subject: 'math',
+    subject: 'Math',
     title: 'Math Basics Rapid Fire',
     // Increased time limit to allow for a deeper set of questions
     timeLimit: 90,
@@ -161,7 +161,7 @@ export const mathDrills: DrillSession[] = [
 export const englishDrills: DrillSession[] = [
   {
     id: 'grammar-basics',
-    subject: 'english',
+    subject: 'English',
     title: 'Grammar Rules Rapid Fire',
     // Extended the time limit to accommodate a richer set of questions
     timeLimit: 120,
@@ -315,7 +315,7 @@ export const curriculum: Day[] = [
     mathLesson: {
       id: 'math-day1-3',
       title: 'Fundamentals: Percentages, Fractions & Ratios',
-      subject: 'math',
+      subject: 'Math',
       concept:
         'This combined lesson covers percentages, fractions/decimals, and ratios/proportions. Mastering these conversions and relationships is critical for solving word problems, interpreting data, and setting up equations on the ACT.',
       examples: [
@@ -413,7 +413,7 @@ export const curriculum: Day[] = [
     englishLesson: {
       id: 'english-day1-3',
       title: 'Core Grammar & Punctuation',
-      subject: 'english',
+      subject: 'English',
       concept:
         'This combined lesson reviews subject–verb agreement, comma usage, and advanced punctuation (semicolons and colons). Understanding these rules ensures grammatically correct sentences and enhances clarity in writing.',
       examples: [
@@ -531,7 +531,7 @@ export const curriculum: Day[] = [
     mathLesson: {
       id: 'math-day2',
       title: 'Algebra Essentials and Exponents',
-      subject: 'math',
+      subject: 'Math',
       concept:
         'Develop fluency in solving linear equations, manipulating exponents, and simplifying radical expressions. These skills form the backbone of algebra problems on the ACT.',
       examples: [
@@ -612,7 +612,7 @@ export const curriculum: Day[] = [
     englishLesson: {
       id: 'english-day2',
       title: 'Pronouns & Verb Tense',
-      subject: 'english',
+      subject: 'English',
       concept:
         'Focus on correct use of pronouns (subjective vs. objective vs. possessive) and maintaining consistent verb tense within sentences and paragraphs.',
       examples: [
@@ -704,7 +704,7 @@ export const curriculum: Day[] = [
     mathLesson: {
       id: 'math-day3',
       title: 'Functions, Graphs & Inequalities',
-      subject: 'math',
+      subject: 'Math',
       concept:
         'Develop proficiency in evaluating functions, analyzing graphs, and solving inequalities. Learn how to identify domain and range, perform graph shifts, and represent solutions on a number line.',
       examples: [
@@ -769,7 +769,7 @@ export const curriculum: Day[] = [
     englishLesson: {
       id: 'english-day3',
       title: 'Parallel Structure & Modifiers',
-      subject: 'english',
+      subject: 'English',
       concept:
         'Learn how to create parallel structure in lists and comparisons and how to identify and correct misplaced or dangling modifiers.',
       examples: [
@@ -872,7 +872,7 @@ export const curriculum: Day[] = [
     mathLesson: {
       id: 'math-day4',
       title: 'Geometry & Trigonometry Basics',
-      subject: 'math',
+      subject: 'Math',
       concept:
         'Learn to calculate area, perimeter, and volume for common shapes, and apply basic trigonometric ratios to right triangles. Understand the relationships between angles and sides in triangles.',
       examples: [
@@ -954,7 +954,7 @@ export const curriculum: Day[] = [
     englishLesson: {
       id: 'english-day4',
       title: 'Run‑ons and Fragments',
-      subject: 'english',
+      subject: 'English',
       concept:
         'Learn how to identify and correct run‑on sentences (two independent clauses without proper punctuation) and sentence fragments (incomplete thoughts).',
       examples: [
@@ -1056,7 +1056,7 @@ export const curriculum: Day[] = [
     mathLesson: {
       id: 'math-day5',
       title: 'Statistics & Probability',
-      subject: 'math',
+      subject: 'Math',
       concept:
         'Understand how to calculate measures of central tendency (mean, median, mode, range) and basic probability. These topics regularly appear on the ACT.',
       examples: [
@@ -1129,7 +1129,7 @@ export const curriculum: Day[] = [
     englishLesson: {
       id: 'english-day5',
       title: 'Sentence Clarity & Conciseness',
-      subject: 'english',
+      subject: 'English',
       concept:
         'Improve writing by eliminating redundancy, choosing precise words, and restructuring sentences for clear and concise expression.',
       examples: [
@@ -1231,7 +1231,7 @@ export const curriculum: Day[] = [
     mathLesson: {
       id: 'math-day6',
       title: 'Word Problems & Matrices',
-      subject: 'math',
+      subject: 'Math',
       concept:
         'Learn to set up equations from verbal descriptions and solve systems using matrices (addition, subtraction, multiplication, and inverses). These tools are essential for multi‑step ACT questions.',
       examples: [
@@ -1304,7 +1304,7 @@ export const curriculum: Day[] = [
     englishLesson: {
       id: 'english-day6',
       title: 'Rhetorical Skills & Organization',
-      subject: 'english',
+      subject: 'English',
       concept:
         'Explore transitions, tone, and overall passage organization. Learn how to choose appropriate transitional words and phrases and maintain consistent tone throughout a passage.',
       examples: [
@@ -1386,7 +1386,7 @@ export const curriculum: Day[] = [
     mathLesson: {
       id: 'math-day7',
       title: 'Mixed Math Review',
-      subject: 'math',
+      subject: 'Math',
       concept:
         'Review all topics covered so far (percentages, fractions, ratios, algebra, functions, geometry, statistics, matrices) through mixed problem sets. Focus on pacing and recognizing problem types quickly.',
       examples: [
@@ -1459,7 +1459,7 @@ export const curriculum: Day[] = [
     englishLesson: {
       id: 'english-day7',
       title: 'Comprehensive Grammar Review',
-      subject: 'english',
+      subject: 'English',
       concept:
         'Reinforce all grammar rules learned so far (agreement, punctuation, pronouns, parallelism, fragments, clarity). Practice identifying and correcting errors in context.',
       examples: [
@@ -1562,7 +1562,7 @@ export const curriculum: Day[] = [
     mathLesson: {
       id: 'math-day8',
       title: 'Full ACT Math Practice Test',
-      subject: 'math',
+      subject: 'Math',
       concept:
         'Simulate the ACT math section with a timed test. Solve a variety of questions from all content areas. After completing the test, review incorrect answers to identify patterns and areas for improvement.',
       examples: [
@@ -1642,7 +1642,7 @@ export const curriculum: Day[] = [
     englishLesson: {
       id: 'english-day8',
       title: 'Full ACT English Practice',
-      subject: 'english',
+      subject: 'English',
       concept:
         'Take a full practice ACT English section, focusing on timing and applying all grammar and rhetoric rules learned. After completing, review each question to understand mistakes and reinforce strategies.',
       examples: [
@@ -1740,7 +1740,7 @@ export const curriculum: Day[] = [
     mathLesson: {
       id: 'm9',
       title: 'Percentages & Proportions',
-      subject: 'math',
+      subject: 'Math',
       concept: `**Core Concept: Percentages**
 - Percent = part/whole × 100
 - Decimal to percent: multiply by 100
@@ -1873,7 +1873,7 @@ Three partners split profits in ratio 2:3:5. Total profit is $50,000.
     englishLesson: {
       id: 'e9',
       title: 'Grammar Review',
-      subject: 'english',
+      subject: 'English',
       concept: `Review of essential grammar concepts from previous lessons.
 
 **Key Areas to Review:**
@@ -1941,7 +1941,7 @@ Three partners split profits in ratio 2:3:5. Total profit is $50,000.
     mathLesson: {
       id: 'm10',
       title: 'Linear Equations & Systems',
-      subject: 'math',
+      subject: 'Math',
       concept: `**Solving Linear Equations:**
 1. Distribute/expand
 2. Combine like terms
@@ -2078,7 +2078,7 @@ Simplify: (2x^3)^2 × 4x^(-2)
     englishLesson: {
       id: 'e10',
       title: 'Punctuation Rules',
-      subject: 'english',
+      subject: 'English',
       concept: `**Comma Rules:**
 1. Before FANBOYS joining complete sentences
 2. After introductory elements
@@ -2171,7 +2171,7 @@ Simplify: (2x^3)^2 × 4x^(-2)
     mathLesson: {
       id: 'm11',
       title: 'Essential Geometry & Functions',
-      subject: 'math',
+      subject: 'Math',
       concept: `**Triangle Properties:**
 - Sum of angles = 180°
 - Area = ½bh
@@ -2301,7 +2301,7 @@ Simplify: (2x^3)^2 × 4x^(-2)
     englishLesson: {
       id: 'e11',
       title: 'Advanced Grammar',
-      subject: 'english',
+      subject: 'English',
       concept: `**Subject-Verb Agreement:**
 - Singular subjects → singular verbs
 - Plural subjects → plural verbs
@@ -2377,7 +2377,7 @@ Simplify: (2x^3)^2 × 4x^(-2)
     mathLesson: {
       id: 'm12',
       title: 'Word Problems & Statistics',
-      subject: 'math',
+      subject: 'Math',
       concept: `**Key Translations:**
 - "is" = equals (=)
 - "of" = multiply (×)
@@ -2505,7 +2505,7 @@ Simplify: (2x^3)^2 × 4x^(-2)
     englishLesson: {
       id: 'e12',
       title: 'Reading Comprehension Strategies',
-      subject: 'english',
+      subject: 'English',
       concept: `**Active Reading Strategies:**
 1. Read the question first
 2. Skim the passage for main ideas
@@ -2607,7 +2607,7 @@ Simplify: (2x^3)^2 × 4x^(-2)
     mathLesson: {
       id: 'm13',
       title: 'Comprehensive Math Review',
-      subject: 'math',
+      subject: 'Math',
       concept: `**Review of All Key Topics:**
 
 **Percentages & Ratios:**
@@ -2734,7 +2734,7 @@ Simplify: (2x^3)^2 × 4x^(-2)
     englishLesson: {
       id: 'e13',
       title: 'Comprehensive English Review',
-      subject: 'english',
+      subject: 'English',
       concept: `**Grammar Review:**
 - Subject-verb agreement (collective nouns, indefinite pronouns)
 - Pronoun agreement and clarity

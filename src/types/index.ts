@@ -10,7 +10,7 @@ export interface Question {
 export interface Lesson {
   id: string;
   title: string;
-  subject: 'math' | 'english';
+  subject: 'Math' | 'English';
   concept: string;
   examples: string[];
   practiceQuestions: Question[];
@@ -26,7 +26,7 @@ export interface Day {
 
 export interface DrillSession {
   id: string;
-  subject: 'math' | 'english';
+  subject: 'Math' | 'English';
   title: string;
   timeLimit: number; // seconds
   questions: Question[];
@@ -54,7 +54,7 @@ export interface WrongAnswer {
 }
 
 export interface WeakArea {
-  subject: 'math' | 'english';
+  subject: 'Math' | 'English';
   topic: string;
   errorCount: number;
 }
