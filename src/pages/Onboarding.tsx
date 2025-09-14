@@ -121,7 +121,13 @@ export default function Onboarding() {
                 mode="single"
                 selected={testDate}
                 onSelect={setTestDate}
-                disabled={(date) => date < new Date()}
+                disabled={(date) => {
+                  const d = new Date(date);
+                  d.setHours(0,0,0,0);
+                  const today = new Date();
+                  today.setHours(0,0,0,0);
+                  return d < today;
+                }}
                 initialFocus
                 className="p-3 pointer-events-auto"
               />
