@@ -718,6 +718,66 @@ export type Database = {
           },
         ]
       }
+      test_package_sections: {
+        Row: {
+          created_at: string | null
+          form_id: string
+          ord: number
+          package_id: string
+          section: string
+          time_limit_minutes: number
+        }
+        Insert: {
+          created_at?: string | null
+          form_id: string
+          ord: number
+          package_id: string
+          section: string
+          time_limit_minutes: number
+        }
+        Update: {
+          created_at?: string | null
+          form_id?: string
+          ord?: number
+          package_id?: string
+          section?: string
+          time_limit_minutes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_package_sections_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_package_sections_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "test_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      test_packages: {
+        Row: {
+          created_at: string | null
+          id: string
+          label: string
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          label: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          label?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       v_form_section: {

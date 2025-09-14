@@ -34,6 +34,11 @@ const TIMERS = {
   D2MA: 25 * 60, // 25 minutes
   D2RD: 18 * 60, // 18 minutes
   D2SCI: 18 * 60, // 18 minutes
+  // Official ACT section timers
+  EN_A: 45 * 60, EN_B: 45 * 60, EN_C: 45 * 60, // 45 minutes
+  MATH_A: 60 * 60, MATH_B: 60 * 60, MATH_C: 60 * 60, // 60 minutes
+  RD_A: 35 * 60, RD_B: 35 * 60, RD_C: 35 * 60, // 35 minutes
+  SCI_A: 35 * 60, SCI_B: 35 * 60, SCI_C: 35 * 60, // 35 minutes
 };
 
 // Seeded shuffle function
