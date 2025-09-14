@@ -1,0 +1,75 @@
+id	form_id	section	ord	passage_id	passage_type	passage_title	passage_text	topic	skill_code	difficulty	title	question	choice_a	choice_b	choice_c	choice_d	answer	explanation
+FA_RD_001	A	RD	1	R1	Literary	Narrative			R1.A	Medium	The Clockmaker	What is the central theme of the passage?	The burden of family expectations	The discipline behind precision work	The decline of small shops	The glamour of sports	B	Lina’s focus and Grandfather’s maxim frame precision as meaningful discipline.
+FA_RD_002	A	RD	2	R1	Literary	Narrative			R1.B	Easy		Which detail best supports that Lina prefers the craft over conversation?	“Customers came in for batteries and left with stories.”	“Grandfather had time for both.”	“Lina preferred the gears.”	“He waved it away.”	C	Direct statement of preference.
+FA_RD_003	A	RD	3	R1	Literary	Narrative			R1.C	Medium		The metaphor “the mechanism inside was a stubborn optimist” primarily suggests that the stopwatch __.	is beyond repair	will run if given minor help	is more valuable than it appears	has sentimental value	B	Hints it can work with small adjustments.
+FA_RD_004	A	RD	4	R1	Literary	Narrative			R1.D	Medium		Function of the sentence “Precision is a courtesy”?	It introduces the shop’s pricing policy	It reveals the moral framework of the work	It foreshadows a failure	It provides comic relief	B	Frames the values guiding Lina’s craft.
+FA_RD_005	A	RD	5	R1	Literary	Narrative			R1.E	Medium		What does Lina’s final line (“If you do”) imply?	The watch is still broken	The runner’s preparation affects reliability	The crystal must be replaced	Grandfather will redo the repair	B	Implies the human factor matters.
+FA_RD_006	A	RD	6	R1	Literary	Narrative			R1.F	Hard		Which inference is most supported?	Grandfather doubts Lina’s skill	The marathoner respects rituals	Lina has repaired many stopwatches before	The shop is failing financially	B	Tapping the crystal” and tea/story ritual show respect for routine.
+FA_RD_007	A	RD	7	R1	Literary	Narrative			R1.G	Medium		Which choice best captures the narrator’s tone toward Grandfather?	Irreverent	Admiring	Impatient	Detached	B	He’s wise, patient, and principled.
+FA_RD_008	A	RD	8	R1	Literary	Narrative			R1.H	Medium		Vocabulary in context: “hesitated” most nearly means __ here.	paused	braked	disagreed	delayed	A	Describes the balance wheel’s brief pause.
+FA_RD_009	A	RD	9	R1	Literary	Narrative			R1.I	Medium		Which sentence best supports the idea that precision serves others?	“Customers came in for batteries and left with stories.”	“You keep time so others don’t lose theirs.”	“The casing was dented.”	“The start button stuck.”	B	Direct support for service-oriented precision.
+FA_RD_010	A	RD	10	R1	Literary	Narrative			R1.J	Medium		Structure: The narrative develops mainly through __.	action and dialogue	flashback and summary	description and internal reflection	second-person address	C	Workbench details, values, and small actions.
+FA_RD_011	A	RD	11	R2	Social	Science			R2.A	Medium	The Sidewalk Experiment	What is the central claim of the passage?	Slow streets increase pedestrian activity and reduce speeds during the pilot.	Slow streets permanently reduce car ownership.	Slow streets reduce noise but increase crashes.	Slow streets benefit only older residents.	A	Data show speed drops and pedestrian increases during the pilot.
+FA_RD_012	A	RD	12	R2	Social	Science			R2.B	Medium		Which detail best supports the claim that effects were not driven by broader city trends?	The interview quotes	The control street data	The farmers’ market anomaly	The delivery drivers’ complaints	B	Controls showed no significant changes.
+FA_RD_013	A	RD	13	R2	Social	Science			R2.C	Medium		Which inference is most supported about trip purpose?	Increases were random	Park-to-grocery routes drew more walkers	People avoided markets	Older residents walked less	B	Park-to-grocery routes had the largest increases.
+FA_RD_014	A	RD	14	R2	Social	Science			R2.D	Medium		Function: Why mention weekend anomalies?	To undermine the speed data	To acknowledge expected confounds	To suggest the sensors malfunctioned	To argue against reopening	B	Authors flag confounding events.
+FA_RD_015	A	RD	15	R2	Social	Science			R2.E	Medium		Vocab in context: “rebounded” most nearly means __.	overshot	returned	increased gradually	fell unexpectedly	B	Returned toward prior levels.
+FA_RD_016	A	RD	16	R2	Social	Science			R2.F	Hard		Which conclusion is justified?	The pilot caused permanent behavior change of equal magnitude	The pilot had temporary strong effects and a smaller lasting effect	The pilot was ineffective overall	The sensors were likely biased	B	Data: large drops during pilot; partial persistence after.
+FA_RD_017	A	RD	17	R2	Social	Science			R2.G	Medium		Which evidence best supports that speeds fell substantially?	Interviews with older residents	Speeds fell from 28 mph to 17 mph	Control streets had no changes	Farmers’ market days had anomalies	B	Direct numeric change.
+FA_RD_018	A	RD	18	R2	Social	Science			R2.H	Medium		What role do interviews play?	They replace sensor data	They provide qualitative context	They disprove the counts	They establish causation	B	Add experiences to complement measurements.
+FA_RD_019	A	RD	19	R2	Social	Science			R2.I	Medium		Which is a reasonable policy implication?	Make all streets slow permanently	Target slow-street pilots on key connectors	Ignore weekends	Remove markets	B	Data show biggest gains on connector routes.
+FA_RD_020	A	RD	20	R2	Social	Science			R2.J	Medium		Structure: The passage develops primarily through __.	anecdote and opinion	experimental results and interpretation	chronological memoir	legal analysis	B	Presents measurements, then analysis.
+FA_RD_021	A	RD	21	R3	Humanities	Essay	In the new wing, the museum promised “a history of modern design.” The phrase bothered Mara, the curator tasked with arranging the show. History implied a single line; design had never behaved so neatly. Chairs refused to march from ornate to minimal without detours; tools acquired elegance for reasons having little to do with taste. When donors asked whether their favorites would be “featured,” Mara nodded politely and returned to floor plans that looked like tangled yarn. Space was finite, but so was attention, and attention was the rarer constraint. She chose a bentwood chair less for beauty than for its factory photo, where steam curled like handwriting. She placed a plastic lawn chair between two icons to make them explain themselves. Labels were rewritten to show use before authorship. Visitors wandered in expecting masterpieces and found arguments arranged on platforms. Some grew irritated, as if they had been asked to assemble the exhibit themselves. “Good,” Mara said in the quiet before opening. “They’ll have to decide what belongs.”	What is the central claim of the passage?	Design history is a simple linear progression.	Curation can frame design as questions rather than answers.	Donors should control exhibition choices.	Labels are more important than objects.	B	Mara organizes to provoke thinking, not to tell a single line.	Donors should control exhibition choices.	Labels are more important than objects.	B	Mara organizes to provoke thinking, not to tell a single line.
+FA_RD_022	A	RD	22	R3	Humanities	Essay			R3.B	Easy		Which detail best shows that Mara rejects a single timeline?	“She nodded politely.”	“Chairs refused to march from ornate to minimal without detours.”	“She chose a bentwood chair for beauty.”	“Visitors wandered in expecting masterpieces.”	B	Direct statement against linear progress.
+FA_RD_023	A	RD	23	R3	Humanities	Essay			R3.C	Medium		The lawn chair is included primarily to ____.	fill space between icons	mock high design	force viewers to compare objects	create a humorous interlude	C	It makes the “icons” justify themselves by contrast.
+FA_RD_024	A	RD	24	R3	Humanities	Essay			R3.D	Hard		The phrase “steam curled like handwriting” suggests that the factory photo ____.	is purely decorative	documents process with expressive detail	was taken by a famous artist	lacks relevance to the chair	B	Metaphor links process image to a human trace; emphasizes making.
+FA_RD_025	A	RD	25	R3	Humanities	Essay			R3.E	Medium		Function: “Space was finite, but so was attention…” mainly serves to ____.	explain budget cuts	introduce the two constraints guiding choices	criticize visitors	force donor compliance	B	States the practical limits shaping the curation.
+FA_RD_026	A	RD	26	R3	Humanities	Essay			R3.F	Medium		Vocabulary in context: “featured” most nearly means __ here.	praised prominently	posted online	discounted	removed	A	Donors want prominent placement.
+FA_RD_027	A	RD	27	R3	Humanities	Essay			R3.G	Medium		What attitude does the narrator convey toward visitors who are “irritated”?	sarcastic	disdainful	appreciative yet firm	indifferent	C	Mara said ‘Good’” shows she welcomes the challenge for visitors.
+FA_RD_028	A	RD	28	R3	Humanities	Essay			R3.H	Hard		Which inference is most supported about the labels?	They list designer biographies only.	They prioritize how objects were used.	They are replaced by audio tours.	They contain no dates.	B	Text: “Labels were rewritten to show use before authorship.”
+FA_RD_029	A	RD	29	R3	Humanities	Essay			R3.I	Medium		Which statement best captures the relationship between donors and Mara?	Donors directly choose the objects.	Mara flatly refuses donor input.	Donors ask; Mara listens but makes curatorial decisions.	Mara depends on donors to write labels.	C	She nods but returns to her plan.
+FA_RD_030	A	RD	30	R3	Humanities	Essay			R3.J	Medium				second-person instructions	a sequence of donor interviews	chronological history of chairs	A	Visitor expectations vs Mara’s arrangement drives the piece.
+FA_RD_031	A	RD	31	R4	Natural Science	Explanatory			R4.A	Medium	Cool Roofs, Hot Cities	What is the main purpose of the passage?	to advocate for ending air-conditioning	to explain evidence that reflective roofs reduce heat loads	to show that clouds eliminate any benefits	to dismiss concerns about glare	B	Presents measurements and outcomes showing benefits.
+FA_RD_032	A	RD	32	R4	Natural Science	Explanatory			R4.B	Easy		Which finding directly supports energy savings?	Coated roofs were 18–25°C cooler.	Indoor cooling energy dropped 12 percent.	Differences shrank on cloudy days.	Aerial images showed hot spots.	B	Energy metric is explicit.
+FA_RD_033	A	RD	33	R4	Natural Science	Explanatory			R4.C	Medium		What role do the cloudy-week results play?	They contradict the program’s conclusions.	They show the effect varies with conditions but persists.	They prove sensors were inaccurate.	They show winter benefits only.	B	Smaller but nonzero differences indicate robustness.
+FA_RD_034	A	RD	34	R4	Natural Science	Explanatory			R4.D	Medium		The aerial thermal images primarily indicate that ____.	the city has no heat island effect	the program coverage was incomplete	reflection causes glare	clouds increase surface temperatures	B	Hot spots show untreated areas remain.
+FA_RD_035	A	RD	35	R4	Natural Science	Explanatory			R4.E	Hard		Which claim is best supported by the engineers’ response?	Glare makes cool roofs impractical in all cases.	Reflected light mostly exits upward; glare risk depends on geometry.	All reflections are harmless.	Cool roofs work only on tall buildings.	B	Text: “most reflected energy goes back to the sky…glare depends on angle and texture.”
+FA_RD_036	A	RD	36	R4	Natural Science	Explanatory			R4.F	Medium		Vocabulary in context: “counterparts” most nearly means __.	complements	duplicates	opposites	comparable items	D	Here, uncoated roofs serving as the comparison group.
+FA_RD_037	A	RD	37	R4	Natural Science	Explanatory			R4.G	Medium		Which conclusion is justified by the tenant reports?	They prove causation without sensors.	They add qualitative support for measured benefits.	They show energy bills increased.	They invalidate concerns about coverage.	B	Anecdotal outcomes align with sensor data.
+FA_RD_038	A	RD	38	R4	Natural Science	Explanatory			R4.H	Medium		If a coated roof reduces peak surface temperature by 20°C and indoor cooling by 10%, which scenario most likely reduces benefits?	a string of clear days	a building shaded by taller neighbors	more rooftop insulation	program expansion to schools	B	Shade lessens solar input; effect size shrinks.
+FA_RD_039	A	RD	39	R4	Natural Science	Explanatory			R4.I	Hard		Which additional evidence would most strengthen the program’s case?	Photos of white roofs in other cities	A winter-week test showing identical results	Three-year billing data showing sustained lower kWh	Interviews with roofers about installation	C	Long-term energy billing confirms durable impact.
+FA_RD_040	A	RD	40	R4	Natural Science	Explanatory			R4.J	Medium		Structure: The passage develops primarily through __.	definition, methods, results, and implications	anecdotes and opinions	a legal debate about building codes	a chronological memoir	A	Classic explanatory arc: define problem → test → results → response.
+																		
+																		
+																		
+																		
+																		
+																		
+																		
+																		
+																		
+																		
+																		
+																		
+																		
+																		
+																		
+																		
+																		
+																		
+																		
+																		
+																		
+																		
+																		
+																		
+FA_EN_016																		
+FA_EN_017																		
+FA_EN_018																		
+FA_EN_019																		
+FA_EN_020																		
+FA_EN_021																		
+FA_EN_022																		
+FA_EN_023																		
+FA_EN_024																		
+FA_EN_025																		

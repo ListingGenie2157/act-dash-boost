@@ -1,0 +1,61 @@
+id	form_id	section	ord	passage_id	passage_type	passage_title	passage_text	topic	skill_code	difficulty	question	choice_a	choice_b	choice_c	choice_d	answer	explanation
+FA_MA_001	A	MATH	1					Linear Equations	M2.A	Easy	Solve: 3(2x − 5) = 4x + 7.	7	11	22	−11	B	6x − 15 = 4x + 7 → 2x = 22 → x = 11.
+FA_MA_002	A	MATH	2					Slope/Rate	M7.A	Easy	What is the slope of the line through (2, −3) and (8, 9)?	2	−2	1/2	12	A	(9 − (−3)) / (8 − 2) = 12/6 = 2.
+FA_MA_003	A	MATH	3					Exponent Rules	M1.B	Easy	Simplify: (4x^2y^3)(−3xy^2).	−12x^3y^5	−7x^2y^6	12x^3y^5	−12x^2y^5	A	Multiply coefficients and add exponents: 4(−3)=−12; x^(2+1); y^(3+2).
+FA_MA_004	A	MATH	4					Systems (Linear)	M2.B	Medium	Solve the system: x + y = 7 and 2x − y = 4.	(11/3, 10/3)	(10/3, 11/3)	(3, 4)	(4, 3)	A	Add equations → 3x = 11 → x = 11/3; y = 7 − 11/3 = 10/3.
+FA_MA_005	A	MATH	5					Quadratics (Solve)	M3.A	Easy	Solve x^2 − 5x − 24 = 0.	x = 8 and x = −3	x = 6 and x = −4	x = 12 and x = 2	x = −8 and x = 3	A	Factor (x − 8)(x + 3) = 0.
+FA_MA_006	A	MATH	6					Discriminant	M3.B	Medium	For 2x^2 + 3x + k = 0 to have one real solution, k must equal ____.	9/8	8/9	3/4	9/4	A	Set b^2 − 4ac = 0 → 9 − 8k = 0 → k = 9/8.
+FA_MA_007	A	MATH	7					Function Value	M4.A	Easy	If f(x) = 2x^2 − 3x + 4, find f(−2).	0	18	−18	12	B	2(4) + 6 + 4 = 18.
+FA_MA_008	A	MATH	8					Quadratic Vertex	M4.B	Easy	Vertex of y = (x − 3)^2 + 5.	(3, 5)	(−3, 5)	(5, 3)	(3, −5)	A	Vertex form gives (h, k) = (3, 5).
+FA_MA_009	A	MATH	9					Absolute Value	M1.C	Medium	Sum of solutions to |2x − 5| = 9.	5	−5	9	−2	A	Solutions: x = 7 and x = −2 → sum = 5.
+FA_MA_010	A	MATH	10					Exponent/Negative Powers	M1.D	Medium	Simplify: (x^3y^−2)^2 ÷ (x^−1y).	x^5y^7	x^7/y^5	x^−7y^5	x^6/y^3	B	x^(6 − (−1)) y^(−4 − 1) = x^7 y^−5.
+FA_MA_011	A	MATH	11					Log Properties	M5.A	Medium	If log10 a = 2 and log10 b = 3, find log10(a√b).	3	3.5	5	2.5	B	2 + ½·3 = 3.5.
+FA_MA_012	A	MATH	12					Percent Change	M10.A	Easy	Increase by 20%, then decrease by 20%. Final percent of original?	96%	100%	80%	120%	A	1.2 × 0.8 = 0.96.
+FA_MA_013	A	MATH	13					Ratios	M10.B	Easy	Cats:dogs = 3:5, total 64. How many cats?	24	32	40	8	A	8 parts → 64/8 = 8 each; cats = 3×8 = 24.
+FA_MA_014	A	MATH	14					Simple Interest	M10.C	Easy	$500 at 6% simple interest for 3 years → total?	$590	$530	$600	$560	A	I = 500(0.06)(3) = 90 → 500 + 90 = 590.
+FA_MA_015	A	MATH	15					Distance Formula	M7.B	Medium	Distance between (−3, 4) and (5, −8).	13	4√13	2√41	12	B	√[(8)^2 + (−12)^2] = √(64+144) = √208 = 4√13.
+FA_MA_016	A	MATH	16					Circle Area	M6.B	Easy	Area of a circle with radius 7.	14π	49π	98π	343π	B	A = πr^2 = 49π.
+FA_MA_017	A	MATH	17					Right Triangles	M6.C	Easy	A right triangle has legs 6 and 8. Perimeter?	20	22	24	26	C	Hypotenuse 10 → 6+8+10=24.
+FA_MA_018	A	MATH	18					Trig Basics	M8.A	Easy	In a right triangle with hypotenuse 13 and opposite 5, sin θ = ____.	5/13	12/13	12/5	13/5	A	Sin = opp/hyp = 5/13.
+FA_MA_019	A	MATH	19					Special Triangles	M8.B	Easy	In a 30-60-90 triangle with short leg 5, the long leg is ____.	5√3	10	5	10√3	A	Ratios 1:√3:2 → long = 5√3.
+FA_MA_020	A	MATH	20					Trapezoid Area	M6.D	Medium	Trapezoid with bases 10 and 14, height 6. Area?	48	72	84	144	B	½(10+14)·6 = 12·6 = 72.
+FA_MA_021	A	MATH	21					Probability	M9.B	Medium	Bag: 4 red, 5 blue, 1 green. P(not blue)?	1/10	1/2	1/5	3/5	B	(4+1)/10 = 5/10 = 1/2.
+FA_MA_022	A	MATH	22					Counting/Combinations	M9.C	Medium	How many ways to choose 2 from 7?	35	21	14	42	B	C(7,2) = 7·6/2 = 21.
+FA_MA_023	A	MATH	23					Linear Models	M2.C	Easy	Line with slope −2 passing through (0, 3).	y = −2x + 3	y = 2x + 3	y = −2x − 3	y = 3x − 2	A	Slope-intercept with b = 3.
+FA_MA_024	A	MATH	24					Exponential Growth	M5.B	Medium	Starts at 200, doubles every 5 years. After 15 years?	400	800	1600	3200	C	200·2^(15/5) = 200·2^3 = 1600.
+FA_MA_025	A	MATH	25					Mean vs Median	M9.A	Medium	Data: 2, 5, 7, 7, 10, 13. Mean − median = ____.	0	1/3	2/3	1/6	B	Mean 44/6 = 22/3; median 7 → 22/3 − 7 = 1/3.
+FA_MA_026	A	MATH	26					Matrices (2×2 Det)	M10.D	Medium	Determinant of [[2, −1],[3, 4]] is ____.	5	7	11	14	C	2·4 − (−1·3) = 8 + 3 = 11.
+FA_MA_027	A	MATH	27					Systems Word Problem	M10.E	Medium	Two numbers sum to 27; their difference is 5. Larger number?	11	12	16	22	C	x + y = 27, x − y = 5 → 2x = 32 → x = 16.
+FA_MA_028	A	MATH	28					Rational Expressions	M3.C	Medium	Simplify: (x^2 − 9)/(x^2 − 3x), x ≠ 0,3.	(x + 3)/x	(x − 3)/x	x/(x + 3)	Cannot be simplified	A	Factor → (x−3)(x+3)/[x(x−3)] = (x+3)/x.
+FA_MA_029	A	MATH	29					Absolute Value/Min	M4.C	Easy	Minimum of |x − 4| + 3 is ____.	−3	0	3	4	C	|x − 4| ≥ 0, min at x=4 → 3.
+FA_MA_030	A	MATH	30					Quadratic Max/MIN	M3.D	Medium	Maximum of f(x) = −x^2 + 6x − 5.	−4	3	4	5	C	Vertex at x = −b/(2a) = 3; f(3)= −9+18−5=4.
+FA_MA_031	A	MATH	31					Inequalities (Linear)	M2.D	Easy	Solve: 5 − 2x > 11.	x < −3	x > −3	x > 3	x < 3	A	−2x > 6 → x < −3.
+FA_MA_032	A	MATH	32					Parallel Lines (Slope)	M7.C	Medium	Equation of the line parallel to 3x − 2y = 8 through (1, −4).	y = (3/2)x − 11/2	y = (−2/3)x − 4	y = (3/2)x + 4	y = (−2/3)x + 11/2	A	Slope is 3/2; plug point to find b = −11/2.
+FA_MA_033	A	MATH	33					Perpendicular Lines	M7.D	Easy	Line perpendicular to y = (3/2)x − 1 and through (0, 5).	y = (−2/3)x + 5	y = (3/2)x + 5	y = (−3/2)x + 5	y = (2/3)x + 5	A	Perpendicular slope is −2/3; passes through (0,5).
+FA_MA_034	A	MATH	34					Systems (Linear)	M2.E	Medium	Solve: 3x + 2y = 12 and x − y = 1.	(14/5, 9/5)	(9/5, 14/5)	(4, 2)	(2, 4)	A	Substitute x = y + 1 → 3(y+1)+2y=12 → y=9/5; x=14/5.
+FA_MA_035	A	MATH	35					Rates/Work	M10.F	Medium	Time for workers A (6 h) and B (4 h) together to finish 1 job.	12/5 h	5/12 h	2 h	10/3 h	A	1/6+1/4=5/12 job/h → t=12/5 h = 2.4 h.
+FA_MA_036	A	MATH	36					Similarity & Area Scale	M6.I	Easy	Triangles are similar with scale factor 3 (side). If small area is 7, large area is __.	21	63	9	27	B	Area scales by factor^2 → 7·9=63.
+FA_MA_037	A	MATH	37					Circumference	M6.A	Easy	Circumference of a circle with diameter 10.	10π	5π	25π	50π	A	C = πd = 10π.
+FA_MA_038	A	MATH	38					Arc Length	M6.J	Medium	Arc length for central angle 60° in a circle of radius 9.	6π	3π	9π	π	B	(60/360)·2π·9 = 3π.
+FA_MA_039	A	MATH	39					Sector Area	M6.K	Easy	Area of a 90° sector of a circle with r = 4.	4π	8π	16π	2π	A	(90/360)·π·4^2 = 4π.
+FA_MA_040	A	MATH	40					Similar Triangles (5-12-13)	M6.H	Easy	A triangle similar to 5-12-13 has hypotenuse 26. The leg corresponding to 12 equals __.	12	24	10	13	B	Scale factor 2 → 12→24.
+FA_MA_041	A	MATH	41					Equation of Circle	M7.E	Medium	Circle with center (2, −3) and radius 5.	(x − 2)^2 + (y + 3)^2 = 25	(x + 2)^2 + (y − 3)^2 = 25	(x − 2)^2 + (y − 3)^2 = 5	(x + 2)^2 + (y + 3)^2 = 5	A	Standard form (x − h)^2 + (y − k)^2 = r^2.
+FA_MA_042	A	MATH	42					Parabola (Vertex)	M4.D	Easy	Vertex of y = −2(x + 1)^2 + 8.	(−1, 8)	(1, 8)	(−1, −8)	(1, −8)	A	Vertex is (−1, 8).
+FA_MA_043	A	MATH	43					Function Composition	M4.E	Easy	f(x)=3x−1, g(x)=x^2. Find (f∘g)(2).	11	5	7	12	A	g(2)=4 → f(4)=11.
+FA_MA_044	A	MATH	44					Inverse Functions	M4.F	Medium	f(x)=(x−5)/3. Find f^−1(4).	17	3	7	−17	A	Solve y=(x−5)/3 → x=3y+5 → f^−1(4)=17.
+FA_MA_045	A	MATH	45					Log Equation	M5.C	Hard	Solve: log₃x + log₃(x−2) = 2.	1 + √10	1 − √10	3	9	A	x(x−2)=9 → x=1±√10; need x>2 → 1+√10.
+FA_MA_046	A	MATH	46					Exponential Equation	M5.D	Easy	Solve: 5^(2x) = 125.	3/2	2	5/2	1/3	A	125 = 5^3 → 2x=3 → x=3/2.
+FA_MA_047	A	MATH	47					Radical Equation	M1.E	Hard	Solve: √(x+5) − √(x−3) = 1.	61/4	15	49/4	9	A	Squaring twice → x=61/4; check satisfies.
+FA_MA_048	A	MATH	48					Complex Powers	M1.F	Easy	i^23 equals __.	i	−1	−i	1	C	23 mod 4 = 3 → i^3 = −i.
+FA_MA_049	A	MATH	49					Rationalize Denominator	M1.G	Medium	Simplify: 3/(2 − √2).	3 + (3/2)√2	(6 − 3√2)/2	(2 + √2)/3	(6 + 3√2)	A	Multiply by (2+√2): 3(2+√2)/(4−2)=3+(3/2)√2.
+FA_MA_050	A	MATH	50					Arithmetic Sequence	M4.G	Easy	nth term with a₁=4, d=3.	a_n = 3n + 1	a_n = 4n + 3	a_n = 3n − 1	a_n = 4 + 3n^2	A	a_n = a₁ + (n−1)d = 3n+1.
+FA_MA_051	A	MATH	51					Geometric Series Sum	M4.H	Medium	Sum of first 5 terms: a₁=2, r=3.	242	162	242/3	486	A	S₅=2(1−3^5)/(1−3)=242.
+FA_MA_052	A	MATH	52					Conditional Probability	M9.D	Medium	P(heart | card is red) from a standard deck.	1/2	1/4	13/52	13/26	A	13 hearts among 26 red → 1/2.
+FA_MA_053	A	MATH	53					Expected Value	M9.E	Easy	Expectation when payout equals die face.	3.5	3	4	3.25	A	(1+2+3+4+5+6)/6 = 3.5.
+FA_MA_054	A	MATH	54					Spread/SD Concept	M9.F	Easy	Which set has greater standard deviation?	A	B	Equal	Not enough info	B	B is more spread out.
+FA_MA_055	A	MATH	55					System of Inequalities	M2.F	Medium	Which point satisfies y > 2x − 1 and y ≤ x + 4?	(1, 2)	(3, 1)	(−2, −5)	(2, 7)	A	At (1,2): 2>1 and 2≤5 both true.
+FA_MA_056	A	MATH	56					Absolute Value Inequality	M1.H	Medium	Solution set of |x − 3| < 5.	(−2, 8)	[−2, 8]	(3, 5)	x < −2 or x > 8	A	−5 < x−3 < 5 → −2 < x < 8.
+FA_MA_057	A	MATH	57					Matrix·Vector	M10.G	Medium	[[1, 2], [−3, 4]] · [2, 1]^T equals __.	(4, −2)	(2, 1)	(3, 7)	(−1, 6)	A	(1·2+2·1, −3·2+4·1) = (4, −2).
+FA_MA_058	A	MATH	58					Matrix Inverse (2×2)	M10.H	Hard	Inverse of [[1, −1], [2, 1]].	(1/3)[[1, 1], [−2, 1]]	(1/2)[[1, 1], [−2, 1]]	(1/3)[[1, −1], [2, 1]]	[[1, 1], [−2, 1]]	A	Det=3; inverse = (1/3)[[1,1],[−2,1]].
+FA_MA_059	A	MATH	59					Vector Magnitude	M10.I	Easy	|⟨6, 8⟩| equals __.	10	7	14	2	A	√(6^2+8^2)=10.
+FA_MA_060	A	MATH	60					Piecewise Evaluation	M4.I	Medium	f(x)= {2x+1 if x≤3; x^2−4 if x>3}. Find f(3)+f(5).	28	12	20	10	A	f(3)=7; f(5)=21; sum=28.
