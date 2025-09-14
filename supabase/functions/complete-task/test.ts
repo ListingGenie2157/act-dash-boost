@@ -107,7 +107,7 @@ Deno.test("Answer validation - valid answer choices", () => {
   }
   
   // Test invalid choices
-  const invalidChoices = ['E', 'F', '1', '2', 'a', 'b'];
+  const invalidChoices: string[] = ['E', 'F', '1', '2', 'a', 'b'];
   for (const choice of invalidChoices) {
     assertEquals(['A', 'B', 'C', 'D'].includes(choice), false);
   }

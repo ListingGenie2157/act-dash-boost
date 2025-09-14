@@ -79,7 +79,7 @@ const Index = () => {
     });
 
     // Add wrong answers and update weak areas
-    wrongAnswers.forEach((wa: WrongAnswer) => {
+    wrongAnswers.forEach((wa) => {
       addWrongAnswer(wa.questionId, wa.question, wa.userAnswer);
       
       // Determine topic from lesson
