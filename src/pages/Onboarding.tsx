@@ -39,7 +39,7 @@ export default function Onboarding() {
     setLoading(true);
     try {
       const { error } = await supabase.functions.invoke('set-test-date', {
-        body: { test_date: format(testDate, 'yyyy-MM-dd') }
+        body: { testDate: format(testDate, 'yyyy-MM-dd') }
       });
 
       if (error) throw error;
