@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
+import Simulation from "./pages/Simulation";
 import NotFound from "./pages/NotFound";
 import { 
   LazyAnalytics, 
@@ -48,7 +49,9 @@ const App = () => (
           {/* Diagnostic test routes */}
           <Route path="/diagnostic-test/:formId" element={<DiagnosticTest />} />
           <Route path="/diagnostic-results/:formId" element={<DiagnosticResults />} />
-          {/* Simulation routes */}
+          {/* New simulation system */}
+          <Route path="/simulation" element={<Simulation />} />
+          {/* Legacy simulation routes */}
           <Route path="/sim-english" element={
             <LazyLoader>
               <LazySimEnglish />
