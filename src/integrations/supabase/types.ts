@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      accommodations: {
+        Row: {
+          accommodation_type: string
+          created_at: string
+          id: string
+          time_multiplier: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accommodation_type?: string
+          created_at?: string
+          id?: string
+          time_multiplier?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accommodation_type?: string
+          created_at?: string
+          id?: string
+          time_multiplier?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       attempts: {
         Row: {
           choice_order: number[]
@@ -873,6 +900,99 @@ export type Database = {
           created_at?: string | null
           id?: string
           label?: string
+        }
+        Relationships: []
+      }
+      user_goals: {
+        Row: {
+          created_at: string
+          id: string
+          start_with: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          start_with?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          start_with?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          created_at: string
+          daily_minutes: number
+          email_notifications: boolean
+          id: string
+          preferred_end_hour: number | null
+          preferred_start_hour: number | null
+          quiet_end_hour: number | null
+          quiet_start_hour: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          daily_minutes?: number
+          email_notifications?: boolean
+          id?: string
+          preferred_end_hour?: number | null
+          preferred_start_hour?: number | null
+          quiet_end_hour?: number | null
+          quiet_start_hour?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          daily_minutes?: number
+          email_notifications?: boolean
+          id?: string
+          preferred_end_hour?: number | null
+          preferred_start_hour?: number | null
+          quiet_end_hour?: number | null
+          quiet_start_hour?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_profiles: {
+        Row: {
+          age_verified: boolean
+          created_at: string
+          id: string
+          privacy_accepted: boolean
+          tos_accepted: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          age_verified?: boolean
+          created_at?: string
+          id?: string
+          privacy_accepted?: boolean
+          tos_accepted?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          age_verified?: boolean
+          created_at?: string
+          id?: string
+          privacy_accepted?: boolean
+          tos_accepted?: boolean
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
