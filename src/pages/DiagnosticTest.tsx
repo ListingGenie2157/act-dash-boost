@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { getAccommodatedTime } from '@/utils/accommodations';
 
 interface Question {
   ord: number;
@@ -103,7 +104,9 @@ export default function DiagnosticTest() {
       if (error) throw error;
 
       setQuestions(data || []);
-      setTimeLeft(TIMERS[formId as keyof typeof TIMERS] || 1200);
+      const baseTime = TIMERS[formId as keyof typeof TIMERS] || 1200;
+      const accommodatedTime = await getAccommodatedTime(baseTime);
+      setTimeLeft(accommodatedTime);
 
       // Load or create attempts with choice shuffling
       const existingAttempts: Record<string, Attempt> = {};

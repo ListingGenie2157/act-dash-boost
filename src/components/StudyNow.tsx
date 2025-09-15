@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { getAccommodatedTime } from '@/utils/accommodations';
 
 interface StudyTask {
   id: string;
@@ -246,6 +247,7 @@ const TaskRunner = memo(function TaskRunner({ task, onComplete }: TaskRunnerProp
   const [timeStarted, setTimeStarted] = useState<number>(Date.now());
   const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
   const [timeRemaining, setTimeRemaining] = useState<number>(45);
+  const [baseTimeLimit, setBaseTimeLimit] = useState<number>(45);
   const { toast } = useToast();
 
   // Timer effect
@@ -316,7 +318,7 @@ const TaskRunner = memo(function TaskRunner({ task, onComplete }: TaskRunnerProp
     loadTaskData();
   }, [task, toast]);
 
-  const handleQuestionAnswer = useCallback((answer: 'A' | 'B' | 'C' | 'D') => {
+  const handleQuestionAnswer = useCallback(async (answer: 'A' | 'B' | 'C' | 'D') => {
     const currentQuestion = questions[currentQuestionIndex];
     if (!currentQuestion) return;
 
@@ -327,7 +329,8 @@ const TaskRunner = memo(function TaskRunner({ task, onComplete }: TaskRunnerProp
       // Move to next question
       setCurrentQuestionIndex(prev => prev + 1);
       setQuestionStartTime(Date.now());
-      setTimeRemaining(45);
+      const accommodatedTime = await getAccommodatedTime(baseTimeLimit);
+      setTimeRemaining(accommodatedTime);
     } else {
       // Complete the task
       const totalTime = Date.now() - timeStarted;
@@ -471,7 +474,7 @@ const TaskRunner = memo(function TaskRunner({ task, onComplete }: TaskRunnerProp
             </div>
           </div>
         </div>
-        <Progress value={(timeRemaining / 45) * 100} className="h-1" />
+        <Progress value={baseTimeLimit > 0 ? (timeRemaining / baseTimeLimit) * 100 : 0} className="h-1" />
       </CardHeader>
       
       <CardContent className="space-y-6">
