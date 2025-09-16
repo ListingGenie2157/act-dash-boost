@@ -11,6 +11,7 @@ export { Badge } from "./badge";
 export { Skeleton } from "./skeleton";
 export { LoadingSpinner } from "./spinner";
 export { RadioGroup, RadioGroupItem } from "./radio-group";
+export { Progress } from "./progress";
 export {
   Select,
   SelectGroup,

@@ -1,13 +1,14 @@
-// src/components/DiagnosticEvaluation.tsx
 import * as React from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Timer, Brain, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Card, Button, Progress, Badge, RadioGroup, RadioGroupItem, Label,
+  CardContent, CardDescription, CardHeader, CardTitle
+} from '@/components/ui';
+import { Timer, Brain, AlertCircle, Clock, CheckCircle2, ArrowRight } from 'lucide-react';
 import { evaluationQuestions } from '@/data/evaluationQuestions';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface DiagnosticEvaluationProps {
   onComplete: (results: {
@@ -397,15 +398,10 @@ export const DiagnosticEvaluation = ({
       </div>
     </div>
   );
-};import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { Clock, CheckCircle2, ArrowRight } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+
+export default function Diagnostic() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
 interface DiagnosticQuestion {
   id: string;
