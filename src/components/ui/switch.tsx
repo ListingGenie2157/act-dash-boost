@@ -1,27 +1,39 @@
-import * as React from "react"
-import * as SwitchPrimitives from "@radix-ui/react-switch"
+import * as React from "react";
+import { cn } from "@/lib/cn";
 
-import { cn } from "@/lib/utils"
+export interface SwitchProps
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "onChange"> {
+  checked: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+}
 
-const Switch = React.forwardRef<
-  React.ElementRef<typeof SwitchPrimitives.Root>,
-  React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root>
->(({ className, ...props }, ref) => (
-  <SwitchPrimitives.Root
-    className={cn(
-      "peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input",
-      className
-    )}
-    {...props}
-    ref={ref}
-  >
-    <SwitchPrimitives.Thumb
-      className={cn(
-        "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"
-      )}
-    />
-  </SwitchPrimitives.Root>
-))
-Switch.displayName = SwitchPrimitives.Root.displayName
-
-export { Switch }
+export const Switch = React.forwardRef<HTMLInputElement, SwitchProps>(
+  ({ checked, onCheckedChange, className, disabled, ...props }, ref) => (
+    <label className={cn("inline-flex items-center", disabled && "opacity-50")}>
+      <span className="relative inline-block h-6 w-11">
+        <input
+          ref={ref}
+          type="checkbox"
+          className="peer sr-only"
+          checked={checked}
+          onChange={(e) => onCheckedChange?.(e.target.checked)}
+          disabled={disabled}
+          {...props}
+        />
+        <span
+          className={cn(
+            "absolute inset-0 rounded-full transition-colors",
+            "bg-gray-300 peer-checked:bg-black"
+          )}
+        />
+        <span
+          className={cn(
+            "absolute left-0 top-0 h-6 w-6 transform rounded-full bg-white shadow transition-transform",
+            "peer-checked:translate-x-5"
+          )}
+        />
+      </span>
+    </label>
+  )
+);
+Switch.displayName = "Switch";
