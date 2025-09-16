@@ -1,12 +1,12 @@
 import * as React from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import {
+  Button, Input, Label, Textarea, Card, CardContent, CardDescription, CardHeader, CardTitle,
+  Calendar, Popover, PopoverContent, PopoverTrigger,
+  Select, SelectTrigger, SelectContent, SelectItem, SelectValue,
+  Switch, Checkbox
+} from '@/components/ui';
 import { CalendarIcon, CheckCircle } from 'lucide-react';
 import { addYears, format, startOfToday } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -26,11 +26,6 @@ export default function Onboarding() {
 
   // Step 2: Past Scores
   const [scores, setScores] = React.useState({ English: '', Math: '', Reading: '', Science: '' });
-    English: '',
-    Math: '',
-    Reading: '',
-    Science: ''
-  });
   const [notes, setNotes] = React.useState('');
 
   const handleSetTestDate = async () => {

@@ -1,8 +1,17 @@
 export { Button } from "./button";
 export { Input } from "./input";
 export { Label } from "./label";
+export { Switch } from "./switch";
+export { Checkbox } from "./checkbox";
+export { Textarea } from "./textarea";
+export { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./card";
+export { Calendar } from "./calendar";
+export { Popover, PopoverContent, PopoverTrigger } from "./popover";
+export { Badge } from "./badge";
+export { Skeleton } from "./skeleton";
+export { LoadingSpinner } from "./spinner";
+export { RadioGroup, RadioGroupItem } from "./radio-group";
 export {
-  // Radix Select exports (shadcn pattern)
   Select,
   SelectGroup,
   SelectValue,
@@ -14,4 +23,3 @@ export {
   SelectScrollDownButton,
   SelectScrollUpButton
 } from "./select";
-export { Switch } from "./switch";

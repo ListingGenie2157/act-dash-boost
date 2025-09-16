@@ -11,4 +11,5 @@ type Props = {
   onChange: (d: Date) => void;
   minDate?: Date;
   maxDate?: Date;
-  placeholder?:
+  placeholder?: string;
+};
