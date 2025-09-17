@@ -264,12 +264,16 @@ export default function Diagnostic() {
         return;
       }
 
+      // Calculate average score
+      const scores = Object.values(results).map((result: any) => Number(result?.score) || 0);
+      const averageScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+
       // Save results to diagnostics table
       const { error } = await supabase.from('diagnostics').insert({
         user_id: user.id,
         section: 'full',
         block: 1,
-        score: Object.values(results).reduce((sum: number, result: any) => sum + result.score, 0) / 4,
+        score: averageScore,
         responses: results,
         completed_at: new Date().toISOString()
       });

@@ -17,6 +17,7 @@ interface OfflineQueueDB extends DBSchema {
   attemptQueue: {
     key: number;
     value: AttemptQueueItem;
+    indexes: { 'timestampIndex': number };
   };
 }
 
@@ -28,7 +29,7 @@ async function initDB() {
       upgrade(db) {
         if (!db.objectStoreNames.contains('attemptQueue')) {
           const store = db.createObjectStore('attemptQueue', { keyPath: 'id', autoIncrement: true });
-          store.createIndex('timestamp', 'timestamp');
+          store.createIndex('timestampIndex', 'timestamp');
         }
       },
     });
