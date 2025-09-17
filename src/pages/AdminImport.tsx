@@ -53,7 +53,7 @@ export default function AdminImport() {
     
     return lines.slice(1).map((line, index) => {
       const values = line.split('\t');
-      const record: any = {};
+      const record: Record<string, string> = {};
       
       headers.forEach((header, i) => {
         const cleanHeader = header.trim().toLowerCase();

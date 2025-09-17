@@ -2,7 +2,7 @@ export interface Question {
   id: string;
   question: string;
   options: string[];
-  correctAnswer: number;
+  correctAnswer: number; // Back to number
   explanation: string;
   difficulty: 'easy' | 'medium' | 'hard';
 }
@@ -60,9 +60,20 @@ export interface WeakArea {
 }
 
 export interface SupabaseClientLike {
-  from: (table: string) => any;
-  auth: any;
-  functions: any;
+  from: (table: string) => {
+    select: (columns?: string) => Promise<{ data: unknown; error: unknown }>;
+    insert: (data: unknown) => Promise<{ data: unknown; error: unknown }>;
+    update: (data: unknown) => Promise<{ data: unknown; error: unknown }>;
+    delete: () => Promise<{ data: unknown; error: unknown }>;
+  };
+  auth: {
+    getUser: () => Promise<{ data: { user: unknown }; error: unknown }>;
+    signUp: (credentials: { email: string; password: string }) => Promise<{ data: unknown; error: unknown }>;
+    signIn: (credentials: { email: string; password: string }) => Promise<{ data: unknown; error: unknown }>;
+  };
+  functions: {
+    invoke: (name: string, options?: { body?: unknown }) => Promise<{ data: unknown; error: unknown }>;
+  };
 }
 
 export interface TimerState {

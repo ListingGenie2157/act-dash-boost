@@ -71,7 +71,16 @@ export const DiagnosticEvaluation = ({
     
     // Add questions from each subject
     Object.entries(evaluationQuestions).forEach(([subject, subjectQuestions]) => {
-      subjectQuestions.forEach((q: any) => {
+      subjectQuestions.forEach((q: { 
+        id: string; 
+        skill?: string; 
+        question: string; 
+        passage?: string;
+        underlined?: string;
+        options: string[]; 
+        correctAnswer: number | string; 
+        explanation?: string; 
+      }) => {
         questions.push({
           id: q.id,
           subject: subject as 'english' | 'math' | 'reading' | 'science',
@@ -79,7 +88,7 @@ export const DiagnosticEvaluation = ({
           difficulty: 'medium',
           question: q.question,
           options: q.options,
-          correctAnswer: q.correctAnswer,
+          correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : parseInt(q.correctAnswer) || 0,
           explanation: q.explanation,
           timeLimit: 60
         });
@@ -251,7 +260,7 @@ export default function Diagnostic() {
   const { toast } = useToast();
   const [showEvaluation, setShowEvaluation] = useState(false);
 
-  const handleEvaluationComplete = async (results: any) => {
+  const handleEvaluationComplete = async (results: Record<string, { score: number }>) => {
     try {
       // Save diagnostic results to Supabase
       const { data: { user } } = await supabase.auth.getUser();
@@ -265,7 +274,7 @@ export default function Diagnostic() {
       }
 
       // Calculate average score
-      const scores = Object.values(results).map((result: any) => Number(result?.score) || 0);
+      const scores = Object.values(results).map((result: { score?: number }) => Number(result?.score) || 0);
       const averageScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
 
       // Save results to diagnostics table

@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 interface RewardRule {
   id: string;
   type: 'DRILL' | 'SIM' | 'STREAK';
-  threshold: any;
+  threshold: number | { accuracy?: number; time_ms?: number; days?: number };
   amount_cents: number;
   created_at: string;
 }
@@ -287,11 +287,11 @@ export default function ParentPortal() {
                 <div className="flex items-center gap-3">
                   <Badge variant="outline">{rule.type}</Badge>
                   <span className="font-medium">${(rule.amount_cents / 100).toFixed(2)}</span>
-                  {rule.type === 'STREAK' && (
-                    <span className="text-sm text-muted-foreground">
-                      {rule.threshold.days} days
-                    </span>
-                  )}
+                   {rule.type === 'STREAK' && (
+                     <span className="text-sm text-muted-foreground">
+                       {typeof rule.threshold === 'object' && 'days' in rule.threshold ? `${rule.threshold.days} days` : `${rule.threshold} days`}
+                     </span>
+                   )}
                   {rule.type === 'DRILL' && (
                     <span className="text-sm text-muted-foreground">
                       85%+ accuracy, ≤45s
