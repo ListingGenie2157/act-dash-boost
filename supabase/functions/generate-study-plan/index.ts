@@ -95,8 +95,18 @@ function getStudyMode(daysLeft: number | null): StudyMode {
 }
 
 // Test week special scheduling
-function getTestWeekTasks(daysLeft: number, userId: string, dateStr: string): any[] {
-  const tasks: any[] = [];
+function getTestWeekTasks(daysLeft: number, userId: string, dateStr: string): Array<{
+  type: string;
+  section?: string;
+  size: number;
+  estimated_mins: number;
+}> {
+  const tasks: Array<{
+    type: string;
+    section?: string;
+    size: number;
+    estimated_mins: number;
+  }> = [];
   
   if (daysLeft === 7 || daysLeft === 5 || daysLeft === 3) {
     // T-7, T-5, T-3: English SIM
@@ -126,7 +136,7 @@ function getTestWeekTasks(daysLeft: number, userId: string, dateStr: string): an
 }
 
 // Helper function for choosing weak skills from baseline
-function chooseWeakSkills(baseline: any[], progress: any[], allSkills: any[]): string[] {
+function chooseWeakSkills(baseline: Array<{ section: string; score: number }>, progress: Array<{ section: string; accuracy: number }>, allSkills: Array<{ subject: string; skill_name: string; cluster: string }>): string[] {
   const weakSkillIds: string[] = [];
   
   baseline.forEach(diagnostic => {

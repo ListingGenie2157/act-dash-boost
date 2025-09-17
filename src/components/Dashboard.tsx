@@ -172,7 +172,7 @@ export const Dashboard = ({ onStartDay, onViewReview, onStudyNow }: DashboardPro
               variant="drill" 
               className="w-full"
               onClick={() => {
-                console.log("Math drill button clicked from Dashboard");
+                console.warn("Math drill button clicked from Dashboard");
                 // Direct to Day 9 where new drills are available
                 onStartDay(9);
               }}
@@ -196,7 +196,7 @@ export const Dashboard = ({ onStartDay, onViewReview, onStudyNow }: DashboardPro
                 variant="success" 
                 className="w-full"
                 onClick={() => {
-                  console.log("Grammar drill button clicked from Dashboard");
+                  console.warn("Grammar drill button clicked from Dashboard");
                   // Direct to Day 9 where new drills are available
                   onStartDay(9);
                 }}

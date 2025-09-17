@@ -24,7 +24,7 @@ export const AdminCronButton = () => {
 
       setLastResult(data);
       toast.success('Cron job completed successfully');
-      console.log('Cron job result:', data);
+      console.warn('Cron job result:', data);
     } catch (error) {
       console.error('Error calling cron function:', error);
       toast.error('Failed to run cron job');

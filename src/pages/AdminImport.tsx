@@ -199,7 +199,7 @@ export default function AdminImport() {
         setProgress((processedFiles / selectedFiles.length) * 50); // First 50% for parsing
       }
 
-      console.log(`Parsed ${allRecords.length} records with ${allErrors.length} errors`);
+      console.warn(`Parsed ${allRecords.length} records with ${allErrors.length} errors`);
 
       if (allErrors.length > 0 && !dryRun) {
         setResults({

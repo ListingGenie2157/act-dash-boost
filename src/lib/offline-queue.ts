@@ -45,7 +45,7 @@ export async function queueAttemptOffline(attempt: Omit<AttemptQueueItem, 'id' |
   };
   
   await database.add('attemptQueue', item);
-  console.log('Queued attempt offline:', item);
+  console.warn('Queued attempt offline:', item);
 }
 
 export async function flushOfflineQueue() {
@@ -54,7 +54,7 @@ export async function flushOfflineQueue() {
   
   if (items.length === 0) return;
   
-  console.log(`Flushing ${items.length} offline attempts`);
+  console.warn(`Flushing ${items.length} offline attempts`);
   
   for (const item of items) {
     try {
@@ -94,7 +94,7 @@ export async function getQueuedAttemptsCount(): Promise<number> {
 // Auto-flush when coming back online
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => {
-    console.log('Back online, flushing offline queue');
+    console.warn('Back online, flushing offline queue');
     flushOfflineQueue();
   });
 }

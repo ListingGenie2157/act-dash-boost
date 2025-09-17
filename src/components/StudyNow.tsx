@@ -257,16 +257,19 @@ const TaskRunner = memo(function TaskRunner({ task, onComplete }: TaskRunnerProp
     const timer = setInterval(() => {
       setTimeRemaining(prev => {
         if (prev <= 1) {
-          // Auto-submit when time runs out
-          handleQuestionAnswer('A'); // Default answer
-          return 45;
+          // Move to next question when time runs out
+          if (currentQuestionIndex < questions.length - 1) {
+            setCurrentQuestionIndex(prev => prev + 1);
+            return 45;
+          }
+          return 0;
         }
         return prev - 1;
       });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [currentQuestionIndex]);
+  }, [currentQuestionIndex, task.type, questions.length]);
 
   // Load questions and skill data
   useEffect(() => {

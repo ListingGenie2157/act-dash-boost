@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -26,9 +26,9 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
 
   useEffect(() => {
     if (isCompleted && hasStarted) {
-      handleTimeUp();
+      handleFinish(answers);
     }
-  }, [isCompleted, hasStarted]);
+  }, [isCompleted, hasStarted, answers]);
 
   const handleStart = () => {
     setHasStarted(true);

@@ -27,11 +27,6 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
-  // Fetch days left on component mount
-  useEffect(() => {
-    fetchDaysLeft();
-  }, []);
-
   const fetchDaysLeft = async () => {
     try {
       setLoading(true);
@@ -61,6 +56,10 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchDaysLeft();
+  }, []);
 
   const handleSetTestDate = async (date: Date) => {
     if (!date) return;
