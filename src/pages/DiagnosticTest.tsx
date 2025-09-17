@@ -78,8 +78,20 @@ export default function DiagnosticTest() {
   }, [formId]);
 
 useEffect(() => {
-  if (timeLeft > 0) {
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  if (!formId) return;
+  let cancelled = false;
+
+  (async () => {
+    if (cancelled) return;
+    await loadDiagnostic();
+  })();
+
+  return () => {
+    cancelled = true;
+  };
+}, [formId]);
+
+// eslint-disable-next-line react-hooks/exhaustive-deps
 useEffect(() => {
   if (timeLeft > 0) {
     const timer = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
