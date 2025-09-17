@@ -135,7 +135,6 @@ for (const question of data || []) {
     existingAttempts[question.question_id] = existing;
     continue;
   }
-  const choices = [question.choice_a, question.choice_b, question.choice_c, question.choice_d];
   const answerMap = { A: 0, B: 1, C: 2, D: 3 } as const;
   const baseIdx = answerMap[question.answer as keyof typeof answerMap];
   const choiceOrder = shuffle([0, 1, 2, 3], Date.now() + question.ord);
@@ -151,16 +150,13 @@ for (const question of data || []) {
   newAttempts.push(attempt);
 }
   
-      .eq('question_id', question.question_id)
-          .maybeSingle();
-
-         // Save new attempts to database
+      // Save new attempts to database
       if (newAttempts.length > 0) {
         const { error: insertError } = await supabase
           .from('attempts')
           .insert(
             newAttempts.map(attempt => ({
-              user_id: user.user.id,
+              user_id: user.id,
               form_id: formId,
               ...attempt
             }))
@@ -194,14 +190,15 @@ for (const question of data || []) {
     // Save to database
     try {
       const { data: { user } } = await supabase.auth.getUser();
-if (!user) {
+if (!user) return;
 
-      await supabase
-        .from('attempts')
-        .update({ selected_idx: choiceIndex })
-        .eq('user_id', user.user.id)
-        .eq('form_id', formId)
-        .eq('question_id', question.question_id);
+await supabase
+  .from('attempts')
+  .update({ selected_idx: choiceIndex })
+  .eq('user_id', user.id)
+  .eq('form_id', formId)
+  .eq('question_id', question.question_id);
+
     } catch (error) {
       console.error('Error saving answer:', error);
     }
@@ -213,10 +210,10 @@ if (!user) {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-if (!user) {
+if (!user) return;
 
-      // Calculate results
-      const results = calculateResults();
+// Calculate results
+const results = calculateResults();
       
       // Call finish-diagnostic edge function
       const { data, error } = await supabase.functions.invoke('finish-diagnostic', {
