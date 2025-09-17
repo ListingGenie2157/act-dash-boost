@@ -18,11 +18,11 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
 });
 
 async function smokeTest() {
-  console.log('🚀 Starting comprehensive smoke test...\n');
+  console.warn('🚀 Starting comprehensive smoke test...\n');
 
   try {
     // Step 1: Create or get test user
-    console.log('1️⃣ Setting up test user...');
+    console.warn('1️⃣ Setting up test user...');
     const testEmail = 'smoketest@example.com';
     
     // Try to sign up (will fail if user exists, which is fine)
@@ -43,10 +43,10 @@ async function smokeTest() {
       throw new Error('Test user not found');
     }
 
-    console.log('✅ Test user ready:', testUser.id);
+    console.warn('✅ Test user ready:', testUser.id);
 
     // Step 2: Post baseline scores
-    console.log('\n2️⃣ Testing set-baseline function...');
+    console.warn('\n2️⃣ Testing set-baseline function...');
     
     // Create JWT token for the test user
     const { data: { session }, error: sessionError } = await supabase.auth.admin.generateLink({
@@ -77,13 +77,13 @@ async function smokeTest() {
       throw new Error(`set-baseline error: ${baselineError.message}`);
     }
 
-    console.log('✅ set-baseline response:', {
+    console.warn('✅ set-baseline response:', {
       hasSuccess: 'success' in baselineResult,
       diagnosticsCreated: baselineResult.diagnostics_created || 0
     });
 
     // Step 3: Set test date T+14
-    console.log('\n3️⃣ Testing set-test-date function with T+14...');
+    console.warn('\n3️⃣ Testing set-test-date function with T+14...');
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + 14);
     const testDate = futureDate.toISOString().split('T')[0]; // YYYY-MM-DD format
@@ -97,13 +97,13 @@ async function smokeTest() {
       throw new Error(`set-test-date error: ${setDateError.message}`);
     }
 
-    console.log('✅ set-test-date response:', {
+    console.warn('✅ set-test-date response:', {
       hasTestDate: 'test_date' in setDateResult,
       testDate: setDateResult.test_date
     });
 
     // Step 4: Generate study plan and assert 1-3 tasks
-    console.log('\n4️⃣ Testing generate-study-plan function...');
+    console.warn('\n4️⃣ Testing generate-study-plan function...');
     
     const { data: studyPlanResult, error: studyPlanError } = await supabase.functions.invoke('generate-study-plan', {
       headers: { Authorization: `Bearer ${token}` }
@@ -113,7 +113,7 @@ async function smokeTest() {
       throw new Error(`generate-study-plan error: ${studyPlanError.message}`);
     }
 
-    console.log('✅ generate-study-plan response:', {
+    console.warn('✅ generate-study-plan response:', {
       hasSuccess: 'success' in studyPlanResult,
       hasTasks: 'tasks' in studyPlanResult,
       tasksLength: studyPlanResult.tasks?.length || 0
@@ -126,7 +126,7 @@ async function smokeTest() {
     }
 
     // Step 5: Get a DRILL task and mark it DONE
-    console.log('\n5️⃣ Testing complete-task and calculate-rewards functions...');
+    console.warn('\n5️⃣ Testing complete-task and calculate-rewards functions...');
     
     // First, get available drill tasks
     const { data: tasks } = await supabase
@@ -138,7 +138,7 @@ async function smokeTest() {
       .limit(1);
 
     if (!tasks || tasks.length === 0) {
-      console.log('⚠️ No DRILL tasks found, skipping complete-task test');
+      console.warn('⚠️ No DRILL tasks found, skipping complete-task test');
     } else {
       const testTask = tasks[0];
       
@@ -160,14 +160,14 @@ async function smokeTest() {
         throw new Error(`complete-task error: ${completeError.message}`);
       }
 
-      console.log('✅ complete-task response:', {
+      console.warn('✅ complete-task response:', {
         hasSuccess: 'success' in completeResult,
         taskId: testTask.id,
         accuracy: 87.5
       });
 
       // Step 6: Test calculate-rewards function
-      console.log('\n6️⃣ Testing calculate-rewards function...');
+      console.warn('\n6️⃣ Testing calculate-rewards function...');
       
       const { data: rewardsResult, error: rewardsError } = await supabase.functions.invoke('calculate-rewards', {
         body: {
@@ -181,7 +181,7 @@ async function smokeTest() {
         throw new Error(`calculate-rewards error: ${rewardsError.message}`);
       }
 
-      console.log('✅ calculate-rewards response:', {
+      console.warn('✅ calculate-rewards response:', {
         hasSuccess: 'success' in rewardsResult,
         hasRewardsEarned: 'rewardsEarned' in rewardsResult,
         rewardsEarned: rewardsResult.rewardsEarned || 0
@@ -195,14 +195,14 @@ async function smokeTest() {
         .order('earned_at', { ascending: false })
         .limit(1);
 
-      console.log('✅ Ledger check:', {
+      console.warn('✅ Ledger check:', {
         hasEntries: ledgerEntries && ledgerEntries.length > 0,
         latestEntry: ledgerEntries?.[0] || null
       });
     }
 
     // Step 7: Test days-left function
-    console.log('\n7️⃣ Testing days-left function...');
+    console.warn('\n7️⃣ Testing days-left function...');
     
     const { data: daysLeftResult, error: daysLeftError } = await supabase.functions.invoke('days-left', {
       headers: { Authorization: `Bearer ${token}` }
@@ -212,21 +212,21 @@ async function smokeTest() {
       throw new Error(`days-left error: ${daysLeftError.message}`);
     }
 
-    console.log('✅ days-left response:', {
+    console.warn('✅ days-left response:', {
       hasDaysLeft: 'days_left' in daysLeftResult,
       hasTestDate: 'test_date' in daysLeftResult,
       daysLeftValue: daysLeftResult.days_left
     });
 
-    console.log('\n🎉 All smoke tests passed! Edge functions are working correctly.');
-    console.log('\n📋 Summary:');
-    console.log('  ✅ User authentication and profiles');
-    console.log('  ✅ Baseline scores posted via set-baseline');
-    console.log('  ✅ Test date setting with T+14 date');
-    console.log('  ✅ Study plan generation with 1-3 tasks');
-    console.log('  ✅ Task completion with high accuracy');
-    console.log('  ✅ Rewards calculation for qualifying performance');
-    console.log('  ✅ Days calculation from test date');
+    console.warn('\n🎉 All smoke tests passed! Edge functions are working correctly.');
+    console.warn('\n📋 Summary:');
+    console.warn('  ✅ User authentication and profiles');
+    console.warn('  ✅ Baseline scores posted via set-baseline');
+    console.warn('  ✅ Test date setting with T+14 date');
+    console.warn('  ✅ Study plan generation with 1-3 tasks');
+    console.warn('  ✅ Task completion with high accuracy');
+    console.warn('  ✅ Rewards calculation for qualifying performance');
+    console.warn('  ✅ Days calculation from test date');
 
   } catch (error) {
     console.error('\n💥 Smoke test failed:', error);
