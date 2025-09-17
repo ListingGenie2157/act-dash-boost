@@ -185,7 +185,7 @@ serve(async (req) => {
     // Get the authorization header
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
-      console.log('No authorization header provided');
+      console.warn('No authorization header provided');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -197,7 +197,7 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
-      console.log('Authentication failed:', authError?.message);
+      console.warn('Authentication failed:', authError?.message);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -216,7 +216,7 @@ serve(async (req) => {
       .single();
 
     if (existingPlan) {
-      console.log('Plan already exists for today');
+      console.warn('Plan already exists for today');
       return new Response(JSON.stringify({
         the_date: todayStr,
         tasks: existingPlan.tasks_json || []
@@ -245,7 +245,7 @@ serve(async (req) => {
     const dailyTimeCap = profile?.daily_time_cap_mins || 30;
     const mode = getStudyMode(daysLeft);
 
-    console.log(`Study mode: ${mode.name}, Days left: ${daysLeft}, Time cap: ${dailyTimeCap}mins`);
+    console.warn(`Study mode: ${mode.name}, Days left: ${daysLeft}, Time cap: ${dailyTimeCap}mins`);
 
     // Check for test week special scheduling
     if (daysLeft !== null && daysLeft <= 7) {
@@ -265,7 +265,7 @@ serve(async (req) => {
           console.error('Error saving test week plan:', planError);
         } else {
           // Create study tasks for special schedule
-          const studyTasks = specialTasks.map((task: any) => ({
+          const studyTasks = specialTasks.map((task: { type: string; skill_id?: string; size: number }) => ({
             user_id: user.id,
             the_date: todayStr,
             type: task.type,
@@ -331,7 +331,7 @@ serve(async (req) => {
 
     // If progress is sparse (seen < 20), seed from baseline diagnostics
     const sparseProgress = weakestSkills?.filter(s => s.seen < 20) || [];
-    let baselineSeededSkills: any[] = [];
+    let baselineSeededSkills: Array<{ id: string; subject: string; cluster: string; name: string }> = [];
     
     if (sparseProgress.length > 0 && Object.keys(diagnosticsBySection).length > 0) {
       // Get all skills grouped by subject and cluster
@@ -433,7 +433,7 @@ serve(async (req) => {
     // Select tasks within time cap
     const selectedTasks = selectPlaylist(priorities, dailyTimeCap);
 
-    console.log(`Selected ${selectedTasks.length} tasks for ${dailyTimeCap} minutes`);
+    console.warn(`Selected ${selectedTasks.length} tasks for ${dailyTimeCap} minutes`);
 
     // Save to database
     const tasksJson = selectedTasks.map(task => ({
@@ -493,7 +493,7 @@ serve(async (req) => {
       days_left: daysLeft
     };
 
-    console.log('Study plan generated successfully:', response);
+    console.warn('Study plan generated successfully:', response);
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -33,7 +33,7 @@ function parseTSV(tsvContent: string): PracticeRow[] {
   
   return lines.slice(1).map(line => {
     const values = line.split('\t');
-    const row: any = {};
+    const row: Record<string, string> = {};
     headers.forEach((header, index) => {
       row[header.trim()] = values[index]?.trim() || '';
     });
@@ -134,9 +134,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log('Parsing TSV content...');
+    console.warn('Parsing TSV content...');
     const rows = parseTSV(tsvContent);
-    console.log(`Parsed ${rows.length} rows`);
+    console.warn(`Parsed ${rows.length} rows`);
 
     const report: ImportReport = {
       success: true,
@@ -171,11 +171,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`Processing ${validRows.length} valid rows...`);
+    console.warn(`Processing ${validRows.length} valid rows...`);
 
     // Get unique skill codes to create missing skills
     const uniqueSkillCodes = [...new Set(validRows.map(row => row.skill_code))];
-    const skillsToCreate: any[] = [];
+    const skillsToCreate: Array<{ name: string; subject: string; cluster: string; description: string }> = [];
 
     for (const skillCode of uniqueSkillCodes) {
       const existingSkill = await supabase
@@ -209,7 +209,7 @@ Deno.serve(async (req) => {
         report.success = false;
       } else {
         report.skillsCreated = skillsToCreate.length;
-        console.log(`Created ${skillsToCreate.length} new skills`);
+        console.warn(`Created ${skillsToCreate.length} new skills`);
       }
     }
 
@@ -260,7 +260,7 @@ Deno.serve(async (req) => {
         report.success = false;
       } else {
         report.questionsCreated = questionsToInsert.length;
-        console.log(`Created ${questionsToInsert.length} questions`);
+        console.warn(`Created ${questionsToInsert.length} questions`);
       }
     }
 
