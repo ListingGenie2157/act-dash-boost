@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
       savedBaselines.push(data);
     }
 
-    console.log(`Successfully saved ${savedBaselines.length} baseline entries for user ${user.id}`);
+    console.warn(`Successfully saved ${savedBaselines.length} baseline entries for user ${user.id}`);
 
     return new Response(
       JSON.stringify({ 

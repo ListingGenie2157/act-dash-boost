@@ -70,7 +70,7 @@ serve(async (req) => {
     // Get the authorization header
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
-      console.log('No authorization header provided');
+      console.warn('No authorization header provided');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -82,7 +82,7 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
-      console.log('Authentication failed:', authError?.message);
+      console.warn('Authentication failed:', authError?.message);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -103,7 +103,7 @@ serve(async (req) => {
     // Validate the test date
     const validation = validateTestDate(testDate);
     if (!validation.isValid) {
-      console.log('Date validation failed:', validation.error);
+      console.warn('Date validation failed:', validation.error);
       return new Response(JSON.stringify({ error: validation.error }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -136,7 +136,7 @@ serve(async (req) => {
         });
       }
 
-      console.log('Profile created with test date:', testDate);
+      console.warn('Profile created with test date:', testDate);
       return new Response(JSON.stringify({ test_date: newProfile.test_date }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -157,7 +157,7 @@ serve(async (req) => {
         });
       }
 
-      console.log('Profile updated with test date:', testDate);
+      console.warn('Profile updated with test date:', testDate);
       return new Response(JSON.stringify({ test_date: updatedProfile.test_date }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

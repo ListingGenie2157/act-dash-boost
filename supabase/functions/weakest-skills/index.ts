@@ -41,7 +41,7 @@ serve(async (req) => {
     // Get the authorization header
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
-      console.log('No authorization header provided');
+      console.warn('No authorization header provided');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -53,14 +53,14 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
-      console.log('Authentication failed:', authError?.message);
+      console.warn('Authentication failed:', authError?.message);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log(`Finding weakest skills for user ${user.id}`);
+    console.warn(`Finding weakest skills for user ${user.id}`);
 
     // Query the user skill stats view for weakness detection
     const { data: skillStats, error: statsError } = await supabase
@@ -78,7 +78,7 @@ serve(async (req) => {
     }
 
     if (!skillStats || skillStats.length === 0) {
-      console.log('No skills with sufficient data found');
+      console.warn('No skills with sufficient data found');
       return new Response(JSON.stringify({
         weakest_skills: [],
         message: 'No skills with sufficient practice data found'
@@ -144,7 +144,7 @@ serve(async (req) => {
       }
     };
 
-    console.log(`Found ${weakSkills.length} weak skills, returning top 3:`, top3Weakest.map(s => s.skill_name));
+    console.warn(`Found ${weakSkills.length} weak skills, returning top 3:`, top3Weakest.map(s => s.skill_name));
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

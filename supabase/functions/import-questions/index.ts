@@ -49,7 +49,7 @@ function parseTSV(tsvContent: string): StagingRow[] {
   for (let i = 1; i < lines.length; i++) {
     const values = lines[i].split('\t').map(v => v.trim().replace(/"/g, ''));
     if (values.length === headers.length) {
-      const row: any = {};
+      const row: Record<string, string> = {};
       headers.forEach((header, index) => {
         row[header] = values[index];
       });
