@@ -50,6 +50,7 @@ function shuffle<T>(array: T[], seed: number): T[] {
   const x = Math.sin(seed++) * 10000;
   return x - Math.floor(x);
 };
+
   
   while (m) {
     const i = Math.floor(random() * m--);
@@ -76,6 +77,9 @@ export default function DiagnosticTest() {
     }
   }, [formId]);
 
+useEffect(() => {
+  if (timeLeft > 0) {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
 useEffect(() => {
   if (timeLeft > 0) {
     const timer = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
@@ -115,13 +119,13 @@ if (!user) {
       const newAttempts: Attempt[] = [];
 
      const questionIds = (data || []).map(q => q.question_id);
-const { data: existingRows, error: attemptsErr } = await supabase
-  .from('attempts')
-  .select('*')
-  .eq('user_id', user.id)
-  .eq('form_id', formId)
-  .in('question_id', questionIds);
-
+const { data: existingRows, error: attemptsErr } = questionIds.length
+  ? await supabase.from('attempts')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('form_id', formId)
+      .in('question_id', questionIds)
+  : { data: [], error: null };
 if (attemptsErr) throw attemptsErr;
 
 const existingMap: Record<string, Attempt> = {};
