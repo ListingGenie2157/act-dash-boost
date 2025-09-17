@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useEffect, useCallback } from "react";
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -27,39 +28,39 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
-  const fetchDaysLeft = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase.functions.invoke('days-left', {
-        method: 'GET'
-      });
-
-      if (error) {
-        console.error('Error fetching days left:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to fetch test countdown. Please try again.',
-          variant: 'destructive'
-        });
-        return;
-      }
-
-      setDaysLeft(data);
-    } catch (error) {
+const fetchDaysLeft = useCallback(async () => {
+  try {
+    setLoading(true);
+    const { data, error } = await supabase.functions.invoke('days-left', { method: 'GET' });
+    if (error) {
       console.error('Error fetching days left:', error);
       toast({
         title: 'Error',
         description: 'Failed to fetch test countdown. Please try again.',
-        variant: 'destructive'
+        variant: 'destructive',
       });
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
+    setDaysLeft(data);
+  } catch (err) {
+    console.error('Error fetching days left:', err);
+    toast({
+      title: 'Error',
+      description: 'Failed to fetch test countdown. Please try again.',
+      variant: 'destructive',
+    });
+  } finally {
+    setLoading(false);
+  }
+}, [supabase, toast]);
 
-  useEffect(() => {
-    fetchDaysLeft();
-  }, []);
+useEffect(() => {
+  let cancelled = false;
+  (async () => {
+    if (!cancelled) await fetchDaysLeft();
+  })();
+  return () => { cancelled = true; };
+}, [fetchDaysLeft]);
 
   const handleSetTestDate = async (date: Date) => {
     if (!date) return;
