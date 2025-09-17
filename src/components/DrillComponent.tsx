@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';   
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -250,10 +250,10 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
             Question {currentQuestion + 1} of {drill.questions.length}
           </p>
         </div>
-        <div className="text-right">
-          <div className="text-3xl font-bold text-primary">{formatTime}</div>
-          <Progress value={timeProgress} className="w-32 h-2" />
-        </div>
+       <div className="text-right">
+  <div className="text-3xl font-bold text-primary">{formatTime(timeLeft)}</div>
+  <Progress value={timeProgress} className="w-32 h-2" />
+</div>
       </div>
 
       {/* Question Progress */}
