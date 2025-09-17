@@ -46,10 +46,10 @@ const TIMERS = {
 function shuffle<T>(array: T[], seed: number): T[] {
   const arr = [...array];
   let m = arr.length;
-  let random = () => {
-    const x = Math.sin(seed++) * 10000;
-    return x - Math.floor(x);
-  };
+ const random = () => {
+  const x = Math.sin(seed++) * 10000;
+  return x - Math.floor(x);
+};
   
   while (m) {
     const i = Math.floor(random() * m--);
@@ -76,19 +76,21 @@ export default function DiagnosticTest() {
     }
   }, [formId]);
 
-  useEffect(() => {
-    if (timeLeft > 0) {
-      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && questions.length > 0) {
-      handleSubmit();
-    }
-  }, [timeLeft]);
+useEffect(() => {
+  if (timeLeft > 0) {
+    const timer = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }
+  if (timeLeft === 0 && questions.length > 0 && !submitting) {
+    handleSubmit();
+  }
+}, [timeLeft, questions.length, submitting]);
 
   const loadDiagnostic = async () => {
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) {
+      const { data: { user } } = await supabase.auth.getUser();
+if (!user) {
+
         navigate('/login');
         return;
       }
@@ -112,38 +114,47 @@ export default function DiagnosticTest() {
       const existingAttempts: Record<string, Attempt> = {};
       const newAttempts: Attempt[] = [];
 
-      for (const question of data || []) {
-        const { data: existing } = await supabase
-          .from('attempts')
-          .select('*')
-          .eq('user_id', user.user.id)
-          .eq('form_id', formId)
-          .eq('question_id', question.question_id)
+     const questionIds = (data || []).map(q => q.question_id);
+const { data: existingRows, error: attemptsErr } = await supabase
+  .from('attempts')
+  .select('*')
+  .eq('user_id', user.id)
+  .eq('form_id', formId)
+  .in('question_id', questionIds);
+
+if (attemptsErr) throw attemptsErr;
+
+const existingMap: Record<string, Attempt> = {};
+(existingRows || []).forEach(row => {
+  existingMap[row.question_id] = row as unknown as Attempt;
+});
+
+for (const question of data || []) {
+  const existing = existingMap[question.question_id];
+  if (existing) {
+    existingAttempts[question.question_id] = existing;
+    continue;
+  }
+  const choices = [question.choice_a, question.choice_b, question.choice_c, question.choice_d];
+  const answerMap = { A: 0, B: 1, C: 2, D: 3 } as const;
+  const baseIdx = answerMap[question.answer as keyof typeof answerMap];
+  const choiceOrder = shuffle([0, 1, 2, 3], Date.now() + question.ord);
+  const correctIdx = choiceOrder.indexOf(baseIdx);
+
+  const attempt: Attempt = {
+    question_id: question.question_id,
+    choice_order: choiceOrder,
+    correct_idx: correctIdx,
+    question_ord: question.ord,
+  };
+  existingAttempts[question.question_id] = attempt;
+  newAttempts.push(attempt);
+}
+  
+      .eq('question_id', question.question_id)
           .maybeSingle();
 
-        if (existing) {
-          existingAttempts[question.question_id] = existing;
-        } else {
-          // Create new attempt with shuffled choices
-          const choices = [question.choice_a, question.choice_b, question.choice_c, question.choice_d];
-          const answerMap = { A: 0, B: 1, C: 2, D: 3 };
-          const baseIdx = answerMap[question.answer as keyof typeof answerMap];
-          const choiceOrder = shuffle([0, 1, 2, 3], Date.now() + question.ord);
-          const correctIdx = choiceOrder.indexOf(baseIdx);
-
-          const attempt: Attempt = {
-            question_id: question.question_id,
-            choice_order: choiceOrder,
-            correct_idx: correctIdx,
-            question_ord: question.ord
-          };
-
-          existingAttempts[question.question_id] = attempt;
-          newAttempts.push(attempt);
-        }
-      }
-
-      // Save new attempts to database
+         // Save new attempts to database
       if (newAttempts.length > 0) {
         const { error: insertError } = await supabase
           .from('attempts')
@@ -182,8 +193,8 @@ export default function DiagnosticTest() {
 
     // Save to database
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return;
+      const { data: { user } } = await supabase.auth.getUser();
+if (!user) {
 
       await supabase
         .from('attempts')
@@ -201,8 +212,8 @@ export default function DiagnosticTest() {
     setSubmitting(true);
 
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return;
+      const { data: { user } } = await supabase.auth.getUser();
+if (!user) {
 
       // Calculate results
       const results = calculateResults();
