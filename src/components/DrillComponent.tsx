@@ -24,11 +24,11 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
   // Toast API for immediate feedback during drills.
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (isCompleted && hasStarted) {
-      handleFinish(answers);
-    }
-  }, [isCompleted, hasStarted, answers]);
+ useEffect(() => {
+  if (isCompleted && hasStarted && !showResults) {
+    handleFinish(answers);
+  }
+}, [isCompleted, hasStarted, showResults, answers]);
 
   const handleStart = () => {
     setHasStarted(true);
@@ -51,15 +51,11 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
     
     // Auto-advance to next question
     if (currentQuestion < drill.questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
+      setCurrentQuestion(q => q + 1);
     } else {
       // All questions answered, finish drill
       handleFinish(newAnswers);
     }
-  };
-
-  const handleTimeUp = () => {
-    handleFinish(answers);
   };
 
   const handleFinish = (finalAnswers: number[]) => {
@@ -76,7 +72,10 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
 
   const currentQ = drill.questions[currentQuestion];
   const progress = ((currentQuestion + 1) / drill.questions.length) * 100;
-  const timeProgress = ((drill.timeLimit - timeLeft) / drill.timeLimit) * 100;
+  const timeProgress = Math.min(
+  100,
+  Math.max(0, ((drill.timeLimit - timeLeft) / drill.timeLimit) * 100)
+);
 
   if (showResults) {
     const correctCount = answers.filter((answer, index) => 
