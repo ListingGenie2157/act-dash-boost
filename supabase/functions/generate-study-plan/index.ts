@@ -245,7 +245,7 @@ serve(async (req) => {
       console.warn('Profile not found, creating default profile for user:', user.id);
       const { data: newProfile, error: createError } = await supabaseAdmin
         .from('profiles')
-        .insert({
+        .upsert({
           id: user.id,
           daily_time_cap_mins: 30
         })
@@ -491,7 +491,7 @@ serve(async (req) => {
       });
     }
 
-    // Create individual study tasks
+    // Create individual study tasks and return them with IDs
     const studyTasks = selectedTasks.map(task => ({
       user_id: user.id,
       the_date: todayStr,
@@ -502,22 +502,27 @@ serve(async (req) => {
       reward_cents: task.type === 'REVIEW' ? 10 : task.type === 'DRILL' ? 15 : 20
     }));
 
+    let insertedTasks = [];
     if (studyTasks.length > 0) {
-      const { error: tasksError } = await supabase
+      const { data: insertedData, error: tasksError } = await supabase
         .from('study_tasks')
         .upsert(studyTasks, { 
           onConflict: 'user_id,the_date,type,skill_id',
           ignoreDuplicates: false 
-        });
+        })
+        .select('*');
 
       if (tasksError) {
         console.error('Error saving study tasks:', tasksError);
+        insertedTasks = tasksJson; // Fallback to original format
+      } else {
+        insertedTasks = insertedData || [];
       }
     }
 
     const response = {
       the_date: todayStr,
-      tasks: tasksJson,
+      tasks: insertedTasks,
       mode: mode.name,
       days_left: daysLeft
     };

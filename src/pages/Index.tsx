@@ -7,6 +7,7 @@ import { StudyNow } from '@/components/StudyNow';
 import { TestWeekBanner } from '@/components/TestWeekBanner';
 import { ParentBanner } from '@/components/ParentBanner';
 import { Button } from '@/components/ui/button';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { curriculum } from '@/data/curriculum';
 import { useProgress } from '@/hooks/useProgress';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +18,8 @@ type View = 'dashboard' | 'day' | 'review' | 'study';
 const Index = () => {
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [selectedDay, setSelectedDay] = useState<number>(1);
+  const [loading, setLoading] = useState(true);
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const { progress, updateProgress, addWrongAnswer, updateWeakAreas, completeDay } = useProgress();
   const navigate = useNavigate();
 
@@ -24,21 +27,32 @@ const Index = () => {
   // Redirect to login if no session, or to onboarding if test_date not set.
   useEffect(() => {
     const checkAuth = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
+      try {
+        setLoading(true);
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) {
+          navigate('/login');
+          return;
+        }
+
+        // Check if user has completed onboarding (test date set)
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('test_date')
+          .eq('id', data.session.user.id)
+          .maybeSingle();
+
+        if (!profile?.test_date) {
+          navigate('/onboarding');
+          return;
+        }
+
+        setHasCompletedOnboarding(true);
+      } catch (error) {
+        console.error('Auth check error:', error);
         navigate('/login');
-        return;
-      }
-
-      // Check if user has completed onboarding
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('test_date')
-        .eq('id', data.session.user.id)
-        .maybeSingle();
-
-      if (!profile?.test_date) {
-        navigate('/onboarding');
+      } finally {
+        setLoading(false);
       }
     };
     checkAuth();
@@ -96,6 +110,18 @@ const Index = () => {
   };
 
   const selectedDayData = curriculum.find(d => d.day === selectedDay);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  if (!hasCompletedOnboarding) {
+    return null; // Will redirect to onboarding
+  }
 
   return (
     <div className="min-h-screen bg-background">

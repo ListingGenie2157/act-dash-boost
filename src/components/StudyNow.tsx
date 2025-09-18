@@ -68,7 +68,21 @@ export function StudyNow() {
         throw error;
       }
 
-      setStudyPlan(data);
+      // If tasks don't have IDs, fetch them from the database
+      let tasks = data.tasks;
+      if (tasks.length > 0 && !tasks[0].id) {
+        const { data: studyTasks, error: fetchError } = await supabase
+          .from('study_tasks')
+          .select('*')
+          .eq('the_date', data.the_date)
+          .order('created_at', { ascending: true });
+
+        if (!fetchError && studyTasks) {
+          tasks = studyTasks;
+        }
+      }
+
+      setStudyPlan({ ...data, tasks });
       setCurrentTaskIndex(0);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);

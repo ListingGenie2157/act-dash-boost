@@ -112,7 +112,7 @@ export default function Onboarding() {
       });
 
       toast.success('Onboarding completed! Your personalized study plan is ready.');
-      navigate('/dashboard');
+      navigate('/');
     } catch (error) {
       console.error('Error completing diagnostic:', error);
       toast.error('Failed to complete onboarding');
