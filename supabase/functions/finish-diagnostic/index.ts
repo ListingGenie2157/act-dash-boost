@@ -18,8 +18,14 @@ interface DiagnosticBlock {
 }
 
 interface DiagnosticRequest {
-  section: 'English' | 'Math' | 'Reading' | 'Science';
-  blocks: DiagnosticBlock[];
+  sections?: Array<{
+    section: string;
+    score: number;
+    notes?: string;
+  }>;
+  // Legacy format support
+  section?: 'English' | 'Math' | 'Reading' | 'Science';
+  blocks?: DiagnosticBlock[];
 }
 
 // Rough skill mapping for diagnostic questions
@@ -112,95 +118,158 @@ Deno.serve(async (req) => {
     }
 
     const body: DiagnosticRequest = await req.json();
-    console.log('Processing diagnostic for section:', body.section);
+    console.log('Processing diagnostic request:', body);
 
-    // Score the diagnostic
-    const { score, skillAccuracy } = scoreDiagnostic(body.blocks);
-    console.log('Diagnostic score:', score, 'Skill accuracy:', skillAccuracy);
+    let diagnosticResults: any[] = [];
 
-    // Save diagnostic results
-    const { data: diagnostic, error: insertError } = await supabase
-      .from('diagnostics')
-      .insert({
-        user_id: user.id,
-        section: body.section,
-        block: 1, // For now, treating as single combined result
-        responses: body.blocks,
-        score: score,
-        completed_at: new Date().toISOString()
-      })
-      .select()
-      .single();
+    // Handle new multi-section format (onboarding)
+    if (body.sections) {
+      console.log('Processing multi-section diagnostic for onboarding');
+      
+      for (const sectionData of body.sections) {
+        const { data: diagnostic, error: insertError } = await supabase
+          .from('diagnostics')
+          .insert({
+            user_id: user.id,
+            section: sectionData.section,
+            block: 1,
+            responses: { score: sectionData.score },
+            score: sectionData.score,
+            source: 'onboarding',
+            notes: sectionData.notes,
+            completed_at: new Date().toISOString()
+          })
+          .select()
+          .single();
 
-    if (insertError) {
-      console.error('Error saving diagnostic:', insertError);
+        if (insertError) {
+          console.error('Error saving diagnostic for section:', sectionData.section, insertError);
+          continue;
+        }
+
+        diagnosticResults.push(diagnostic);
+      }
+    } 
+    // Handle legacy single-section format
+    else if (body.section && body.blocks) {
+      console.log('Processing single-section diagnostic for section:', body.section);
+      
+      const { score, skillAccuracy } = scoreDiagnostic(body.blocks);
+      console.log('Diagnostic score:', score, 'Skill accuracy:', skillAccuracy);
+
+      const { data: diagnostic, error: insertError } = await supabase
+        .from('diagnostics')
+        .insert({
+          user_id: user.id,
+          section: body.section,
+          block: 1,
+          responses: body.blocks,
+          score: score,
+          completed_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error saving diagnostic:', insertError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to save diagnostic' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      diagnosticResults.push(diagnostic);
+    } else {
       return new Response(
-        JSON.stringify({ error: 'Failed to save diagnostic' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Invalid diagnostic format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Get missed questions for review queue seeding
-    const missedQuestions: Array<{ questionId: string; skill: string | null }> = [];
-    
-    for (const block of body.blocks) {
-      for (let i = 0; i < block.questions.length; i++) {
-        const question = block.questions[i];
-        const answer = block.answers[i];
-        
-        if (answer && !answer.isCorrect) {
-          const skill = getSkillFromTags(question.skill_tags);
-          missedQuestions.push({
-            questionId: answer.questionId,
-            skill
-          });
+    // Handle review queue seeding only for legacy format with actual questions
+    if (body.blocks) {
+      const missedQuestions: Array<{ questionId: string; skill: string | null }> = [];
+      
+      for (const block of body.blocks) {
+        for (let i = 0; i < block.questions.length; i++) {
+          const question = block.questions[i];
+          const answer = block.answers[i];
+          
+          if (answer && !answer.isCorrect) {
+            const skill = getSkillFromTags(question.skill_tags);
+            missedQuestions.push({
+              questionId: answer.questionId,
+              skill
+            });
+          }
+        }
+      }
+
+      // Seed review queue with missed items (due now for immediate review)
+      if (missedQuestions.length > 0) {
+        const reviewItems = missedQuestions.map(item => ({
+          user_id: user.id,
+          question_id: item.questionId,
+          due_at: new Date().toISOString(),
+          interval_days: 0,
+          ease: 250,
+          lapses: 1
+        }));
+
+        const { error: reviewError } = await supabase
+          .from('review_queue')
+          .insert(reviewItems);
+
+        if (reviewError) {
+          console.error('Error seeding review queue:', reviewError);
+        } else {
+          console.log('Seeded review queue with', reviewItems.length, 'missed questions');
         }
       }
     }
 
-    // Seed review queue with missed items (due now for immediate review)
-    if (missedQuestions.length > 0) {
-      const reviewItems = missedQuestions.map(item => ({
-        user_id: user.id,
-        question_id: item.questionId,
-        due_at: new Date().toISOString(),
-        interval_days: 0,
-        ease: 250,
-        lapses: 1
+    // Calculate overall results
+    let averageScore = 0;
+    let sectionResults: any[] = [];
+
+    if (body.sections) {
+      // Multi-section onboarding results
+      averageScore = body.sections.reduce((sum, s) => sum + s.score, 0) / body.sections.length;
+      sectionResults = body.sections.map(s => ({
+        section: s.section,
+        score: Math.round(s.score * 100), // Convert to percentage
+        weak_areas: s.score < 0.6 ? ['general'] : []
       }));
+    } else if (body.blocks) {
+      // Legacy single-section results
+      const { score, skillAccuracy } = scoreDiagnostic(body.blocks);
+      averageScore = score;
+      
+      const weakSkills = Object.entries(skillAccuracy)
+        .map(([skill, data]) => ({
+          skill,
+          accuracy: data.total > 0 ? (data.correct / data.total) * 100 : 0,
+          total: data.total
+        }))
+        .filter(s => s.total >= 2)
+        .sort((a, b) => a.accuracy - b.accuracy)
+        .slice(0, 5);
 
-      const { error: reviewError } = await supabase
-        .from('review_queue')
-        .insert(reviewItems);
-
-      if (reviewError) {
-        console.error('Error seeding review queue:', reviewError);
-      } else {
-        console.log('Seeded review queue with', reviewItems.length, 'missed questions');
-      }
+      sectionResults = [{
+        section: body.section,
+        score: Math.round(score),
+        weak_areas: weakSkills.map(s => s.skill)
+      }];
     }
 
-    // Calculate predicted section score (simplified)
-    const predictedSectionScore = Math.round(score);
-
-    // Get top 5 weak skills
-    const weakSkills = Object.entries(skillAccuracy)
-      .map(([skill, data]) => ({
-        skill,
-        accuracy: data.total > 0 ? (data.correct / data.total) * 100 : 0,
-        total: data.total
-      }))
-      .filter(s => s.total >= 2) // Only include skills with at least 2 questions
-      .sort((a, b) => a.accuracy - b.accuracy)
-      .slice(0, 5);
-
-    console.log('Top weak skills:', weakSkills);
+    console.log('Diagnostic completed - Average score:', averageScore, 'Section results:', sectionResults);
 
     return new Response(
       JSON.stringify({
-        predicted_section_score: predictedSectionScore,
-        top_5_weak_skills: weakSkills,
-        diagnostic_id: diagnostic.id
+        predicted_section_score: Math.round(averageScore),
+        section_results: sectionResults,
+        diagnostic_ids: diagnosticResults.map(d => d.id),
+        success: true
       }),
       { 
         status: 200, 
