@@ -56,6 +56,6 @@ export const useTimer = (initialTime: number) => {
     startTimer,
     pauseTimer,
     resetTimer,
-    formatTime: formatTime(timerState.timeLeft)
+    formatTime
   };
 };

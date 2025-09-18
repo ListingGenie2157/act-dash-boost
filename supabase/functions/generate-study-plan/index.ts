@@ -225,14 +225,37 @@ serve(async (req) => {
       });
     }
 
-    // Get user profile
+    // Get user profile or create default if not exists
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('test_date, daily_time_cap_mins')
       .eq('id', user.id)
       .single();
 
-    if (profileError) {
+    let userProfile = profile;
+    
+    // If profile doesn't exist, create a default one
+    if (profileError && profileError.code === 'PGRST116') {
+      console.warn('Profile not found, creating default profile for user:', user.id);
+      const { data: newProfile, error: createError } = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          daily_time_cap_mins: 30
+        })
+        .select('test_date, daily_time_cap_mins')
+        .single();
+        
+      if (createError) {
+        console.error('Error creating profile:', createError);
+        return new Response(JSON.stringify({ error: 'Failed to create profile' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      userProfile = newProfile;
+    } else if (profileError) {
       console.error('Error fetching profile:', profileError);
       return new Response(JSON.stringify({ error: 'Failed to fetch profile' }), {
         status: 500,
@@ -240,9 +263,9 @@ serve(async (req) => {
       });
     }
 
-    const testDate = profile?.test_date ? new Date(profile.test_date + 'T00:00:00') : null;
+    const testDate = userProfile?.test_date ? new Date(userProfile.test_date + 'T00:00:00') : null;
     const daysLeft = calculateDaysLeft(today, testDate);
-    const dailyTimeCap = profile?.daily_time_cap_mins || 30;
+    const dailyTimeCap = userProfile?.daily_time_cap_mins || 30;
     const mode = getStudyMode(daysLeft);
 
     console.warn(`Study mode: ${mode.name}, Days left: ${daysLeft}, Time cap: ${dailyTimeCap}mins`);
