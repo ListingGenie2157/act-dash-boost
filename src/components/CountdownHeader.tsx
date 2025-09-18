@@ -25,9 +25,15 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [saving, setSaving] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const { toast } = useToast();
 
 const fetchDaysLeft = useCallback(async () => {
+  if (!user) {
+    setLoading(false);
+    return;
+  }
+  
   try {
     setLoading(true);
     const { data, error } = await supabase.functions.invoke('days-left', { method: 'GET' });
@@ -51,7 +57,30 @@ const fetchDaysLeft = useCallback(async () => {
   } finally {
     setLoading(false);
   }
-}, [supabase, toast]);
+}, [user, toast]);
+
+// Check authentication status
+useEffect(() => {
+  let cancelled = false;
+  
+  (async () => {
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!cancelled) {
+      setUser(currentUser);
+    }
+  })();
+  
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    if (!cancelled) {
+      setUser(session?.user || null);
+    }
+  });
+
+  return () => {
+    cancelled = true;
+    subscription.unsubscribe();
+  };
+}, []);
 
 useEffect(() => {
   let cancelled = false;
@@ -116,6 +145,10 @@ useEffect(() => {
   };
 
   const renderCountdown = () => {
+    if (!user) {
+      return null; // Don't show anything if user is not logged in
+    }
+    
     if (loading) {
       return (
         <div className="flex items-center gap-2 text-muted-foreground">
@@ -185,7 +218,7 @@ useEffect(() => {
 
   return (
     <div className={cn("flex items-center justify-center p-4 border-b bg-card", className)}>
-      {renderCountdown()}
+      {user && renderCountdown()}
     </div>
   );
 }
