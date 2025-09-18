@@ -176,7 +176,13 @@ serve(async (req) => {
   }
 
   try {
-    // Initialize Supabase client
+    // Initialize Supabase client with service role for admin operations
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // Initialize regular client for user operations
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -234,10 +240,10 @@ serve(async (req) => {
 
     let userProfile = profile;
     
-    // If profile doesn't exist, create a default one
+    // If profile doesn't exist, create a default one using admin client
     if (profileError && profileError.code === 'PGRST116') {
       console.warn('Profile not found, creating default profile for user:', user.id);
-      const { data: newProfile, error: createError } = await supabase
+      const { data: newProfile, error: createError } = await supabaseAdmin
         .from('profiles')
         .insert({
           id: user.id,
