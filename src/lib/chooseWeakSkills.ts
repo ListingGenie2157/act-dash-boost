@@ -45,12 +45,16 @@ export function chooseWeakSkills(
         clusterGroups[skill.cluster].push(skill.id);
       });
       
-      // Pick skills from the first two clusters (assume ordered by difficulty)
-      const clusters = Object.keys(clusterGroups).slice(0, 2);
-      clusters.forEach(cluster => {
-        const clusterSkillIds = clusterGroups[cluster].slice(0, 2); // Max 2 skills per cluster
-        weakSkillIds.push(...clusterSkillIds);
-      });
+      // Distribute picks across clusters until we reach 5 total
+      const clusters = Object.keys(clusterGroups);
+      for (const cluster of clusters) {
+        if (weakSkillIds.length >= 5) break;
+        const clusterSkillIds = clusterGroups[cluster];
+        for (const id of clusterSkillIds) {
+          if (weakSkillIds.length >= 5) break;
+          weakSkillIds.push(id);
+        }
+      }
     }
   });
   

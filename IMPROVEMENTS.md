@@ -1,3 +1,26 @@
+Production readiness checklist
+
+- Environment
+  - Provide `.env.example` and never commit real secrets
+  - Enforce required `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+
+- Build & runtime
+  - PWA enabled with `vite-plugin-pwa`
+  - Dockerfile builds static assets and serves via Nginx with security headers
+  - Nginx caches immutable assets
+
+- Quality gates
+  - CI runs typecheck, lint, unit tests, and build
+  - Playwright config uses port 8080 to match dev server
+
+- Security
+  - CSP added in `index.html`
+  - ErrorBoundary logs via `console.error` (hook to APM in prod)
+
+- Next steps
+  - Add monitoring (Sentry or OpenTelemetry) and structured logging
+  - Add e2e smoke job in CI (Playwright) behind ephemeral preview env
+  - Configure Supabase RLS and review migrations
 # Code Quality and Performance Improvements
 
 This document outlines the improvements made to enhance type safety, performance, and maintainability.

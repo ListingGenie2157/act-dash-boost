@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
     const body: DiagnosticRequest = await req.json();
     console.log('Processing diagnostic request:', body);
 
-    let diagnosticResults: any[] = [];
+    const diagnosticResults: unknown[] = [];
 
     // Handle new multi-section format (onboarding)
     if (body.sections) {
@@ -230,7 +230,7 @@ Deno.serve(async (req) => {
 
     // Calculate overall results
     let averageScore = 0;
-    let sectionResults: any[] = [];
+    let sectionResults: Array<{ section: string; score: number; weak_areas: string[] }> = [];
 
     if (body.sections) {
       // Multi-section onboarding results

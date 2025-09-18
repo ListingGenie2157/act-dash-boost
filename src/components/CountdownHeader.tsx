@@ -25,7 +25,7 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [saving, setSaving] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string } | null>(null);
   const { toast } = useToast();
 
 const fetchDaysLeft = useCallback(async () => {
