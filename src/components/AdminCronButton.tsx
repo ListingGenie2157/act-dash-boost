@@ -4,12 +4,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Play, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { cronRateLimiter } from '@/utils/rateLimiter';
+import { sanitizeError } from '@/utils/validation';
 
 export const AdminCronButton = () => {
   const [loading, setLoading] = useState(false);
   const [lastResult, setLastResult] = useState<{ successful: number; failed: number; errors: string[] } | null>(null);
 
   const runCronDaily = async () => {
+    if (!cronRateLimiter.canMakeRequest('cron-daily')) {
+      toast.error('Please wait before running the cron job again');
+      return;
+    }
+    
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('cron-daily', {
@@ -17,17 +24,14 @@ export const AdminCronButton = () => {
       });
 
       if (error) {
-        console.error('Cron function error:', error);
-        toast.error('Failed to run cron job: ' + error.message);
+        toast.error('Failed to run cron job: ' + sanitizeError(error));
         return;
       }
 
       setLastResult(data);
       toast.success('Cron job completed successfully');
-      console.warn('Cron job result:', data);
     } catch (error) {
-      console.error('Error calling cron function:', error);
-      toast.error('Failed to run cron job');
+      toast.error('Failed to run cron job: ' + sanitizeError(error));
     } finally {
       setLoading(false);
     }
