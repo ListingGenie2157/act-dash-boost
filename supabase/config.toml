@@ -24,6 +24,15 @@ verify_jwt = true
 [functions.set-baseline]
 verify_jwt = true
 
+[functions.session-start]
+verify_jwt = true
+
+[functions.response-submit]
+verify_jwt = true
+
+[functions.session-finish]
+verify_jwt = true
+
 [functions.import-questions]
 verify_jwt = true
 
