@@ -38,7 +38,6 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
       setLoading(true);
       const { data, error } = await supabase.functions.invoke<DaysLeftResponse>("days-left", { method: "GET" });
       if (error) {
-        console.error("Error fetching days left:", error);
         toast({
           title: "Error",
           description: "Failed to fetch test countdown. Please try again.",
@@ -48,7 +47,6 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
       }
       setDaysLeft(data ?? null);
     } catch (err) {
-      console.error("Error fetching days left:", err);
       toast({
         title: "Error",
         description: "Failed to fetch test countdown. Please try again.",
@@ -78,12 +76,16 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    const abortController = new AbortController();
+    
     (async () => {
-      if (!cancelled) await fetchDaysLeft();
+      if (!abortController.signal.aborted) {
+        await fetchDaysLeft();
+      }
     })();
+    
     return () => {
-      cancelled = true;
+      abortController.abort();
     };
   }, [fetchDaysLeft]);
 
@@ -98,7 +100,6 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
       });
 
       if (error) {
-        console.error("Error setting test date:", error);
         toast({
           title: "Error",
           description: "Failed to set test date. Please try again.",
@@ -118,7 +119,6 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
         description: `Test date set to ${format(date, "PPP")}`,
       });
     } catch (error) {
-      console.error("Error setting test date:", error);
       toast({
         title: "Error",
         description: "Failed to set test date. Please try again.",

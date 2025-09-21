@@ -1,6 +1,6 @@
 import { Target, TrendingUp, Clock, Play } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,38 +21,50 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
   const [todaysTasks, setTodaysTasks] = useState<StudyTask[]>([]);
 
   useEffect(() => {
+    const abortController = new AbortController();
+    
     const raw = localStorage.getItem("diagnostic-results");
     if (raw) {
       try {
         setDiagnosticResults(JSON.parse(raw));
-      } catch {
+      } catch (error) {
+        // Invalid JSON in localStorage
         setDiagnosticResults(null);
+        localStorage.removeItem("diagnostic-results");
       }
     }
-    void fetchDaysLeft();
-    void fetchTodaysTasks();
-  }, []);
+    
+    void fetchDaysLeft(abortController.signal);
+    void fetchTodaysTasks(abortController.signal);
+    
+    return () => {
+      abortController.abort();
+    };
+  }, [fetchDaysLeft, fetchTodaysTasks]);
 
-  const fetchDaysLeft = async () => {
+  const fetchDaysLeft = useCallback(async (signal?: AbortSignal) => {
     try {
       const { data, error } = await supabase.functions.invoke<{
         today: string;
         test_date: string | null;
         days_left: number | null;
       }>("days-left", { method: "GET" });
+      
+      if (signal?.aborted) return;
+      
       if (error) {
-        console.error("Error fetching days left:", error);
         setDaysLeft(null);
         return;
       }
       setDaysLeft(typeof data?.days_left === "number" ? data.days_left : null);
     } catch (error) {
-      console.error("Error fetching days left:", error);
-      setDaysLeft(null);
+      if (!signal?.aborted) {
+        setDaysLeft(null);
+      }
     }
-  };
+  }, []);
 
-  const fetchTodaysTasks = async () => {
+  const fetchTodaysTasks = useCallback(async (signal?: AbortSignal) => {
     try {
       const today = new Date().toISOString().split("T")[0];
       const { data, error } = await supabase
@@ -61,23 +73,31 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
         .eq("the_date", today)
         .eq("status", "PENDING")
         .order("created_at", { ascending: true });
+      
+      if (signal?.aborted) return;
+      
       if (!error && data) setTodaysTasks(data as StudyTask[]);
     } catch (error) {
-      console.error("Error fetching today's tasks:", error);
+      // Silently fail, tasks are optional
     }
-  };
+  }, []);
 
   const weakAreas = progress?.weakAreas ?? [];
-  const topWeakAreas = [...weakAreas].sort((a, b) => b.errorCount - a.errorCount).slice(0, 3);
+  const topWeakAreas = useMemo(() => 
+    [...weakAreas].sort((a, b) => b.errorCount - a.errorCount).slice(0, 3),
+    [weakAreas]
+  );
 
-  const statusText =
+  const statusText = useMemo(() =>
     daysLeft == null
       ? "No test date"
       : daysLeft > 0
       ? `${daysLeft} days until test`
       : daysLeft === 0
       ? "Test Day!"
-      : "Test date passed";
+      : "Test date passed",
+    [daysLeft]
+  );
 
   return (
     <div className="space-y-6">
@@ -167,14 +187,13 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
               <h3 className="font-semibold">Quick Drills</h3>
             </div>
             <p className="text-sm text-muted-foreground">Practice with timed rapid-fire questions</p>
-            <Button
-              variant="drill"
-              className="w-full"
-              onClick={() => {
-                console.warn("Math drill button clicked from Dashboard");
-                onStartDay(9);
-              }}
-            >
+              <Button
+                variant="drill"
+                className="w-full"
+                onClick={() => {
+                  onStartDay(9);
+                }}
+              >
               🔢 Start Math Drill (60s)
             </Button>
           </div>
@@ -192,7 +211,6 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
                 variant="success"
                 className="w-full"
                 onClick={() => {
-                  console.warn("Grammar drill button clicked from Dashboard");
                   onStartDay(9);
                 }}
               >
