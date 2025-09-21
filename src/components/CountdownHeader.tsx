@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Calendar, CalendarIcon, Clock } from 'lucide-react';
-import { format } from 'date-fns';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import React, { useState, useEffect, useCallback } from "react";
+import type { User } from "@supabase/supabase-js";
+import { Calendar as CalendarIcon, Calendar, Clock } from "lucide-react";
+import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface DaysLeftResponse {
   today: string;
@@ -25,119 +26,103 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [saving, setSaving] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
 
-const fetchDaysLeft = useCallback(async () => {
-  if (!user) {
-    setLoading(false);
-    return;
-  }
-  
-  try {
-    setLoading(true);
-    const { data, error } = await supabase.functions.invoke('days-left', { method: 'GET' });
-    if (error) {
-      console.error('Error fetching days left:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch test countdown. Please try again.',
-        variant: 'destructive',
-      });
+  const fetchDaysLeft = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
       return;
     }
-    setDaysLeft(data);
-  } catch (err) {
-    console.error('Error fetching days left:', err);
-    toast({
-      title: 'Error',
-      description: 'Failed to fetch test countdown. Please try again.',
-      variant: 'destructive',
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.functions.invoke<DaysLeftResponse>("days-left", { method: "GET" });
+      if (error) {
+        console.error("Error fetching days left:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch test countdown. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setDaysLeft(data ?? null);
+    } catch (err) {
+      console.error("Error fetching days left:", err);
+      toast({
+        title: "Error",
+        description: "Failed to fetch test countdown. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [user, toast]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!cancelled) setUser(data.user ?? null);
+    })();
+
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!cancelled) setUser(session?.user ?? null);
     });
-  } finally {
-    setLoading(false);
-  }
-}, [user, toast]);
 
-// Check authentication status
-useEffect(() => {
-  let cancelled = false;
-  
-  (async () => {
-    const { data: { user: currentUser } } = await supabase.auth.getUser();
-    if (!cancelled) {
-      setUser(currentUser);
-    }
-  })();
-  
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-    if (!cancelled) {
-      setUser(session?.user || null);
-    }
-  });
+    return () => {
+      cancelled = true;
+      data.subscription.unsubscribe();
+    };
+  }, []);
 
-  return () => {
-    cancelled = true;
-    subscription.unsubscribe();
-  };
-}, []);
-
-useEffect(() => {
-  let cancelled = false;
-  (async () => {
-    if (!cancelled) await fetchDaysLeft();
-  })();
-  return () => { cancelled = true; };
-}, [fetchDaysLeft]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!cancelled) await fetchDaysLeft();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchDaysLeft]);
 
   const handleSetTestDate = async (date: Date) => {
     if (!date) return;
-
     try {
       setSaving(true);
-      const testDate = format(date, 'yyyy-MM-dd');
+      const testDate = format(date, "yyyy-MM-dd");
 
-      const { data, error } = await supabase.functions.invoke('set-test-date', {
-        body: { testDate }
+      const { error } = await supabase.functions.invoke("set-test-date", {
+        body: { testDate },
       });
 
       if (error) {
-        console.error('Error setting test date:', error);
+        console.error("Error setting test date:", error);
         toast({
-          title: 'Error',
-          description: 'Failed to set test date. Please try again.',
-          variant: 'destructive'
+          title: "Error",
+          description: "Failed to set test date. Please try again.",
+          variant: "destructive",
         });
         return;
       }
 
-      // Optimistic update
-      if (daysLeft) {
-        const today = new Date(daysLeft.today);
-        const timeDiff = date.getTime() - today.getTime();
-        const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-        
-        setDaysLeft({
-          ...daysLeft,
-          test_date: testDate,
-          days_left: daysDiff
-        });
-      }
+      // Refresh from server for authoritative value
+      await fetchDaysLeft();
 
       setDialogOpen(false);
       setSelectedDate(undefined);
-      
-      toast({
-        title: 'Success',
-        description: `Test date set to ${format(date, 'PPP')}`,
-      });
 
-    } catch (error) {
-      console.error('Error setting test date:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to set test date. Please try again.',
-        variant: 'destructive'
+        title: "Success",
+        description: `Test date set to ${format(date, "PPP")}`,
+      });
+    } catch (error) {
+      console.error("Error setting test date:", error);
+      toast({
+        title: "Error",
+        description: "Failed to set test date. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setSaving(false);
@@ -145,10 +130,8 @@ useEffect(() => {
   };
 
   const renderCountdown = () => {
-    if (!user) {
-      return null; // Don't show anything if user is not logged in
-    }
-    
+    if (!user) return null;
+
     if (loading) {
       return (
         <div className="flex items-center gap-2 text-muted-foreground">
@@ -179,7 +162,7 @@ useEffect(() => {
 
     const daysLeftNum = daysLeft.days_left;
     const testDate = new Date(daysLeft.test_date);
-    
+
     return (
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-1.5">
@@ -198,11 +181,11 @@ useEffect(() => {
             )}
           </span>
         </div>
-        
+
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-foreground">
-              {format(testDate, 'MMM d, yyyy')}
+              {format(testDate, "MMM d, yyyy")}
             </Button>
           </DialogTrigger>
           <SetTestDateDialog
@@ -216,11 +199,7 @@ useEffect(() => {
     );
   };
 
-  return (
-    <div className={cn("flex items-center justify-center p-4 border-b bg-card", className)}>
-      {user && renderCountdown()}
-    </div>
-  );
+  return <div className={cn("flex items-center justify-center p-4 border-b bg-card", className)}>{user && renderCountdown()}</div>;
 }
 
 interface SetTestDateDialogProps {
@@ -239,21 +218,18 @@ function SetTestDateDialog({ selectedDate, onDateSelect, onConfirm, saving }: Se
       <DialogHeader>
         <DialogTitle>Set Your ACT Test Date</DialogTitle>
       </DialogHeader>
-      
+
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">
           Choose your official ACT test date to get a personalized study countdown and schedule.
         </p>
-        
+
         <div className="flex flex-col space-y-3">
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !selectedDate && "text-muted-foreground"
-                )}
+                className={cn("w-full justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {selectedDate ? format(selectedDate, "PPP") : "Pick a test date"}
@@ -270,20 +246,13 @@ function SetTestDateDialog({ selectedDate, onDateSelect, onConfirm, saving }: Se
               />
             </PopoverContent>
           </Popover>
-          
+
           <div className="flex gap-2 justify-end">
-            <Button
-              variant="outline"
-              onClick={() => onDateSelect(undefined)}
-              disabled={saving}
-            >
+            <Button variant="outline" onClick={() => onDateSelect(undefined)} disabled={saving}>
               Clear
             </Button>
-            <Button
-              onClick={() => selectedDate && onConfirm(selectedDate)}
-              disabled={!selectedDate || saving}
-            >
-              {saving ? 'Setting...' : 'Set Date'}
+            <Button onClick={() => selectedDate && onConfirm(selectedDate)} disabled={!selectedDate || saving}>
+              {saving ? "Setting..." : "Set Date"}
             </Button>
           </div>
         </div>
