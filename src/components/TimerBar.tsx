@@ -18,20 +18,30 @@ export function TimerBar({ timeLeftSec, totalTimeSec, onTimeEnd, isActive = true
   }, [timeLeftSec]);
 
   useEffect(() => {
-    if (!isActive || timeLeft <= 0) return;
-
+    if (!isActive) return;
+    let cancelled = false;
     const interval = setInterval(() => {
+      if (cancelled) return;
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          onTimeEnd();
+          // Ensure onTimeEnd is called at most once when crossing zero
+          if (prev > 0) {
+            try {
+              onTimeEnd();
+            } catch (err) {
+              console.error('TimerBar onTimeEnd callback error:', err);
+            }
+          }
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-
-    return () => clearInterval(interval);
-  }, [timeLeft, isActive, onTimeEnd]);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [isActive, onTimeEnd]);
 
   const formatTime = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);

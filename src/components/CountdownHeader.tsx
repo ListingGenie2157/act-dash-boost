@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import type { User } from "@supabase/supabase-js";
 import { Calendar as CalendarIcon, Calendar, Clock } from "lucide-react";
 import { format } from "date-fns";
@@ -28,6 +28,38 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const { toast } = useToast();
+  const latestFetchIdRef = useRef(0);
+
+  async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error("Request timed out")), ms);
+    });
+    try {
+      const result = await Promise.race([promise, timeoutPromise]);
+      return result as T;
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  }
+
+  async function invokeWithRetry<T>(name: string, options: { method?: "GET" | "POST"; body?: unknown } = {}, { retries = 2, timeoutMs = 8000 }: { retries?: number; timeoutMs?: number } = {}): Promise<T> {
+    let attempt = 0;
+    let lastErr: unknown;
+    while (attempt <= retries) {
+      try {
+        const { data, error } = await withTimeout(supabase.functions.invoke<T>(name, options), timeoutMs);
+        if (error) throw error;
+        return data as T;
+      } catch (err) {
+        lastErr = err;
+        const backoff = 300 * Math.pow(2, attempt);
+        await new Promise((r) => setTimeout(r, backoff));
+        attempt += 1;
+      }
+    }
+    throw lastErr instanceof Error ? lastErr : new Error("Unknown error");
+  }
 
   const fetchDaysLeft = useCallback(async () => {
     if (!user) {
@@ -36,16 +68,9 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
     }
     try {
       setLoading(true);
-      const { data, error } = await supabase.functions.invoke<DaysLeftResponse>("days-left", { method: "GET" });
-      if (error) {
-        console.error("Error fetching days left:", error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch test countdown. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
+      const fetchId = ++latestFetchIdRef.current;
+      const data = await invokeWithRetry<DaysLeftResponse>("days-left", { method: "GET" });
+      if (latestFetchIdRef.current !== fetchId) return; // stale response
       setDaysLeft(data ?? null);
     } catch (err) {
       console.error("Error fetching days left:", err);
@@ -63,17 +88,22 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
     let cancelled = false;
 
     (async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!cancelled) setUser(data.user ?? null);
+      try {
+        const { data } = await withTimeout(supabase.auth.getUser(), 8000);
+        if (!cancelled) setUser(data.user ?? null);
+      } catch (err) {
+        console.error("Error loading user:", err);
+        if (!cancelled) setUser(null);
+      }
     })();
 
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!cancelled) setUser(session?.user ?? null);
     });
 
     return () => {
       cancelled = true;
-      data.subscription.unsubscribe();
+      sub.subscription.unsubscribe();
     };
   }, []);
 
@@ -93,19 +123,7 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
       setSaving(true);
       const testDate = format(date, "yyyy-MM-dd");
 
-      const { error } = await supabase.functions.invoke("set-test-date", {
-        body: { testDate },
-      });
-
-      if (error) {
-        console.error("Error setting test date:", error);
-        toast({
-          title: "Error",
-          description: "Failed to set test date. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
+      await invokeWithRetry("set-test-date", { method: "POST", body: { testDate } }, { retries: 2, timeoutMs: 8000 });
 
       // Refresh from server for authoritative value
       await fetchDaysLeft();
