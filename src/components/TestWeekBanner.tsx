@@ -21,14 +21,30 @@ export const TestWeekBanner = () => {
 
   useEffect(() => {
     const fetchTestWeekSchedule = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('Request timed out')), ms);
+        });
+        try {
+          const result = await Promise.race([promise, timeoutPromise]);
+          return result as T;
+        } finally {
+          if (timeoutId) clearTimeout(timeoutId);
+        }
+      }
+
+      const { data: { user } } = await withTimeout(supabase.auth.getUser(), 8000);
       if (!user) return;
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('test_date')
-        .eq('id', user.id)
-        .single();
+      const { data: profile } = await withTimeout(
+        supabase
+          .from('profiles')
+          .select('test_date')
+          .eq('id', user.id)
+          .single(),
+        8000
+      );
 
       if (!profile?.test_date) return;
 

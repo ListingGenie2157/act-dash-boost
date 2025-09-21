@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Play, Loader2 } from 'lucide-react';
@@ -8,23 +8,51 @@ import { toast } from 'sonner';
 export const AdminCronButton = () => {
   const [loading, setLoading] = useState(false);
   const [lastResult, setLastResult] = useState<{ successful: number; failed: number; errors: string[] } | null>(null);
+  const invokeCounterRef = useRef(0);
+
+  async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error('Request timed out')), ms);
+    });
+    try {
+      const result = await Promise.race([promise, timeoutPromise]);
+      return result as T;
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  }
+
+  async function invokeWithRetry<T>(fnName: string, body: unknown, { retries = 2, timeoutMs = 10000 }: { retries?: number; timeoutMs?: number } = {}): Promise<T> {
+    let attempt = 0;
+    let lastErr: unknown;
+    while (attempt <= retries) {
+      try {
+        const { data, error } = await withTimeout(supabase.functions.invoke<T>(fnName, { method: 'POST', body }), timeoutMs);
+        if (error) throw error;
+        return data as T;
+      } catch (err) {
+        lastErr = err;
+        // Backoff: 500ms, 1000ms, 2000ms
+        const backoff = 500 * Math.pow(2, attempt);
+        await new Promise((r) => setTimeout(r, backoff));
+        attempt += 1;
+      }
+    }
+    throw lastErr instanceof Error ? lastErr : new Error('Unknown error');
+  }
 
   const runCronDaily = async () => {
+    if (loading) return; // Concurrency guard
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('cron-daily', {
-        body: { manual: true }
-      });
-
-      if (error) {
-        console.error('Cron function error:', error);
-        toast.error('Failed to run cron job: ' + error.message);
-        return;
-      }
-
+      // Track invocation id to avoid race updates
+      const invocationId = ++invokeCounterRef.current;
+      const data = await invokeWithRetry<{ successful: number; failed: number; errors: string[] }>('cron-daily', { manual: true });
+      if (invokeCounterRef.current !== invocationId) return; // stale response
       setLastResult(data);
-      toast.success('Cron job completed successfully');
-      console.warn('Cron job result:', data);
+      toast.success('Cron job completed');
+      console.debug('Cron job result summary:', { successful: data?.successful, failed: data?.failed, errorsCount: data?.errors?.length ?? 0 });
     } catch (error) {
       console.error('Error calling cron function:', error);
       toast.error('Failed to run cron job');

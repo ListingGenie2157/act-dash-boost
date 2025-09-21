@@ -55,27 +55,55 @@ export function StudyNow() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error('Request timed out')), ms);
+    });
+    try {
+      const result = await Promise.race([promise, timeoutPromise]);
+      return result as T;
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  }
+
+  async function invokeWithRetry<T>(name: string, options: { method?: 'GET' | 'POST'; body?: unknown } = {}, { retries = 2, timeoutMs = 12000 }: { retries?: number; timeoutMs?: number } = {}): Promise<T> {
+    let attempt = 0;
+    let lastErr: unknown;
+    while (attempt <= retries) {
+      try {
+        const { data, error } = await withTimeout(supabase.functions.invoke<T>(name, options), timeoutMs);
+        if (error) throw error;
+        return data as T;
+      } catch (err) {
+        lastErr = err;
+        const backoff = 400 * Math.pow(2, attempt);
+        await new Promise((r) => setTimeout(r, backoff));
+        attempt += 1;
+      }
+    }
+    throw lastErr instanceof Error ? lastErr : new Error('Unknown error');
+  }
+
   const loadStudyPlan = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const { data, error } = await supabase.functions.invoke('generate-study-plan', {
-        method: 'POST'
-      });
-
-      if (error) {
-        throw error;
-      }
+      const data = await invokeWithRetry<any>('generate-study-plan', { method: 'POST' }, { retries: 2, timeoutMs: 12000 });
 
       // If tasks don't have IDs, fetch them from the database
       let tasks = data.tasks;
       if (tasks.length > 0 && !tasks[0].id) {
-        const { data: studyTasks, error: fetchError } = await supabase
-          .from('study_tasks')
-          .select('*')
-          .eq('the_date', data.the_date)
-          .order('created_at', { ascending: true });
+        const { data: studyTasks, error: fetchError } = await withTimeout(
+          supabase
+            .from('study_tasks')
+            .select('*')
+            .eq('the_date', data.the_date)
+            .order('created_at', { ascending: true }),
+          10000
+        );
 
         if (!fetchError && studyTasks) {
           tasks = studyTasks;
@@ -100,17 +128,7 @@ export function StudyNow() {
 
   const handleTaskComplete = useCallback(async (taskId: string, accuracy: number, timeMs: number) => {
     try {
-      const { data, error } = await supabase.functions.invoke('complete-task', {
-        body: {
-          task_id: taskId,
-          accuracy,
-          time_ms: timeMs
-        }
-      });
-
-      if (error) {
-        throw error;
-      }
+      const data = await invokeWithRetry<any>('complete-task', { method: 'POST', body: { task_id: taskId, accuracy, time_ms: timeMs } }, { retries: 2, timeoutMs: 12000 });
 
       // Update the study plan with the completed task
       if (studyPlan) {
@@ -267,14 +285,14 @@ const TaskRunner = memo(function TaskRunner({ task, onComplete }: TaskRunnerProp
   // Timer effect
   useEffect(() => {
     if (task.type === 'LEARN') return;
-
+    let cancelled = false;
     const timer = setInterval(() => {
+      if (cancelled) return;
       setTimeRemaining(prev => {
         if (prev <= 1) {
-          // Move to next question when time runs out
           if (currentQuestionIndex < questions.length - 1) {
             setCurrentQuestionIndex(prev => prev + 1);
-            return 45;
+            return baseTimeLimit;
           }
           return 0;
         }
@@ -282,8 +300,11 @@ const TaskRunner = memo(function TaskRunner({ task, onComplete }: TaskRunnerProp
       });
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [currentQuestionIndex, task.type, questions.length]);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [currentQuestionIndex, task.type, questions.length, baseTimeLimit]);
 
   // Load questions and skill data
   useEffect(() => {
@@ -305,11 +326,14 @@ const TaskRunner = memo(function TaskRunner({ task, onComplete }: TaskRunnerProp
 
         if (task.type !== 'LEARN') {
           // Load questions for this skill
-          const { data: questionsData, error: questionsError } = await supabase
-            .from('questions')
-            .select('*')
-            .eq('skill_id', task.skill_id)
-            .limit(task.size);
+          const { data: questionsData, error: questionsError } = await withTimeout(
+            supabase
+              .from('questions')
+              .select('*')
+              .eq('skill_id', task.skill_id)
+              .limit(task.size),
+            10000
+          );
 
           if (questionsError) throw questionsError;
           setQuestions((questionsData || []).map(q => ({
@@ -320,6 +344,10 @@ const TaskRunner = memo(function TaskRunner({ task, onComplete }: TaskRunnerProp
 
         setTimeStarted(Date.now());
         setQuestionStartTime(Date.now());
+        // Set accommodated time limit for the session
+        const accommodatedTime = await getAccommodatedTime(45);
+        setBaseTimeLimit(accommodatedTime);
+        setTimeRemaining(accommodatedTime);
       } catch (error) {
         console.error('Error loading task data:', error);
         toast({
@@ -346,8 +374,7 @@ const TaskRunner = memo(function TaskRunner({ task, onComplete }: TaskRunnerProp
       // Move to next question
       setCurrentQuestionIndex(prev => prev + 1);
       setQuestionStartTime(Date.now());
-      const accommodatedTime = await getAccommodatedTime(baseTimeLimit);
-      setTimeRemaining(accommodatedTime);
+      setTimeRemaining(baseTimeLimit);
     } else {
       // Complete the task
       const totalTime = Date.now() - timeStarted;

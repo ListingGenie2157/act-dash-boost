@@ -103,9 +103,17 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
               You got {correctCount} out of {drill.questions.length} questions correct
             </p>
             <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
-              <span>Time: {drill.timeLimit - timeLeft}s</span>
+              <span>Time: {Math.max(0, drill.timeLimit - timeLeft)}s</span>
               <span>•</span>
-              <span>Speed: {Math.round((drill.questions.length / (drill.timeLimit - timeLeft)) * 60)} Q/min</span>
+              <span>
+                Speed: {
+                  (() => {
+                    const elapsed = Math.max(1, drill.timeLimit - timeLeft);
+                    const val = (drill.questions.length / elapsed) * 60;
+                    return Number.isFinite(val) ? Math.round(val) : 0;
+                  })()
+                } Q/min
+              </span>
             </div>
           </div>
         </Card>

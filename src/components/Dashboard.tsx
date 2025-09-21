@@ -33,18 +33,40 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
     void fetchTodaysTasks();
   }, []);
 
+  async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error("Request timed out")), ms);
+    });
+    try {
+      const result = await Promise.race([promise, timeoutPromise]);
+      return result as T;
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  }
+
+  async function invokeWithRetry<T>(name: string, options: { method?: "GET" | "POST"; body?: unknown } = {}, { retries = 2, timeoutMs = 8000 }: { retries?: number; timeoutMs?: number } = {}): Promise<T> {
+    let attempt = 0;
+    let lastErr: unknown;
+    while (attempt <= retries) {
+      try {
+        const { data, error } = await withTimeout(supabase.functions.invoke<T>(name, options), timeoutMs);
+        if (error) throw error;
+        return data as T;
+      } catch (err) {
+        lastErr = err;
+        const backoff = 300 * Math.pow(2, attempt);
+        await new Promise((r) => setTimeout(r, backoff));
+        attempt += 1;
+      }
+    }
+    throw lastErr instanceof Error ? lastErr : new Error("Unknown error");
+  }
+
   const fetchDaysLeft = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke<{
-        today: string;
-        test_date: string | null;
-        days_left: number | null;
-      }>("days-left", { method: "GET" });
-      if (error) {
-        console.error("Error fetching days left:", error);
-        setDaysLeft(null);
-        return;
-      }
+      const data = await invokeWithRetry<{ today: string; test_date: string | null; days_left: number | null }>("days-left", { method: "GET" });
       setDaysLeft(typeof data?.days_left === "number" ? data.days_left : null);
     } catch (error) {
       console.error("Error fetching days left:", error);
@@ -55,12 +77,15 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
   const fetchTodaysTasks = async () => {
     try {
       const today = new Date().toISOString().split("T")[0];
-      const { data, error } = await supabase
-        .from("study_tasks")
-        .select("*")
-        .eq("the_date", today)
-        .eq("status", "PENDING")
-        .order("created_at", { ascending: true });
+      const { data, error } = await withTimeout(
+        supabase
+          .from("study_tasks")
+          .select("*")
+          .eq("the_date", today)
+          .eq("status", "PENDING")
+          .order("created_at", { ascending: true }),
+        8000
+      );
       if (!error && data) setTodaysTasks(data as StudyTask[]);
     } catch (error) {
       console.error("Error fetching today's tasks:", error);

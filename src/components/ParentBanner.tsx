@@ -11,25 +11,44 @@ export const ParentBanner = () => {
     fetchPotentialEarnings();
   }, []);
 
+  async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error('Request timed out')), ms);
+    });
+    try {
+      const result = await Promise.race([promise, timeoutPromise]);
+      return result as T;
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  }
+
   const fetchPotentialEarnings = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await withTimeout(supabase.auth.getUser(), 8000);
       if (!user) return;
 
       // Get today's pending tasks
       const today = new Date().toISOString().split('T')[0];
-      const { data: todayTasks } = await supabase
-        .from('study_tasks')
-        .select('type, size')
-        .eq('user_id', user.id)
-        .eq('the_date', today)
-        .eq('status', 'PENDING');
+      const { data: todayTasks } = await withTimeout(
+        supabase
+          .from('study_tasks')
+          .select('type, size')
+          .eq('user_id', user.id)
+          .eq('the_date', today)
+          .eq('status', 'PENDING'),
+        8000
+      );
 
       // Get parent links to find applicable rules
-      const { data: parentLinks } = await supabase
-        .from('parent_links')
-        .select('parent_id')
-        .eq('student_id', user.id);
+      const { data: parentLinks } = await withTimeout(
+        supabase
+          .from('parent_links')
+          .select('parent_id')
+          .eq('student_id', user.id),
+        8000
+      );
 
       if (!parentLinks?.length) {
         setLoading(false);
@@ -39,10 +58,13 @@ export const ParentBanner = () => {
       const parentIds = parentLinks.map(link => link.parent_id);
 
       // Get active rules
-      const { data: rules } = await supabase
-        .from('rewards_rules')
-        .select('type, amount_cents, threshold')
-        .in('parent_id', parentIds);
+      const { data: rules } = await withTimeout(
+        supabase
+          .from('rewards_rules')
+          .select('type, amount_cents, threshold')
+          .in('parent_id', parentIds),
+        8000
+      );
 
       let potential = 0;
 
