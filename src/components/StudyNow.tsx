@@ -345,7 +345,7 @@ const TaskRunner = memo(function TaskRunner({ task, onComplete }: TaskRunnerProp
       const accuracy = correctAnswers / questions.length;
       onComplete(task.id, accuracy, totalTime);
     }
-  }, [questions, currentQuestionIndex, answers, timeStarted, questionStartTime, onComplete, task.id]);
+  }, [questions, currentQuestionIndex, answers, timeStarted, questionStartTime, onComplete, task.id, baseTimeLimit]);
 
   const getTaskIcon = () => {
     switch (task.type) {

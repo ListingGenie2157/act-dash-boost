@@ -46,7 +46,7 @@ const TIMERS = {
 function shuffle<T>(array: T[], seed: number): T[] {
   const arr = [...array];
   let m = arr.length;
-  let random = () => {
+  const random = () => {
     const x = Math.sin(seed++) * 10000;
     return x - Math.floor(x);
   };

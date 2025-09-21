@@ -1,0 +1,16 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:8080",
+  "executionArgs": {
+    "projectName": "act-dash-boost",
+    "projectPath": "C:\\Users\\Sarah\\source\\repos\\act-dash-boost",
+    "testIds": [],
+    "additionalInstruction": "Test the ACT preparation application comprehensively, focusing on user authentication, onboarding flow, study plan functionality, diagnostic tests, simulation tests, and all major user journeys. Ensure all features work correctly and provide detailed feedback on any issues found.",
+    "envs": {
+      "API_KEY": "sk-user-LD7z4fTcDceTD3d_3pKekEYZH9T2MYfy7pe_9EbpTF2WQrl2vLj9PvmKO3Eh_ZaaT_-dFN3qY2ygFDdK7anbNj6s6dLV2hdB9VPqRoGY26angFGKYubJr_700coIpwlD--g"
+    }
+  },
+  "proxy": "http://01942a06-8f2d-44e2-b649-eb83361a2e6a:TjyBX5D0zA4CiZ1aWhC4Og2DUFhIhoxL@tun.testsprite.com:8080"
+}

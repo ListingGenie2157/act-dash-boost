@@ -1,0 +1,504 @@
+[
+  {
+    "id": "TC001",
+    "title": "Onboarding Completion with Data Persistence",
+    "description": "Verify that new users can complete the multi-step onboarding wizard within 90 seconds, with data persistence across page refreshes and correct routing to diagnostic or plan start.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the onboarding start page"
+      },
+      {
+        "type": "action",
+        "description": "Complete age consent step correctly"
+      },
+      {
+        "type": "action",
+        "description": "Set valid test date"
+      },
+      {
+        "type": "action",
+        "description": "Select accommodations from available options"
+      },
+      {
+        "type": "action",
+        "description": "Set personal goals and preferred study window"
+      },
+      {
+        "type": "action",
+        "description": "Configure notification preferences"
+      },
+      {
+        "type": "action",
+        "description": "Set accessibility options including reduced motion and dyslexia font"
+      },
+      {
+        "type": "action",
+        "description": "Choose learning mode (diagnostic or direct plan start)"
+      },
+      {
+        "type": "action",
+        "description": "Refresh page midway through onboarding"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify all inputs persist after page refresh"
+      },
+      {
+        "type": "action",
+        "description": "Complete onboarding flow"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm automatic routing to diagnostic test or study plan start page"
+      },
+      {
+        "type": "assertion",
+        "description": "Measure onboarding completion time is under 90 seconds"
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Diagnostic Assessment Flow and Personalized Study Plan Generation",
+    "description": "Ensure diagnostic test completes successfully in about 30 minutes, results display with per-section and overall scores, and a personalized 7-day study plan is generated with scheduled reviews.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Start diagnostic assessment after onboarding completion"
+      },
+      {
+        "type": "action",
+        "description": "Answer all diagnostic questions within time limits"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify diagnostic results display for each test section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify overall diagnostic score is calculated and shown"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm generation and display of personalized 7-day study plan based on weak areas"
+      },
+      {
+        "type": "assertion",
+        "description": "Check scheduling of follow-up review items per spaced repetition logic"
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Daily Drills Answer Persistence and Review Queue",
+    "description": "Validate daily untimed drills retain answers across page refreshes, provide explanations for each question, and enqueue incorrectly answered questions for spaced repetition review mode.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to daily drills for a selected weak subject or skill"
+      },
+      {
+        "type": "action",
+        "description": "Answer multiple drill questions"
+      },
+      {
+        "type": "action",
+        "description": "Refresh the drill page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify all answers persist after page reload"
+      },
+      {
+        "type": "action",
+        "description": "View explanations for each answered question"
+      },
+      {
+        "type": "action",
+        "description": "Complete the drill session"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm that incorrectly answered questions are added to review queue"
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Timed Section Simulator Functionality and Autosave",
+    "description": "Verify timed ACT section simulator loads content correctly, shuffles answer choices, persists answers and timer state through refresh, applies accommodations multipliers accurately, provides mid-section resume, and calculates final score with detailed summary.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Start a timed section simulation with user accommodations applied"
+      },
+      {
+        "type": "assertion",
+        "description": "Validate that answer choices are shuffled per question"
+      },
+      {
+        "type": "action",
+        "description": "Answer several questions in the section"
+      },
+      {
+        "type": "action",
+        "description": "Refresh the page mid-section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify answers persist after refresh"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify timer resumes at correct adjusted time after refresh"
+      },
+      {
+        "type": "action",
+        "description": "Complete the timed section"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm final scoring is correct consistent with answers"
+      },
+      {
+        "type": "assertion",
+        "description": "Display detailed summary including timing and scoring per question"
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Full ACT Test Simulation with Section Pausing and Resume",
+    "description": "Test the full test simulation process with back-to-back ACT sections, ability to pause and resume each section, and correct per-section result reporting consistent across sessions.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Begin full ACT test simulation"
+      },
+      {
+        "type": "action",
+        "description": "Complete first section partially and pause"
+      },
+      {
+        "type": "action",
+        "description": "Close and reopen application, resume test"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm test resumes at exact paused point with answers and timer preserved"
+      },
+      {
+        "type": "action",
+        "description": "Finish all sections back-to-back"
+      },
+      {
+        "type": "assertion",
+        "description": "Ensure each section's results are correctly calculated and displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify aggregate test results summary is accurate"
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Spaced Repetition Review Mode Scheduling and Feedback",
+    "description": "Ensure review mode presents due review items according to spaced repetition intervals, shows previous attempts and explanations, and allows user feedback to reschedule or mark items as mastered.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open spaced repetition review mode"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify only review items due for current day are presented"
+      },
+      {
+        "type": "action",
+        "description": "View previous attempt details and explanations for an item"
+      },
+      {
+        "type": "action",
+        "description": "Provide feedback to reschedule the item or mark it as mastered"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm item is rescheduled correctly or removed when marked mastered"
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Admin TSV Content Import with Idempotency and Error Handling",
+    "description": "Verify that only authorized admin users can upload TSV question content, duplicate entries are skipped without side effects, and errors are reported clearly with graceful fallback.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as a non-admin user and attempt to access admin import interface"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm access is denied"
+      },
+      {
+        "type": "action",
+        "description": "Login as authorized admin user"
+      },
+      {
+        "type": "action",
+        "description": "Upload a well-formed TSV file with new question data"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm content is imported successfully"
+      },
+      {
+        "type": "action",
+        "description": "Upload the same TSV file again"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm duplicates are skipped and no duplicate content is created"
+      },
+      {
+        "type": "action",
+        "description": "Upload a malformed TSV file"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify clear error message is shown and import fails gracefully"
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Dashboard Load Performance and Accurate Progress Metrics",
+    "description": "Confirm that dashboard loads within 1 second on repeat visits using cached data and displays accurate real-time progress metrics including accuracy, streaks, XP counters, and recommended next actions.",
+    "category": "performance",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login and load dashboard for first time"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify all progress metrics and actionable items load correctly"
+      },
+      {
+        "type": "action",
+        "description": "Navigate away and return to dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm dashboard load time is under 1 second using cached data"
+      },
+      {
+        "type": "assertion",
+        "description": "Validate displayed metrics are accurate based on user data"
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Row-Level Security Enforcement and Cross-User Data Isolation",
+    "description": "Validate strict enforcement of row-level security policies to prevent any cross-user data access including negative tests with unauthorized direct API attempts.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as User A and access own data through UI"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm User A data access is successful"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to access User B's data via UI or direct API calls as User A"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access is denied at row-level, with no leakage of User B's data"
+      },
+      {
+        "type": "action",
+        "description": "Run automated negative security tests for RLS policy bypass attempts"
+      },
+      {
+        "type": "assertion",
+        "description": "All bypass attempts are rejected and logged"
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Accessibility Compliance Across Key User Interfaces",
+    "description": "Ensure all core pages and components comply with accessibility standards including keyboard navigation support, ARIA labels presence, and toggles for reduced motion and dyslexia-friendly fonts.",
+    "category": "ui",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate through onboarding, drills, simulations, and dashboard using keyboard only"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify all interactive elements are reachable and operable via keyboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm appropriate ARIA roles and labels are present on important UI elements"
+      },
+      {
+        "type": "action",
+        "description": "Enable reduced motion toggle"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify animations and transitions are minimized or disabled"
+      },
+      {
+        "type": "action",
+        "description": "Enable dyslexia font toggle"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm fonts update to dyslexia-friendly styling"
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Error Handling and Fallback UI Display",
+    "description": "Verify comprehensive error handling across the app with proper display of fallback UIs for loading failures, data retrieval errors, and empty states in all primary modules.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Simulate network failure loading dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify fallback UI indicating loading failure is displayed"
+      },
+      {
+        "type": "action",
+        "description": "Simulate empty data state in drills or review mode"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user-friendly empty state message and options are shown"
+      },
+      {
+        "type": "action",
+        "description": "Inject server error during admin TSV import"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm error is captured and error boundary UI is shown"
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Offline Support and Queued Answer Syncing",
+    "description": "Test offline mode by disconnecting network during drills and simulations, verify answers queue up locally, and upon reconnection, answers sync correctly to backend without loss.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Go offline on device"
+      },
+      {
+        "type": "action",
+        "description": "Answer several drill questions or simulation section items"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify answers queue locally and can be reviewed offline"
+      },
+      {
+        "type": "action",
+        "description": "Reconnect network"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm queued answers sync seamlessly to backend and reflect in user progress"
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Parent Portal Read-Only Access and Data Accuracy",
+    "description": "Ensure parent users have secure read-only access to student progress and reports, with accurate data displayed and no ability to modify student data.",
+    "category": "security",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as parent account linked to student"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access to student progress dashboard and reports is permitted"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm data accuracy matching student's own dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to edit any student data or settings in parent portal"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no modification controls available and edits are prevented"
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Strict TypeScript Compliance and Test Coverage",
+    "description": "Validate that the codebase compiles with zero TypeScript errors and all features have comprehensive unit and integration test suites with passing results.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Run full TypeScript compile check"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm zero TypeScript errors present"
+      },
+      {
+        "type": "action",
+        "description": "Execute entire unit and integration testing suite"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify coverage is comprehensive across key modules and all tests pass"
+      }
+    ]
+  }
+]
