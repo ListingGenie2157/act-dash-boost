@@ -1,40 +1,42 @@
 project_id = "hhbkmxrzxcswwokmbtbz"
 
-[functions.generate-study-plan]
-verify_jwt = true
-
-[functions.complete-task]
-verify_jwt = true
-
-[functions.weakest-skills]
-verify_jwt = true
-
-[functions.finish-diagnostic]
-verify_jwt = true
-
 [functions.cron-daily]
 verify_jwt = false
 
+# Admin-only import
+[functions.admin-import]
+verify_jwt = true
+
+# User-scoped, RLS via JWT
+[functions.generate-study-plan]
+verify_jwt = true
+[functions.calculate-rewards]
+verify_jwt = true
+[functions.complete-task]
+verify_jwt = true
 [functions.days-left]
 verify_jwt = true
-
-[functions.set-test-date]
+[functions.finish-diagnostic]
 verify_jwt = true
-
-[functions.set-baseline]
-verify_jwt = true
-
-[functions.session-start]
-verify_jwt = true
-
-[functions.response-submit]
-verify_jwt = true
-
-[functions.session-finish]
-verify_jwt = true
-
 [functions.import-questions]
 verify_jwt = true
-
 [functions.import-practice-questions]
+verify_jwt = true
+[functions.is-admin]
+verify_jwt = true
+[functions.practice-next]
+verify_jwt = true
+[functions.response-submit]
+verify_jwt = true
+[functions.session-fetch]
+verify_jwt = true
+[functions.session-finish]
+verify_jwt = true
+[functions.session-start]
+verify_jwt = true
+[functions.set-baseline]
+verify_jwt = true
+[functions.set-test-date]
+verify_jwt = true
+[functions.weakest-skills]
 verify_jwt = true
