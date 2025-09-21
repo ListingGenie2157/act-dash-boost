@@ -53,6 +53,7 @@ export function ErrorBoundary({ children, fallback: Fallback }: ErrorBoundaryPro
       FallbackComponent={Fallback || ErrorFallback}
       onError={(error, errorInfo) => {
         console.error('Error caught by boundary:', error, errorInfo);
+        // TODO: Wire to monitoring service (e.g., Sentry) in production
       }}
     >
       {children}

@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL!;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY!;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const hasEnv = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
-describe('Row Level Security Tests', () => {
+(hasEnv ? describe : describe.skip)('Row Level Security Tests', () => {
   let anonClient: SupabaseClient;
   let authClient: SupabaseClient;
   let testUserId: string;
