@@ -103,6 +103,26 @@ export default function DiagnosticTest() {
 
       if (error) throw error;
 
+      // Debug missing passages
+      const questionsWithMissingPassages = (data || []).filter(q =>
+        q.section === 'RD' && (!q.passage_text || !q.passage_title)
+      );
+      const questionsWithMissingScience = (data || []).filter(q =>
+        q.section === 'SCI' && (!q.passage_text || !q.passage_title)
+      );
+
+      if (questionsWithMissingPassages.length > 0) {
+        console.warn(`Found ${questionsWithMissingPassages.length} reading questions without passages:`,
+          questionsWithMissingPassages.map(q => ({ id: q.question_id, ord: q.ord }))
+        );
+      }
+
+      if (questionsWithMissingScience.length > 0) {
+        console.warn(`Found ${questionsWithMissingScience.length} science questions without data:`,
+          questionsWithMissingScience.map(q => ({ id: q.question_id, ord: q.ord }))
+        );
+      }
+
       setQuestions(data || []);
       const baseTime = TIMERS[formId as keyof typeof TIMERS] || 1200;
       const accommodatedTime = await getAccommodatedTime(baseTime);

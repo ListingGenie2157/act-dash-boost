@@ -277,17 +277,24 @@ export default function Diagnostic() {
       const scores = Object.values(results).map((result: { score?: number }) => Number(result?.score) || 0);
       const averageScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
 
-      // Save results to diagnostics table
-      const { error } = await supabase.from('diagnostics').insert({
-        user_id: user.id,
-        section: 'full',
-        block: 1,
-        score: averageScore,
-        responses: results,
-        completed_at: new Date().toISOString()
-      });
+      // Save results to diagnostics table for each section
+      const sections = Object.keys(results);
+      for (const sectionKey of sections) {
+        const sectionName = sectionKey.charAt(0).toUpperCase() + sectionKey.slice(1); // Capitalize
+        const { error } = await supabase.from('diagnostics').insert({
+          user_id: user.id,
+          section: sectionName,
+          block: 1,
+          score: results[sectionKey].score || 0,
+          responses: { [sectionKey]: results[sectionKey] },
+          completed_at: new Date().toISOString()
+        });
 
-      if (error) throw error;
+        if (error) {
+          console.error(`Error saving ${sectionName} diagnostic:`, error);
+          throw error;
+        }
+      }
 
       toast({
         title: "Diagnostic Complete!",

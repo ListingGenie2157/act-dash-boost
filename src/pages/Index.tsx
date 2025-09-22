@@ -17,28 +17,41 @@ type View = 'dashboard' | 'day' | 'review' | 'study';
 const Index = () => {
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [selectedDay, setSelectedDay] = useState<number>(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { progress, updateProgress, addWrongAnswer, updateWeakAreas, completeDay } = useProgress();
   const navigate = useNavigate();
 
   // On mount, verify the user has an active session and completed onboarding.
-  // Redirect to login if no session, or to onboarding if test_date not set.
   useEffect(() => {
     const checkAuth = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        navigate('/login');
-        return;
-      }
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) {
+          setIsAuthenticated(false);
+          setIsLoading(false);
+          return;
+        }
 
-      // Check if user has completed onboarding
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('test_date')
-        .eq('id', data.session.user.id)
-        .maybeSingle();
+        setIsAuthenticated(true);
 
-      if (!profile?.test_date) {
-        navigate('/onboarding');
+        // Check if user has completed onboarding
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('test_date')
+          .eq('id', data.session.user.id)
+          .maybeSingle();
+
+        if (!profile?.test_date) {
+          navigate('/onboarding');
+          return;
+        }
+
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        setIsAuthenticated(false);
+        setIsLoading(false);
       }
     };
     checkAuth();
@@ -97,6 +110,74 @@ const Index = () => {
 
   const selectedDayData = curriculum.find(d => d.day === selectedDay);
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Loading your ACT prep dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Landing page for unauthenticated users
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-12">
+          <div className="max-w-4xl mx-auto text-center space-y-8">
+            <div className="space-y-4">
+              <h1 className="text-4xl font-bold tracking-tight">
+                Master the ACT with Personalized Prep
+              </h1>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                Get a personalized study plan based on your test date, current skills, and goals.
+                Take diagnostic assessments, practice with timed sections, and track your progress.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6 mt-12">
+              <div className="p-6 border rounded-lg space-y-3">
+                <h3 className="font-semibold">📊 Diagnostic Assessment</h3>
+                <p className="text-sm text-muted-foreground">
+                  Take a quick assessment to identify your strengths and weaknesses across all ACT sections.
+                </p>
+              </div>
+              <div className="p-6 border rounded-lg space-y-3">
+                <h3 className="font-semibold">📚 Personalized Study Plan</h3>
+                <p className="text-sm text-muted-foreground">
+                  Get a custom roadmap based on your test date, available study time, and skill gaps.
+                </p>
+              </div>
+              <div className="p-6 border rounded-lg space-y-3">
+                <h3 className="font-semibold">⏱️ Timed Practice</h3>
+                <p className="text-sm text-muted-foreground">
+                  Practice with realistic ACT sections, complete with accommodations and detailed explanations.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
+              <Button size="lg" onClick={() => navigate('/login')} className="bg-primary">
+                Get Started - Sign Up Free
+              </Button>
+              <Button size="lg" variant="outline" onClick={() => navigate('/login')}>
+                Already have an account? Sign In
+              </Button>
+            </div>
+
+            <p className="text-sm text-muted-foreground mt-6">
+              Join thousands of students improving their ACT scores with adaptive learning.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Authenticated user dashboard
   return (
     <div className="min-h-screen bg-background">
       <CountdownHeader />

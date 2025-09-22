@@ -19,6 +19,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [signUpSuccess, setSignUpSuccess] = useState(false);
   const navigate = useNavigate();
 
   // Handles form submission for both sign‑in and sign‑up flows.
@@ -28,24 +29,35 @@ const Login = () => {
     setError(null);
     try {
       if (isSignUp) {
-        // Attempt to create a new account. If the account already exists
-        // Supabase will return an error that is surfaced to the user.
-        const { error: signUpError } = await supabase.auth.signUp({ email, password });
+        // Attempt to create a new account
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`
+          }
+        });
+
+        console.log('Signup response:', { data, error: signUpError });
         if (signUpError) {
           setError(signUpError.message);
           setLoading(false);
           return;
         }
+        // Show success message instead of trying to sign in immediately
+        setSignUpSuccess(true);
+        setLoading(false);
+        return;
       }
-      // Sign in with the provided credentials. This will create a session
-      // and persist it in localStorage thanks to the Supabase client configuration.
+
+      // Sign in with the provided credentials
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) {
         setError(signInError.message);
         setLoading(false);
         return;
       }
-      // On success, navigate to the dashboard.
+      // On success, navigate to the dashboard
       navigate('/');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -54,6 +66,40 @@ const Login = () => {
       setLoading(false);
     }
   };
+
+  // Show success message after signup
+  if (signUpSuccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="p-8 w-full max-w-md space-y-6 shadow-medium">
+          <div className="space-y-4 text-center">
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold">Check Your Email</h1>
+            <p className="text-sm text-muted-foreground">
+              We've sent a confirmation link to <strong>{email}</strong>.
+              Click the link in your email to activate your account, then come back to sign in.
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSignUpSuccess(false);
+                setIsSignUp(false);
+                setEmail('');
+                setPassword('');
+              }}
+              className="w-full"
+            >
+              Back to Sign In
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
