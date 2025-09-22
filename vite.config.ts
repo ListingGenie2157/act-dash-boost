@@ -1,26 +1,42 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
-import path from "path";
+import { resolve } from "node:path";
 import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
-    host: "::",
+    host: mode === 'development' ? 'localhost' : '::',
     port: 8080,
   },
   plugins: [
     react(),
-    mode === 'development' &&
-    componentTagger(),
-  ].filter(Boolean),
+    ...(mode === 'development' ? [
+      (() => {
+        try {
+          return componentTagger();
+        } catch (error) {
+          console.warn('Failed to load componentTagger:', error);
+          return null;
+        }
+      })()
+    ].filter(Boolean) : []),
+  ],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": resolve(__dirname, "./src"),
     },
   },
-  test: {
-    globals: true,
-    environment: 'jsdom',
+  build: {
+    target: 'esnext',
+    sourcemap: mode === 'development',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          supabase: ['@supabase/supabase-js'],
+        },
+      },
+    },
   },
 }));
