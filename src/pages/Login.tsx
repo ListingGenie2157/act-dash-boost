@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -22,11 +22,46 @@ const Login = () => {
   const [signUpSuccess, setSignUpSuccess] = useState(false);
   const navigate = useNavigate();
 
+  // Clear any cached auth state on component mount
+  useEffect(() => {
+    const clearCachedAuth = async () => {
+      console.log('Clearing cached auth state...');
+      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.clear();
+      
+      // Verify Supabase client configuration
+      console.log('Supabase client config:', {
+        url: import.meta.env.VITE_SUPABASE_URL ? 'Set' : 'Missing',
+        key: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ? 'Set' : 'Missing'
+      });
+    };
+    clearCachedAuth();
+  }, []);
+
+  // Check for existing session and redirect if authenticated
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          console.log('User already authenticated, redirecting...');
+          navigate('/');
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+      }
+    };
+    checkAuth();
+  }, [navigate]);
+
   // Handles form submission for both sign‑in and sign‑up flows.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    
+    console.log('Attempting authentication...', { isSignUp, email });
+    
     try {
       if (isSignUp) {
         // Attempt to create a new account
@@ -40,7 +75,8 @@ const Login = () => {
 
         console.log('Signup response:', { data, error: signUpError });
         if (signUpError) {
-          setError(signUpError.message);
+          console.error('Signup error:', signUpError);
+          setError(`Signup failed: ${signUpError.message}`);
           setLoading(false);
           return;
         }
@@ -51,9 +87,13 @@ const Login = () => {
       }
 
       // Sign in with the provided credentials
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      console.log('Attempting sign in with:', { email, passwordLength: password.length });
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      console.log('Sign in response:', { data: signInData, error: signInError });
+      
       if (signInError) {
-        setError(signInError.message);
+        console.error('Sign in error:', signInError);
+        setError(`Login failed: ${signInError.message}`);
         setLoading(false);
         return;
       }
