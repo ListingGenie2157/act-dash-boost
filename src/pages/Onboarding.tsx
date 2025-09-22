@@ -235,18 +235,13 @@ export default function Onboarding() {
                 onSelect={(d) => {
                   if (!d) return;
                   setForm(f => ({ ...f, testDate: d }));
-                  setCalendarMonth(d);
                 }}
-                month={calendarMonth}
-                onMonthChange={setCalendarMonth}
-                captionLayout="dropdown-buttons"
+                defaultMonth={calendarMonth}
                 fromDate={today}
                 toDate={addYears(today, 2)}
-                showOutsideDays
-                fixedWeeks
                 disabled={{ before: today }}
                 initialFocus
-                className={cn("p-3 pointer-events-auto")}
+                className="p-3"
               />
             </PopoverContent>
           </Popover>
