@@ -249,7 +249,7 @@ const SimMath = () => {
               <Button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-700">
                 Print Results
               </Button>
-              <Button onClick={() => navigate('/dashboard')} variant="outline">
+              <Button onClick={() => navigate('/')} variant="outline">
                 Back to Dashboard
               </Button>
             </div>

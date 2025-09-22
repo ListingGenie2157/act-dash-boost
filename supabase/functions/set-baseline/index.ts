@@ -75,37 +75,69 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Upsert baseline entries for each provided section
+    // Save baseline entries for each provided section
     const savedBaselines = [];
-    
-    for (const [section, score] of Object.entries(body.scores)) {
-      const { data, error } = await supabase
-        .from('diagnostics')
-        .upsert({
-          user_id: user.id,
-          section: section,
-          source: 'self',
-          score: score,
-          completed_at: new Date().toISOString(),
-          notes: body.notes || null,
-          block: 0, // Default block for self-reported baselines
-          responses: null,
-        }, {
-          onConflict: 'user_id,section,source',
-          ignoreDuplicates: false
-        })
-        .select()
-        .single();
 
-      if (error) {
-        console.error(`Error saving baseline for ${section}:`, error);
-        return new Response(
-          JSON.stringify({ error: `Failed to save baseline for ${section}` }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+    for (const [section, score] of Object.entries(body.scores)) {
+      // First check if a baseline already exists for this user/section/source
+      const { data: existingBaseline } = await supabase
+        .from('diagnostics')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('section', section)
+        .eq('source', 'self')
+        .maybeSingle();
+
+      let result;
+      if (existingBaseline) {
+        // Update existing baseline
+        const { data, error } = await supabase
+          .from('diagnostics')
+          .update({
+            score: score,
+            completed_at: new Date().toISOString(),
+            notes: body.notes || null,
+          })
+          .eq('id', existingBaseline.id)
+          .select()
+          .single();
+
+        if (error) {
+          console.error(`Error updating baseline for ${section}:`, error);
+          return new Response(
+            JSON.stringify({ error: `Failed to update baseline for ${section}` }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        result = data;
+      } else {
+        // Insert new baseline
+        const { data, error } = await supabase
+          .from('diagnostics')
+          .insert({
+            user_id: user.id,
+            section: section,
+            source: 'self',
+            score: score,
+            completed_at: new Date().toISOString(),
+            notes: body.notes || null,
+            block: 0, // Default block for self-reported baselines
+            responses: null,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error(`Error creating baseline for ${section}:`, error);
+          return new Response(
+            JSON.stringify({ error: `Failed to create baseline for ${section}` }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        result = data;
       }
 
-      savedBaselines.push(data);
+      savedBaselines.push(result);
     }
 
     console.warn(`Successfully saved ${savedBaselines.length} baseline entries for user ${user.id}`);

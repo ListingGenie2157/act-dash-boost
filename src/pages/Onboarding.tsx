@@ -73,59 +73,59 @@ export default function Onboarding() {
   const handleSubmitOnboarding = async () => {
     setLoading(true);
     try {
-      // Save all onboarding data
-      const updates = [];
+      // Get user ID once at the start
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        throw new Error('Authentication failed');
+      }
+
+      // Save all onboarding data sequentially to avoid conflicts
 
       // 1. Create user profile
-      updates.push(
-        supabase.from('user_profiles').upsert({
-          user_id: (await supabase.auth.getUser()).data.user?.id,
-          age_verified: form.ageVerified,
-          tos_accepted: form.tosAccepted,
-          privacy_accepted: form.privacyAccepted,
-        })
-      );
+      const { error: profileError } = await supabase.from('user_profiles').upsert({
+        user_id: user.id,
+        age_verified: form.ageVerified,
+        tos_accepted: form.tosAccepted,
+        privacy_accepted: form.privacyAccepted,
+      });
+      if (profileError) throw profileError;
 
       // 2. Set test date in profile
       if (form.testDate) {
-        updates.push(
-          supabase.functions.invoke('set-test-date', {
-            body: { testDate: format(form.testDate, 'yyyy-MM-dd') }
-          })
-        );
+        const { error: testDateError } = await supabase.functions.invoke('set-test-date', {
+          body: { testDate: format(form.testDate, 'yyyy-MM-dd') }
+        });
+        if (testDateError) throw testDateError;
       }
 
       // 3. Save accommodations
       if (form.timeMultiplier !== '100') {
-        updates.push(
-          supabase.from('accommodations').upsert({
-            user_id: (await supabase.auth.getUser()).data.user?.id,
-            time_multiplier: parseFloat(form.timeMultiplier) / 100,
-            accommodation_type: form.timeMultiplier === '150' ? 'time_and_half' : 'double_time'
-          })
-        );
+        const { error: accommodationError } = await supabase.from('accommodations').upsert({
+          user_id: user.id,
+          time_multiplier: parseFloat(form.timeMultiplier) / 100,
+          accommodation_type: form.timeMultiplier === '150' ? 'time_and_half' : 'double_time'
+        });
+        if (accommodationError) throw accommodationError;
       }
 
       // 4. Save preferences
-      updates.push(
-        supabase.from('user_preferences').upsert({
-          user_id: (await supabase.auth.getUser()).data.user?.id,
-          daily_minutes: parseInt(form.dailyMinutes),
-          preferred_start_hour: parseInt(form.preferredStartHour),
-          preferred_end_hour: parseInt(form.preferredEndHour),
-          email_notifications: form.emailNotifications,
-          quiet_start_hour: parseInt(form.quietStartHour),
-          quiet_end_hour: parseInt(form.quietEndHour),
-        })
-      );
+      const { error: preferencesError } = await supabase.from('user_preferences').upsert({
+        user_id: user.id,
+        daily_minutes: parseInt(form.dailyMinutes),
+        preferred_start_hour: parseInt(form.preferredStartHour),
+        preferred_end_hour: parseInt(form.preferredEndHour),
+        email_notifications: form.emailNotifications,
+        quiet_start_hour: parseInt(form.quietStartHour),
+        quiet_end_hour: parseInt(form.quietEndHour),
+      });
+      if (preferencesError) throw preferencesError;
 
       // 5. Save starting preference
-      updates.push(
-        supabase.from('user_goals').upsert({
-          user_id: (await supabase.auth.getUser()).data.user?.id,
-          start_with: form.startWith
-        })
-      );
+      const { error: goalsError } = await supabase.from('user_goals').upsert({
+        user_id: user.id,
+        start_with: form.startWith
+      });
+      if (goalsError) throw goalsError;
 
       // 6. Save baseline scores if provided
       const numericScores: Record<string, number> = {};
@@ -138,15 +138,11 @@ export default function Onboarding() {
       });
 
       if (Object.keys(numericScores).length > 0) {
-        updates.push(
-          supabase.functions.invoke('set-baseline', {
-            body: { scores: numericScores, notes: form.notes.trim() || undefined }
-          })
-        );
+        const { error: baselineError } = await supabase.functions.invoke('set-baseline', {
+          body: { scores: numericScores, notes: form.notes.trim() || undefined }
+        });
+        if (baselineError) throw baselineError;
       }
-
-      // Execute all updates
-      await Promise.all(updates);
 
       toast.success('Onboarding completed successfully!');
       
@@ -154,7 +150,7 @@ export default function Onboarding() {
       if (form.startWith === 'diagnostic') {
         navigate('/diagnostic');
       } else {
-        navigate('/dashboard');
+        navigate('/');
       }
     } catch (error) {
       console.error('Error completing onboarding:', error);
@@ -585,7 +581,7 @@ export default function Onboarding() {
             if (form.startWith === 'diagnostic') {
               navigate('/diagnostic');
             } else {
-              navigate('/dashboard');
+              navigate('/');
             }
           }}
           className="w-full"

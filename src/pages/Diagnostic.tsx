@@ -371,7 +371,7 @@ export default function Diagnostic() {
                   Start Diagnostic Test
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
-                <Button variant="outline" onClick={() => navigate('/dashboard')}>
+                <Button variant="outline" onClick={() => navigate('/')}>
                   Skip for Now
                 </Button>
               </div>
