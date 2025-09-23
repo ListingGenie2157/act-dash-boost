@@ -104,6 +104,7 @@ export default function Simulation() {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'apikey': (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) as string,
           'Content-Type': 'application/json'
         }
       });
