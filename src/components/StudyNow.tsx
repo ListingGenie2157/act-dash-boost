@@ -55,30 +55,71 @@ export function StudyNow() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  const createDefaultStudyPlan = (): StudyPlan => {
+    const today = new Date();
+    return {
+      the_date: today.toISOString().split('T')[0],
+      mode: 'default',
+      days_left: null,
+      tasks: [
+        {
+          id: 'default-math-1',
+          subject: 'Math',
+          skill: 'Basic Algebra',
+          description: 'Practice solving linear equations',
+          estimatedMins: 10,
+          size: 5,
+          type: 'practice'
+        },
+        {
+          id: 'default-english-1',
+          subject: 'English',
+          skill: 'Grammar',
+          description: 'Review sentence structure and punctuation',
+          estimatedMins: 10,
+          size: 5,
+          type: 'practice'
+        },
+        {
+          id: 'default-reading-1',
+          subject: 'Reading',
+          skill: 'Comprehension',
+          description: 'Practice reading comprehension strategies',
+          estimatedMins: 15,
+          size: 3,
+          type: 'practice'
+        }
+      ]
+    };
+  };
+
   const loadStudyPlan = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
+      // Try to generate personalized study plan
       const { data, error } = await supabase.functions.invoke('generate-study-plan', {
         method: 'POST'
       });
 
       if (error) {
-        throw error;
+        console.warn('Personalized study plan failed, using default:', error);
+        // Fallback to default study plan for new users
+        const defaultPlan = createDefaultStudyPlan();
+        setStudyPlan(defaultPlan);
+        setCurrentTaskIndex(0);
+        return;
       }
 
       setStudyPlan(data);
       setCurrentTaskIndex(0);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error('Error loading study plan:', msg);
-      setError(msg || 'Failed to load study plan');
-      toast({
-        title: 'Error',
-        description: 'Failed to load your study plan. Please try again.',
-        variant: 'destructive'
-      });
+      console.warn('Study plan generation failed, using default:', err);
+      // Fallback to default study plan for new users
+      const defaultPlan = createDefaultStudyPlan();
+      setStudyPlan(defaultPlan);
+      setCurrentTaskIndex(0);
     } finally {
       setLoading(false);
     }
