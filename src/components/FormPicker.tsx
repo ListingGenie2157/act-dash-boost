@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Form {
   id: string;
   label: string;
+  description: string;
+  badge: 'Complete' | 'Available' | 'Coming Soon';
 }
 
 interface FormPickerProps {
@@ -14,134 +17,147 @@ interface FormPickerProps {
 
 export function FormPicker({ onFormSelect }: FormPickerProps) {
   const [selectedForm, setSelectedForm] = useState<string>('');
+  const [forms, setForms] = useState<Form[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const forms: Form[] = [
-    { id: 'EN_A', label: 'ACT English – Form A' },
-    { id: 'MATH_A', label: 'ACT Math – Form A' },
-    { id: 'RD_A', label: 'ACT Reading – Form A' },
-    { id: 'SCI_A', label: 'ACT Science – Form A' },
-    { id: 'EN_B', label: 'ACT English – Form B' },
-    { id: 'MATH_B', label: 'ACT Math – Form B' },
-    { id: 'RD_B', label: 'ACT Reading – Form B' },
-    { id: 'SCI_B', label: 'ACT Science – Form B' },
-    { id: 'EN_C', label: 'ACT English – Form C' },
-    { id: 'MATH_C', label: 'ACT Math – Form C' },
-    { id: 'RD_C', label: 'ACT Reading – Form C' },
-    { id: 'SCI_C', label: 'ACT Science – Form C' },
-  ];
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const { data: formsData, error } = await supabase
+          .from('forms')
+          .select('id, label, is_active')
+          .eq('is_active', true)
+          .order('id');
 
-  // Group forms by test package
-  const testPackages = [
-    {
-      id: 'D4A',
-      label: 'Full ACT – Form A',
-      forms: forms.filter(f => f.id.endsWith('_A')),
-      badge: 'Complete',
-    },
-    {
-      id: 'D4B', 
-      label: 'Full ACT – Form B',
-      forms: forms.filter(f => f.id.endsWith('_B')),
-      badge: 'Complete',
-    },
-    {
-      id: 'D4C',
-      label: 'Full ACT – Form C', 
-      forms: forms.filter(f => f.id.endsWith('_C')),
-      badge: 'Partial',
-    },
-  ];
+        if (error) {
+          console.error('Error fetching forms:', error);
+          return;
+        }
+
+        const formsWithMetadata: Form[] = (formsData || []).map(form => ({
+          id: form.id,
+          label: form.label || `Form ${form.id}`,
+          description: `Test form with practice content`,
+          badge: 'Available' as const
+        }));
+
+        setForms(formsWithMetadata);
+      } catch (error) {
+        console.error('Error fetching forms:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchForms();
+  }, []);
 
   const handleFormClick = (formId: string) => {
     setSelectedForm(formId);
     onFormSelect(formId);
   };
 
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold mb-2">Loading Available Forms...</h1>
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (forms.length === 0) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold mb-2">No Forms Available</h1>
+          <p className="text-muted-foreground">No practice forms have been imported yet.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-6">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold mb-2">Choose Your ACT Form</h1>
         <p className="text-muted-foreground">
-          Select an individual section or a complete test package
+          Select a test form to begin your simulation
         </p>
       </div>
 
-      <div className="grid gap-6">
-        {testPackages.map((pkg) => (
-          <Card key={pkg.id} className="w-full">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-xl">{pkg.label}</CardTitle>
-                  <CardDescription>
-                    {pkg.forms.length} sections available
-                  </CardDescription>
+      <div className="max-w-4xl mx-auto">
+        <div className="grid gap-6 md:grid-cols-3">
+          {forms.map((form) => (
+            <Card
+              key={form.id}
+              className={`cursor-pointer transition-all hover:shadow-md ${
+                selectedForm === form.id ? 'ring-2 ring-primary' : ''
+              }`}
+              onClick={() => handleFormClick(form.id)}
+            >
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xl">{form.label}</CardTitle>
+                  <Badge variant={form.badge === 'Available' ? 'default' : 'secondary'}>
+                    {form.badge}
+                  </Badge>
                 </div>
-                <Badge variant={pkg.badge === 'Complete' ? 'default' : 'secondary'}>
-                  {pkg.badge}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                {pkg.forms.map((form) => {
-                  const section = form.id.split('_')[0];
-                  const sectionNames = {
-                    'EN': 'English',
-                    'MATH': 'Math', 
-                    'RD': 'Reading',
-                    'SCI': 'Science'
-                  };
-                  
-                  const timeLimits = {
-                    'EN': '45 min',
-                    'MATH': '60 min',
-                    'RD': '35 min', 
-                    'SCI': '35 min'
-                  };
+                <CardDescription>{form.description}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">English:</span>
+                      <span className="font-medium">75 questions</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">45 min</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Math:</span>
+                      <span className="font-medium">60 questions</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">60 min</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Reading:</span>
+                      <span className="font-medium">40 questions</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">35 min</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Science:</span>
+                      <span className="font-medium">40 questions</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">35 min</span>
+                    </div>
+                  </div>
 
-                  const questionCounts = {
-                    'EN': '75 questions',
-                    'MATH': '60 questions',
-                    'RD': '40 questions',
-                    'SCI': '40 questions'
-                  };
-
-                  const isAvailable = !(section === 'EN' && !form.id.endsWith('_C')) && 
-                                   !(section === 'MATH' && !form.id.endsWith('_C'));
-
-                  return (
-                    <Button
-                      key={form.id}
-                      variant={selectedForm === form.id ? 'default' : 'outline'}
-                      className="h-auto p-4 flex flex-col items-start text-left"
-                      onClick={() => handleFormClick(form.id)}
-                      disabled={!isAvailable}
-                    >
-                      <div className="font-semibold text-sm">
-                        {sectionNames[section as keyof typeof sectionNames]}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {timeLimits[section as keyof typeof timeLimits]} • {questionCounts[section as keyof typeof questionCounts]}
-                      </div>
-                      {!isAvailable && (
-                        <Badge variant="outline" className="mt-2 text-xs">
-                          Coming Soon
-                        </Badge>
-                      )}
-                    </Button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                  <Button
+                    className="w-full"
+                    variant={selectedForm === form.id ? 'default' : 'outline'}
+                    disabled={form.badge === 'Coming Soon'}
+                  >
+                    {selectedForm === form.id ? 'Selected' : 'Select Form'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
 
       <div className="mt-8 text-center">
         <div className="text-sm text-muted-foreground">
-          <p>• Form C sections (Reading, Science) are fully available</p>
-          <p>• English and Math sections coming soon for all forms</p>
+          <p>Each form contains authentic ACT questions from real tests</p>
+          <p>All sections include detailed explanations and timing features</p>
         </div>
       </div>
     </div>

@@ -49,12 +49,11 @@ export function SectionPicker({ formId, onSectionSelect, onBack }: SectionPicker
     },
   ];
 
-  const formLetter = formId.split('_')[1];
-  const formName = `Form ${formLetter}`;
+  const formName = `Form ${formId}`;
 
   const isAvailable = (sectionId: string) => {
-    // Only RD_C and SCI_C are available
-    return (sectionId === 'RD' || sectionId === 'SCI') && formId.endsWith('_C');
+    // All sections are now available for all forms since we've imported content
+    return true;
   };
 
   return (
@@ -126,8 +125,8 @@ export function SectionPicker({ formId, onSectionSelect, onBack }: SectionPicker
 
       <div className="mt-8 text-center">
         <div className="text-sm text-muted-foreground">
-          <p>Currently available: Reading and Science sections for Form C</p>
-          <p>English and Math sections coming soon</p>
+          <p>All sections available for {formName}</p>
+          <p>Choose any section to begin practicing</p>
         </div>
       </div>
     </div>

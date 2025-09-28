@@ -11,9 +11,9 @@ import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
 import Simulation from "./pages/Simulation";
 import NotFound from "./pages/NotFound";
-import { 
-  LazyAnalytics, 
-  LazyAdminImport, 
+import {
+  LazyAnalytics,
+  LazyAdminImport,
   LazyParentPortal,
   LazyDiagnostic,
   LazySimEnglish,
@@ -24,6 +24,16 @@ import {
   LazyMathCheatsheet,
   LazyReadingCheatsheet,
   LazyScienceCheatsheet,
+  LazyPlan,
+  LazyDrillRunner,
+  LazyLessonViewer,
+  LazyTimedSection,
+  LazyFullTestRunner,
+  LazyReviewQueue,
+  LazyProgressDashboard,
+  LazySettings,
+  LazyCurriculum,
+  LazyModuleViewer,
   LazyLoader
 } from "./components/LazyComponents";
 import DiagnosticTest from "./pages/DiagnosticTest";
@@ -45,6 +55,54 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           {/* Onboarding wizard route */}
           <Route path="/onboarding" element={<Onboarding />} />
+          {/* Daily Plan route - DayView + FiveDayCalendar */}
+          <Route path="/plan" element={
+            <LazyLoader>
+              <LazyPlan />
+            </LazyLoader>
+          } />
+          {/* Drill routes */}
+          <Route path="/drill/:subject" element={
+            <LazyLoader>
+              <LazyDrillRunner />
+            </LazyLoader>
+          } />
+          {/* Lesson routes */}
+          <Route path="/lesson/:topic" element={
+            <LazyLoader>
+              <LazyLessonViewer />
+            </LazyLoader>
+          } />
+          {/* Quiz/Timed Section routes */}
+          <Route path="/quiz/:sectionId" element={
+            <LazyLoader>
+              <LazyTimedSection />
+            </LazyLoader>
+          } />
+          {/* Full Test routes */}
+          <Route path="/fulltest/:id" element={
+            <LazyLoader>
+              <LazyFullTestRunner />
+            </LazyLoader>
+          } />
+          {/* Review Queue route */}
+          <Route path="/review" element={
+            <LazyLoader>
+              <LazyReviewQueue />
+            </LazyLoader>
+          } />
+          {/* Progress Dashboard route */}
+          <Route path="/progress" element={
+            <LazyLoader>
+              <LazyProgressDashboard />
+            </LazyLoader>
+          } />
+          {/* Settings route */}
+          <Route path="/settings" element={
+            <LazyLoader>
+              <LazySettings />
+            </LazyLoader>
+          } />
           {/* Diagnostic assessment route */}
           <Route path="/diagnostic" element={
             <LazyLoader>
@@ -54,6 +112,17 @@ const App = () => (
           {/* Diagnostic test routes */}
           <Route path="/diagnostic-test/:formId" element={<DiagnosticTest />} />
           <Route path="/diagnostic-results/:formId" element={<DiagnosticResults />} />
+          {/* Curriculum routes */}
+          <Route path="/curriculum" element={
+            <LazyLoader>
+              <LazyCurriculum />
+            </LazyLoader>
+          } />
+          <Route path="/curriculum/module/:moduleId" element={
+            <LazyLoader>
+              <LazyModuleViewer />
+            </LazyLoader>
+          } />
           {/* New simulation system */}
           <Route path="/simulation" element={<Simulation />} />
           {/* Legacy simulation routes */}

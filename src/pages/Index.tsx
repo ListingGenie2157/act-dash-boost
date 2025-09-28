@@ -199,6 +199,32 @@ const Index = () => {
               <div className="lg:col-span-2 space-y-6">
                 <StudyNow />
 
+                {/* Study Options */}
+                <Card className="p-6">
+                  <h3 className="font-semibold mb-4">Choose Your Study Method</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer" onClick={() => navigate('/curriculum')}>
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-purple-100 rounded-lg">
+                          <BookOpen className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <h4 className="font-medium">Curriculum Modules</h4>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Structured learning path through E1-E8, M1-M10, and more</p>
+                    </div>
+
+                    <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer" onClick={() => setCurrentView('study-modes')}>
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-orange-100 rounded-lg">
+                          <Timer className="h-5 w-5 text-orange-600" />
+                        </div>
+                        <h4 className="font-medium">Practice & Drills</h4>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Quick practice sessions and timed drills</p>
+                    </div>
+                  </div>
+                </Card>
+
                 {/* Quick Actions */}
                 <div className="grid grid-cols-2 gap-4">
                   <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/diagnostic')}>
