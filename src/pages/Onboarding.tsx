@@ -12,6 +12,8 @@ import { addYears, format, startOfToday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { AuthGuard } from '@/components/AuthGuard';
+import { useAuthUser } from '@/hooks/useAuthUser';
 
 interface OnboardingForm {
   // Step 1: Legal
@@ -43,8 +45,9 @@ interface OnboardingForm {
   notes: string;
 }
 
-export default function Onboarding() {
+function OnboardingContent() {
   const navigate = useNavigate();
+  const { data: user } = useAuthUser();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<OnboardingForm>({
@@ -73,9 +76,8 @@ export default function Onboarding() {
   const handleSubmitOnboarding = async () => {
     setLoading(true);
     try {
-      // Get user ID once at the start
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
+      // User is guaranteed to exist due to AuthGuard
+      if (!user) {
         throw new Error('Authentication failed');
       }
 
@@ -620,5 +622,13 @@ export default function Onboarding() {
         {step > 7 && renderCompletedStep()}
       </div>
     </div>
+  );
+}
+
+export default function Onboarding() {
+  return (
+    <AuthGuard>
+      <OnboardingContent />
+    </AuthGuard>
   );
 }
