@@ -1,7 +1,7 @@
 // Shared review system utilities for spaced repetition learning
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 
-export type StudyMode = 'MASTERY' | 'CRASH';
+export type StudyMode = 'MASTERY' | 'CRASH' | 'ACCEL';
 
 export type Choice = 'A' | 'B' | 'C' | 'D';
 
@@ -11,9 +11,7 @@ export interface WrongAnswer {
   elapsedMs: number;
 }
 
-export interface ReviewMode { 
-  name: 'CRASH' | 'ACCEL' | 'MASTERY';
-}
+export type ReviewMode = StudyMode;
 
 interface ReviewQueueEntry {
   user_id: string;
@@ -126,7 +124,7 @@ export async function updateReviewQueueOnAnswer(
     const currentEase = currentEntry?.ease || 250; // Default ease factor (2.5)
 
     // Calculate next interval
-    const nextIntervalDays = nextInterval(mode.name, currentInterval, !correct);
+    const nextIntervalDays = nextInterval(mode, currentInterval, !correct);
     
     // Calculate new due date
     const dueAt = new Date(now);
@@ -178,7 +176,7 @@ export async function updateReviewQueueOnAnswer(
     console.error('Error updating review queue:', error);
     return {
       success: false,
-      error: error.message || 'Failed to update review queue'
+      error: error instanceof Error ? error.message : 'Failed to update review queue'
     };
   }
 }

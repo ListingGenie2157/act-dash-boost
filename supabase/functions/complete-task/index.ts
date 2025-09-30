@@ -1,7 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
-import { updateReviewQueueOnAnswer } from '../_shared/review.ts';
+import { updateReviewQueueOnAnswer, type ReviewMode } from '../_shared/review.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -175,7 +175,7 @@ serve(async (req) => {
             user.id,
             answer.question_id,
             answer.correct,
-            studyMode as 'MASTERY' | 'CRASH'
+            studyMode as ReviewMode
           );
         } catch (error) {
           console.error(`Error updating review queue for question ${answer.question_id}:`, error);
@@ -234,7 +234,7 @@ serve(async (req) => {
     console.error('Error in complete-task function:', error);
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
-      message: error.message 
+      message: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

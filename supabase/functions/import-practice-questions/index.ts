@@ -37,7 +37,7 @@ function parseTSV(tsvContent: string): PracticeRow[] {
     headers.forEach((header, index) => {
       row[header.trim()] = values[index]?.trim() || '';
     });
-    return row as PracticeRow;
+    return row as unknown as PracticeRow;
   });
 }
 
@@ -191,9 +191,8 @@ Deno.serve(async (req) => {
           name: skillCode,
           subject: row.subject.toLowerCase(),
           cluster: `${row.subject} Practice`,
-          description: `Practice questions for ${skillCode}`,
-          order_index: skillsToCreate.length + 1000
-        });
+          description: `Practice questions for ${skillCode}`
+        } as any);
       }
     }
 
@@ -274,10 +273,10 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error',
         validRows: 0,
         invalidRows: 0,
-        errors: [error.message],
+        errors: [error instanceof Error ? error.message : 'Unknown error'],
         questionsCreated: 0,
         skillsCreated: 0
       }), 
