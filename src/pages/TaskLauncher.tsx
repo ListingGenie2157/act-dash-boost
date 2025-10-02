@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import type { StudyPlanTask, StudyPlanDay } from '@/types';
+import type { StudyPlanTask } from '@/types';
 
 export default function TaskLauncher() {
   const { date, idx } = useParams<{ date?: string; idx?: string }>();

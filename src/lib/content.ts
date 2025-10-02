@@ -1,8 +1,4 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { Database } from '@/integrations/supabase/types';
-
-type Skill = Database['public']['Tables']['skills']['Row'];
-type Question = Database['public']['Tables']['questions']['Row'];
 
 export async function getLessonBySkill(skill_code: string) {
   // Since there's no lessons table, we fetch from skills table

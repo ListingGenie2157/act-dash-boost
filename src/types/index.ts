@@ -1,3 +1,4 @@
+// Database Question type (from questions table)
 export interface Question {
   id: string;
   stem: string;
@@ -16,14 +17,24 @@ export interface Question {
   passage_text?: string | null;
 }
 
+// Legacy Question type for curriculum/lesson data
+export interface LegacyQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+}
+
 export interface Lesson {
   id: string;
   title: string;
   subject: 'Math' | 'English';
   concept: string;
   examples: string[];
-  practiceQuestions: Question[];
-  quiz: Question[];
+  practiceQuestions: LegacyQuestion[];
+  quiz: LegacyQuestion[];
 }
 
 export interface Day {
@@ -38,7 +49,7 @@ export interface DrillSession {
   subject: 'Math' | 'English';
   title: string;
   timeLimit: number; // seconds
-  questions: Question[];
+  questions: LegacyQuestion[];
 }
 
 export interface UserProgress {
@@ -57,7 +68,7 @@ export interface UserProgress {
 
 export interface WrongAnswer {
   questionId: string;
-  question: Question;
+  question: LegacyQuestion;
   userAnswer: number;
   timestamp: Date;
 }
@@ -101,7 +112,7 @@ export type DrillResults = DrillResult[];
 
 export interface QuizAnswer {
   questionId: string;
-  question: Question;
+  question: LegacyQuestion;
   userAnswer: number;
 }
 

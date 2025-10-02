@@ -68,7 +68,7 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
       setSaving(true);
       const testDate = format(date, 'yyyy-MM-dd');
 
-      const { data, error } = await supabase.functions.invoke('set-test-date', {
+      const { error } = await supabase.functions.invoke('set-test-date', {
         body: { testDate }
       });
 

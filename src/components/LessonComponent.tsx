@@ -17,7 +17,7 @@ export const LessonComponent = ({ lesson, onComplete, onBack }: LessonComponentP
   const [practiceScore, setPracticeScore] = useState<number | null>(null);
   const [quizScore, setQuizScore] = useState<number | null>(null);
   const [practiceWrongAnswers, setPracticeWrongAnswers] = useState<WrongAnswer[]>([]);
-  const [quizWrongAnswers, setQuizWrongAnswers] = useState<WrongAnswer[]>([]);
+  const [, setQuizWrongAnswers] = useState<WrongAnswer[]>([]);
 
   const handlePracticeComplete = (score: number, wrongAnswers: WrongAnswer[]) => {
     setPracticeScore(score);

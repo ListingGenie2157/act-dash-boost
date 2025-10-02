@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, memo } from 'react';
-import { Play, Clock, CheckCircle, XCircle, Brain, Target, BookOpen, Zap } from 'lucide-react';
+import { Play, Clock, CheckCircle, Brain, Target, BookOpen, Zap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,15 +28,15 @@ interface Question {
   choice_c: string;
   choice_d: string;
   answer: 'A' | 'B' | 'C' | 'D';
-  explanation: string;
+  explanation: string | null;
   difficulty: number;
-  time_limit_secs: number;
+  time_limit_secs: number | null;
 }
 
 interface Skill {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   subject: string;
   cluster: string;
 }
@@ -247,7 +247,6 @@ const TaskRunner = memo(function TaskRunner({ task, onComplete }: TaskRunnerProp
   const [timeStarted, setTimeStarted] = useState<number>(Date.now());
   const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
   const [timeRemaining, setTimeRemaining] = useState<number>(45);
-  const [baseTimeLimit, setBaseTimeLimit] = useState<number>(45);
   const { toast } = useToast();
 
   // Timer effect
@@ -286,7 +285,12 @@ const TaskRunner = memo(function TaskRunner({ task, onComplete }: TaskRunnerProp
             .single();
 
           if (skillError) throw skillError;
-          setSkill(skillData);
+          if (skillData) {
+            setSkill({
+              ...skillData,
+              description: skillData.description ?? '',
+            });
+          }
         }
 
         if (task.type !== 'LEARN') {
@@ -300,7 +304,8 @@ const TaskRunner = memo(function TaskRunner({ task, onComplete }: TaskRunnerProp
           if (questionsError) throw questionsError;
           setQuestions((questionsData || []).map(q => ({
             ...q,
-            answer: q.answer as 'A' | 'B' | 'C' | 'D'
+            answer: q.answer as 'A' | 'B' | 'C' | 'D',
+            explanation: q.explanation ?? '',
           })));
         }
 
@@ -324,15 +329,13 @@ const TaskRunner = memo(function TaskRunner({ task, onComplete }: TaskRunnerProp
   const handleQuestionAnswer = useCallback(async (answer: 'A' | 'B' | 'C' | 'D') => {
     const currentQuestion = questions[currentQuestionIndex];
     if (!currentQuestion) return;
-
-    const questionTime = Date.now() - questionStartTime;
     setAnswers(prev => ({ ...prev, [currentQuestion.id]: answer }));
 
     if (currentQuestionIndex < questions.length - 1) {
       // Move to next question
       setCurrentQuestionIndex(prev => prev + 1);
       setQuestionStartTime(Date.now());
-      const accommodatedTime = await getAccommodatedTime(baseTimeLimit);
+      const accommodatedTime = await getAccommodatedTime(45);
       setTimeRemaining(accommodatedTime);
     } else {
       // Complete the task
@@ -345,7 +348,7 @@ const TaskRunner = memo(function TaskRunner({ task, onComplete }: TaskRunnerProp
       const accuracy = correctAnswers / questions.length;
       onComplete(task.id, accuracy, totalTime);
     }
-  }, [questions, currentQuestionIndex, answers, timeStarted, questionStartTime, onComplete, task.id, baseTimeLimit]);
+  }, [questions, currentQuestionIndex, answers, timeStarted, questionStartTime, onComplete, task.id]);
 
   const getTaskIcon = () => {
     switch (task.type) {
@@ -477,7 +480,7 @@ const TaskRunner = memo(function TaskRunner({ task, onComplete }: TaskRunnerProp
             </div>
           </div>
         </div>
-        <Progress value={baseTimeLimit > 0 ? (timeRemaining / baseTimeLimit) * 100 : 0} className="h-1" />
+        <Progress value={timeRemaining > 0 ? ((45 - timeRemaining) / 45) * 100 : 0} className="h-1" />
       </CardHeader>
       
       <CardContent className="space-y-6">

@@ -3,11 +3,11 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle, XCircle, ArrowRight, ArrowLeft } from 'lucide-react';
-import { Question, QuizAnswers } from '@/types';
+import type { LegacyQuestion, QuizAnswers } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
 interface QuizComponentProps {
-  questions: Question[];
+  questions: LegacyQuestion[];
   title: string;
   onComplete: (score: number, wrongAnswers: QuizAnswers) => void;
   onBack?: () => void;
@@ -59,7 +59,7 @@ export const QuizComponent = ({ questions, title, onComplete, onBack }: QuizComp
         question,
         userAnswer: answers[index]
       }))
-      .filter((item, index) => answers[index] !== questions[index].correctAnswer);
+      .filter((_item, index) => answers[index] !== questions[index].correctAnswer);
     
     const score = Math.round(((questions.length - wrongAnswers.length) / questions.length) * 100);
     onComplete(score, wrongAnswers);
