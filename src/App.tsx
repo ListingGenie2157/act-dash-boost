@@ -38,6 +38,12 @@ import {
 } from "./components/LazyComponents";
 import DiagnosticTest from "./pages/DiagnosticTest";
 import DiagnosticResults from "./pages/DiagnosticResults";
+import Plan from "./pages/Plan";
+import TaskLauncher from "./pages/TaskLauncher";
+import LessonViewer from "./pages/LessonViewer";
+import DrillRunner from "./pages/DrillRunner";
+import QuizRunner from "./pages/QuizRunner";
+
 
 const queryClient = new QueryClient();
 
@@ -185,7 +191,12 @@ const App = () => (
               <LazyParentPortal />
             </LazyLoader>
           } />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+        <Route path="/plan" element={<Plan />} />
+  <Route path="/task/:date/:idx" element={<TaskLauncher />} />
+  <Route path="/lesson/:topic" element={<LessonViewer />} />
+  <Route path="/drill/:subject" element={<DrillRunner />} />
+  <Route path="/quiz/:section" element={<QuizRunner />} />
+    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

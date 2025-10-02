@@ -136,7 +136,7 @@ function getTestWeekTasks(daysLeft: number, userId: string, dateStr: string): Ar
 }
 
 // Helper function for choosing weak skills from baseline
-function chooseWeakSkills(baseline: Array<{ section: string; score: number }>, progress: Array<{ section: string; accuracy: number }>, allSkills: Array<{ subject: string; skill_name: string; cluster: string }>): string[] {
+function chooseWeakSkills(baseline: Array<{ section: string; score: number }>, progress: Array<{ section: string; accuracy: number }>, allSkills: Array<{ id?: string; subject: string; skill_name?: string; name?: string; cluster: string }>): string[] {
   const weakSkillIds: string[] = [];
   
   baseline.forEach(diagnostic => {
@@ -147,7 +147,7 @@ function chooseWeakSkills(baseline: Array<{ section: string; score: number }>, p
       // Group skills by cluster
       sectionSkills.forEach(skill => {
         if (!clusterGroups[skill.cluster]) clusterGroups[skill.cluster] = [];
-        clusterGroups[skill.cluster].push(skill.id);
+        clusterGroups[skill.cluster].push(skill.skill_name || skill.name || skill.id || '');
       });
       
       // Pick skills from the first two clusters (assume ordered by difficulty)
@@ -354,14 +354,18 @@ serve(async (req) => {
         correct: p.correct
       }));
 
-      const weakSkillIds = chooseWeakSkills(baselineDiagnostics, progressData, allSkills || []);
+    const progressDataMapped = progressData.map(p => ({
+      section: p.skill_id, // Map skill_id to section for function compatibility
+      accuracy: p.seen > 0 ? p.correct / p.seen : 0
+    }));
+    const weakSkillIds = chooseWeakSkills(baselineDiagnostics, progressDataMapped, allSkills || []);
       
-      baselineSeededSkills = weakSkillIds.map(skillId => ({
-        skill_id: skillId,
-        mastery_level: 0,
-        correct: 0,
-        seen: 0
-      }));
+    baselineSeededSkills = weakSkillIds.map(skillId => ({
+      id: skillId,
+      subject: 'math', // Default subject
+      cluster: 'basic',
+      name: skillId
+    }));
     }
 
     // Combine actual weak skills with baseline seeded skills
@@ -383,7 +387,7 @@ serve(async (req) => {
     const learnableSkills = availableSkills?.filter(skill => {
       if (learnedSkillIds.has(skill.id)) return false;
       if (!skill.prereq_skill_ids || skill.prereq_skill_ids.length === 0) return true;
-      return skill.prereq_skill_ids.every(prereqId => learnedSkillIds.has(prereqId));
+      return skill.prereq_skill_ids.every((prereqId: string) => learnedSkillIds.has(prereqId));
     }) || [];
 
     // Build priority task list
@@ -404,7 +408,7 @@ serve(async (req) => {
     combinedWeakSkills?.forEach((skill, index) => {
       priorities.push({
         type: 'DRILL',
-        skillId: skill.skill_id,
+        skillId: 'skill_id' in skill ? skill.skill_id : skill.id,
         size: 5, // 5 questions per drill
         estimatedMins: 8, // Estimated 8 mins for 5 questions
         priority: mode.drillWeight * 1000 + (50 - index)

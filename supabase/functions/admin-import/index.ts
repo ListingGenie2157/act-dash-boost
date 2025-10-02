@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Import error:', error);
-    return new Response(`Server error: ${error.message}`, { 
+    return new Response(`Server error: ${error instanceof Error ? error.message : 'Unknown error'}`, { 
       status: 500, 
       headers: corsHeaders 
     });

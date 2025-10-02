@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { generateStudyPlan } from '@/lib/supabase-client';
+import { generateStudyPlan, StudyPlanParams } from '@/lib/supabase-client';
 
 export function useStudyPlan(userId?: string) {
   return useQuery({
@@ -49,7 +49,7 @@ export function useGenerateStudyPlan() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: generateStudyPlan,
+    mutationFn: (params?: StudyPlanParams) => generateStudyPlan(supabase, params),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['study-plan'] });
       queryClient.invalidateQueries({ queryKey: ['study-tasks'] });

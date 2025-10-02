@@ -55,9 +55,9 @@ function parseTSV(tsvContent: string): StagingRow[] {
       });
       
       // Convert numeric fields
-      row.ord = parseInt(row.ord) || 0;
+      (row as any).ord = parseInt(row.ord as string) || 0;
       
-      rows.push(row as StagingRow);
+      rows.push(row as unknown as StagingRow);
     }
   }
   

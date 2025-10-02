@@ -24,39 +24,80 @@ const Index = () => {
   const { progress, updateProgress, addWrongAnswer, updateWeakAreas, completeDay } = useProgress();
   const navigate = useNavigate();
 
-  // On mount, verify the user has an active session and completed onboarding.
+  // Enhanced auth state management with proper listeners
   useEffect(() => {
-    const checkAuth = async () => {
+    let mounted = true;
+
+    const initAuth = async () => {
       try {
-        const { data } = await supabase.auth.getSession();
-        if (!data.session) {
+        console.log('Initializing auth state...');
+        
+        // Set up auth state listener FIRST
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log('Auth state changed:', { event, session: !!session });
+            
+            if (!mounted) return;
+            
+            if (session) {
+              setIsAuthenticated(true);
+              
+              // Check if user has completed onboarding
+              try {
+                const { data: profile, error } = await supabase
+                  .from('profiles')
+                  .select('test_date')
+                  .eq('id', session.user.id)
+                  .maybeSingle();
+                
+                console.log('Profile check:', { profile, error });
+                
+                if (!profile?.test_date && mounted) {
+                  navigate('/onboarding');
+                  return;
+                }
+              } catch (profileError) {
+                console.error('Profile check failed:', profileError);
+              }
+            } else {
+              setIsAuthenticated(false);
+            }
+            
+            if (mounted) {
+              setIsLoading(false);
+            }
+          }
+        );
+
+        // THEN check for existing session
+        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('Initial session check:', { session: !!session, error });
+        
+        if (error) {
+          console.error('Session check error:', error);
+        }
+
+        // Clean up subscription on unmount
+        return () => {
+          mounted = false;
+          subscription.unsubscribe();
+        };
+        
+      } catch (error) {
+        console.error('Auth initialization failed:', error);
+        if (mounted) {
           setIsAuthenticated(false);
           setIsLoading(false);
-          return;
         }
-
-        setIsAuthenticated(true);
-
-        // Check if user has completed onboarding
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('test_date')
-          .eq('id', data.session.user.id)
-          .maybeSingle();
-
-        if (!profile?.test_date) {
-          navigate('/onboarding');
-          return;
-        }
-
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        setIsAuthenticated(false);
-        setIsLoading(false);
       }
     };
-    checkAuth();
+
+    const cleanup = initAuth();
+    
+    return () => {
+      mounted = false;
+      cleanup?.then?.(cleanupFn => cleanupFn?.());
+    };
   }, [navigate]);
 
   const handleStartDay = (dayNumber: number) => {

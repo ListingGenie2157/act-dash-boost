@@ -15,6 +15,6 @@ create table if not exists public.staging_items (
   choice_b text not null,
   choice_c text not null,
   choice_d text not null,
-  answer text not null check (answer in ('A','B','C','D')),
+  answer text not null check (answer in ('choice_a','choice_b','choice_c','choice_d')),
   explanation text null
 );

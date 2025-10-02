@@ -76,16 +76,18 @@ serve(async (req) => {
         console.log(`DRILL task meets criteria: accuracy=${task.accuracy}, time=${task.median_time_ms}ms`);
         
         // Get applicable DRILL rules
+        const { data: parentLinks } = await supabase
+          .from('parent_links')
+          .select('parent_id')
+          .eq('student_id', user.id);
+        
+        const parentIds = parentLinks?.map(link => link.parent_id) || [];
+        
         const { data: rules } = await supabase
           .from('rewards_rules')
           .select('id, amount_cents, parent_id')
           .eq('type', 'DRILL')
-          .in('parent_id', 
-            supabase
-              .from('parent_links')
-              .select('parent_id')
-              .eq('student_id', user.id)
-          );
+          .in('parent_id', parentIds);
 
         for (const rule of rules || []) {
           // Add to ledger
@@ -139,16 +141,18 @@ serve(async (req) => {
           console.log(`SIM improvement: ${simResult.raw_score} vs baseline ${baselineScore}`);
           
           // Get applicable SIM rules
+          const { data: parentLinks2 } = await supabase
+            .from('parent_links')
+            .select('parent_id')
+            .eq('student_id', user.id);
+          
+          const parentIds2 = parentLinks2?.map(link => link.parent_id) || [];
+          
           const { data: rules } = await supabase
             .from('rewards_rules')
             .select('id, amount_cents, parent_id')
             .eq('type', 'SIM')
-            .in('parent_id', 
-              supabase
-                .from('parent_links')
-                .select('parent_id')
-                .eq('student_id', user.id)
-            );
+            .in('parent_id', parentIds2);
 
           for (const rule of rules || []) {
             const { error: ledgerError } = await supabase
@@ -194,16 +198,18 @@ serve(async (req) => {
           console.log(`Streak milestone reached: ${maxStreak} days`);
           
           // Get applicable STREAK rules
+          const { data: parentLinks3 } = await supabase
+            .from('parent_links')
+            .select('parent_id')
+            .eq('student_id', user.id);
+          
+          const parentIds3 = parentLinks3?.map(link => link.parent_id) || [];
+          
           const { data: rules } = await supabase
             .from('rewards_rules')
             .select('id, amount_cents, parent_id, threshold')
             .eq('type', 'STREAK')
-            .in('parent_id', 
-              supabase
-                .from('parent_links')
-                .select('parent_id')
-                .eq('student_id', user.id)
-            );
+            .in('parent_id', parentIds3);
 
           for (const rule of rules || []) {
             const thresholdDays = rule.threshold?.days || 5;

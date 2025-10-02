@@ -88,7 +88,7 @@ serve(async (req) => {
           }
 
           // Extract the access token from the response
-          const accessToken = tokenData?.properties?.access_token;
+          const accessToken = (tokenData as any)?.properties?.access_token;
           
           if (!accessToken) {
             throw new Error('No access token generated');
@@ -117,7 +117,7 @@ serve(async (req) => {
 
         } catch (error) {
           console.error(`Failed to generate plan for user ${user.id}:`, error);
-          return { userId: user.id, success: false, error: error.message };
+          return { userId: user.id, success: false, error: error instanceof Error ? error.message : 'Unknown error' };
         }
       });
 
@@ -162,7 +162,7 @@ serve(async (req) => {
     console.error('Error in cron-daily function:', error);
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
-      message: error.message 
+      message: error instanceof Error ? error.message : 'Unknown error' 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
