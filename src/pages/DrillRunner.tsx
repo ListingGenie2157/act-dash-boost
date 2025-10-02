@@ -2,17 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { getQuestionsBySkill } from '@/lib/content';
 import { supabase } from '@/integrations/supabase/client';
-
-interface Question {
-  id: string;
-  stem: string;
-  choice_a: string;
-  choice_b: string;
-  choice_c: string;
-  choice_d: string;
-  answer: string;
-  form_id?: string;
-}
+import type { Question } from '@/types';
 
 export default function DrillRunner() {
   const { subject } = useParams<{ subject?: string }>();
@@ -35,13 +25,13 @@ export default function DrillRunner() {
         }
         setUserId(user.id);
         const nParam = searchParams.get('n');
-        const n = nParam ? parseInt(nParam) : 10;
+        const n = nParam ? parseInt(nParam, 10) : 10;
         const code = subject ?? '';
         const { data, error: qError } = await getQuestionsBySkill(code, n);
         if (qError) {
           setError(qError.message);
         } else {
-          setQuestions(Array.isArray(data) ? (data as Question[]) : []);
+          setQuestions(data ?? []);
         }
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Failed to load questions');
@@ -49,22 +39,24 @@ export default function DrillRunner() {
         setLoading(false);
       }
     };
-    fetchData();
+    void fetchData();
   }, [subject, searchParams]);
 
   const handleAnswer = async (selectedIdx: number) => {
     if (!userId) return;
     const q = questions[current];
-    const correctIdx = ['A','B','C','D'].indexOf((q as any).answer);
+    if (!q) return;
+    
+    const correctIdx = ['A', 'B', 'C', 'D'].indexOf(q.answer);
     try {
       await supabase.from('attempts').insert({
         user_id: userId,
         question_id: q.id,
         form_id: q.form_id ?? 'drill',
         question_ord: current + 1,
-        choice_order: [0,1,2,3],
+        choice_order: [0, 1, 2, 3],
         correct_idx: correctIdx,
-        selected_idx: selectedIdx
+        selected_idx: selectedIdx,
       });
       if (selectedIdx !== correctIdx) {
         const dueDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
@@ -72,7 +64,7 @@ export default function DrillRunner() {
           user_id: userId,
           question_id: q.id,
           due_at: dueDate.toISOString(),
-          interval_days: 2
+          interval_days: 2,
         });
       }
     } catch (err) {

@@ -1,10 +1,19 @@
 export interface Question {
   id: string;
-  question: string;
-  options: string[];
-  correctAnswer: number; // Back to number
-  explanation: string;
-  difficulty: 'easy' | 'medium' | 'hard';
+  stem: string;
+  choice_a: string;
+  choice_b: string;
+  choice_c: string;
+  choice_d: string;
+  answer: string;
+  explanation?: string;
+  skill_code?: string;
+  section?: string;
+  ord?: number;
+  form_id?: string;
+  passage_id?: string | null;
+  passage_title?: string | null;
+  passage_text?: string | null;
 }
 
 export interface Lesson {
@@ -108,13 +117,40 @@ export interface DiagnosticResults {
 export interface StudyTask {
   id: string;
   user_id: string;
-  type: string; // This comes from the database as string
-  skill_id: string;
+  type: string;
+  skill_id: string | null;
   the_date: string;
-  status: string;
+  status: string | null;
   size: number;
-  accuracy: number;
-  median_time_ms: number;
-  reward_cents: number;
-  created_at: string;
+  accuracy: number | null;
+  median_time_ms: number | null;
+  reward_cents: number | null;
+  created_at: string | null;
+}
+
+export interface Skill {
+  id: string;
+  name: string;
+  description: string;
+  subject: string;
+  cluster: string;
+  order_index: number;
+  prereq_skill_ids: string[] | null;
+  created_at: string | null;
+}
+
+export interface StudyPlanTask {
+  type: string;
+  size?: number;
+  estimated_mins?: number;
+  skill_code?: string;
+  content_hint?: string;
+  title?: string;
+}
+
+export interface StudyPlanDay {
+  the_date: string;
+  user_id: string;
+  tasks_json: StudyPlanTask[] | null;
+  generated_at: string | null;
 }
