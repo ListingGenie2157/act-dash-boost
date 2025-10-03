@@ -43,7 +43,6 @@ export const DiagnosticEvaluation = ({
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [selectedAnswer, setSelectedAnswer] = useState<string>('');
-  const [timeRemaining, setTimeRemaining] = useState(0);
 
   // Use the evaluation questions from the data file
   const [allQuestions] = useState<Question[]>(() => {
@@ -153,7 +152,7 @@ export const DiagnosticEvaluation = ({
           </span>
           <Badge variant="outline" className="flex items-center gap-1">
             <Timer className="w-3 h-3" />
-            {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
+            Time Remaining
           </Badge>
         </div>
         <Progress value={(currentQuestionIndex / totalQuestions) * 100} className="h-2" />

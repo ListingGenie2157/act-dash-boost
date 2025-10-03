@@ -15,7 +15,6 @@ type View = 'dashboard' | 'day' | 'review' | 'study';
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<View>('dashboard');
-  const [selectedDay, setSelectedDay] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { progress, updateProgress, addWrongAnswer, updateWeakAreas, completeDay } = useProgress();
@@ -135,7 +134,7 @@ const Index = () => {
     });
   };
 
-  const selectedDayData = curriculum.find(d => d.day === selectedDay);
+  const selectedDayData = curriculum.find(d => d.day === 1);
 
   // Loading state
   if (isLoading) {

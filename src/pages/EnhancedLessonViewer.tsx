@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, BookOpen, Target, Clock, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { sanitizeHTML } from '@/lib/sanitize';
 import { supabase } from '@/integrations/supabase/client';
 import { updateMastery } from '@/lib/mastery';
 import { toast } from 'sonner';
+import { shuffleQuestionChoices } from '@/lib/shuffle';
 
 export default function EnhancedLessonViewer() {
   const { topic } = useParams<{ topic?: string }>();
@@ -24,18 +25,34 @@ export default function EnhancedLessonViewer() {
   const [currentTab, setCurrentTab] = useState('overview');
   
   // Practice tracking
-  const [practiceAnswers, setPracticeAnswers] = useState<Record<string, string>>({});
+  const [practiceAnswers, setPracticeAnswers] = useState<Record<string, number>>({});
   const [showingPracticeResults, setShowingPracticeResults] = useState(false);
   const [practiceStartTime, setPracticeStartTime] = useState<number>(Date.now());
+  const [userId, setUserId] = useState<string | null>(null);
 
   // Mastery data
   const { data: mastery, refetch: refetchMastery } = useSkillMastery(topic);
+
+  // Shuffle practice questions
+  const shuffledPractice = useMemo(() => {
+    if (!lesson || !userId) return [];
+    return lesson.practiceQuestions.map(q => {
+      const seed = `${userId}-${q.staging_id}`;
+      return shuffleQuestionChoices(q, seed);
+    });
+  }, [lesson, userId]);
 
   useEffect(() => {
     const fetchLesson = async () => {
       setLoading(true);
       setError(null);
       try {
+        // Get user ID first
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setUserId(user.id);
+        }
+
         const code = topic ?? '';
         const { data, error: fetchError } = await getEnhancedLesson(code);
         if (fetchError) {
@@ -52,10 +69,10 @@ export default function EnhancedLessonViewer() {
     void fetchLesson();
   }, [topic]);
 
-  const handlePracticeAnswer = (questionId: string, answer: string) => {
+  const handlePracticeAnswer = (questionId: string, answerIndex: number) => {
     setPracticeAnswers(prev => ({
       ...prev,
-      [questionId]: answer,
+      [questionId]: answerIndex,
     }));
   };
 
@@ -68,13 +85,16 @@ export default function EnhancedLessonViewer() {
       return;
     }
 
-    // Calculate results
+    // Calculate results using shuffled answers
     let correct = 0;
     const totalTime = Date.now() - practiceStartTime;
     
-    lesson.practiceQuestions.forEach(q => {
-      const userAnswer = practiceAnswers[q.staging_id.toString()];
-      if (userAnswer === q.answer) {
+    shuffledPractice.forEach((shuffledQ) => {
+      const questionId = shuffledQ.original.staging_id.toString();
+      const userAnswerIndex = practiceAnswers[questionId];
+      
+      // Check if user's answer index matches correct index in shuffled array
+      if (userAnswerIndex === shuffledQ.correctIndex) {
         correct++;
       }
     });
@@ -150,14 +170,14 @@ export default function EnhancedLessonViewer() {
     );
   }
 
-  const practiceComplete = lesson.practiceQuestions.length > 0 &&
-    lesson.practiceQuestions.every(q => practiceAnswers[q.staging_id.toString()]);
+  const practiceComplete = shuffledPractice.length > 0 &&
+    shuffledPractice.every(sq => practiceAnswers[sq.original.staging_id.toString()] !== undefined);
 
-  const practiceScore = lesson.practiceQuestions.length > 0
-    ? lesson.practiceQuestions.filter(q => 
-        practiceAnswers[q.staging_id.toString()] === q.answer
-      ).length
-    : 0;
+  const practiceScore = shuffledPractice.filter(sq => {
+    const questionId = sq.original.staging_id.toString();
+    const userAnswerIndex = practiceAnswers[questionId];
+    return userAnswerIndex === sq.correctIndex;
+  }).length;
 
   return (
     <div className="container mx-auto p-6 max-w-5xl">
@@ -387,18 +407,18 @@ export default function EnhancedLessonViewer() {
                 </CardContent>
               </Card>
 
-              {/* Practice Questions */}
+              {/* Practice Questions - Shuffled */}
               <div className="space-y-4">
-                {lesson.practiceQuestions.map((question, idx) => {
-                  const questionId = question.staging_id.toString();
-                  const userAnswer = practiceAnswers[questionId];
-                  const isCorrect = userAnswer === question.answer;
-                  const hasAnswered = !!userAnswer;
+                {shuffledPractice.map((shuffledQ, idx) => {
+                  const questionId = shuffledQ.original.staging_id.toString();
+                  const userAnswerIndex = practiceAnswers[questionId];
+                  const isCorrect = userAnswerIndex === shuffledQ.correctIndex;
+                  const hasAnswered = userAnswerIndex !== undefined;
 
                   return (
                     <Card 
-                      key={question.staging_id}
-                      className={cn(
+                      key={shuffledQ.original.staging_id}
+                      className={cnLocal(
                         showingPracticeResults && hasAnswered && (
                           isCorrect 
                             ? 'border-green-300 bg-green-50 dark:bg-green-900/10' 
@@ -419,27 +439,25 @@ export default function EnhancedLessonViewer() {
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        {question.passage_text && (
+                        {shuffledQ.original.passage_text && (
                           <div className="p-4 bg-muted rounded-lg">
-                            <p className="text-sm whitespace-pre-wrap">{question.passage_text}</p>
+                            <p className="text-sm whitespace-pre-wrap">{shuffledQ.original.passage_text}</p>
                           </div>
                         )}
 
-                        <p className="font-medium">{question.question}</p>
+                        <p className="font-medium">{shuffledQ.original.question}</p>
 
                         <div className="space-y-2">
-                          {['A', 'B', 'C', 'D'].map((letter) => {
-                            const choiceKey = `choice_${letter.toLowerCase()}` as keyof typeof question;
-                            const choiceText = question[choiceKey] as string;
-                            const isSelected = userAnswer === letter;
-                            const isCorrectAnswer = question.answer === letter;
+                          {shuffledQ.choices.map((choiceText, choiceIdx) => {
+                            const isSelected = userAnswerIndex === choiceIdx;
+                            const isCorrectAnswer = choiceIdx === shuffledQ.correctIndex;
                             
                             return (
                               <button
-                                key={letter}
-                                onClick={() => !showingPracticeResults && handlePracticeAnswer(questionId, letter)}
+                                key={choiceIdx}
+                                onClick={() => !showingPracticeResults && handlePracticeAnswer(questionId, choiceIdx)}
                                 disabled={showingPracticeResults}
-                                className={cn(
+                                className={cnLocal(
                                   'w-full text-left p-4 rounded-lg border-2 transition-all',
                                   !showingPracticeResults && 'hover:border-primary hover:bg-primary/5',
                                   isSelected && !showingPracticeResults && 'border-primary bg-primary/10',
@@ -449,7 +467,7 @@ export default function EnhancedLessonViewer() {
                                 )}
                               >
                                 <div className="flex items-start gap-3">
-                                  <span className="font-bold text-sm mt-0.5">{letter})</span>
+                                  <span className="font-bold text-sm mt-0.5">{['A', 'B', 'C', 'D'][choiceIdx]})</span>
                                   <span className="flex-1">{choiceText}</span>
                                   {showingPracticeResults && isCorrectAnswer && (
                                     <Award className="h-5 w-5 text-green-600 flex-shrink-0" />
@@ -460,13 +478,13 @@ export default function EnhancedLessonViewer() {
                           })}
                         </div>
 
-                        {showingPracticeResults && question.explanation && (
+                        {showingPracticeResults && shuffledQ.original.explanation && (
                           <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200">
                             <h4 className="font-semibold text-sm mb-1 text-blue-900 dark:text-blue-100">
                               Explanation:
                             </h4>
                             <p className="text-sm text-blue-800 dark:text-blue-200">
-                              {question.explanation}
+                              {shuffledQ.original.explanation}
                             </p>
                           </div>
                         )}
@@ -543,6 +561,6 @@ export default function EnhancedLessonViewer() {
   );
 }
 
-function cn(...classes: (string | boolean | undefined)[]) {
+function cnLocal(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(' ');
 }

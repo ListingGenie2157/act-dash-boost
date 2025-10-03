@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { getQuestionsBySkill } from '@/lib/content';
 import { supabase } from '@/integrations/supabase/client';
 import type { Question } from '@/types';
+import { shuffleQuestionChoices } from '@/lib/shuffle';
 
 export default function DrillRunner() {
   const { subject } = useParams<{ subject?: string }>();
@@ -89,25 +90,39 @@ export default function DrillRunner() {
     }
   };
 
+  // Shuffle current question's choices
+  const shuffled = useMemo(() => {
+    if (!questions[current]) return null;
+    const seed = userId ? `${userId}-${questions[current].id}` : undefined;
+    return shuffleQuestionChoices(questions[current], seed);
+  }, [current, questions, userId]);
+
   if (loading) return <div className="p-4">Loading questions...</div>;
   if (error) return <div className="p-4 text-destructive">{error}</div>;
   if (completed) return <div className="p-4">Drill complete! Nice work.</div>;
   if (questions.length === 0) return <div className="p-4">No questions found.</div>;
+  if (!shuffled) return <div className="p-4">Loading question...</div>;
 
-  const q = questions[current];
-  const choices = [q.choice_a, q.choice_b, q.choice_c, q.choice_d];
+  const handleShuffledAnswer = async (shuffledIndex: number) => {
+    if (!shuffled) return;
+    
+    // Map shuffled index back to original index
+    const originalIndex = shuffled.choiceOrder[shuffledIndex];
+    await handleAnswer(originalIndex);
+  };
 
   return (
     <div className="container mx-auto p-4">
       <h2 className="font-bold mb-4">Drill Question {current + 1} of {questions.length}</h2>
-      <p className="mb-4">{q.stem}</p>
+      <p className="mb-4">{shuffled.original.stem}</p>
       <div className="space-y-2">
-        {choices.map((choice, i) => (
+        {shuffled.choices.map((choice, i) => (
           <button
             key={i}
             className="w-full border rounded-md p-2 text-left hover:bg-muted"
-            onClick={() => handleAnswer(i)}
+            onClick={() => handleShuffledAnswer(i)}
           >
+            <span className="font-semibold mr-2">{['A', 'B', 'C', 'D'][i]})</span>
             {choice}
           </button>
         ))}

@@ -30,7 +30,6 @@ import DiagnosticTest from "./pages/DiagnosticTest";
 import DiagnosticResults from "./pages/DiagnosticResults";
 import Plan from "./pages/Plan";
 import TaskLauncher from "./pages/TaskLauncher";
-import LessonViewer from "./pages/LessonViewer";
 import EnhancedLessonViewer from "./pages/EnhancedLessonViewer";
 import LessonsLibrary from "./pages/LessonsLibrary";
 import DrillRunner from "./pages/DrillRunner";
