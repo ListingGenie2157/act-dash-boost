@@ -33,6 +33,7 @@ import TaskLauncher from "./pages/TaskLauncher";
 import LessonViewer from "./pages/LessonViewer";
 import DrillRunner from "./pages/DrillRunner";
 import QuizRunner from "./pages/QuizRunner";
+import WeakAreas from "./pages/WeakAreas";
 
 
 const queryClient = new QueryClient();
@@ -127,6 +128,7 @@ const App = () => (
   <Route path="/lesson/:topic" element={<LessonViewer />} />
   <Route path="/drill/:subject" element={<DrillRunner />} />
   <Route path="/quiz/:section" element={<QuizRunner />} />
+  <Route path="/weak-areas" element={<WeakAreas />} />
     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
             </Routes>

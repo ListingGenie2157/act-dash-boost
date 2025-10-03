@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { StudyTask } from '@/types';
 import { MasteryDashboard } from './MasteryDashboard';
+import { WeakAreasCard } from './WeakAreasCard';
 
 interface DashboardProps {
   onStartDay: (day: number) => void;
@@ -157,8 +158,11 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
         </Card>
       )}
 
-      {/* Mastery Progress */}
-      <MasteryDashboard />
+      {/* Mastery & Weak Areas Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <MasteryDashboard />
+        <WeakAreasCard limit={3} />
+      </div>
 
       {/* Hidden 5-Day Template - Only show after test_date exists */}
       
