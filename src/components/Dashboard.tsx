@@ -7,6 +7,7 @@ import { useProgress } from '@/hooks/useProgress';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { StudyTask } from '@/types';
+import { MasteryDashboard } from './MasteryDashboard';
 
 interface DashboardProps {
   onStartDay: (day: number) => void;
@@ -155,6 +156,9 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
           </div>
         </Card>
       )}
+
+      {/* Mastery Progress */}
+      <MasteryDashboard />
 
       {/* Hidden 5-Day Template - Only show after test_date exists */}
       

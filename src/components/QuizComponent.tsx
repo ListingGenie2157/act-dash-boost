@@ -5,6 +5,8 @@ import { Progress } from '@/components/ui/progress';
 import { CheckCircle, XCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import type { LegacyQuestion, QuizAnswers } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { batchUpdateMastery } from '@/lib/mastery';
+import { supabase } from '@/integrations/supabase/client';
 
 interface QuizComponentProps {
   questions: LegacyQuestion[];
@@ -49,7 +51,7 @@ export const QuizComponent = ({ questions, title, onComplete, onBack }: QuizComp
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setSubmitted(true);
     setShowResults(true);
     
@@ -62,6 +64,23 @@ export const QuizComponent = ({ questions, title, onComplete, onBack }: QuizComp
       .filter((_item, index) => answers[index] !== questions[index].correctAnswer);
     
     const score = Math.round(((questions.length - wrongAnswers.length) / questions.length) * 100);
+    
+    // Update mastery for all questions
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const masteryResults = questions.map((question, index) => ({
+          skillId: question.id, // Using question.id as skillId for curriculum questions
+          correct: answers[index] === question.correctAnswer,
+          timeMs: 30000, // Default 30 seconds per question (can be enhanced with actual timing)
+        }));
+        
+        await batchUpdateMastery(user.id, masteryResults);
+      }
+    } catch (error) {
+      console.error('Error updating mastery:', error);
+    }
+    
     onComplete(score, wrongAnswers);
   };
 
