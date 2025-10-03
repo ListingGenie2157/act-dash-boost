@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { curriculum } from '@/data/curriculum';
 import { useProgress } from '@/hooks/useProgress';
 import { supabase } from '@/integrations/supabase/client';
-import type { WrongAnswer, LegacyQuestion } from '@/types';
+import type { LegacyQuestion, QuizAnswers } from '@/types';
 
 type View = 'dashboard' | 'day' | 'review' | 'study';
 
@@ -104,7 +104,7 @@ const Index = () => {
     completeDay(dayNumber);
   };
 
-  const handleUpdateScore = (lessonId: string, practiceScore: number, quizScore: number, wrongAnswers: WrongAnswer[]) => {
+  const handleUpdateScore = (lessonId: string, practiceScore: number, quizScore: number, wrongAnswers: QuizAnswers) => {
     // Update scores
     updateProgress({
       ...progress,
