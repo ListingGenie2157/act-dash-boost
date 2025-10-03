@@ -31,7 +31,19 @@ export default function DrillRunner() {
         if (qError) {
           setError(qError.message);
         } else {
-          setQuestions(data ?? []);
+          // Map DB questions to Question type with proper defaults
+          const mappedQuestions: Question[] = (data ?? []).map(q => ({
+            id: q.id,
+            stem: q.stem,
+            choice_a: q.choice_a,
+            choice_b: q.choice_b,
+            choice_c: q.choice_c,
+            choice_d: q.choice_d,
+            answer: q.answer,
+            explanation: q.explanation ?? undefined,
+            skill_code: q.skill_id,
+          }));
+          setQuestions(mappedQuestions);
         }
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Failed to load questions');

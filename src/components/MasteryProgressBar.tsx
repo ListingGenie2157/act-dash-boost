@@ -35,7 +35,6 @@ export function MasteryProgressBar({
     milestoneLabel = 'Mastered';
   }
 
-  const progressToNext = level === 'mastered' ? 100 : (accuracy / nextMilestone) * 100;
 
   return (
     <div className={cn('space-y-2', className)}>

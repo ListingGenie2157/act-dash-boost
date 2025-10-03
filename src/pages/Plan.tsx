@@ -31,7 +31,7 @@ export default function Plan() {
         if (fetchError) {
           throw fetchError;
         }
-        setPlans(data ?? []);
+        setPlans((data ?? []) as StudyPlanDay[]);
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load plan';
         setError(errorMessage);

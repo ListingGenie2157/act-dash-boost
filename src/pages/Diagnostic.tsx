@@ -1,5 +1,4 @@
-import * as React from 'react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Card, Button, Progress, Badge, RadioGroup, RadioGroupItem, Label,
@@ -10,23 +9,6 @@ import { evaluationQuestions } from '@/data/evaluationQuestions';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-interface DiagnosticQuestion {
-  id: string;
-  stem: string;
-  choice_a: string;
-  choice_b: string;
-  choice_c: string;
-  choice_d: string;
-  answer: string;
-  skill_tags?: string[];
-}
-
-interface DiagnosticAnswer {
-  questionId: string;
-  selectedAnswer: string;
-  isCorrect: boolean;
-  timeSpent: number;
-}
 
 interface DiagnosticEvaluationProps {
   onComplete: (results: {
@@ -57,30 +39,28 @@ interface Question {
 
 export const DiagnosticEvaluation = ({
   onComplete,
-  previousScores
 }: DiagnosticEvaluationProps) => {
-  const [currentQuestionIndex, setCurrentQuestionIndex] = React.useState(0);
-  const [answers, setAnswers] = React.useState<Record<string, number>>({});
-  const [timeRemaining, setTimeRemaining] = React.useState(0);
-  const [isReviewing, setIsReviewing] = React.useState(false);
-  const [selectedAnswer, setSelectedAnswer] = React.useState<string>('');
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [selectedAnswer, setSelectedAnswer] = useState<string>('');
+  const [timeRemaining, setTimeRemaining] = useState(0);
 
   // Use the evaluation questions from the data file
-  const allQuestions = React.useMemo(() => {
+  const [allQuestions] = useState<Question[]>(() => {
     const questions: Question[] = [];
     
     // Add questions from each subject
     Object.entries(evaluationQuestions).forEach(([subject, subjectQuestions]) => {
-      subjectQuestions.forEach((q: { 
-        id: string; 
-        skill?: string; 
-        question: string; 
+      (subjectQuestions as Array<{
+        id: string;
+        skill?: string;
+        question: string;
         passage?: string;
         underlined?: string;
-        options: string[]; 
-        correctAnswer: number | string; 
-        explanation?: string; 
-      }) => {
+        options: string[];
+        correctAnswer: number | string;
+        explanation?: string;
+      }>).forEach((q) => {
         questions.push({
           id: q.id,
           subject: subject as 'english' | 'math' | 'reading' | 'science',
@@ -88,36 +68,18 @@ export const DiagnosticEvaluation = ({
           difficulty: 'medium',
           question: q.question,
           options: q.options,
-          correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : parseInt(q.correctAnswer) || 0,
-          explanation: q.explanation,
+          correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : parseInt(String(q.correctAnswer), 10) || 0,
+          explanation: q.explanation || '',
           timeLimit: 60
         });
       });
     });
     
     return questions;
-  }, []);
+  });
 
   const currentQuestion = allQuestions[currentQuestionIndex];
   const totalQuestions = allQuestions.length;
-
-  React.useEffect(() => {
-    if (currentQuestion && !isReviewing) {
-      setTimeRemaining(currentQuestion.timeLimit);
-      setSelectedAnswer('');
-    }
-  }, [currentQuestionIndex, currentQuestion, isReviewing]);
-
-  React.useEffect(() => {
-    if (timeRemaining > 0 && !isReviewing) {
-      const timer = setInterval(() => {
-        setTimeRemaining(prev => prev - 1);
-      }, 1000);
-      return () => clearInterval(timer);
-    } else if (timeRemaining === 0 && currentQuestion && !isReviewing) {
-      handleSubmitAnswer();
-    }
-  }, [timeRemaining, isReviewing, currentQuestion]);
 
   const handleSubmitAnswer = () => {
     if (!currentQuestion) return;
@@ -273,9 +235,7 @@ export default function Diagnostic() {
         return;
       }
 
-      // Calculate average score
-      const scores = Object.values(results).map((result: { score?: number }) => Number(result?.score) || 0);
-      const averageScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+      // Results ready to save
 
       // Save results to diagnostics table for each section
       const sections = Object.keys(results);

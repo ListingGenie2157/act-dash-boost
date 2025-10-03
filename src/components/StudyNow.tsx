@@ -293,7 +293,7 @@ const TaskRunner = memo(function TaskRunner({ task, onComplete }: TaskRunnerProp
           }
         }
 
-        if (task.type !== 'LEARN') {
+        if (task.type !== 'LEARN' && task.skill_id) {
           // Load questions for this skill
           const { data: questionsData, error: questionsError } = await supabase
             .from('questions')

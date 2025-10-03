@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { FormPicker } from '@/components/FormPicker';
 import { SectionPicker } from '@/components/SectionPicker';
@@ -7,7 +7,7 @@ import { TimerBar } from '@/components/TimerBar';
 import { QuestionCard } from '@/components/QuestionCard';
 import { PassageLayout } from '@/components/PassageLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Home } from 'lucide-react';
@@ -150,7 +150,7 @@ export default function Simulation() {
     const timeSpent = Date.now() - questionStartTime;
 
     try {
-      const { data, error } = await supabase.functions.invoke('response-submit', {
+      const { error } = await supabase.functions.invoke('response-submit', {
         body: {
           session_id: sessionData.session_id,
           question_id: questionId,

@@ -50,8 +50,8 @@ const SimMath = () => {
         if (error) throw error;
         
         const formattedQuestions = (data || []).map(d => ({
-          id: d.id ?? '',
-          stem: d.stem ?? '',
+          id: d.question_id ?? '',
+          stem: d.question ?? '',
           choice_a: d.choice_a ?? '',
           choice_b: d.choice_b ?? '',
           choice_c: d.choice_c ?? '',

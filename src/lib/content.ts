@@ -23,7 +23,7 @@ export async function getLessonBySkill(skill_code: string) {
 export async function getQuestionsBySkill(skill_code: string, n: number) {
   const { data, error } = await supabase
     .from('questions')
-    .select('id, stem, choice_a, choice_b, choice_c, choice_d, answer, explanation, skill_id, section, ord, form_id')
+    .select('id, stem, choice_a, choice_b, choice_c, choice_d, answer, explanation, skill_id, difficulty, time_limit_secs')
     .eq('skill_id', skill_code)
     .limit(n);
   return { data, error };

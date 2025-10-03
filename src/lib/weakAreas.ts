@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { getAllUserMastery, type MasteryData } from './mastery';
+import { getAllUserMastery } from './mastery';
 
 export interface WeakArea {
   skill_id: string;

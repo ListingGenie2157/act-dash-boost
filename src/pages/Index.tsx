@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Dashboard } from '@/components/Dashboard';
 import { DayView } from '@/components/DayView';
 import { CountdownHeader } from '@/components/CountdownHeader';
 import { StudyNow } from '@/components/StudyNow';
@@ -10,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { curriculum } from '@/data/curriculum';
 import { useProgress } from '@/hooks/useProgress';
 import { supabase } from '@/integrations/supabase/client';
-import { WrongAnswer } from '@/types';
+import type { WrongAnswer, LegacyQuestion } from '@/types';
 
 type View = 'dashboard' | 'day' | 'review' | 'study';
 
@@ -98,21 +97,8 @@ const Index = () => {
     };
   }, [navigate]);
 
-  const handleStartDay = (dayNumber: number) => {
-    setSelectedDay(dayNumber);
-    setCurrentView('day');
-  };
-
   const handleBackToDashboard = () => {
     setCurrentView('dashboard');
-  };
-
-  const handleViewReview = () => {
-    setCurrentView('review');
-  };
-
-  const handleStudyNow = () => {
-    setCurrentView('study');
   };
 
   const handleDayComplete = (dayNumber: number) => {
@@ -134,7 +120,7 @@ const Index = () => {
 
     // Add wrong answers and update weak areas
     wrongAnswers.forEach((wa) => {
-      addWrongAnswer(wa.questionId, wa.question, wa.userAnswer);
+      addWrongAnswer(wa.questionId, wa.question as LegacyQuestion, wa.userAnswer);
       
       // Determine topic from lesson
       const lesson = curriculum.find(d => 
