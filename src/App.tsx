@@ -31,6 +31,8 @@ import DiagnosticResults from "./pages/DiagnosticResults";
 import Plan from "./pages/Plan";
 import TaskLauncher from "./pages/TaskLauncher";
 import LessonViewer from "./pages/LessonViewer";
+import EnhancedLessonViewer from "./pages/EnhancedLessonViewer";
+import LessonsLibrary from "./pages/LessonsLibrary";
 import DrillRunner from "./pages/DrillRunner";
 import QuizRunner from "./pages/QuizRunner";
 import WeakAreas from "./pages/WeakAreas";
@@ -125,7 +127,8 @@ const App = () => (
           } />
         <Route path="/plan" element={<Plan />} />
   <Route path="/task/:date/:idx" element={<TaskLauncher />} />
-  <Route path="/lesson/:topic" element={<LessonViewer />} />
+  <Route path="/lesson/:topic" element={<EnhancedLessonViewer />} />
+  <Route path="/lessons" element={<LessonsLibrary />} />
   <Route path="/drill/:subject" element={<DrillRunner />} />
   <Route path="/quiz/:section" element={<QuizRunner />} />
   <Route path="/weak-areas" element={<WeakAreas />} />
