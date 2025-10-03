@@ -8,6 +8,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageLoadingSpinner } from './components/LoadingSpinner';
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import SimpleLogin from "./pages/SimpleLogin";
 import Onboarding from "./pages/Onboarding";
 import Simulation from "./pages/Simulation";
 import NotFound from "./pages/NotFound";
@@ -51,6 +52,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           {/* Login route to handle user authentication. */}
           <Route path="/login" element={<Login />} />
+          <Route path="/simple-login" element={<SimpleLogin />} />
           {/* Onboarding wizard route */}
           <Route path="/onboarding" element={<Onboarding />} />
           {/* Diagnostic assessment route */}
