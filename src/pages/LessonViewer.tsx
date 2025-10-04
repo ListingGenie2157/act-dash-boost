@@ -1,10 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { getLessonBySkill } from '@/lib/content';
+import { sanitizeHTML } from '@/lib/sanitize';
+
+interface Lesson {
+  id: string;
+  title: string;
+  body: string;
+  skill_code: string;
+  subject: string;
+}
 
 export default function LessonViewer() {
   const { topic } = useParams<{ topic?: string }>();
-  const [lesson, setLesson] = useState<any | null>(null);
+  const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -14,9 +23,9 @@ export default function LessonViewer() {
       setError(null);
       try {
         const code = topic ?? '';
-        const { data, error } = await getLessonBySkill(code);
-        if (error) {
-          setError(error.message);
+        const { data, error: fetchError } = await getLessonBySkill(code);
+        if (fetchError) {
+          setError(fetchError.message);
         } else {
           setLesson(data);
         }
@@ -26,7 +35,7 @@ export default function LessonViewer() {
         setLoading(false);
       }
     };
-    fetchLesson();
+    void fetchLesson();
   }, [topic]);
 
   if (loading) {
@@ -44,10 +53,10 @@ export default function LessonViewer() {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">{lesson.title || 'Lesson'}</h1>
-      {/* naive rendering; if body contains markdown HTML; ideally use a markdown renderer */}
-      <div className="prose max-w-none">
-        {lesson.body || lesson.content || 'No content'}
-      </div>
+      <div
+        className="prose max-w-none"
+        dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.body || 'No content') }}
+      />
     </div>
   );
 }

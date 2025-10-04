@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Timer, Play, Pause, RotateCcw, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
-import { DrillSession } from '@/types';
+import type { DrillSession } from '@/types';
 import { useTimer } from '@/hooks/useTimer';
 import { useToast } from '@/hooks/use-toast';
 
@@ -24,11 +24,23 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
   // Toast API for immediate feedback during drills.
   const { toast } = useToast();
 
+  const handleFinish = (finalAnswers: number[]) => {
+    pauseTimer();
+    setShowResults(true);
+    
+    const correctCount = finalAnswers.filter((answer, index) => 
+      answer === drill.questions[index].correctAnswer
+    ).length;
+    
+    const score = Math.round((correctCount / drill.questions.length) * 100);
+    onComplete(score);
+  };
+
   useEffect(() => {
     if (isCompleted && hasStarted) {
       handleFinish(answers);
     }
-  }, [isCompleted, hasStarted, answers]);
+  }, [isCompleted, hasStarted, answers, handleFinish]);
 
   const handleStart = () => {
     setHasStarted(true);
@@ -56,22 +68,6 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
       // All questions answered, finish drill
       handleFinish(newAnswers);
     }
-  };
-
-  const handleTimeUp = () => {
-    handleFinish(answers);
-  };
-
-  const handleFinish = (finalAnswers: number[]) => {
-    pauseTimer();
-    setShowResults(true);
-    
-    const correctCount = finalAnswers.filter((answer, index) => 
-      answer === drill.questions[index].correctAnswer
-    ).length;
-    
-    const score = Math.round((correctCount / drill.questions.length) * 100);
-    onComplete(score);
   };
 
   const currentQ = drill.questions[currentQuestion];

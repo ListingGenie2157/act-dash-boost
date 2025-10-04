@@ -1,4 +1,4 @@
-import { Day, Lesson, DrillSession } from '../types';
+import type { Day, DrillSession } from '../types';
 
 // Drill sessions provide rapid-fire practice separate from the structured daily lessons.
 // These drills are unchanged from the original curriculum and can be used for extra practice.

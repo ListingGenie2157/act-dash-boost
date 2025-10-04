@@ -73,9 +73,11 @@ export default function ParentPortal() {
         currentParentId = newParent.id;
       }
 
-      setParentId(currentParentId);
-      fetchRules(currentParentId);
-      fetchLedger(currentParentId);
+      if (currentParentId) {
+        setParentId(currentParentId);
+        void fetchRules(currentParentId);
+        void fetchLedger(currentParentId);
+      }
     } catch (error) {
       console.error('Error initializing parent portal:', error);
       toast.error('Failed to load parent portal');

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Dashboard } from '@/components/Dashboard';
 import { DayView } from '@/components/DayView';
 import { CountdownHeader } from '@/components/CountdownHeader';
 import { StudyNow } from '@/components/StudyNow';
@@ -10,13 +9,12 @@ import { Button } from '@/components/ui/button';
 import { curriculum } from '@/data/curriculum';
 import { useProgress } from '@/hooks/useProgress';
 import { supabase } from '@/integrations/supabase/client';
-import { WrongAnswer } from '@/types';
+import type { LegacyQuestion, QuizAnswers } from '@/types';
 
 type View = 'dashboard' | 'day' | 'review' | 'study';
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<View>('dashboard');
-  const [selectedDay, setSelectedDay] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { progress, updateProgress, addWrongAnswer, updateWeakAreas, completeDay } = useProgress();
@@ -41,21 +39,44 @@ const Index = () => {
               setIsAuthenticated(true);
               
               // Check if user has completed onboarding
+              // We check BOTH tables: profiles (has test_date) and user_profiles (has onboarding flags)
               try {
-                const { data: profile, error } = await supabase
+                // Check if user has test_date set (in profiles table)
+                const { data: profile, error: profileError } = await supabase
                   .from('profiles')
                   .select('test_date')
                   .eq('id', session.user.id)
                   .maybeSingle();
                 
-                console.log('Profile check:', { profile, error });
+                console.log('Profile check:', { profile, error: profileError });
                 
-                if (!profile?.test_date && mounted) {
-                  navigate('/onboarding');
+                // If no profile or no test_date, send to onboarding
+                if ((!profile || !profile.test_date) && mounted) {
+                  console.log('No profile or test date found, redirecting to onboarding');
+                  navigate('/onboarding', { replace: true });
+                  return;
+                }
+
+                // Also check if they completed onboarding wizard
+                const { data: userProfile } = await supabase
+                  .from('user_profiles')
+                  .select('age_verified, tos_accepted')
+                  .eq('user_id', session.user.id)
+                  .maybeSingle();
+
+                // If no user_profile (onboarding not started), send to onboarding
+                if (!userProfile && mounted) {
+                  console.log('No user_profile found, redirecting to onboarding');
+                  navigate('/onboarding', { replace: true });
                   return;
                 }
               } catch (profileError) {
                 console.error('Profile check failed:', profileError);
+                // On error, safer to send to onboarding
+                if (mounted) {
+                  navigate('/onboarding', { replace: true });
+                  return;
+                }
               }
             } else {
               setIsAuthenticated(false);
@@ -98,28 +119,15 @@ const Index = () => {
     };
   }, [navigate]);
 
-  const handleStartDay = (dayNumber: number) => {
-    setSelectedDay(dayNumber);
-    setCurrentView('day');
-  };
-
   const handleBackToDashboard = () => {
     setCurrentView('dashboard');
-  };
-
-  const handleViewReview = () => {
-    setCurrentView('review');
-  };
-
-  const handleStudyNow = () => {
-    setCurrentView('study');
   };
 
   const handleDayComplete = (dayNumber: number) => {
     completeDay(dayNumber);
   };
 
-  const handleUpdateScore = (lessonId: string, practiceScore: number, quizScore: number, wrongAnswers: WrongAnswer[]) => {
+  const handleUpdateScore = (lessonId: string, practiceScore: number, quizScore: number, wrongAnswers: QuizAnswers) => {
     // Update scores
     updateProgress({
       ...progress,
@@ -134,7 +142,7 @@ const Index = () => {
 
     // Add wrong answers and update weak areas
     wrongAnswers.forEach((wa) => {
-      addWrongAnswer(wa.questionId, wa.question, wa.userAnswer);
+      addWrongAnswer(wa.questionId, wa.question as LegacyQuestion, wa.userAnswer);
       
       // Determine topic from lesson
       const lesson = curriculum.find(d => 
@@ -149,7 +157,7 @@ const Index = () => {
     });
   };
 
-  const selectedDayData = curriculum.find(d => d.day === selectedDay);
+  const selectedDayData = curriculum.find(d => d.day === 1);
 
   // Loading state
   if (isLoading) {

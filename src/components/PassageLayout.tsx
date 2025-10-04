@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { QuestionCard } from './QuestionCard';
 
 interface Question {
@@ -133,7 +132,7 @@ export function PassageLayout({
                       {questionsForPassage.length > 0 && (
                         <div className="mt-4 pt-3 border-t">
                           <div className="flex flex-wrap gap-1">
-                            {questionsForPassage.map((q, idx) => {
+                            {questionsForPassage.map((q) => {
                               const questionIndex = questions.findIndex(question => question.id === q.id);
                               const isAnswered = !!answers[q.id];
                               const isCurrent = questionIndex === currentQuestionIndex;

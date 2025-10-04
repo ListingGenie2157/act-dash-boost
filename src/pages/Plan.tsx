@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import type { StudyPlanDay, StudyPlanTask } from '@/types';
 
 export default function Plan() {
-  const [plans, setPlans] = useState<any[]>([]);
+  const [plans, setPlans] = useState<StudyPlanDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,18 +18,23 @@ export default function Plan() {
           return;
         }
         const today = new Date().toISOString().split('T')[0];
+        const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0];
         const { data, error: fetchError } = await supabase
           .from('study_plan_days')
-          .select('the_date, tasks_json')
+          .select('the_date, tasks_json, user_id, generated_at')
           .eq('user_id', user.id)
           .gte('the_date', today)
+          .lte('the_date', sevenDaysFromNow)
           .order('the_date', { ascending: true });
         if (fetchError) {
           throw fetchError;
         }
-        setPlans(data ?? []);
-      } catch (err: any) {
-        setError(err.message ?? 'Failed to load plan');
+        setPlans((data ?? []) as StudyPlanDay[]);
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load plan';
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -47,12 +53,12 @@ export default function Plan() {
       ) : (
         <div className="space-y-4">
           {plans.map((plan, idx) => {
-            const tasks = plan.tasks_json || [];
+            const tasks: StudyPlanTask[] = plan.tasks_json ?? [];
             return (
               <div key={idx} className="border p-4 rounded">
                 <h2 className="font-semibold">{plan.the_date}</h2>
                 <ul className="mt-2 space-y-1">
-                  {tasks.map((task: any, taskIdx: number) => (
+                  {tasks.map((task: StudyPlanTask, taskIdx: number) => (
                     <li key={taskIdx}>
                       <Link
                         to={`/task/${plan.the_date}/${taskIdx}`}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,18 +52,18 @@ const SimScience = () => {
 
         if (error) throw error;
         
-        const formattedQuestions = data?.map(d => ({
-          id: d.question_id,
-          stem: d.question,
-          choice_a: d.choice_a,
-          choice_b: d.choice_b,
-          choice_c: d.choice_c,
-          choice_d: d.choice_d,
-          answer: d.answer,
+        const formattedQuestions = (data || []).map(d => ({
+          id: d.question_id ?? '',
+          stem: d.question ?? '',
+          choice_a: d.choice_a ?? '',
+          choice_b: d.choice_b ?? '',
+          choice_c: d.choice_c ?? '',
+          choice_d: d.choice_d ?? '',
+          answer: d.answer ?? 'A',
           passage_id: d.passage_id,
           passage_title: d.passage_title,
           passage_text: d.passage_text
-        })) || [];
+        }));
         
         setQuestions(formattedQuestions);
       } catch (error) {
@@ -151,7 +151,7 @@ const SimScience = () => {
       if (!user) throw new Error('User not authenticated');
 
       // Create sim result
-      const { data: simResult, error: simError } = await supabase
+      const { error: simError } = await supabase
         .from('sim_results')
         .insert({
           user_id: user.id,

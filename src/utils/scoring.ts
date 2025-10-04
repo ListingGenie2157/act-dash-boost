@@ -1,7 +1,7 @@
 // Simple monotonic mapping from percent to scaled score
 // Note: This is an estimate until proper IRT scaling tables are implemented
 
-export function percentToScaledScore(percent: number, section: string): number {
+export function percentToScaledScore(percent: number): number {
   // Clamp percent between 0 and 100
   const clampedPercent = Math.max(0, Math.min(100, percent));
   

@@ -1,13 +1,14 @@
-import { Target, TrendingUp, AlertCircle, Clock, CheckCircle, Brain, Play } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Target, TrendingUp, Clock, Play } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useProgress } from '@/hooks/useProgress';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { DiagnosticResults, StudyTask } from '@/types';
+import { StudyTask } from '@/types';
+import { MasteryDashboard } from './MasteryDashboard';
+import { WeakAreasCard } from './WeakAreasCard';
 
 interface DashboardProps {
   onStartDay: (day: number) => void;
@@ -15,58 +16,60 @@ interface DashboardProps {
   onStudyNow?: () => void;
 }
 
-export const Dashboard = ({ onStartDay, onViewReview, onStudyNow }: DashboardProps) => {
+export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
   const { progress } = useProgress();
-  const navigate = useNavigate();
-  const [diagnosticResults, setDiagnosticResults] = useState<DiagnosticResults | null>(null);
   const [daysLeft, setDaysLeft] = useState<number | null>(null);
   const [todaysTasks, setTodaysTasks] = useState<StudyTask[]>([]);
 
   useEffect(() => {
-    const results = localStorage.getItem('diagnostic-results');
-    if (results) {
-      setDiagnosticResults(JSON.parse(results));
-    }
-    fetchDaysLeft();
-    fetchTodaysTasks();
-  }, []);
-  
-  const fetchDaysLeft = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('days-left');
-      if (error) {
+    const fetchDaysLeft = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('days-left');
+        if (error) {
+          console.error('Error fetching days left:', error);
+          setDaysLeft(5);
+          return;
+        }
+        if (data && typeof (data as { days_left?: number }).days_left === 'number') {
+          setDaysLeft((data as { days_left: number }).days_left);
+        } else {
+          setDaysLeft(null);
+        }
+      } catch (error) {
         console.error('Error fetching days left:', error);
-        setDaysLeft(5); // fallback
-        return;
+        setDaysLeft(5);
       }
-      if (data && typeof data.days_left === 'number') {
-        setDaysLeft(data.days_left);
-      } else {
-        setDaysLeft(null);
-      }
-    } catch (error) {
-      console.error('Error fetching days left:', error);
-      setDaysLeft(5); // fallback
-    }
-  };
+    };
 
-  const fetchTodaysTasks = async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const { data, error } = await supabase
-        .from('study_tasks')
-        .select('*')
-        .eq('the_date', today)
-        .eq('status', 'PENDING')
-        .order('created_at', { ascending: true });
-      
-      if (!error && data) {
-        setTodaysTasks(data);
+    const fetchTodaysTasks = async () => {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from('study_tasks')
+          .select(
+            'id, user_id, type, skill_id, the_date, status, size, accuracy, median_time_ms, reward_cents, created_at'
+          )
+          .eq('the_date', today)
+          .eq('user_id', user.id)
+          .eq('status', 'PENDING')
+          .order('created_at', { ascending: true });
+
+        if (!error && data) {
+          setTodaysTasks(data);
+        }
+      } catch (error) {
+        console.error("Error fetching today's tasks:", error);
       }
-    } catch (error) {
-      console.error('Error fetching today\'s tasks:', error);
-    }
-  };
+    };
+
+    void fetchDaysLeft();
+    void fetchTodaysTasks();
+  }, []);
 
   const daysUntilTest = daysLeft ?? 5;
   const topWeakAreas = progress.weakAreas
@@ -99,7 +102,7 @@ export const Dashboard = ({ onStartDay, onViewReview, onStudyNow }: DashboardPro
               </Badge>
             </div>
             <div className="space-y-2">
-              {todaysTasks.slice(0, 3).map((task, index) => (
+              {todaysTasks.slice(0, 3).map((task) => (
                 <div key={task.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className={`w-2 h-2 rounded-full ${
@@ -135,7 +138,7 @@ export const Dashboard = ({ onStartDay, onViewReview, onStudyNow }: DashboardPro
               </Button>
             </div>
             <div className="space-y-3">
-              {topWeakAreas.map((area, index) => (
+              {topWeakAreas.map((area) => (
                 <div key={`${area.subject}-${area.topic}`} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center ${
@@ -154,6 +157,12 @@ export const Dashboard = ({ onStartDay, onViewReview, onStudyNow }: DashboardPro
           </div>
         </Card>
       )}
+
+      {/* Mastery & Weak Areas Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <MasteryDashboard />
+        <WeakAreasCard limit={3} />
+      </div>
 
       {/* Hidden 5-Day Template - Only show after test_date exists */}
       

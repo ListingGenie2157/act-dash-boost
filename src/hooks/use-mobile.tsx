@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { isBrowser } from '@/lib/env';
 
-const MOBILE_BREAKPOINT = 768
+// const MOBILE_BREAKPOINT = 768
 
 export function useIsMobile() {
   const [mobile, setMobile] = useState(false);
