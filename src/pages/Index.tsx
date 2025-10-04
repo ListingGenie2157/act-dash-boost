@@ -39,21 +39,44 @@ const Index = () => {
               setIsAuthenticated(true);
               
               // Check if user has completed onboarding
+              // We check BOTH tables: profiles (has test_date) and user_profiles (has onboarding flags)
               try {
-                const { data: profile, error } = await supabase
+                // Check if user has test_date set (in profiles table)
+                const { data: profile, error: profileError } = await supabase
                   .from('profiles')
                   .select('test_date')
                   .eq('id', session.user.id)
                   .maybeSingle();
                 
-                console.log('Profile check:', { profile, error });
+                console.log('Profile check:', { profile, error: profileError });
                 
-                if (!profile?.test_date && mounted) {
-                  navigate('/onboarding');
+                // If no profile or no test_date, send to onboarding
+                if ((!profile || !profile.test_date) && mounted) {
+                  console.log('No profile or test date found, redirecting to onboarding');
+                  navigate('/onboarding', { replace: true });
+                  return;
+                }
+
+                // Also check if they completed onboarding wizard
+                const { data: userProfile } = await supabase
+                  .from('user_profiles')
+                  .select('age_verified, tos_accepted')
+                  .eq('user_id', session.user.id)
+                  .maybeSingle();
+
+                // If no user_profile (onboarding not started), send to onboarding
+                if (!userProfile && mounted) {
+                  console.log('No user_profile found, redirecting to onboarding');
+                  navigate('/onboarding', { replace: true });
                   return;
                 }
               } catch (profileError) {
                 console.error('Profile check failed:', profileError);
+                // On error, safer to send to onboarding
+                if (mounted) {
+                  navigate('/onboarding', { replace: true });
+                  return;
+                }
               }
             } else {
               setIsAuthenticated(false);

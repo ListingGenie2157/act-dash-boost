@@ -161,7 +161,8 @@ export default function Onboarding() {
       if (form.startWith === 'diagnostic') {
         navigate('/diagnostic');
       } else {
-        navigate('/dashboard');
+        // Skip diagnostic, go straight to main app
+        navigate('/');
       }
     } catch (error) {
       console.error('Error completing onboarding:', error);

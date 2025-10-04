@@ -140,8 +140,8 @@ export default function SimpleLogin() {
           )}
 
           <div className="text-xs text-muted-foreground space-y-1">
-            <p><strong>Supabase URL:</strong> {supabase.supabaseUrl}</p>
             <p><strong>Auth enabled:</strong> ✅</p>
+            <p><strong>Ready to test</strong></p>
           </div>
         </CardContent>
       </Card>
