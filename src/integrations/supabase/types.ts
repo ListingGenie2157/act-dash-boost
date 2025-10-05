@@ -326,6 +326,8 @@ export type Database = {
           created_at: string | null
           daily_time_cap_mins: number | null
           id: string
+          onboarding_complete: boolean | null
+          onboarding_step: string | null
           test_date: string | null
           updated_at: string | null
         }
@@ -333,6 +335,8 @@ export type Database = {
           created_at?: string | null
           daily_time_cap_mins?: number | null
           id: string
+          onboarding_complete?: boolean | null
+          onboarding_step?: string | null
           test_date?: string | null
           updated_at?: string | null
         }
@@ -340,6 +344,8 @@ export type Database = {
           created_at?: string | null
           daily_time_cap_mins?: number | null
           id?: string
+          onboarding_complete?: boolean | null
+          onboarding_step?: string | null
           test_date?: string | null
           updated_at?: string | null
         }

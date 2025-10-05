@@ -39,24 +39,6 @@ const Index = () => {
             
             if (session) {
               setIsAuthenticated(true);
-              
-              // Check if user has completed onboarding
-              try {
-                const { data: profile, error } = await supabase
-                  .from('profiles')
-                  .select('test_date')
-                  .eq('id', session.user.id)
-                  .maybeSingle();
-                
-                console.log('Profile check:', { profile, error });
-                
-                if (!profile?.test_date && mounted) {
-                  navigate('/onboarding');
-                  return;
-                }
-              } catch (profileError) {
-                console.error('Profile check failed:', profileError);
-              }
             } else {
               setIsAuthenticated(false);
             }
