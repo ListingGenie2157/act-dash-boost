@@ -44,7 +44,8 @@ export default function OnboardingGate() {
   }
 
   // User needs to complete onboarding
-  if (!profile || profile.onboarding_complete === false) {
+  // Treat null/undefined as incomplete (for existing users before migration)
+  if (!profile || profile.onboarding_complete !== true) {
     return <OnboardingWizard initialStep={profile?.onboarding_step} />;
   }
 
