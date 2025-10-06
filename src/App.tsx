@@ -33,6 +33,7 @@ import TaskLauncher from "./pages/TaskLauncher";
 import LessonViewer from "./pages/LessonViewer";
 import DrillRunner from "./pages/DrillRunner";
 import QuizRunner from "./pages/QuizRunner";
+import RunMigration from "./pages/RunMigration";
 
 
 const queryClient = new QueryClient();
@@ -51,6 +52,8 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           {/* Onboarding wizard route */}
           <Route path="/onboarding" element={<Onboarding />} />
+          {/* Migration helper route */}
+          <Route path="/run-migration" element={<RunMigration />} />
           {/* Diagnostic assessment route */}
           <Route path="/diagnostic" element={
             <LazyLoader>
