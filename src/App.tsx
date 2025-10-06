@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageLoadingSpinner } from './components/LoadingSpinner';
-import Index from "./pages/Index";
+import OnboardingGate from "./routes/OnboardingGate";
 import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
 import Simulation from "./pages/Simulation";
@@ -33,6 +33,7 @@ import TaskLauncher from "./pages/TaskLauncher";
 import LessonViewer from "./pages/LessonViewer";
 import DrillRunner from "./pages/DrillRunner";
 import QuizRunner from "./pages/QuizRunner";
+import RunMigration from "./pages/RunMigration";
 
 
 const queryClient = new QueryClient();
@@ -46,11 +47,13 @@ const App = () => (
         <BrowserRouter>
           <Suspense fallback={<PageLoadingSpinner />}>
             <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<OnboardingGate />} />
           {/* Login route to handle user authentication. */}
           <Route path="/login" element={<Login />} />
           {/* Onboarding wizard route */}
           <Route path="/onboarding" element={<Onboarding />} />
+          {/* Migration helper route */}
+          <Route path="/run-migration" element={<RunMigration />} />
           {/* Diagnostic assessment route */}
           <Route path="/diagnostic" element={
             <LazyLoader>

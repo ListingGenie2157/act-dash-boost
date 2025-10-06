@@ -1,6 +1,7 @@
 export { Button } from "./button";
 export { Input } from "./input";
 export { Label } from "./label";
+export { default as Stepper } from "./Stepper";
 export { Switch } from "./switch";
 export { Checkbox } from "./checkbox";
 export { Textarea } from "./textarea";
