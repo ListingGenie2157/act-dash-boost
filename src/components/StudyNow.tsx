@@ -27,8 +27,6 @@ interface Question {
   choice_b: string;
   choice_c: string;
   choice_d: string;
-  answer: 'A' | 'B' | 'C' | 'D';
-  explanation: string;
   difficulty: number;
   time_limit_secs: number;
 }
@@ -290,18 +288,15 @@ const TaskRunner = memo(function TaskRunner({ task, onComplete }: TaskRunnerProp
         }
 
         if (task.type !== 'LEARN') {
-          // Load questions for this skill
+          // Load questions for this skill (without answers for security)
           const { data: questionsData, error: questionsError } = await supabase
-            .from('questions')
+            .from('questions_secure')
             .select('*')
             .eq('skill_id', task.skill_id)
             .limit(task.size);
 
           if (questionsError) throw questionsError;
-          setQuestions((questionsData || []).map(q => ({
-            ...q,
-            answer: q.answer as 'A' | 'B' | 'C' | 'D'
-          })));
+          setQuestions(questionsData || []);
         }
 
         setTimeStarted(Date.now());
@@ -335,12 +330,29 @@ const TaskRunner = memo(function TaskRunner({ task, onComplete }: TaskRunnerProp
       const accommodatedTime = await getAccommodatedTime(baseTimeLimit);
       setTimeRemaining(accommodatedTime);
     } else {
-      // Complete the task
+      // Complete the task - check answers server-side
       const totalTime = Date.now() - timeStarted;
-      const correctAnswers = Object.entries(answers).reduce((count, [qId, ans]) => {
-        const q = questions.find(q => q.id === qId);
-        return count + (q && q.answer === ans ? 1 : 0);
-      }, 0) + (currentQuestion.answer === answer ? 1 : 0);
+      
+      // Check all answers using the secure server-side function
+      let correctAnswers = 0;
+      for (const [qId, ans] of Object.entries(answers)) {
+        const { data } = await supabase.rpc('check_answer', {
+          p_question_id: qId,
+          p_user_answer: ans
+        });
+        if (data && data[0]?.is_correct) {
+          correctAnswers++;
+        }
+      }
+      
+      // Check current question
+      const { data: currentCheck } = await supabase.rpc('check_answer', {
+        p_question_id: currentQuestion.id,
+        p_user_answer: answer
+      });
+      if (currentCheck && currentCheck[0]?.is_correct) {
+        correctAnswers++;
+      }
       
       const accuracy = correctAnswers / questions.length;
       onComplete(task.id, accuracy, totalTime);

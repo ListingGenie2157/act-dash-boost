@@ -44,14 +44,29 @@ describe('Row Level Security Tests', () => {
       expect(forms).toBeDefined();
     });
 
-    it('should allow reading questions', async () => {
+    it('should allow reading questions through secure view (without answers)', async () => {
       const { data: questions, error: questionsError } = await anonClient
-        .from('questions')
+        .from('questions_secure')
         .select('*')
         .limit(1);
       
       expect(questionsError).toBeNull();
       expect(questions).toBeDefined();
+      // Verify answer field is not exposed
+      if (questions && questions.length > 0) {
+        expect(questions[0]).not.toHaveProperty('answer');
+        expect(questions[0]).not.toHaveProperty('explanation');
+      }
+    });
+
+    it('should NOT allow reading questions table directly (to prevent cheating)', async () => {
+      const { data: questions, error: questionsError } = await anonClient
+        .from('questions')
+        .select('*')
+        .limit(1);
+      
+      // Should fail or return empty due to no RLS policy
+      expect(questions).toEqual([]);
     });
 
     it('should not allow writing to user-specific tables', async () => {
