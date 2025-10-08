@@ -146,6 +146,13 @@ export type Database = {
             referencedRelation: "questions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "error_bank_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "v_form_section"
+            referencedColumns: ["question_id"]
+          },
         ]
       }
       form_questions: {
@@ -186,11 +193,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "form_questions_passage_id_fkey"
+            columns: ["passage_id"]
+            isOneToOne: false
+            referencedRelation: "v_form_section"
+            referencedColumns: ["passage_id"]
+          },
+          {
             foreignKeyName: "form_questions_question_id_fkey"
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "questions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_questions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "v_form_section"
+            referencedColumns: ["question_id"]
           },
         ]
       }
@@ -326,6 +347,8 @@ export type Database = {
           created_at: string | null
           daily_time_cap_mins: number | null
           id: string
+          onboarding_complete: boolean | null
+          onboarding_step: string | null
           test_date: string | null
           updated_at: string | null
         }
@@ -333,6 +356,8 @@ export type Database = {
           created_at?: string | null
           daily_time_cap_mins?: number | null
           id: string
+          onboarding_complete?: boolean | null
+          onboarding_step?: string | null
           test_date?: string | null
           updated_at?: string | null
         }
@@ -340,6 +365,8 @@ export type Database = {
           created_at?: string | null
           daily_time_cap_mins?: number | null
           id?: string
+          onboarding_complete?: boolean | null
+          onboarding_step?: string | null
           test_date?: string | null
           updated_at?: string | null
         }
@@ -506,6 +533,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "questions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_queue_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "v_form_section"
+            referencedColumns: ["question_id"]
           },
         ]
       }
@@ -993,20 +1027,6 @@ export type Database = {
             columns: ["form_id"]
             isOneToOne: false
             referencedRelation: "forms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "form_questions_passage_id_fkey"
-            columns: ["passage_id"]
-            isOneToOne: false
-            referencedRelation: "passages"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "form_questions_question_id_fkey"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "questions"
             referencedColumns: ["id"]
           },
         ]
