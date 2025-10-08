@@ -26,63 +26,53 @@ const Index = () => {
   useEffect(() => {
     let mounted = true;
 
-    const initAuth = async () => {
+    const checkAuthAndProfile = async () => {
       try {
-        console.log('Initializing auth state...');
+        // Check for existing session first
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
-        // Set up auth state listener FIRST
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            console.log('Auth state changed:', { event, session: !!session });
-            
-            if (!mounted) return;
-            
-            if (session) {
-              setIsAuthenticated(true);
-              
-              // Check if user has completed onboarding
-              try {
-                const { data: profile, error } = await supabase
-                  .from('profiles')
-                  .select('test_date')
-                  .eq('id', session.user.id)
-                  .maybeSingle();
-                
-                console.log('Profile check:', { profile, error });
-                
-                if (!profile?.test_date && mounted) {
-                  navigate('/onboarding');
-                  return;
-                }
-              } catch (profileError) {
-                console.error('Profile check failed:', profileError);
-              }
-            } else {
-              setIsAuthenticated(false);
-            }
-            
-            if (mounted) {
-              setIsLoading(false);
-            }
+        if (sessionError) {
+          console.error('Session check error:', sessionError);
+          if (mounted) {
+            setIsAuthenticated(false);
+            setIsLoading(false);
           }
-        );
-
-        // THEN check for existing session
-        const { data: { session }, error } = await supabase.auth.getSession();
-        console.log('Initial session check:', { session: !!session, error });
-        
-        if (error) {
-          console.error('Session check error:', error);
+          return;
         }
 
-        // Clean up subscription on unmount
-        return () => {
-          mounted = false;
-          subscription.unsubscribe();
-        };
-        
+        if (!session) {
+          if (mounted) {
+            setIsAuthenticated(false);
+            setIsLoading(false);
+          }
+          return;
+        }
+
+        // User is authenticated
+        setIsAuthenticated(true);
+
+        // Check onboarding status
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('test_date, onboarding_complete')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error('Profile check failed:', profileError);
+        }
+
+        // Redirect to onboarding if not completed
+        if (mounted && !profile?.onboarding_complete) {
+          navigate('/onboarding');
+          return;
+        }
+
+        if (mounted) {
+          setIsLoading(false);
+        }
       } catch (error) {
-        console.error('Auth initialization failed:', error);
+        console.error('Auth check failed:', error);
         if (mounted) {
           setIsAuthenticated(false);
           setIsLoading(false);
@@ -90,11 +80,23 @@ const Index = () => {
       }
     };
 
-    const cleanup = initAuth();
-    
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (!mounted) return;
+        
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+          checkAuthAndProfile();
+        }
+      }
+    );
+
+    // Initial check
+    checkAuthAndProfile();
+
     return () => {
       mounted = false;
-      cleanup?.then?.(cleanupFn => cleanupFn?.());
+      subscription.unsubscribe();
     };
   }, [navigate]);
 
