@@ -36,12 +36,12 @@ export default function QuizRunner() {
         setUserId(user.id);
         const nParam = searchParams.get('n');
         const n = nParam ? parseInt(nParam) : 10;
-        const code = section ?? '';
-        const { data, error: qError } = await getQuestionsBySkill(code, n);
+        const skillId = section ?? '';
+        const { data, error: qError } = await getQuestionsBySkill(skillId, n);
         if (qError) {
           setError(qError.message);
         } else {
-          setQuestions(Array.isArray(data) ? (data as Question[]) : []);
+          setQuestions(Array.isArray(data) ? data : []);
         }
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Failed to load questions');
