@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,7 +33,7 @@ const SimEnglish = () => {
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [simResultId, setSimResultId] = useState<string | null>(null);
+  const [, setSimResultId] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
   const [score, setScore] = useState(0);
 
@@ -50,15 +50,15 @@ const SimEnglish = () => {
 
         if (error) throw error;
         
-        const formattedQuestions = data?.map(d => ({
-          id: d.question_id,
-          stem: d.question,
-          choice_a: d.choice_a,
-          choice_b: d.choice_b,
-          choice_c: d.choice_c,
-          choice_d: d.choice_d,
-          answer: d.answer
-        })) || [];
+        const formattedQuestions = (data || []).map(d => ({
+          id: d.question_id ?? '',
+          stem: d.question ?? '',
+          choice_a: d.choice_a ?? '',
+          choice_b: d.choice_b ?? '',
+          choice_c: d.choice_c ?? '',
+          choice_d: d.choice_d ?? '',
+          answer: d.answer ?? 'A'
+        }));
         
         setQuestions(formattedQuestions);
       } catch (error) {

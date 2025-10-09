@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UserProgress, Question } from '../types';
+import type { UserProgress, LegacyQuestion } from '../types';
 
 const initialProgress: UserProgress = {
   currentDay: 1,
@@ -23,7 +23,7 @@ export const useProgress = () => {
     setProgress(prev => ({ ...prev, ...updates }));
   };
 
-  const addWrongAnswer = (questionId: string, question: Question, userAnswer: number) => {
+  const addWrongAnswer = (questionId: string, question: LegacyQuestion, userAnswer: number) => {
     setProgress(prev => ({
       ...prev,
       wrongAnswers: [

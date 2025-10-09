@@ -1,18 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { getQuestionsBySkill } from '@/lib/content';
 import { supabase } from '@/integrations/supabase/client';
-
-interface Question {
-  id: string;
-  stem: string;
-  choice_a: string;
-  choice_b: string;
-  choice_c: string;
-  choice_d: string;
-  answer: string;
-  form_id?: string;
-}
+import type { Question } from '@/types';
+import { shuffleQuestionChoices } from '@/lib/shuffle';
 
 export default function QuizRunner() {
   const { section } = useParams<{ section?: string }>();
@@ -35,6 +26,25 @@ export default function QuizRunner() {
         }
         setUserId(user.id);
         const nParam = searchParams.get('n');
+        const n = nParam ? parseInt(nParam, 10) : 10;
+        const code = section ?? '';
+        const { data, error: qError } = await getQuestionsBySkill(code, n);
+        if (qError) {
+          setError(qError.message);
+        } else {
+          // Map DB questions to Question type with proper defaults
+          const mappedQuestions: Question[] = (data ?? []).map(q => ({
+            id: q.id,
+            stem: q.stem,
+            choice_a: q.choice_a,
+            choice_b: q.choice_b,
+            choice_c: q.choice_c,
+            choice_d: q.choice_d,
+            answer: q.answer,
+            explanation: q.explanation ?? undefined,
+            skill_code: q.skill_id,
+          }));
+          setQuestions(mappedQuestions);
         const n = nParam ? parseInt(nParam) : 10;
         const skillId = section ?? '';
         const { data, error: qError } = await getQuestionsBySkill(skillId, n);
@@ -49,22 +59,24 @@ export default function QuizRunner() {
         setLoading(false);
       }
     };
-    fetchData();
+    void fetchData();
   }, [section, searchParams]);
 
   const handleAnswer = async (selectedIdx: number) => {
     if (!userId) return;
     const q = questions[current];
-    const correctIdx = ['A','B','C','D'].indexOf((q as any).answer);
+    if (!q) return;
+    
+    const correctIdx = ['A', 'B', 'C', 'D'].indexOf(q.answer);
     try {
       await supabase.from('attempts').insert({
         user_id: userId,
         question_id: q.id,
         form_id: q.form_id ?? 'quiz',
         question_ord: current + 1,
-        choice_order: [0,1,2,3],
+        choice_order: [0, 1, 2, 3],
         correct_idx: correctIdx,
-        selected_idx: selectedIdx
+        selected_idx: selectedIdx,
       });
       if (selectedIdx !== correctIdx) {
         const dueDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
@@ -72,7 +84,7 @@ export default function QuizRunner() {
           user_id: userId,
           question_id: q.id,
           due_at: dueDate.toISOString(),
-          interval_days: 2
+          interval_days: 2,
         });
       }
     } catch (err) {
@@ -85,25 +97,39 @@ export default function QuizRunner() {
     }
   };
 
+  // Shuffle current question's choices
+  const shuffled = useMemo(() => {
+    if (!questions[current]) return null;
+    const seed = userId ? `${userId}-${questions[current].id}` : undefined;
+    return shuffleQuestionChoices(questions[current], seed);
+  }, [current, questions, userId]);
+
   if (loading) return <div className="p-4">Loading quiz...</div>;
   if (error) return <div className="p-4 text-destructive">{error}</div>;
   if (completed) return <div className="p-4">Quiz complete! Great job.</div>;
   if (questions.length === 0) return <div className="p-4">No quiz questions found.</div>;
+  if (!shuffled) return <div className="p-4">Loading question...</div>;
 
-  const q = questions[current];
-  const choices = [q.choice_a, q.choice_b, q.choice_c, q.choice_d];
+  const handleShuffledAnswer = async (shuffledIndex: number) => {
+    if (!shuffled) return;
+    
+    // Map shuffled index back to original index
+    const originalIndex = shuffled.choiceOrder[shuffledIndex];
+    await handleAnswer(originalIndex);
+  };
 
   return (
     <div className="container mx-auto p-4">
       <h2 className="font-bold mb-4">Quiz Question {current + 1} of {questions.length}</h2>
-      <p className="mb-4">{q.stem}</p>
+      <p className="mb-4">{shuffled.original.stem}</p>
       <div className="space-y-2">
-        {choices.map((choice, i) => (
+        {shuffled.choices.map((choice, i) => (
           <button
             key={i}
             className="w-full border rounded-md p-2 text-left hover:bg-muted"
-            onClick={() => handleAnswer(i)}
+            onClick={() => handleShuffledAnswer(i)}
           >
+            <span className="font-semibold mr-2">{['A', 'B', 'C', 'D'][i]})</span>
             {choice}
           </button>
         ))}

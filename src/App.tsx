@@ -8,6 +8,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageLoadingSpinner } from './components/LoadingSpinner';
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import SimpleLogin from "./pages/SimpleLogin";
 import Onboarding from "./pages/Onboarding";
 import Simulation from "./pages/Simulation";
 import NotFound from "./pages/NotFound";
@@ -30,9 +31,11 @@ import DiagnosticTest from "./pages/DiagnosticTest";
 import DiagnosticResults from "./pages/DiagnosticResults";
 import Plan from "./pages/Plan";
 import TaskLauncher from "./pages/TaskLauncher";
-import LessonViewer from "./pages/LessonViewer";
+import EnhancedLessonViewer from "./pages/EnhancedLessonViewer";
+import LessonsLibrary from "./pages/LessonsLibrary";
 import DrillRunner from "./pages/DrillRunner";
 import QuizRunner from "./pages/QuizRunner";
+import WeakAreas from "./pages/WeakAreas";
 
 
 const queryClient = new QueryClient();
@@ -49,6 +52,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           {/* Login route to handle user authentication. */}
           <Route path="/login" element={<Login />} />
+          <Route path="/simple-login" element={<SimpleLogin />} />
           {/* Onboarding wizard route */}
           <Route path="/onboarding" element={<Onboarding />} />
           {/* Diagnostic assessment route */}
@@ -124,9 +128,11 @@ const App = () => (
           } />
         <Route path="/plan" element={<Plan />} />
   <Route path="/task/:date/:idx" element={<TaskLauncher />} />
-  <Route path="/lesson/:topic" element={<LessonViewer />} />
+  <Route path="/lesson/:topic" element={<EnhancedLessonViewer />} />
+  <Route path="/lessons" element={<LessonsLibrary />} />
   <Route path="/drill/:subject" element={<DrillRunner />} />
   <Route path="/quiz/:section" element={<QuizRunner />} />
+  <Route path="/weak-areas" element={<WeakAreas />} />
     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
             </Routes>

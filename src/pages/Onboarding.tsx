@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -73,6 +72,14 @@ export default function Onboarding() {
   const handleSubmitOnboarding = async () => {
     setLoading(true);
     try {
+      // Get authenticated user first
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
       // Save all onboarding data
       const updates = [];
 
@@ -81,6 +88,7 @@ export default function Onboarding() {
       // 1. Create user profile
       updates.push(
         supabase.from('user_profiles').upsert({
+          user_id: user.id,
           user_id: userId,
           age_verified: form.ageVerified,
           tos_accepted: form.tosAccepted,
@@ -92,7 +100,7 @@ export default function Onboarding() {
       if (form.testDate) {
         updates.push(
           supabase.functions.invoke('set-test-date', {
-            body: { testDate: format(form.testDate, 'yyyy-MM-dd') }
+            body: { testDate: format(form.testDate, 'yyyy-MM-dd') },
           })
         );
         updates.push(
@@ -108,9 +116,9 @@ export default function Onboarding() {
       if (form.timeMultiplier !== '100') {
         updates.push(
           supabase.from('accommodations').upsert({
-            user_id: (await supabase.auth.getUser()).data.user?.id,
+            user_id: user.id,
             time_multiplier: parseFloat(form.timeMultiplier) / 100,
-            accommodation_type: form.timeMultiplier === '150' ? 'time_and_half' : 'double_time'
+            accommodation_type: form.timeMultiplier === '150' ? 'time_and_half' : 'double_time',
           })
         );
       }
@@ -118,21 +126,21 @@ export default function Onboarding() {
       // 4. Save preferences
       updates.push(
         supabase.from('user_preferences').upsert({
-          user_id: (await supabase.auth.getUser()).data.user?.id,
-          daily_minutes: parseInt(form.dailyMinutes),
-          preferred_start_hour: parseInt(form.preferredStartHour),
-          preferred_end_hour: parseInt(form.preferredEndHour),
+          user_id: user.id,
+          daily_minutes: parseInt(form.dailyMinutes, 10),
+          preferred_start_hour: parseInt(form.preferredStartHour, 10),
+          preferred_end_hour: parseInt(form.preferredEndHour, 10),
           email_notifications: form.emailNotifications,
-          quiet_start_hour: parseInt(form.quietStartHour),
-          quiet_end_hour: parseInt(form.quietEndHour),
+          quiet_start_hour: parseInt(form.quietStartHour, 10),
+          quiet_end_hour: parseInt(form.quietEndHour, 10),
         })
       );
 
       // 5. Save starting preference
       updates.push(
         supabase.from('user_goals').upsert({
-          user_id: (await supabase.auth.getUser()).data.user?.id,
-          start_with: form.startWith
+          user_id: user.id,
+          start_with: form.startWith,
         })
       );
 
@@ -163,6 +171,7 @@ export default function Onboarding() {
       if (form.startWith === 'diagnostic') {
         navigate('/diagnostic');
       } else {
+        // Skip diagnostic, go straight to main app
         navigate('/');
       }
     } catch (error) {

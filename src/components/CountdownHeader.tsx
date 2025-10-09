@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar, CalendarIcon, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -68,7 +68,7 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
       setSaving(true);
       const testDate = format(date, 'yyyy-MM-dd');
 
-      const { data, error } = await supabase.functions.invoke('set-test-date', {
+      const { error } = await supabase.functions.invoke('set-test-date', {
         body: { testDate }
       });
 

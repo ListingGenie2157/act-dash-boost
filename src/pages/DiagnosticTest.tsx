@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -59,7 +59,8 @@ function shuffle<T>(array: T[], seed: number): T[] {
 }
 
 export default function DiagnosticTest() {
-  const { formId } = useParams<{ formId: string }>();
+  const params = useParams<{ formId?: string }>();
+  const formId = params.formId!; // Assert non-null - we validate in render
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -123,7 +124,22 @@ export default function DiagnosticTest() {
         );
       }
 
-      setQuestions(data || []);
+      // Map to Question type with defaults for nullable fields
+      const mappedQuestions: Question[] = (data || []).map(q => ({
+        ord: q.ord ?? 0,
+        question_id: q.question_id ?? '',
+        question: q.question ?? '',
+        choice_a: q.choice_a ?? '',
+        choice_b: q.choice_b ?? '',
+        choice_c: q.choice_c ?? '',
+        choice_d: q.choice_d ?? '',
+        answer: q.answer ?? 'A',
+        explanation: q.explanation ?? '',
+        passage_text: q.passage_text ?? undefined,
+        passage_title: q.passage_title ?? undefined,
+      }));
+
+      setQuestions(mappedQuestions);
       const baseTime = TIMERS[formId as keyof typeof TIMERS] || 1200;
       const accommodatedTime = await getAccommodatedTime(baseTime);
       setTimeLeft(accommodatedTime);
@@ -132,7 +148,7 @@ export default function DiagnosticTest() {
       const existingAttempts: Record<string, Attempt> = {};
       const newAttempts: Attempt[] = [];
 
-      for (const question of data || []) {
+      for (const question of mappedQuestions) {
         const { data: existing } = await supabase
           .from('attempts')
           .select('*')
@@ -142,12 +158,17 @@ export default function DiagnosticTest() {
           .maybeSingle();
 
         if (existing) {
-          existingAttempts[question.question_id] = existing;
+          existingAttempts[question.question_id] = {
+            question_id: existing.question_id,
+            choice_order: existing.choice_order,
+            correct_idx: existing.correct_idx,
+            selected_idx: existing.selected_idx ?? undefined,
+            question_ord: existing.question_ord,
+          };
         } else {
           // Create new attempt with shuffled choices
-          const choices = [question.choice_a, question.choice_b, question.choice_c, question.choice_d];
           const answerMap = { A: 0, B: 1, C: 2, D: 3 };
-          const baseIdx = answerMap[question.answer as keyof typeof answerMap];
+          const baseIdx = answerMap[question.answer as keyof typeof answerMap] ?? 0;
           const choiceOrder = shuffle([0, 1, 2, 3], Date.now() + question.ord);
           const correctIdx = choiceOrder.indexOf(baseIdx);
 
@@ -224,13 +245,11 @@ export default function DiagnosticTest() {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) return;
 
-      // Calculate results
-      const results = calculateResults();
       
       // Call finish-diagnostic edge function
-      const { data, error } = await supabase.functions.invoke('finish-diagnostic', {
+      const { error } = await supabase.functions.invoke('finish-diagnostic', {
         body: {
-          section: formId?.startsWith('D2') ? formId.slice(2) : formId,
+          section: formId.startsWith('D2') ? formId.slice(2) : formId,
           blocks: [{
             questions: questions.map(q => ({ 
               id: q.question_id, 
@@ -248,9 +267,7 @@ export default function DiagnosticTest() {
       if (error) throw error;
 
       // Navigate to results
-      navigate(`/diagnostic-results/${formId}`, { 
-        state: { results: data, formId } 
-      });
+      navigate(`/diagnostic-results/${formId}`);
 
     } catch (error) {
       console.error('Error submitting diagnostic:', error);
@@ -264,7 +281,8 @@ export default function DiagnosticTest() {
     }
   };
 
-  const calculateResults = () => {
+  // Results calculated server-side by finish-diagnostic function
+  /* const _calculateResults = () => {
     let correct = 0;
     let total = 0;
 
@@ -279,7 +297,7 @@ export default function DiagnosticTest() {
     });
 
     return { correct, total, percentage: total > 0 ? (correct / total) * 100 : 0 };
-  };
+  }; */
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -310,6 +328,21 @@ export default function DiagnosticTest() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p>Loading diagnostic test...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (!params.formId) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-destructive">Invalid test form</p>
+            <Button onClick={() => navigate('/diagnostic')} className="mt-4">
+              Back to Diagnostic
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

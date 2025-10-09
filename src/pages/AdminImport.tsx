@@ -13,10 +13,10 @@ interface ImportRecord {
   form_id: string;
   section: string;
   ord: number;
-  passage_id?: string;
-  passage_type?: string;
-  passage_title?: string;
-  passage_text?: string;
+  passage_id?: string | null;
+  passage_type?: string | null;
+  passage_title?: string | null;
+  passage_text?: string | null;
   topic: string;
   skill_code: string;
   difficulty: string;
@@ -26,7 +26,7 @@ interface ImportRecord {
   choice_c: string;
   choice_d: string;
   answer: string;
-  explanation?: string;
+  explanation?: string | null;
 }
 
 interface ValidationError {

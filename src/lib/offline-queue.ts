@@ -58,7 +58,7 @@ export async function flushOfflineQueue() {
   
   for (const item of items) {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('attempts')
         .upsert({
           user_id: item.userId,
