@@ -25,11 +25,6 @@ export async function getQuestionsBySkill(skill_code: string, n: number) {
     .from('questions')
     .select('id, stem, choice_a, choice_b, choice_c, choice_d, answer, explanation, skill_id, difficulty, time_limit_secs')
     .eq('skill_id', skill_code)
-export async function getQuestionsBySkill(skillId: string, n: number) {
-  const { data, error } = await supabase
-    .from('questions')
-    .select('id, stem, choice_a, choice_b, choice_c, choice_d, answer, explanation, skill_id, difficulty')
-    .eq('skill_id', skillId)
     .limit(n);
   return { data, error };
 }

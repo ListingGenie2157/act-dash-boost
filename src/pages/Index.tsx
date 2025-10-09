@@ -86,46 +86,31 @@ const Index = () => {
             if (mounted) {
               setIsLoading(false);
             }
+          }
+        );
+
+        // Initial check with current session
         if (sessionError) {
           console.error('Session check error:', sessionError);
           if (mounted) {
             setIsAuthenticated(false);
             setIsLoading(false);
           }
-          return;
+          return () => {
+            mounted = false;
+            subscription.unsubscribe();
+          };
         }
 
-        if (!session) {
-          if (mounted) {
-            setIsAuthenticated(false);
-            setIsLoading(false);
-          }
-          return;
-        }
-
-        // User is authenticated
-        setIsAuthenticated(true);
-
-        // Check onboarding status
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('test_date, onboarding_complete')
-          .eq('id', session.user.id)
-          .maybeSingle();
-
-        if (profileError) {
-          console.error('Profile check failed:', profileError);
-        }
-
-        // Redirect to onboarding if not completed
-        if (mounted && !profile?.onboarding_complete) {
-          navigate('/onboarding');
-          return;
-        }
-
-        if (mounted) {
+        if (!session && mounted) {
+          setIsAuthenticated(false);
           setIsLoading(false);
         }
+
+        return () => {
+          mounted = false;
+          subscription.unsubscribe();
+        };
       } catch (error) {
         console.error('Auth check failed:', error);
         if (mounted) {
@@ -137,7 +122,7 @@ const Index = () => {
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (event, _session) => {
         if (!mounted) return;
         
         if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {

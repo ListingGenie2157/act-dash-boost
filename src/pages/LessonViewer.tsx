@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { getLessonBySkill } from '@/lib/content';
 import { sanitizeHTML } from '@/lib/sanitize';
@@ -57,18 +57,6 @@ export default function LessonViewer() {
         className="prose max-w-none"
         dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.body || 'No content') }}
       />
-
-export default function LessonViewer() {
-  const { topic } = useParams<{ topic?: string }>();
-
-  return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Lesson: {topic}</h1>
-      <div className="prose max-w-none">
-        <p className="text-muted-foreground">
-          Lesson content for {topic} will be available soon.
-        </p>
-      </div>
     </div>
   );
 }
