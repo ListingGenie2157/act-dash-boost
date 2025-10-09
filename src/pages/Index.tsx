@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CountdownHeader } from '@/components/CountdownHeader';
-import { StudyNow } from '@/components/StudyNow';
+import { StudyPlanWidget } from '@/components/StudyPlanWidget';
+import { LessonsQuickAccess } from '@/components/LessonsQuickAccess';
 import { TestWeekBanner } from '@/components/TestWeekBanner';
 import { ParentBanner } from '@/components/ParentBanner';
 import { MasteryDashboard } from '@/components/MasteryDashboard';
@@ -212,8 +213,19 @@ const Index = () => {
       
       <div className="container max-w-6xl mx-auto px-4 py-8">
         <div className="space-y-8">
-          {/* Main Study Section */}
-          <StudyNow />
+          {/* Hero Section */}
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl font-bold">Welcome back!</h1>
+            <p className="text-muted-foreground">
+              Here's your personalized study path
+            </p>
+          </div>
+
+          {/* Two Interface Cards */}
+          <div className="grid lg:grid-cols-2 gap-6">
+            <StudyPlanWidget />
+            <LessonsQuickAccess />
+          </div>
           
           {/* Mastery Dashboard */}
           <MasteryDashboard />
