@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Card, Button, Progress, Badge, RadioGroup, RadioGroupItem, Label,
   CardContent, CardDescription, CardHeader, CardTitle
 } from '@/components/ui';
-import { Timer, Brain, AlertCircle, Clock, CheckCircle2, ArrowRight } from 'lucide-react';
-import { evaluationQuestions } from '@/data/evaluationQuestions';
+import { Brain, AlertCircle, Clock, CheckCircle2, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -52,39 +51,79 @@ export const DiagnosticEvaluation = ({
     science: []
   });
   const [selectedAnswer, setSelectedAnswer] = useState<string>('');
+  const [allQuestions, setAllQuestions] = useState<Question[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentSection, setCurrentSection] = useState<string>('');
+  const { toast } = useToast();
 
-  // Use the evaluation questions from the data file
-  const [allQuestions] = useState<Question[]>(() => {
-    const questions: Question[] = [];
-    
-    // Add questions from each subject
-    Object.entries(evaluationQuestions).forEach(([subject, subjectQuestions]) => {
-      (subjectQuestions as Array<{
-        id: string;
-        skill?: string;
-        question: string;
-        passage?: string;
-        underlined?: string;
-        options: string[];
-        correctAnswer: number | string;
-        explanation?: string;
-      }>).forEach((q) => {
-        questions.push({
-          id: q.id,
-          subject: subject as 'english' | 'math' | 'reading' | 'science',
-          topic: q.skill || 'general',
-          difficulty: 'medium',
-          question: q.question,
-          options: q.options,
-          correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : parseInt(String(q.correctAnswer), 10) || 0,
-          explanation: q.explanation || '',
-          timeLimit: 60
+  // Fetch questions from database on mount
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        const questions: Question[] = [];
+        
+        // Map section names to subjects
+        const sectionMap = {
+          english: ['English', 'EN'],
+          math: ['Math', 'MATH'],
+          reading: ['Reading', 'RD'],
+          science: ['Science', 'SCI']
+        };
+        
+        // Fetch 12 questions per subject (4 easy, 6 medium, 2 hard)
+        for (const [subject, sectionNames] of Object.entries(sectionMap)) {
+          const difficulties = [
+            { level: 'Easy', count: 4 },
+            { level: 'Medium', count: 6 },
+            { level: 'Hard', count: 2 }
+          ];
+          
+          for (const { level, count } of difficulties) {
+            const { data, error } = await supabase
+              .from('staging_items')
+              .select('*')
+              .in('section', sectionNames)
+              .eq('difficulty', level)
+              .limit(count);
+            
+            if (error) throw error;
+            
+            if (data) {
+              data.forEach((item) => {
+                questions.push({
+                  id: item.staging_id.toString(),
+                  subject: subject as 'english' | 'math' | 'reading' | 'science',
+                  topic: item.skill_code || 'general',
+                  difficulty: level.toLowerCase() as 'easy' | 'medium' | 'hard',
+                  question: item.question,
+                  options: [item.choice_a, item.choice_b, item.choice_c, item.choice_d],
+                  correctAnswer: item.answer.charCodeAt(0) - 65, // A=0, B=1, C=2, D=3
+                  explanation: item.explanation || '',
+                  timeLimit: 60
+                });
+              });
+            }
+          }
+        }
+        
+        setAllQuestions(questions);
+        if (questions.length > 0) {
+          setCurrentSection(questions[0].subject);
+        }
+      } catch (error) {
+        console.error('Error fetching diagnostic questions:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load diagnostic questions",
+          variant: "destructive",
         });
-      });
-    });
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    return questions;
-  });
+    fetchQuestions();
+  }, [toast]);
 
   const currentQuestion = allQuestions[currentQuestionIndex];
   const totalQuestions = allQuestions.length;
@@ -112,13 +151,21 @@ export const DiagnosticEvaluation = ({
     const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
     const isEndOfSection = nextQuestion && nextQuestion.subject !== currentQuestion.subject;
 
-    if (isEndOfSection || isLastQuestion) {
-      // Complete current section
+    if (isEndOfSection) {
+      // Complete current section and show transition
       completeSection(currentQuestion.subject);
+      setCurrentSection(nextQuestion.subject);
       
-      if (isLastQuestion) {
-        return;
-      }
+      toast({
+        title: `${currentQuestion.subject.charAt(0).toUpperCase() + currentQuestion.subject.slice(1)} Complete!`,
+        description: `Starting ${nextQuestion.subject.charAt(0).toUpperCase() + nextQuestion.subject.slice(1)} section...`,
+      });
+    }
+
+    if (isLastQuestion) {
+      // Complete final section
+      completeSection(currentQuestion.subject);
+      return;
     }
 
     if (currentQuestionIndex < totalQuestions - 1) {
@@ -144,16 +191,28 @@ export const DiagnosticEvaluation = ({
     onComplete(section.charAt(0).toUpperCase() + section.slice(1) as 'English' | 'Math' | 'Reading' | 'Science', blocks);
   };
 
-  if (!currentQuestion) {
+  if (isLoading || !currentQuestion) {
     return (
       <Card className="p-6">
         <div className="text-center">
           <Brain className="w-12 h-12 mx-auto mb-4 text-blue-600" />
-          <h2 className="text-xl font-semibold mb-2">Loading Evaluation...</h2>
+          <h2 className="text-xl font-semibold mb-2">
+            {isLoading ? 'Loading Diagnostic Questions...' : 'No questions available'}
+          </h2>
+          {!isLoading && !currentQuestion && (
+            <p className="text-sm text-muted-foreground">
+              Please contact support if this issue persists.
+            </p>
+          )}
         </div>
       </Card>
     );
   }
+  
+  // Calculate questions in current section
+  const sectionQuestions = allQuestions.filter(q => q.subject === currentSection);
+  const sectionProgress = sectionAnswers[currentSection].length;
+  const sectionTotal = sectionQuestions.length;
 
   return (
     <div className="space-y-6">
@@ -161,14 +220,14 @@ export const DiagnosticEvaluation = ({
       <Card className="p-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium">
-            Question {currentQuestionIndex + 1} of {totalQuestions}
+            Overall: {currentQuestionIndex + 1} of {totalQuestions}
           </span>
-          <Badge variant="outline" className="flex items-center gap-1">
-            <Timer className="w-3 h-3" />
-            Time Remaining
-          </Badge>
+          <span className="text-sm text-muted-foreground">
+            {currentSection.charAt(0).toUpperCase() + currentSection.slice(1)}: {sectionProgress + 1} of {sectionTotal}
+          </span>
         </div>
-        <Progress value={(currentQuestionIndex / totalQuestions) * 100} className="h-2" />
+        <Progress value={(currentQuestionIndex / totalQuestions) * 100} className="h-2 mb-2" />
+        <Progress value={((sectionProgress + 1) / sectionTotal) * 100} className="h-1" />
       </Card>
 
       {/* Question Card */}
@@ -332,14 +391,14 @@ export default function Diagnostic() {
                   <Clock className="w-5 h-5 text-blue-600" />
                   <div>
                     <p className="font-medium">Duration</p>
-                    <p className="text-sm text-muted-foreground">Approximately 20 minutes</p>
+                    <p className="text-sm text-muted-foreground">Approximately 45 minutes</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-4 border rounded-lg">
                   <CheckCircle2 className="w-5 h-5 text-green-600" />
                   <div>
                     <p className="font-medium">Questions</p>
-                    <p className="text-sm text-muted-foreground">Multiple choice format</p>
+                    <p className="text-sm text-muted-foreground">48 questions (12 per subject)</p>
                   </div>
                 </div>
               </div>
