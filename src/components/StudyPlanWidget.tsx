@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Calendar, Target, BookOpen, Brain, Zap, CheckCircle, Play } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Target, GraduationCap, RotateCcw, Zap, Clock, Play, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface StudyTask {
   id: string;
-  type: 'LEARN' | 'DRILL' | 'REVIEW' | 'SIM';
+  type: 'LEARN' | 'DRILL' | 'REVIEW' | 'SIM' | 'FLASH';
   skill_id: string | null;
   size: number;
   status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
@@ -22,32 +20,34 @@ interface StudyTask {
 
 const TASK_CONFIG = {
   LEARN: {
-    icon: BookOpen,
-    label: 'Learn',
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50',
-    description: 'Study new concepts'
+    icon: GraduationCap,
+    label: 'Lesson',
+    gradient: 'from-primary to-primary/80',
+    description: 'Learn New Concepts'
   },
   DRILL: {
     icon: Target,
-    label: 'Practice',
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-50',
-    description: 'Timed practice'
+    label: 'Timed Drill',
+    gradient: 'from-secondary to-cyan-500',
+    description: 'Timed Practice'
   },
   REVIEW: {
-    icon: Brain,
+    icon: RotateCcw,
     label: 'Review',
-    color: 'text-amber-600',
-    bgColor: 'bg-amber-50',
-    description: 'Spaced repetition'
+    gradient: 'from-success to-emerald-500',
+    description: 'Spaced Repetition'
+  },
+  FLASH: {
+    icon: Zap,
+    label: 'Flash Cards',
+    gradient: 'from-warning to-amber-500',
+    description: 'Quick Practice'
   },
   SIM: {
-    icon: Zap,
-    label: 'Simulation',
-    color: 'text-red-600',
-    bgColor: 'bg-red-50',
-    description: 'Full section test'
+    icon: Clock,
+    label: 'Full Test',
+    gradient: 'from-destructive to-rose-500',
+    description: 'Full Section Simulation'
   }
 };
 
@@ -115,165 +115,113 @@ export function StudyPlanWidget() {
 
   const completedCount = tasks.filter(t => t.status === 'COMPLETED').length;
   const totalCount = tasks.length;
-  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Today's Study Plan
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="animate-pulse space-y-3">
-            <div className="h-4 bg-muted rounded w-3/4" />
-            <div className="h-4 bg-muted rounded w-1/2" />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <div className="animate-pulse space-y-3">
+          <div className="h-32 bg-muted rounded-xl" />
+          <div className="h-32 bg-muted rounded-xl" />
+          <div className="h-32 bg-muted rounded-xl" />
+        </div>
+      </div>
     );
   }
 
   if (tasks.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Today's Study Plan
-          </CardTitle>
-          <CardDescription>
-            Generate your personalized plan based on your goals and progress
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="text-center py-6">
-            <Play className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-            <p className="text-sm text-muted-foreground mb-4">
-              No study plan for today yet. Generate one to get started!
-            </p>
-            <Button 
-              onClick={generatePlan} 
-              disabled={generating}
-              className="gap-2"
-            >
-              <Play className="h-4 w-4" />
-              {generating ? 'Generating...' : 'Generate Today\'s Plan'}
-            </Button>
-          </div>
-          <div className="border-t pt-4">
-            <Link to="/plan">
-              <Button variant="outline" className="w-full">
-                View Full Study Plan
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <div className="text-center py-12 bg-card border rounded-xl">
+          <Play className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+          <p className="text-sm text-muted-foreground mb-4">
+            No study plan for today yet
+          </p>
+          <Button 
+            onClick={generatePlan} 
+            disabled={generating}
+            className="gap-2"
+          >
+            <Play className="h-4 w-4" />
+            {generating ? 'Generating...' : 'Generate Today\'s Plan'}
+          </Button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5" />
-          Today's Study Plan
-        </CardTitle>
-        <CardDescription>
-          {completedCount} of {totalCount} tasks completed
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Progress Bar */}
-        <div className="space-y-2">
-          <Progress value={progress} className="h-2" />
-          <p className="text-xs text-muted-foreground text-right">
-            {Math.round(progress)}% complete
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Today's Study Plan</h2>
+          <p className="text-muted-foreground text-sm mt-1">
+            {completedCount} of {totalCount} tasks completed
           </p>
         </div>
+      </div>
 
-        {/* Task List */}
-        <div className="space-y-2">
-          {tasks.map((task, idx) => {
-            const config = TASK_CONFIG[task.type];
-            const Icon = config.icon;
-            const isCompleted = task.status === 'COMPLETED';
-
-            return (
-              <Link 
-                key={task.id} 
-                to={`/task/${task.the_date}/${idx}`}
-                className="block"
-              >
-                <div
-                  className={`
-                    p-3 rounded-lg border transition-all cursor-pointer
-                    ${isCompleted ? 'opacity-60 bg-muted' : 'hover:border-primary hover:shadow-sm'}
-                  `}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded ${config.bgColor}`}>
-                      <Icon className={`h-4 w-4 ${config.color}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-sm truncate">
-                          {config.label}
-                        </p>
-                        <Badge variant="outline" className="text-xs">
-                          {task.size} questions
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {config.description}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {task.reward_cents > 0 && (
-                        <span className="text-xs text-muted-foreground">
-                          {task.reward_cents}¢
-                        </span>
-                      )}
-                      {isCompleted ? (
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                      ) : (
-                        <div className="h-5 w-5 rounded-full border-2 border-muted" />
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2 pt-2">
-          <Link to="/plan" className="flex-1">
-            <Button variant="outline" className="w-full" size="sm">
-              View Full Plan
-            </Button>
-          </Link>
-          {completedCount < totalCount && (
-            <Button 
-              size="sm"
-              onClick={() => {
-                const nextTask = tasks.findIndex(t => t.status === 'PENDING');
-                if (nextTask !== -1) {
-                  navigate(`/task/${tasks[nextTask].the_date}/${nextTask}`);
-                }
-              }}
-              className="flex-1 gap-2"
+      <div className="grid gap-4">
+        {tasks.map((task, idx) => {
+          const config = TASK_CONFIG[task.type];
+          if (!config) return null;
+          
+          const Icon = config.icon;
+          const isCompleted = task.status === 'COMPLETED';
+          
+          return (
+            <Link 
+              key={task.id} 
+              to={`/task/${task.the_date}/${idx}`}
+              className="block"
             >
-              <Play className="h-4 w-4" />
-              Continue Studying
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+              <div
+                className={`
+                  relative overflow-hidden rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all
+                  ${isCompleted ? 'opacity-60' : ''}
+                  bg-gradient-to-br ${config.gradient}
+                `}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <Badge className="bg-white/20 backdrop-blur-sm text-white border-0">
+                    {config.label}
+                  </Badge>
+                </div>
+                
+                <h3 className="text-xl font-bold mb-2">
+                  {config.description}
+                </h3>
+                <p className="text-white/90 text-sm mb-4">
+                  {task.size} questions {isCompleted ? '• Completed ✓' : ''}
+                </p>
+                
+                {!isCompleted && (
+                  <Button 
+                    className="w-full bg-white text-gray-900 hover:bg-white/90 font-medium"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigate(`/task/${task.the_date}/${idx}`);
+                    }}
+                  >
+                    Start Now
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+
+      <div className="flex gap-3">
+        <Link to="/plan" className="flex-1">
+          <Button variant="outline" className="w-full">
+            View Full Plan
+          </Button>
+        </Link>
+      </div>
+    </div>
   );
 }

@@ -204,33 +204,31 @@ const Index = () => {
 
   // Authenticated user dashboard
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
       <CountdownHeader />
       <div className="container mx-auto px-4">
         <ParentBanner />
         <TestWeekBanner />
       </div>
       
-      <div className="container max-w-6xl mx-auto px-4 py-8">
+      <div className="container max-w-7xl mx-auto px-4 py-8">
         <div className="space-y-8">
-          {/* Hero Section */}
-          <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold">Welcome back!</h1>
+          {/* Welcome Section */}
+          <div className="mb-2">
+            <h1 className="text-3xl font-bold mb-2">Welcome back! 👋</h1>
             <p className="text-muted-foreground">
-              Here's your personalized study path
+              Your personalized study plan for today
             </p>
           </div>
 
-          {/* Two Interface Cards */}
-          <div className="grid lg:grid-cols-2 gap-6">
+          {/* Main 2-Column Layout */}
+          <div className="grid lg:grid-cols-2 gap-8">
             <StudyPlanWidget />
             <LessonsQuickAccess />
           </div>
           
-          {/* Mastery Dashboard */}
+          {/* Full Width Sections */}
           <MasteryDashboard />
-          
-          {/* Weak Areas */}
           <WeakAreasCard />
         </div>
       </div>

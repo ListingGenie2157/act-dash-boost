@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, ArrowRight, TrendingUp } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { GraduationCap, ArrowRight } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserMastery } from '@/hooks/useMastery';
 
@@ -97,112 +95,113 @@ export function LessonsQuickAccess() {
     }
   };
 
-  const completedLessons = masteryMap 
+  const subjectColors = {
+    English: 'from-purple-500 to-pink-500',
+    Math: 'from-blue-500 to-cyan-500',
+    Reading: 'from-green-500 to-emerald-500',
+    Science: 'from-orange-500 to-amber-500'
+  };
+
+  const subjectIcons = {
+    English: '📝',
+    Math: '🔢',
+    Reading: '📚',
+    Science: '🔬'
+  };
+
+  // Group lessons by subject
+  const lessonsBySubject = recommendedLessons.reduce((acc, lesson) => {
+    const subject = lesson.subject as 'English' | 'Math' | 'Reading' | 'Science';
+    if (!acc[subject]) acc[subject] = [];
+    acc[subject].push(lesson);
+    return acc;
+  }, {} as Record<string, typeof recommendedLessons>);
+
+  const startedCount = masteryMap 
     ? Array.from(masteryMap.values()).filter(m => m.total > 0).length 
     : 0;
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
-            Lessons Library
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="animate-pulse space-y-3">
-            <div className="h-4 bg-muted rounded w-3/4" />
-            <div className="h-4 bg-muted rounded w-1/2" />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <div className="animate-pulse space-y-3">
+          <div className="h-32 bg-muted rounded-xl" />
+          <div className="h-32 bg-muted rounded-xl" />
+          <div className="h-32 bg-muted rounded-xl" />
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <BookOpen className="h-5 w-5" />
-          Lessons Library
-        </CardTitle>
-        <CardDescription>
-          Comprehensive content library for all ACT subjects
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Stats */}
-        <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-          <div className="space-y-1">
-            <p className="text-2xl font-bold">{totalLessons}</p>
-            <p className="text-xs text-muted-foreground">Total Lessons</p>
-          </div>
-          <div className="space-y-1 text-right">
-            <p className="text-2xl font-bold">{completedLessons}</p>
-            <p className="text-xs text-muted-foreground">Started</p>
-          </div>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Lessons Library</h2>
+          <p className="text-muted-foreground text-sm mt-1">
+            {totalLessons} lessons • {startedCount} started
+          </p>
         </div>
+      </div>
 
-        {/* Recommended Lessons */}
-        {recommendedLessons.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-primary" />
-              <h4 className="font-semibold text-sm">Recommended for You</h4>
-            </div>
-            {recommendedLessons.map(lesson => {
-              const mastery = masteryMap?.get(lesson.skill_code);
-              
+      {Object.keys(lessonsBySubject).length > 0 ? (
+        <>
+          <div className="grid gap-4">
+            {Object.entries(lessonsBySubject).slice(0, 4).map(([subject, lessons]) => {
+              const subjectKey = subject as keyof typeof subjectColors;
               return (
                 <Link 
-                  key={lesson.skill_code} 
-                  to={`/lesson/${lesson.skill_code}`}
-                  className="block"
+                  key={subject}
+                  to={`/lessons?subject=${subject}`}
                 >
-                  <div className="p-3 rounded-lg border hover:border-primary hover:shadow-sm transition-all cursor-pointer">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">
-                          {lesson.skill_name}
+                  <Card className="overflow-hidden hover:shadow-lg transition-all cursor-pointer border-2">
+                    <CardContent className="p-0">
+                      <div className={`bg-gradient-to-r ${subjectColors[subjectKey]} p-5 text-white`}>
+                        <div className="flex items-center gap-3">
+                          <div className="text-3xl">
+                            {subjectIcons[subjectKey]}
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-bold">{subject}</h3>
+                            <p className="text-sm text-white/90">
+                              {lessons.length} lessons available
+                            </p>
+                          </div>
+                          <ArrowRight className="h-5 w-5" />
+                        </div>
+                      </div>
+                      <div className="p-4 bg-card">
+                        <p className="text-sm text-muted-foreground truncate">
+                          {lessons[0]?.skill_name}
                         </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="outline" className="text-xs">
-                            {lesson.subject}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {lesson.questionCount} questions
-                          </span>
-                        </div>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2" />
-                    </div>
-                    {mastery && mastery.total > 0 ? (
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">Progress</span>
-                          <span className="font-medium">{mastery.accuracy.toFixed(0)}%</span>
-                        </div>
-                        <Progress value={mastery.accuracy} className="h-1" />
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground italic">Not started</p>
-                    )}
-                  </div>
+                    </CardContent>
+                  </Card>
                 </Link>
               );
             })}
           </div>
-        )}
-
-        {/* Browse All Button */}
-        <Link to="/lessons" className="block">
-          <Button variant="outline" className="w-full gap-2">
-            <BookOpen className="h-4 w-4" />
-            Browse All Lessons
-          </Button>
-        </Link>
-      </CardContent>
-    </Card>
+          
+          <Link to="/lessons">
+            <Button variant="outline" className="w-full gap-2">
+              <GraduationCap className="h-4 w-4" />
+              Browse All Lessons
+            </Button>
+          </Link>
+        </>
+      ) : (
+        <Card>
+          <CardContent className="text-center py-12">
+            <GraduationCap className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground mb-4">
+              No lessons available yet
+            </p>
+            <Link to="/lessons">
+              <Button>Explore Lessons</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
