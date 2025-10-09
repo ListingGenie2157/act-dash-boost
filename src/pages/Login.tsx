@@ -97,8 +97,19 @@ const Login = () => {
         setLoading(false);
         return;
       }
-      // On success, navigate to the dashboard
-      navigate('/');
+      
+      // Check if user has completed onboarding
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('test_date')
+        .eq('id', signInData.user.id)
+        .maybeSingle();
+      
+      if (!profile?.test_date) {
+        navigate('/onboarding');
+      } else {
+        navigate('/');
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       setError(message);

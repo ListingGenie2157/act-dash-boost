@@ -83,21 +83,31 @@ export default function Onboarding() {
       // Save all onboarding data
       const updates = [];
 
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+
       // 1. Create user profile
       updates.push(
         supabase.from('user_profiles').upsert({
           user_id: user.id,
+          user_id: userId,
           age_verified: form.ageVerified,
           tos_accepted: form.tosAccepted,
           privacy_accepted: form.privacyAccepted,
         })
       );
 
-      // 2. Set test date in profile
+      // 2. Set test date and mark onboarding complete in profile
       if (form.testDate) {
         updates.push(
           supabase.functions.invoke('set-test-date', {
             body: { testDate: format(form.testDate, 'yyyy-MM-dd') },
+          })
+        );
+        updates.push(
+          supabase.from('profiles').upsert({
+            id: userId,
+            test_date: format(form.testDate, 'yyyy-MM-dd'),
+            onboarding_complete: true
           })
         );
       }
