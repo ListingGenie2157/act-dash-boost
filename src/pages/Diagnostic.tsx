@@ -10,13 +10,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 
+interface DiagnosticAnswer {
+  questionId: string;
+  selectedAnswer: string;
+  isCorrect: boolean;
+}
+
 interface DiagnosticEvaluationProps {
-  onComplete: (results: {
-    english: { score: number; weakAreas: string[] };
-    math: { score: number; weakAreas: string[] };
-    reading: { score: number; weakAreas: string[] };
-    science: { score: number; weakAreas: string[] };
-  }) => void;
+  onComplete: (section: string, blocks: Array<{
+    questions: Array<{ id: string; skill_tags?: string[] }>;
+    answers: DiagnosticAnswer[];
+  }>) => void;
   previousScores?: {
     english: number;
     math: number;
@@ -41,7 +45,12 @@ export const DiagnosticEvaluation = ({
   onComplete,
 }: DiagnosticEvaluationProps) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [sectionAnswers, setSectionAnswers] = useState<Record<string, DiagnosticAnswer[]>>({
+    english: [],
+    math: [],
+    reading: [],
+    science: []
+  });
   const [selectedAnswer, setSelectedAnswer] = useState<string>('');
 
   // Use the evaluation questions from the data file
@@ -84,51 +93,55 @@ export const DiagnosticEvaluation = ({
     if (!currentQuestion) return;
 
     const answerIndex = selectedAnswer ? parseInt(selectedAnswer) : -1;
-    setAnswers(prev => ({
+    const isCorrect = answerIndex === currentQuestion.correctAnswer;
+    
+    // Store answer for current section
+    const answer: DiagnosticAnswer = {
+      questionId: currentQuestion.id,
+      selectedAnswer: String.fromCharCode(65 + answerIndex), // Convert 0->A, 1->B, etc.
+      isCorrect
+    };
+    
+    setSectionAnswers(prev => ({
       ...prev,
-      [currentQuestion.id]: answerIndex
+      [currentQuestion.subject]: [...prev[currentQuestion.subject], answer]
     }));
+
+    // Check if this is the last question of current section
+    const nextQuestion = allQuestions[currentQuestionIndex + 1];
+    const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
+    const isEndOfSection = nextQuestion && nextQuestion.subject !== currentQuestion.subject;
+
+    if (isEndOfSection || isLastQuestion) {
+      // Complete current section
+      completeSection(currentQuestion.subject);
+      
+      if (isLastQuestion) {
+        return;
+      }
+    }
 
     if (currentQuestionIndex < totalQuestions - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
-    } else {
-      completeEvaluation();
+      setSelectedAnswer('');
     }
   };
 
-  const completeEvaluation = () => {
-    // Calculate results by subject
-    const results = {
-      english: { score: 0, weakAreas: [] as string[] },
-      math: { score: 0, weakAreas: [] as string[] },
-      reading: { score: 0, weakAreas: [] as string[] },
-      science: { score: 0, weakAreas: [] as string[] }
-    };
+  const completeSection = (section: 'english' | 'math' | 'reading' | 'science') => {
+    // Get all questions for this section
+    const sectionQuestions = allQuestions
+      .filter(q => q.subject === section)
+      .map(q => ({ id: q.id, skill_tags: [q.topic] }));
 
-    allQuestions.forEach(question => {
-      const userAnswer = answers[question.id];
-      const isCorrect = userAnswer === question.correctAnswer;
-      
-      if (isCorrect) {
-        results[question.subject].score += 1;
-      } else {
-        results[question.subject].weakAreas.push(question.topic);
-      }
-    });
+    // Get answers for this section (include current answer if it's the last one)
+    const answers = [...sectionAnswers[section]];
+    
+    const blocks = [{
+      questions: sectionQuestions,
+      answers
+    }];
 
-    // Convert to percentage scores
-    const subjectCounts = { english: 0, math: 0, reading: 0, science: 0 };
-    allQuestions.forEach(q => subjectCounts[q.subject]++);
-
-    Object.keys(results).forEach(subject => {
-      const key = subject as keyof typeof results;
-      const total = subjectCounts[key];
-      if (total > 0) {
-        results[key].score = Math.round((results[key].score / total) * 100);
-      }
-    });
-
-    onComplete(results);
+    onComplete(section.charAt(0).toUpperCase() + section.slice(1) as 'English' | 'Math' | 'Reading' | 'Science', blocks);
   };
 
   if (!currentQuestion) {
@@ -220,10 +233,16 @@ export default function Diagnostic() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [showEvaluation, setShowEvaluation] = useState(false);
+  const [completedSections, setCompletedSections] = useState<Set<string>>(new Set());
 
-  const handleEvaluationComplete = async (results: Record<string, { score: number }>) => {
+  const handleEvaluationComplete = async (
+    section: string, 
+    blocks: Array<{
+      questions: Array<{ id: string; skill_tags?: string[] }>;
+      answers: DiagnosticAnswer[];
+    }>
+  ) => {
     try {
-      // Save diagnostic results to Supabase
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast({
@@ -234,33 +253,45 @@ export default function Diagnostic() {
         return;
       }
 
-      // Results ready to save
-
-      // Save results to diagnostics table for each section
-      const sections = Object.keys(results);
-      for (const sectionKey of sections) {
-        const sectionName = sectionKey.charAt(0).toUpperCase() + sectionKey.slice(1); // Capitalize
-        const { error } = await supabase.from('diagnostics').insert({
-          user_id: user.id,
-          section: sectionName,
-          block: 1,
-          score: results[sectionKey].score || 0,
-          responses: { [sectionKey]: results[sectionKey] },
-          completed_at: new Date().toISOString()
-        });
-
-        if (error) {
-          console.error(`Error saving ${sectionName} diagnostic:`, error);
-          throw error;
-        }
+      // Call the finish-diagnostic edge function
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No active session');
       }
 
-      toast({
-        title: "Diagnostic Complete!",
-        description: "Your results have been saved and your study plan is being generated.",
-      });
+      const response = await fetch(
+        `https://hhbkmxrzxcswwokmbtbz.supabase.co/functions/v1/finish-diagnostic`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ section, blocks }),
+        }
+      );
 
-      navigate('/diagnostic-results');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save diagnostic');
+      }
+
+      const result = await response.json();
+      console.log('Diagnostic saved:', result);
+
+      // Track completed sections
+      setCompletedSections(prev => new Set(prev).add(section));
+
+      // Check if all 4 sections are complete
+      const newCompletedSections = new Set(completedSections).add(section);
+      if (newCompletedSections.size === 4) {
+        toast({
+          title: "Diagnostic Complete!",
+          description: "Your results have been saved and your study plan is being generated.",
+        });
+
+        navigate('/diagnostic-results');
+      }
     } catch (error) {
       console.error('Error saving diagnostic results:', error);
       toast({
