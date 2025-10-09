@@ -35,34 +35,34 @@ const Index = () => {
               setIsAuthenticated(true);
               
               // Check if user has completed onboarding
-              // We check BOTH tables: profiles (has test_date) and user_profiles (has onboarding flags)
+              // Query profiles table for test_date and onboarding_complete
               try {
-                // Check if user has test_date set (in profiles table)
                 const { data: profile, error: profileError } = await supabase
                   .from('profiles')
-                  .select('test_date')
+                  .select('test_date, onboarding_complete')
                   .eq('id', session.user.id)
                   .maybeSingle();
                 
                 console.log('Profile check:', { profile, error: profileError });
-                
-                // If no profile or no test_date, send to onboarding
-                if ((!profile || !profile.test_date) && mounted) {
-                  console.log('No profile or test date found, redirecting to onboarding');
-                  navigate('/onboarding', { replace: true });
-                  return;
-                }
 
-                // Also check if they completed onboarding wizard
+                // Also check user_profiles for onboarding flags
                 const { data: userProfile } = await supabase
                   .from('user_profiles')
                   .select('age_verified, tos_accepted')
                   .eq('user_id', session.user.id)
                   .maybeSingle();
 
-                // If no user_profile (onboarding not started), send to onboarding
-                if (!userProfile && mounted) {
-                  console.log('No user_profile found, redirecting to onboarding');
+                console.log('User profile check:', { userProfile });
+                
+                // If user has test_date AND user_profile exists, stay on dashboard
+                if (profile?.test_date && userProfile && mounted) {
+                  console.log('User has test date and profile, staying on dashboard');
+                  return;
+                }
+                
+                // Otherwise, redirect to onboarding
+                if (mounted) {
+                  console.log('Redirecting to onboarding - missing test_date or user_profile');
                   navigate('/onboarding', { replace: true });
                   return;
                 }

@@ -36,6 +36,32 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
 
       if (error) {
         console.error('Error fetching days left:', error);
+        
+        // Fallback: Query profiles table directly
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('test_date')
+            .eq('id', user.id)
+            .maybeSingle();
+          
+          if (profile?.test_date) {
+            const today = new Date();
+            const testDate = new Date(profile.test_date);
+            const timeDiff = testDate.getTime() - today.getTime();
+            const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+            
+            setDaysLeft({
+              today: today.toISOString().split('T')[0],
+              test_date: profile.test_date,
+              days_left: daysDiff
+            });
+            setLoading(false);
+            return;
+          }
+        }
+        
         toast({
           title: 'Error',
           description: 'Failed to fetch test countdown. Please try again.',

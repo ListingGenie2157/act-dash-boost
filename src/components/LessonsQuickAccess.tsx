@@ -55,13 +55,13 @@ export function LessonsQuickAccess() {
 
       // Filter to only skills with content
       const lessonsWithContent = (skillsData || [])
-        .filter(skill => skillsWithContent.includes(skill.id))
+        .filter(skill => skillsWithContent.includes(skill.name))
         .map(skill => ({
-          skill_code: skill.id,
+          skill_code: skill.name,
           skill_name: skill.name,
           subject: skill.subject,
           section: skill.cluster,
-          questionCount: questionCounts[skill.id] || 0
+          questionCount: questionCounts[skill.name] || 0
         }));
 
       setTotalLessons(lessonsWithContent.length);

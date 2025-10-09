@@ -133,8 +133,9 @@ export function StudyPlanWidget() {
       <div className="space-y-4">
         <div className="text-center py-12 bg-card border rounded-xl">
           <Play className="h-12 w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+          <h3 className="font-semibold mb-2">No Study Plan Yet</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            No study plan for today yet
+            Generate your personalized study plan to get started
           </p>
           <Button 
             onClick={generatePlan} 

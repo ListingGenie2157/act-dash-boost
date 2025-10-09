@@ -168,7 +168,20 @@ export default function Onboarding() {
       if (form.startWith === 'diagnostic') {
         navigate('/diagnostic');
       } else {
-        // Skip diagnostic, go straight to main app
+        // Generate study plan for daily practice path
+        toast.info('Creating your study plan...');
+        const { error: planError } = await supabase.functions.invoke('generate-study-plan', {
+          method: 'POST'
+        });
+        
+        if (planError) {
+          console.error('Error generating study plan:', planError);
+          toast.error('Failed to generate study plan, but you can create one later');
+        } else {
+          toast.success('Study plan ready!');
+        }
+        
+        // Go to main app
         navigate('/');
       }
     } catch (error) {
