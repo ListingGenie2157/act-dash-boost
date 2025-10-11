@@ -14,7 +14,8 @@ import Simulation from "./pages/Simulation";
 import NotFound from "./pages/NotFound";
 import { 
   LazyAnalytics, 
-  LazyAdminImport, 
+  LazyAdminImport,
+  LazyAdminLessonImport,
   LazyParentPortal,
   LazyDiagnostic,
   LazySimEnglish,
@@ -114,10 +115,15 @@ const App = () => (
               <LazyAnalytics />
             </LazyLoader>
           } />
-          {/* Admin route */}
+          {/* Admin routes */}
           <Route path="/admin-import" element={
             <LazyLoader>
               <LazyAdminImport />
+            </LazyLoader>
+          } />
+          <Route path="/admin-lesson-import" element={
+            <LazyLoader>
+              <LazyAdminLessonImport />
             </LazyLoader>
           } />
           {/* Parent portal route */}

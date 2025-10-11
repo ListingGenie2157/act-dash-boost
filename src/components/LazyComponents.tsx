@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react';
 // Lazy load heavy components for better initial bundle size
 export const LazyAnalytics = lazy(() => import('@/pages/Analytics'));
 export const LazyAdminImport = lazy(() => import('@/pages/AdminImport'));
+export const LazyAdminLessonImport = lazy(() => import('@/pages/AdminLessonImport'));
 export const LazyParentPortal = lazy(() => import('@/pages/ParentPortal'));
 export const LazyDiagnostic = lazy(() => import('@/pages/Diagnostic'));
 export const LazySimEnglish = lazy(() => import('@/pages/SimEnglish'));
