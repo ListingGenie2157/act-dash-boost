@@ -10,8 +10,14 @@ export interface EnhancedLesson {
   section: string;
   topic: string | null;
   
-  // Lesson content
+  // Rich content (optional from lesson_content table)
   overview: string;
+  objectives?: string[] | null;
+  concept_explanation?: string | null;
+  guided_practice?: string | null;
+  error_analysis?: string | null;
+  
+  // Practice content (from staging_items)
   examples: StagingItem[];
   practiceQuestions: StagingItem[];
   totalQuestions: number;
@@ -40,7 +46,14 @@ export async function getEnhancedLesson(skillCode: string): Promise<{
       return { data: null, error: skillError || new Error('Skill not found') };
     }
 
-    // Get questions from staging_items for this skill
+    // Try to get rich lesson content
+    const { data: richContent } = await supabase
+      .from('lesson_content')
+      .select('*')
+      .eq('skill_code', skillCode)
+      .maybeSingle();
+
+    // Get questions from staging_items
     const { data: items, error: itemsError } = await supabase
       .from('staging_items')
       .select('*')
@@ -52,27 +65,16 @@ export async function getEnhancedLesson(skillCode: string): Promise<{
     }
 
     const questions = items || [];
-    
-    // Determine section from first question
     const section = questions[0]?.section || 'MATH';
     const topic = questions[0]?.topic || skill.name;
 
-    // Split into examples (first 2-3) and practice (rest)
+    // Split into examples and practice
     const exampleCount = Math.min(3, Math.floor(questions.length * 0.3));
     const examples = questions.slice(0, exampleCount);
     const practiceQuestions = questions.slice(exampleCount);
 
-    // Calculate difficulty based on question difficulty distribution
-    const difficulties = questions.map(q => q.difficulty.toLowerCase());
-    const avgDifficulty = difficulties.includes('hard') ? 'hard' 
-      : difficulties.includes('medium') ? 'medium' 
-      : 'easy';
-
-    // Estimate time: 2 min per question
-    const estimatedMinutes = Math.ceil(questions.length * 2);
-
-    // Create enhanced overview from skill description + question analysis
-    const overview = skill.description || createOverviewFromQuestions(questions, skill.name);
+    // Use rich content if available, otherwise generate
+    const overview = richContent?.overview_html || createOverviewFromQuestions(questions, skill.name);
 
     const lesson: EnhancedLesson = {
       skill_code: skillCode,
@@ -80,12 +82,20 @@ export async function getEnhancedLesson(skillCode: string): Promise<{
       subject: skill.subject,
       section,
       topic,
+      
+      // Rich content (if available)
       overview,
+      objectives: richContent?.objectives || null,
+      concept_explanation: richContent?.concept_explanation || null,
+      guided_practice: richContent?.guided_practice || null,
+      error_analysis: richContent?.error_analysis || null,
+      
+      // Practice content
       examples,
       practiceQuestions,
       totalQuestions: questions.length,
-      difficulty: avgDifficulty,
-      estimatedMinutes,
+      difficulty: (richContent?.difficulty as 'easy' | 'medium' | 'hard') || 'medium',
+      estimatedMinutes: richContent?.estimated_minutes || Math.ceil(questions.length * 2),
     };
 
     return { data: lesson, error: null };

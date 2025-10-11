@@ -236,6 +236,88 @@ export type Database = {
         }
         Relationships: []
       }
+      lesson_content: {
+        Row: {
+          concept_explanation: string
+          created_at: string | null
+          difficulty: string | null
+          error_analysis: string | null
+          estimated_minutes: number | null
+          guided_practice: string | null
+          objectives: string[] | null
+          overview_html: string
+          skill_code: string
+          updated_at: string | null
+        }
+        Insert: {
+          concept_explanation: string
+          created_at?: string | null
+          difficulty?: string | null
+          error_analysis?: string | null
+          estimated_minutes?: number | null
+          guided_practice?: string | null
+          objectives?: string[] | null
+          overview_html: string
+          skill_code: string
+          updated_at?: string | null
+        }
+        Update: {
+          concept_explanation?: string
+          created_at?: string | null
+          difficulty?: string | null
+          error_analysis?: string | null
+          estimated_minutes?: number | null
+          guided_practice?: string | null
+          objectives?: string[] | null
+          overview_html?: string
+          skill_code?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_content_skill_code_fkey"
+            columns: ["skill_code"]
+            isOneToOne: true
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lesson_schedule: {
+        Row: {
+          created_at: string | null
+          priority: number | null
+          skill_id: string
+          status: string | null
+          the_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          priority?: number | null
+          skill_id: string
+          status?: string | null
+          the_date: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          priority?: number | null
+          skill_id?: string
+          status?: string | null
+          the_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_schedule_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mastery: {
         Row: {
           avg_time_ms: number

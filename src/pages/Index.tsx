@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { CountdownHeader } from '@/components/CountdownHeader';
 import { StudyPlanWidget } from '@/components/StudyPlanWidget';
-import { LessonsQuickAccess } from '@/components/LessonsQuickAccess';
 import { TestWeekBanner } from '@/components/TestWeekBanner';
 import { ParentBanner } from '@/components/ParentBanner';
 import { MasteryDashboard } from '@/components/MasteryDashboard';
 import { WeakAreasCard } from '@/components/WeakAreasCard';
+import { WeeklyCalendar } from '@/components/WeeklyCalendar';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -247,11 +247,8 @@ const Index = () => {
           {hasStudyPlan ? (
             // Structured Study Plan Dashboard
             <>
-              <div className="grid lg:grid-cols-2 gap-8">
-                <StudyPlanWidget hasStudyPlan={true} />
-                <LessonsQuickAccess />
-              </div>
-              
+              <StudyPlanWidget hasStudyPlan={true} />
+              <WeeklyCalendar userId={session?.user?.id || ''} testDate={profile?.test_date} />
               <MasteryDashboard />
               <WeakAreasCard />
             </>

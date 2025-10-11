@@ -7,6 +7,68 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper function to select lessons for a specific day
+function selectLessonsForDay(
+  lessonsNeeded: number,
+  daysLeft: number | null,
+  diagnosticResults: Array<{ section: string; score: number }>,
+  availableSkills: Array<{ id: string; subject: string; name: string; order_index: number }>,
+  completedSkillIds: Set<string>
+): string[] {
+  const selectedSkillIds: string[] = [];
+
+  // Filter out completed skills
+  const learnableSkills = availableSkills.filter(s => !completedSkillIds.has(s.id));
+
+  // Identify weak sections (score < 0.6)
+  const weakSections = diagnosticResults
+    .filter(d => d.score < 0.6)
+    .map(d => d.section.toLowerCase());
+
+  // Sort by priority: weak sections first, then by order_index
+  const prioritizedSkills = learnableSkills.sort((a, b) => {
+    const aIsWeak = weakSections.includes(a.subject.toLowerCase()) ? 1 : 0;
+    const bIsWeak = weakSections.includes(b.subject.toLowerCase()) ? 1 : 0;
+
+    if (aIsWeak !== bIsWeak) return bIsWeak - aIsWeak; // Weak first
+    return a.order_index - b.order_index; // Then by order
+  });
+
+  // Time-based strategy
+  if (daysLeft !== null && daysLeft < 30) {
+    // URGENT: Focus only on weak areas
+    const weakSkills = prioritizedSkills.filter(s =>
+      weakSections.includes(s.subject.toLowerCase())
+    );
+    selectedSkillIds.push(...weakSkills.slice(0, lessonsNeeded).map(s => s.id));
+
+    // If not enough weak skills, add foundational ones
+    if (selectedSkillIds.length < lessonsNeeded) {
+      const remaining = lessonsNeeded - selectedSkillIds.length;
+      const foundational = prioritizedSkills
+        .filter(s => !selectedSkillIds.includes(s.id))
+        .slice(0, remaining);
+      selectedSkillIds.push(...foundational.map(s => s.id));
+    }
+  } else {
+    // BALANCED: Mix of weak + new
+    const weakCount = Math.ceil(lessonsNeeded * 0.6);
+    const newCount = lessonsNeeded - weakCount;
+
+    const weakSkills = prioritizedSkills
+      .filter(s => weakSections.includes(s.subject.toLowerCase()))
+      .slice(0, weakCount);
+
+    const newSkills = prioritizedSkills
+      .filter(s => !weakSections.includes(s.subject.toLowerCase()))
+      .slice(0, newCount);
+
+    selectedSkillIds.push(...weakSkills.map(s => s.id), ...newSkills.map(s => s.id));
+  }
+
+  return selectedSkillIds.slice(0, lessonsNeeded);
+}
+
 // Pure function for task selection with time cap
 export function selectPlaylist(priorities: Task[], capMins: number): Task[] {
   const selected: Task[] = [];
@@ -78,7 +140,7 @@ function getStudyMode(daysLeft: number | null): StudyMode {
   } else if (daysLeft <= 7) {
     return {
       name: 'CRASH',
-      allowLearn: false, // Only allow LEARN for prerequisites
+      allowLearn: false,
       reviewWeight: 1,
       drillWeight: 2,
       learnWeight: 4
@@ -109,7 +171,6 @@ function getTestWeekTasks(daysLeft: number, userId: string, dateStr: string): Ar
   }> = [];
   
   if (daysLeft === 7 || daysLeft === 5 || daysLeft === 3) {
-    // T-7, T-5, T-3: English SIM
     tasks.push({
       type: 'SIM',
       section: 'english',
@@ -117,14 +178,12 @@ function getTestWeekTasks(daysLeft: number, userId: string, dateStr: string): Ar
       estimated_mins: 45
     });
   } else if (daysLeft === 2) {
-    // T-2: Only REVIEW tasks
     tasks.push({
       type: 'REVIEW',
       size: 10,
       estimated_mins: 20
     });
   } else if (daysLeft === 1) {
-    // T-1: 15-minute warmup
     tasks.push({
       type: 'WARMUP',
       size: 5,
@@ -140,26 +199,24 @@ function chooseWeakSkills(baseline: Array<{ section: string; score: number }>, p
   const weakSkillIds: string[] = [];
   
   baseline.forEach(diagnostic => {
-    if (diagnostic.score < 0.6) { // If less than 60% accuracy
+    if (diagnostic.score < 0.6) {
       const sectionSkills = allSkills.filter(s => s.subject === diagnostic.section);
       const clusterGroups: { [cluster: string]: string[] } = {};
       
-      // Group skills by cluster
       sectionSkills.forEach(skill => {
         if (!clusterGroups[skill.cluster]) clusterGroups[skill.cluster] = [];
         clusterGroups[skill.cluster].push(skill.skill_name || skill.name || skill.id || '');
       });
       
-      // Pick skills from the first two clusters (assume ordered by difficulty)
       const clusters = Object.keys(clusterGroups).slice(0, 2);
       clusters.forEach(cluster => {
-        const clusterSkillIds = clusterGroups[cluster].slice(0, 2); // Max 2 skills per cluster
+        const clusterSkillIds = clusterGroups[cluster].slice(0, 2);
         weakSkillIds.push(...clusterSkillIds);
       });
     }
   });
   
-  return weakSkillIds.slice(0, 5); // Return max 5 skills
+  return weakSkillIds.slice(0, 5);
 }
 
 serve(async (req) => {
@@ -254,6 +311,12 @@ serve(async (req) => {
       .eq('user_id', user.id)
       .single();
 
+    // Get all skills for lesson tracking
+    const { data: allSkills } = await supabase
+      .from('skills')
+      .select('id, name, subject, cluster, order_index')
+      .order('order_index', { ascending: true });
+
     const timeMultiplier = accommodations?.time_multiplier || 1.0;
     const testDate = profile?.test_date ? new Date(profile.test_date + 'T00:00:00') : null;
     const daysLeft = calculateDaysLeft(today, testDate);
@@ -262,13 +325,37 @@ serve(async (req) => {
 
     console.warn(`Study mode: ${mode.name}, Days left: ${daysLeft}, Time cap: ${dailyTimeCap}mins, Time multiplier: ${timeMultiplier}`);
 
+    // Calculate lesson metrics for time-adaptive planning
+    const { data: lessonsWithContent } = await supabase
+      .from('lesson_content')
+      .select('skill_code');
     
+    const totalLessonsAvailable = lessonsWithContent?.length || 30;
+    
+    // Get completed lessons (mastery level >= 3)
+    const { data: masteryData } = await supabase
+      .from('mastery')
+      .select('skill_id, correct, total')
+      .eq('user_id', user.id);
+
+    const completedSkillIds = new Set<string>();
+    masteryData?.forEach(m => {
+      if (m.total >= 5 && (m.correct / m.total) >= 0.8) {
+        completedSkillIds.add(m.skill_id);
+      }
+    });
+
+    const lessonsRemaining = totalLessonsAvailable - completedSkillIds.size;
+    const lessonsPerDay = daysLeft && daysLeft > 0 
+      ? Math.min(Math.ceil(lessonsRemaining / daysLeft), 3) 
+      : Math.min(lessonsRemaining, 3);
+
+    console.log(`📚 Lessons: ${lessonsRemaining} remaining, ${lessonsPerDay} per day needed (${daysLeft} days left)`);
 
     // Check for test week special scheduling
     if (daysLeft !== null && daysLeft <= 7) {
       const specialTasks = getTestWeekTasks(daysLeft, user.id, todayStr);
       if (specialTasks.length > 0) {
-        // Save special test week plan
         const { error: planError } = await supabase
           .from('study_plan_days')
           .upsert({
@@ -281,7 +368,6 @@ serve(async (req) => {
         if (planError) {
           console.error('Error saving test week plan:', planError);
         } else {
-          // Create study tasks for special schedule
           const studyTasks = specialTasks.map((task: { type: string; skill_id?: string; size: number }) => ({
             user_id: user.id,
             the_date: todayStr,
@@ -303,7 +389,9 @@ serve(async (req) => {
             the_date: todayStr,
             tasks: specialTasks,
             mode: 'TEST_WEEK',
-            days_left: daysLeft
+            days_left: daysLeft,
+            lessons_remaining: lessonsRemaining,
+            lessons_per_day: lessonsPerDay
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
@@ -311,7 +399,6 @@ serve(async (req) => {
       }
     }
 
-    // Get due reviews
     const { data: dueReviews } = await supabase
       .from('review_queue')
       .select('question_id, due_at')
@@ -320,7 +407,6 @@ serve(async (req) => {
       .order('due_at', { ascending: true })
       .limit(10);
 
-    // Query latest diagnostics per section for baseline seeding
     const { data: latestDiagnostics } = await supabase
       .from('diagnostics')
       .select('section, score, source')
@@ -328,7 +414,6 @@ serve(async (req) => {
       .not('completed_at', 'is', null)
       .order('completed_at', { ascending: false });
 
-    // Process diagnostics to get latest per section, prefer 'diagnostic' over 'self'
     const diagnosticsBySection: { [key: string]: { score: number; source: string } } = {};
     latestDiagnostics?.forEach(d => {
       const current = diagnosticsBySection[d.section];
@@ -337,7 +422,6 @@ serve(async (req) => {
       }
     });
 
-    // Get weakest skills (lowest mastery level with some activity)
     const { data: weakestSkills } = await supabase
       .from('progress')
       .select('skill_id, mastery_level, correct, seen')
@@ -346,66 +430,7 @@ serve(async (req) => {
       .order('mastery_level', { ascending: true })
       .limit(3);
 
-    // If progress is sparse (seen < 20), seed from baseline diagnostics
-    const sparseProgress = weakestSkills?.filter(s => s.seen < 20) || [];
-    let baselineSeededSkills: Array<{ id: string; subject: string; cluster: string; name: string }> = [];
-    
-    if (sparseProgress.length > 0 && Object.keys(diagnosticsBySection).length > 0) {
-      // Get all skills grouped by subject and cluster
-      const { data: allSkills } = await supabase
-        .from('skills')
-        .select('id, subject, cluster, name')
-        .order('order_index', { ascending: true });
-
-      // Use helper function to choose weak skills
-      const baselineDiagnostics = Object.entries(diagnosticsBySection).map(([section, data]) => ({
-        section,
-        score: data.score,
-        source: data.source
-      }));
-      
-      const progressData = sparseProgress.map(p => ({
-        skill_id: p.skill_id,
-        seen: p.seen,
-        mastery_level: p.mastery_level,
-        correct: p.correct
-      }));
-
-    const progressDataMapped = progressData.map(p => ({
-      section: p.skill_id, // Map skill_id to section for function compatibility
-      accuracy: p.seen > 0 ? p.correct / p.seen : 0
-    }));
-    const weakSkillIds = chooseWeakSkills(baselineDiagnostics, progressDataMapped, allSkills || []);
-      
-    baselineSeededSkills = weakSkillIds.map(skillId => ({
-      id: skillId,
-      subject: 'math', // Default subject
-      cluster: 'basic',
-      name: skillId
-    }));
-    }
-
-    // Combine actual weak skills with baseline seeded skills
-    const combinedWeakSkills = [...(weakestSkills || []), ...baselineSeededSkills].slice(0, 5);
-
-    // Get skills for learning (no progress yet, prerequisites met)
-    const { data: userProgress } = await supabase
-      .from('progress')
-      .select('skill_id')
-      .eq('user_id', user.id);
-
-    const learnedSkillIds = new Set(userProgress?.map(p => p.skill_id) || []);
-
-    const { data: availableSkills } = await supabase
-      .from('skills')
-      .select('id, prereq_skill_ids, name')
-      .order('order_index', { ascending: true });
-
-    const learnableSkills = availableSkills?.filter(skill => {
-      if (learnedSkillIds.has(skill.id)) return false;
-      if (!skill.prereq_skill_ids || skill.prereq_skill_ids.length === 0) return true;
-      return skill.prereq_skill_ids.every((prereqId: string) => learnedSkillIds.has(prereqId));
-    }) || [];
+    const combinedWeakSkills = weakestSkills || [];
 
     // Build priority task list
     const priorities: Task[] = [];
@@ -416,8 +441,8 @@ serve(async (req) => {
         type: 'REVIEW',
         questionId: review.question_id,
         size: 1,
-        estimatedMins: Math.round(2 * timeMultiplier), // Apply accommodation multiplier
-        priority: mode.reviewWeight * 1000 + (100 - index) // Higher priority for earlier due dates
+        estimatedMins: Math.round(2 * timeMultiplier),
+        priority: mode.reviewWeight * 1000 + (100 - index)
       });
     });
 
@@ -425,26 +450,36 @@ serve(async (req) => {
     combinedWeakSkills?.forEach((skill, index) => {
       priorities.push({
         type: 'DRILL',
-        skillId: 'skill_id' in skill ? skill.skill_id : skill.id,
-        size: 5, // 5 questions per drill
-        estimatedMins: Math.round(8 * timeMultiplier), // Apply accommodation multiplier
+        skillId: skill.skill_id,
+        size: 5,
+        estimatedMins: Math.round(8 * timeMultiplier),
         priority: mode.drillWeight * 1000 + (50 - index)
       });
     });
 
-    // 3. LEARN tasks (lowest priority, mode-dependent)
-    if (mode.allowLearn || mode.name === 'CRASH') {
-      learnableSkills.slice(0, 2).forEach((skill, index) => {
-        const isPrerequisite = mode.name === 'CRASH'; // In CRASH mode, only include if prerequisite
-        if (mode.name !== 'CRASH' || isPrerequisite) {
-          priorities.push({
-            type: 'LEARN',
-            skillId: skill.id,
-            size: 3, // 3 questions to learn
-            estimatedMins: Math.round(12 * timeMultiplier), // Apply accommodation multiplier
-            priority: mode.learnWeight * 1000 + (25 - index)
-          });
-        }
+    // 3. LEARN tasks (time-adaptive, lesson-count aware)
+    if (mode.allowLearn && lessonsPerDay > 0) {
+      const baselineDiagnostics = Object.entries(diagnosticsBySection).map(([section, data]) => ({
+        section,
+        score: data.score
+      }));
+
+      const todaysLessons = selectLessonsForDay(
+        lessonsPerDay,
+        daysLeft,
+        baselineDiagnostics,
+        allSkills || [],
+        completedSkillIds
+      );
+
+      todaysLessons.forEach((skillId, index) => {
+        priorities.push({
+          type: 'LEARN',
+          skillId: skillId,
+          size: 3,
+          estimatedMins: Math.round(12 * timeMultiplier),
+          priority: mode.learnWeight * 1000 + (25 - index)
+        });
       });
     }
 
@@ -491,7 +526,6 @@ serve(async (req) => {
 
     if (profileUpdateError) {
       console.error('Error updating has_study_plan flag:', profileUpdateError);
-      // Don't fail the whole function for this, just log it
     }
 
     // Create individual study tasks
@@ -518,11 +552,63 @@ serve(async (req) => {
       }
     }
 
+    // Generate and save 7-day lesson schedule
+    if (lessonsPerDay > 0 && daysLeft) {
+      const scheduleEntries = [];
+      const seenSkills = new Set<string>(completedSkillIds);
+
+      for (let i = 0; i < Math.min(daysLeft, 30); i++) {
+        const targetDate = new Date(today);
+        targetDate.setDate(today.getDate() + i);
+        const dateStr = targetDate.toISOString().split('T')[0];
+
+        const baselineDiagnostics = Object.entries(diagnosticsBySection).map(([section, data]) => ({
+          section,
+          score: data.score
+        }));
+
+        const dailyLessons = selectLessonsForDay(
+          lessonsPerDay,
+          daysLeft - i,
+          baselineDiagnostics,
+          allSkills || [],
+          seenSkills
+        );
+
+        dailyLessons.forEach((skillId, index) => {
+          if (!seenSkills.has(skillId)) {
+            seenSkills.add(skillId);
+            scheduleEntries.push({
+              user_id: user.id,
+              the_date: dateStr,
+              skill_id: skillId,
+              priority: index,
+              status: 'PENDING'
+            });
+          }
+        });
+      }
+
+      if (scheduleEntries.length > 0) {
+        const { error: scheduleError } = await supabase
+          .from('lesson_schedule')
+          .upsert(scheduleEntries, { onConflict: 'user_id,the_date,skill_id' });
+
+        if (scheduleError) {
+          console.error('Error saving lesson schedule:', scheduleError);
+        } else {
+          console.log(`📅 Saved ${scheduleEntries.length} lessons to schedule`);
+        }
+      }
+    }
+
     const response = {
       the_date: todayStr,
       tasks: tasksJson,
       mode: mode.name,
-      days_left: daysLeft
+      days_left: daysLeft,
+      lessons_remaining: lessonsRemaining,
+      lessons_per_day: lessonsPerDay
     };
 
     console.warn('Study plan generated successfully:', response);
@@ -540,3 +626,4 @@ serve(async (req) => {
     });
   }
 });
+
