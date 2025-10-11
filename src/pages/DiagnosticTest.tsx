@@ -247,7 +247,7 @@ export default function DiagnosticTest() {
 
       
       // Call finish-diagnostic edge function
-      const { error } = await supabase.functions.invoke('finish-diagnostic', {
+      const { data, error } = await supabase.functions.invoke('finish-diagnostic', {
         body: {
           section: formId.startsWith('D2') ? formId.slice(2) : formId,
           blocks: [{
@@ -266,8 +266,15 @@ export default function DiagnosticTest() {
 
       if (error) throw error;
 
-      // Navigate to results
-      navigate(`/diagnostic-results/${formId}`);
+      console.log('Diagnostic results:', data);
+
+      // Navigate to results with data
+      navigate(`/diagnostic-results/${formId}`, {
+        state: {
+          results: data,
+          formId: formId
+        }
+      });
 
     } catch (error) {
       console.error('Error submitting diagnostic:', error);

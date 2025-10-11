@@ -240,12 +240,29 @@ serve(async (req) => {
       });
     }
 
+    // Get user preferences
+    const { data: userPreferences } = await supabase
+      .from('user_preferences')
+      .select('daily_minutes, preferred_start_hour, preferred_end_hour')
+      .eq('user_id', user.id)
+      .single();
+
+    // Get accommodations
+    const { data: accommodations } = await supabase
+      .from('accommodations')
+      .select('time_multiplier')
+      .eq('user_id', user.id)
+      .single();
+
+    const timeMultiplier = accommodations?.time_multiplier || 1.0;
     const testDate = profile?.test_date ? new Date(profile.test_date + 'T00:00:00') : null;
     const daysLeft = calculateDaysLeft(today, testDate);
-    const dailyTimeCap = profile?.daily_time_cap_mins || 30;
+    const dailyTimeCap = userPreferences?.daily_minutes || profile?.daily_time_cap_mins || 30;
     const mode = getStudyMode(daysLeft);
 
-    console.warn(`Study mode: ${mode.name}, Days left: ${daysLeft}, Time cap: ${dailyTimeCap}mins`);
+    console.warn(`Study mode: ${mode.name}, Days left: ${daysLeft}, Time cap: ${dailyTimeCap}mins, Time multiplier: ${timeMultiplier}`);
+
+    
 
     // Check for test week special scheduling
     if (daysLeft !== null && daysLeft <= 7) {
@@ -399,7 +416,7 @@ serve(async (req) => {
         type: 'REVIEW',
         questionId: review.question_id,
         size: 1,
-        estimatedMins: 2, // Estimated 2 mins per review question
+        estimatedMins: Math.round(2 * timeMultiplier), // Apply accommodation multiplier
         priority: mode.reviewWeight * 1000 + (100 - index) // Higher priority for earlier due dates
       });
     });
@@ -410,7 +427,7 @@ serve(async (req) => {
         type: 'DRILL',
         skillId: 'skill_id' in skill ? skill.skill_id : skill.id,
         size: 5, // 5 questions per drill
-        estimatedMins: 8, // Estimated 8 mins for 5 questions
+        estimatedMins: Math.round(8 * timeMultiplier), // Apply accommodation multiplier
         priority: mode.drillWeight * 1000 + (50 - index)
       });
     });
@@ -424,7 +441,7 @@ serve(async (req) => {
             type: 'LEARN',
             skillId: skill.id,
             size: 3, // 3 questions to learn
-            estimatedMins: 12, // Estimated 12 mins for learning
+            estimatedMins: Math.round(12 * timeMultiplier), // Apply accommodation multiplier
             priority: mode.learnWeight * 1000 + (25 - index)
           });
         }

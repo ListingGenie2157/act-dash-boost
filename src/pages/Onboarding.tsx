@@ -104,6 +104,7 @@ export default function Onboarding() {
           supabase.from('profiles').upsert({
             id: user.id,
             test_date: format(form.testDate, 'yyyy-MM-dd'),
+            daily_time_cap_mins: parseInt(form.dailyMinutes, 10),
             onboarding_complete: true
           })
         );

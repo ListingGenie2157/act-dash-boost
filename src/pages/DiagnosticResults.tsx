@@ -23,23 +23,62 @@ export default function DiagnosticResults() {
   const location = useLocation();
   const navigate = useNavigate();
   const state = location.state as DiagnosticResultsState;
+  const formId = state?.formId;
+
+  // Fallback: fetch latest diagnostic if state is missing
+  useEffect(() => {
+    if (!state?.results && formId) {
+      const fetchLatestDiagnostic = async () => {
+        try {
+          const { data: user } = await supabase.auth.getUser();
+          if (!user.user) return;
+
+          const section = formId.startsWith('D2') ? formId.slice(2) : formId;
+          const { data: diagnostic } = await supabase
+            .from('diagnostics')
+            .select('*')
+            .eq('user_id', user.user.id)
+            .eq('section', section)
+            .order('completed_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (diagnostic && diagnostic.responses) {
+            // Reconstruct results from database
+            const responses = diagnostic.responses as any;
+            navigate(`/diagnostic-results/${formId}`, {
+              state: {
+                results: {
+                  predicted_section_score: diagnostic.score || 0,
+                  top_5_weak_skills: responses.top_5_weak_skills || [],
+                  diagnostic_id: diagnostic.id
+                },
+                formId
+              },
+              replace: true
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching diagnostic:', error);
+        }
+      };
+      fetchLatestDiagnostic();
+    }
+  }, [state, formId, navigate]);
 
   if (!state?.results) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
-            <p className="text-center">No results found.</p>
-            <Button onClick={() => navigate('/')} className="w-full mt-4">
-              Return Home
-            </Button>
+            <p className="text-center">Loading results...</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  const { results, formId } = state;
+  const { results } = state;
   const { predicted_section_score, top_5_weak_skills } = results;
 
   // Auto-generate study plan after diagnostic completion
