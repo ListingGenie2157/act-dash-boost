@@ -22,116 +22,71 @@ const Index = () => {
   useEffect(() => {
     let mounted = true;
 
-    const checkAuthAndProfile = async () => {
-      try {
-        // Check for existing session first
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const syncAuthAndProfile = async (session: any) => {
+      if (!mounted) return;
+
+      if (session) {
+        setSession(session);
+        setIsAuthenticated(true);
         
-        // Set up auth state listener FIRST
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            console.log('Auth state changed:', { event, session: !!session });
-            
-            if (!mounted) return;
-            
-            if (session) {
-              setIsAuthenticated(true);
-              
-              // Check if user has completed onboarding
-              // Query profiles table for test_date, onboarding_complete, and has_study_plan
-              try {
-                const { data: profile, error: profileError } = await supabase
-                  .from('profiles')
-                  .select('test_date, onboarding_complete, has_study_plan')
-                  .eq('id', session.user.id)
-                  .maybeSingle();
-                
-                console.log('Profile check:', { profile, error: profileError });
+        try {
+          // Check if user has completed onboarding
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('test_date, onboarding_complete, has_study_plan')
+            .eq('id', session.user.id)
+            .maybeSingle();
+          
+          // Also check user_profiles for onboarding flags
+          const { data: userProfile } = await supabase
+            .from('user_profiles')
+            .select('age_verified, tos_accepted')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
 
-                // Also check user_profiles for onboarding flags
-                const { data: userProfile } = await supabase
-                  .from('user_profiles')
-                  .select('age_verified, tos_accepted')
-                  .eq('user_id', session.user.id)
-                  .maybeSingle();
-
-                console.log('User profile check:', { userProfile });
-                
-                // If user has test_date AND user_profile exists, stay on dashboard
-                if (profile?.test_date && userProfile && mounted) {
-                  console.log('User has test date and profile, staying on dashboard');
-                  setIsLoading(false);
-                  return;
-                }
-                
-                // Otherwise, redirect to onboarding
-                if (mounted) {
-                  console.log('Redirecting to onboarding - missing test_date or user_profile');
-                  navigate('/onboarding', { replace: true });
-                  return;
-                }
-              } catch (profileError) {
-                console.error('Profile check failed:', profileError);
-                // On error, safer to send to onboarding
-                if (mounted) {
-                  navigate('/onboarding', { replace: true });
-                  return;
-                }
-              }
-            } else {
-              setIsAuthenticated(false);
-            }
-            
-            if (mounted) {
-              setIsLoading(false);
-            }
-          }
-        );
-
-        // Initial check with current session
-        if (sessionError) {
-          console.error('Session check error:', sessionError);
-          if (mounted) {
-            setIsAuthenticated(false);
+          // If user has test_date AND user_profile exists, stay on dashboard
+          if (profile?.test_date && userProfile && mounted) {
+            setProfile(profile);
+            setHasStudyPlan(profile.has_study_plan ?? false);
             setIsLoading(false);
+            return;
           }
-          return () => {
-            mounted = false;
-            subscription.unsubscribe();
-          };
+          
+          // Otherwise, redirect to onboarding
+          if (mounted) {
+            navigate('/onboarding', { replace: true });
+            return;
+          }
+        } catch (error) {
+          console.error('Profile check failed:', error);
+          if (mounted) {
+            navigate('/onboarding', { replace: true });
+          }
         }
-
-        if (!session && mounted) {
-          setIsAuthenticated(false);
-          setIsLoading(false);
-        }
-
-        return () => {
-          mounted = false;
-          subscription.unsubscribe();
-        };
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        if (mounted) {
-          setIsAuthenticated(false);
-          setIsLoading(false);
-        }
+      } else {
+        setSession(null);
+        setIsAuthenticated(false);
+        setProfile(null);
+        setHasStudyPlan(null);
+      }
+      
+      if (mounted) {
+        setIsLoading(false);
       }
     };
 
-    // Set up auth state listener
+    // Set up single auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, _session) => {
-        if (!mounted) return;
-        
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-          checkAuthAndProfile();
-        }
+      async (event, session) => {
+        console.log('Auth state changed:', { event, session: !!session });
+        await syncAuthAndProfile(session);
       }
     );
 
-    // Initial check
-    checkAuthAndProfile();
+    // Initial session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      syncAuthAndProfile(session);
+    });
 
     return () => {
       mounted = false;
@@ -206,28 +161,6 @@ const Index = () => {
     );
   }
 
-  // Authenticated user dashboard
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      if (currentSession?.user) {
-        setSession(currentSession);
-        
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('has_study_plan, test_date')
-          .eq('id', currentSession.user.id)
-          .maybeSingle();
-        
-        setProfile(profileData);
-        setHasStudyPlan(profileData?.has_study_plan ?? false);
-      }
-    };
-    
-    if (isAuthenticated) {
-      fetchUserProfile();
-    }
-  }, [isAuthenticated]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
