@@ -238,38 +238,56 @@ export type Database = {
       }
       lesson_content: {
         Row: {
+          checkpoint_quiz: string | null
+          checkpoint_quiz_answers: string | null
+          common_traps: string | null
           concept_explanation: string
           created_at: string | null
           difficulty: string | null
           error_analysis: string | null
           estimated_minutes: number | null
           guided_practice: string | null
+          independent_practice: string | null
+          independent_practice_answers: string | null
           objectives: string[] | null
           overview_html: string
+          recap: string | null
           skill_code: string
           updated_at: string | null
         }
         Insert: {
+          checkpoint_quiz?: string | null
+          checkpoint_quiz_answers?: string | null
+          common_traps?: string | null
           concept_explanation: string
           created_at?: string | null
           difficulty?: string | null
           error_analysis?: string | null
           estimated_minutes?: number | null
           guided_practice?: string | null
+          independent_practice?: string | null
+          independent_practice_answers?: string | null
           objectives?: string[] | null
           overview_html: string
+          recap?: string | null
           skill_code: string
           updated_at?: string | null
         }
         Update: {
+          checkpoint_quiz?: string | null
+          checkpoint_quiz_answers?: string | null
+          common_traps?: string | null
           concept_explanation?: string
           created_at?: string | null
           difficulty?: string | null
           error_analysis?: string | null
           estimated_minutes?: number | null
           guided_practice?: string | null
+          independent_practice?: string | null
+          independent_practice_answers?: string | null
           objectives?: string[] | null
           overview_html?: string
+          recap?: string | null
           skill_code?: string
           updated_at?: string | null
         }

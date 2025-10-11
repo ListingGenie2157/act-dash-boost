@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, Target, Clock, Award } from 'lucide-react';
+import { ArrowLeft, BookOpen, Target, Clock, Award, CheckCircle, AlertTriangle, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { getEnhancedLesson, type EnhancedLesson } from '@/lib/lessons';
 import { useSkillMastery } from '@/hooks/useMastery';
 import { MasteryBadge } from '@/components/MasteryBadge';
@@ -17,12 +18,16 @@ import { updateMastery } from '@/lib/mastery';
 import { toast } from 'sonner';
 import { shuffleQuestionChoices } from '@/lib/shuffle';
 
+function cnLocal(...classes: (string | boolean | undefined)[]) {
+  return classes.filter(Boolean).join(' ');
+}
+
 export default function EnhancedLessonViewer() {
   const { topic } = useParams<{ topic?: string }>();
   const [lesson, setLesson] = useState<EnhancedLesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentTab, setCurrentTab] = useState('overview');
+  const [currentTab, setCurrentTab] = useState('learn');
   
   // Practice tracking
   const [practiceAnswers, setPracticeAnswers] = useState<Record<string, number>>({});
@@ -246,10 +251,10 @@ export default function EnhancedLessonViewer() {
 
       {/* Tabbed Content */}
       <Tabs value={currentTab} onValueChange={setCurrentTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="learn">
             <BookOpen className="h-4 w-4 mr-2" />
-            Overview
+            Learn
           </TabsTrigger>
           <TabsTrigger value="examples">
             Examples ({lesson.examples.length})
@@ -257,13 +262,17 @@ export default function EnhancedLessonViewer() {
           <TabsTrigger value="practice">
             Practice ({lesson.practiceQuestions.length})
           </TabsTrigger>
+          <TabsTrigger value="test">
+            Test Yourself
+          </TabsTrigger>
         </TabsList>
 
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6 mt-6">
+        {/* Learn Tab */}
+        <TabsContent value="learn" className="space-y-6 mt-6">
+          {/* Overview */}
           <Card>
             <CardHeader>
-              <CardTitle>Lesson Overview</CardTitle>
+              <CardTitle>Overview</CardTitle>
             </CardHeader>
             <CardContent>
               <div 
@@ -273,51 +282,35 @@ export default function EnhancedLessonViewer() {
             </CardContent>
           </Card>
 
-          {lesson.examples.length > 0 && (
+          {/* Concept Explanation */}
+          {lesson.concept_explanation && (
             <Card>
               <CardHeader>
-                <CardTitle>Key Concepts</CardTitle>
-                <CardDescription>
-                  Review these examples before practicing
-                </CardDescription>
+                <CardTitle>Concept Explanation</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {lesson.examples.map((example, idx) => (
-                  <div key={example.staging_id} className="p-4 bg-muted rounded-lg">
-                    <h4 className="font-semibold mb-2">Example {idx + 1}</h4>
-                    {example.passage_text && (
-                      <div className="mb-3 p-3 bg-background rounded border">
-                        <p className="text-sm whitespace-pre-wrap">{example.passage_text}</p>
-                      </div>
-                    )}
-                    <p className="mb-3">{example.question}</p>
-                    <div className="space-y-1 text-sm mb-3">
-                      <div>A) {example.choice_a}</div>
-                      <div>B) {example.choice_b}</div>
-                      <div>C) {example.choice_c}</div>
-                      <div>D) {example.choice_d}</div>
-                    </div>
-                    <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded border border-green-200">
-                      <div className="font-semibold text-green-700 dark:text-green-400">
-                        Answer: {example.answer}
-                      </div>
-                    </div>
-                    {example.explanation && (
-                      <div className="mt-2 text-sm text-muted-foreground">
-                        <strong>Explanation:</strong> {example.explanation}
-                      </div>
-                    )}
-                  </div>
-                ))}
+              <CardContent>
+                <div 
+                  className="prose prose-sm max-w-none dark:prose-invert"
+                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.concept_explanation) }}
+                />
               </CardContent>
             </Card>
           )}
 
-          <div className="flex justify-end">
-            <Button onClick={() => setCurrentTab('practice')} size="lg">
-              Start Practice Questions →
-            </Button>
-          </div>
+          {/* Guided Practice */}
+          {lesson.guided_practice && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Guided Practice</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div 
+                  className="prose prose-sm max-w-none dark:prose-invert"
+                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.guided_practice) }}
+                />
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Examples Tab */}
@@ -458,19 +451,21 @@ export default function EnhancedLessonViewer() {
                                 onClick={() => !showingPracticeResults && handlePracticeAnswer(questionId, choiceIdx)}
                                 disabled={showingPracticeResults}
                                 className={cnLocal(
-                                  'w-full text-left p-4 rounded-lg border-2 transition-all',
-                                  !showingPracticeResults && 'hover:border-primary hover:bg-primary/5',
-                                  isSelected && !showingPracticeResults && 'border-primary bg-primary/10',
+                                  'w-full text-left p-3 rounded-lg border-2 transition-colors',
+                                  !showingPracticeResults && 'hover:border-primary cursor-pointer',
+                                  isSelected && !showingPracticeResults && 'border-primary bg-primary/5',
                                   showingPracticeResults && isCorrectAnswer && 'border-green-500 bg-green-50 dark:bg-green-900/20',
-                                  showingPracticeResults && isSelected && !isCorrectAnswer && 'border-red-500 bg-red-50 dark:bg-red-900/20',
-                                  showingPracticeResults && !isSelected && !isCorrectAnswer && 'opacity-50'
+                                  showingPracticeResults && isSelected && !isCorrect && 'border-red-500 bg-red-50 dark:bg-red-900/20',
+                                  showingPracticeResults && 'cursor-default'
                                 )}
                               >
-                                <div className="flex items-start gap-3">
-                                  <span className="font-bold text-sm mt-0.5">{['A', 'B', 'C', 'D'][choiceIdx]})</span>
+                                <div className="flex items-start gap-2">
+                                  <span className="font-semibold min-w-[1.5rem]">
+                                    {String.fromCharCode(65 + choiceIdx)})
+                                  </span>
                                   <span className="flex-1">{choiceText}</span>
                                   {showingPracticeResults && isCorrectAnswer && (
-                                    <Award className="h-5 w-5 text-green-600 flex-shrink-0" />
+                                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
                                   )}
                                 </div>
                               </button>
@@ -479,11 +474,9 @@ export default function EnhancedLessonViewer() {
                         </div>
 
                         {showingPracticeResults && shuffledQ.original.explanation && (
-                          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200">
-                            <h4 className="font-semibold text-sm mb-1 text-blue-900 dark:text-blue-100">
-                              Explanation:
-                            </h4>
-                            <p className="text-sm text-blue-800 dark:text-blue-200">
+                          <div className="pt-4 border-t">
+                            <p className="text-sm font-semibold mb-2">Explanation:</p>
+                            <p className="text-sm text-muted-foreground">
                               {shuffledQ.original.explanation}
                             </p>
                           </div>
@@ -494,61 +487,44 @@ export default function EnhancedLessonViewer() {
                 })}
               </div>
 
-              {/* Submit Button */}
-              {!showingPracticeResults && (
-                <Card className="border-primary">
+              {/* Submit/Reset Buttons */}
+              {!showingPracticeResults ? (
+                <div className="flex justify-end">
+                  <Button 
+                    size="lg"
+                    onClick={handleSubmitPractice}
+                    disabled={!practiceComplete}
+                  >
+                    Submit Practice
+                  </Button>
+                </div>
+              ) : (
+                <Card className="border-blue-200 dark:border-blue-800">
                   <CardContent className="pt-6">
-                    <Button 
-                      onClick={handleSubmitPractice}
-                      disabled={!practiceComplete}
-                      size="lg"
-                      className="w-full"
-                    >
-                      {practiceComplete 
-                        ? `Submit Practice (${lesson.practiceQuestions.length} questions)` 
-                        : `Answer all questions to submit (${Object.keys(practiceAnswers).length}/${lesson.practiceQuestions.length})`
-                      }
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Results Summary */}
-              {showingPracticeResults && (
-                <Card className="border-green-300 bg-green-50 dark:bg-green-900/20">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Award className="h-5 w-5 text-green-600" />
-                      Practice Complete!
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <div className="text-4xl font-bold text-green-700 dark:text-green-400 mb-2">
-                        {practiceScore} / {lesson.practiceQuestions.length}
+                    <div className="text-center space-y-4">
+                      <div>
+                        <p className="text-2xl font-bold mb-1">
+                          {practiceScore} / {shuffledPractice.length}
+                        </p>
+                        <p className="text-muted-foreground">
+                          {Math.round((practiceScore / shuffledPractice.length) * 100)}% Correct
+                        </p>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {((practiceScore / lesson.practiceQuestions.length) * 100).toFixed(0)}% accuracy
+                      <div className="flex gap-3 justify-center">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setPracticeAnswers({});
+                            setShowingPracticeResults(false);
+                            setPracticeStartTime(Date.now());
+                          }}
+                        >
+                          Try Again
+                        </Button>
+                        <Button asChild>
+                          <Link to="/lessons">Browse More Lessons</Link>
+                        </Button>
                       </div>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <Button
-                        onClick={() => {
-                          setPracticeAnswers({});
-                          setShowingPracticeResults(false);
-                          setPracticeStartTime(Date.now());
-                        }}
-                        variant="outline"
-                        className="flex-1"
-                      >
-                        Try Again
-                      </Button>
-                      <Button asChild className="flex-1">
-                        <Link to="/lessons">
-                          Browse More Lessons
-                        </Link>
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -556,11 +532,127 @@ export default function EnhancedLessonViewer() {
             </>
           )}
         </TabsContent>
+
+        {/* Test Yourself Tab */}
+        <TabsContent value="test" className="space-y-6 mt-6">
+          {/* Common Traps */}
+          {lesson.common_traps && (
+            <Card className="border-yellow-500/50 bg-yellow-50/50 dark:bg-yellow-950/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 h-5 text-yellow-600 dark:text-yellow-400" />
+                  Common Traps
+                </CardTitle>
+                <CardDescription>Watch out for these frequent mistakes</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div 
+                  className="prose prose-sm max-w-none dark:prose-invert"
+                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.common_traps) }}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Independent Practice */}
+          {lesson.independent_practice && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5" />
+                  Independent Practice
+                </CardTitle>
+                <CardDescription>Try these on your own before checking answers</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div 
+                  className="prose prose-sm max-w-none dark:prose-invert"
+                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.independent_practice) }}
+                />
+                
+                {lesson.independent_practice_answers && (
+                  <Accordion type="single" collapsible className="mt-6">
+                    <AccordionItem value="answers">
+                      <AccordionTrigger className="text-base font-semibold">
+                        Show Answer Key & Explanations
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div 
+                          className="prose prose-sm max-w-none dark:prose-invert pt-4"
+                          dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.independent_practice_answers) }}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Checkpoint Quiz */}
+          {lesson.checkpoint_quiz && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5" />
+                  Checkpoint Quiz
+                </CardTitle>
+                <CardDescription>Test your mastery of this topic</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div 
+                  className="prose prose-sm max-w-none dark:prose-invert"
+                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.checkpoint_quiz) }}
+                />
+                
+                {lesson.checkpoint_quiz_answers && (
+                  <Accordion type="single" collapsible className="mt-6">
+                    <AccordionItem value="quiz-answers">
+                      <AccordionTrigger className="text-base font-semibold">
+                        Show Quiz Answer Key
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div 
+                          className="prose prose-sm max-w-none dark:prose-invert pt-4"
+                          dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.checkpoint_quiz_answers) }}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Recap */}
+          {lesson.recap && (
+            <Card className="border-primary/50 bg-primary/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Lightbulb className="h-5 w-5" />
+                  Recap
+                </CardTitle>
+                <CardDescription>Key takeaways from this lesson</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div 
+                  className="prose prose-sm max-w-none dark:prose-invert"
+                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.recap) }}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {!lesson.common_traps && !lesson.independent_practice && !lesson.checkpoint_quiz && !lesson.recap && (
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>Additional test materials coming soon!</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
       </Tabs>
     </div>
   );
-}
-
-function cnLocal(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(' ');
 }

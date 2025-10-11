@@ -12,6 +12,12 @@ interface LessonContentInput {
   concept_explanation: string;
   guided_practice?: string;
   error_analysis?: string;
+  common_traps?: string;
+  independent_practice?: string;
+  independent_practice_answers?: string;
+  checkpoint_quiz?: string;
+  checkpoint_quiz_answers?: string;
+  recap?: string;
   estimated_minutes?: number;
   difficulty?: 'easy' | 'medium' | 'hard';
 }
@@ -85,6 +91,12 @@ Deno.serve(async (req) => {
             concept_explanation: lesson.concept_explanation,
             guided_practice: lesson.guided_practice || '',
             error_analysis: lesson.error_analysis || '',
+            common_traps: lesson.common_traps || null,
+            independent_practice: lesson.independent_practice || null,
+            independent_practice_answers: lesson.independent_practice_answers || null,
+            checkpoint_quiz: lesson.checkpoint_quiz || null,
+            checkpoint_quiz_answers: lesson.checkpoint_quiz_answers || null,
+            recap: lesson.recap || null,
             estimated_minutes: lesson.estimated_minutes || 15,
             difficulty: lesson.difficulty || 'medium',
             updated_at: new Date().toISOString(),

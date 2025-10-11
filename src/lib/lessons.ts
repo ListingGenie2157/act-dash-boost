@@ -16,6 +16,12 @@ export interface EnhancedLesson {
   concept_explanation?: string | null;
   guided_practice?: string | null;
   error_analysis?: string | null;
+  common_traps?: string | null;
+  independent_practice?: string | null;
+  independent_practice_answers?: string | null;
+  checkpoint_quiz?: string | null;
+  checkpoint_quiz_answers?: string | null;
+  recap?: string | null;
   
   // Practice content (from staging_items)
   examples: StagingItem[];
@@ -89,6 +95,12 @@ export async function getEnhancedLesson(skillCode: string): Promise<{
       concept_explanation: richContent?.concept_explanation || null,
       guided_practice: richContent?.guided_practice || null,
       error_analysis: richContent?.error_analysis || null,
+      common_traps: richContent?.common_traps || null,
+      independent_practice: richContent?.independent_practice || null,
+      independent_practice_answers: richContent?.independent_practice_answers || null,
+      checkpoint_quiz: richContent?.checkpoint_quiz || null,
+      checkpoint_quiz_answers: richContent?.checkpoint_quiz_answers || null,
+      recap: richContent?.recap || null,
       
       // Practice content
       examples,
