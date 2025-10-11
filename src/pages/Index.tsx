@@ -13,6 +13,8 @@ import { supabase } from '@/integrations/supabase/client';
 const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [session, setSession] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const navigate = useNavigate();
 
   // Enhanced auth state management with proper listeners
@@ -208,15 +210,18 @@ const Index = () => {
 
   useEffect(() => {
     const fetchUserProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (currentSession?.user) {
+        setSession(currentSession);
+        
+        const { data: profileData } = await supabase
           .from('profiles')
-          .select('has_study_plan')
-          .eq('id', user.id)
+          .select('has_study_plan, test_date')
+          .eq('id', currentSession.user.id)
           .maybeSingle();
         
-        setHasStudyPlan(profile?.has_study_plan ?? false);
+        setProfile(profileData);
+        setHasStudyPlan(profileData?.has_study_plan ?? false);
       }
     };
     
