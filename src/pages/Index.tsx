@@ -57,6 +57,7 @@ const Index = () => {
                 // If user has test_date AND user_profile exists, stay on dashboard
                 if (profile?.test_date && userProfile && mounted) {
                   console.log('User has test date and profile, staying on dashboard');
+                  setIsLoading(false);
                   return;
                 }
                 
