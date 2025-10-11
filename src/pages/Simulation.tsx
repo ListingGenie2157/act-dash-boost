@@ -99,21 +99,12 @@ export default function Simulation() {
 
       const { session_id, time_limit_sec } = data;
 
-      // Fetch questions and passages using a GET request with query params
-      const response = await fetch(`https://hhbkmxrzxcswwokmbtbz.supabase.co/functions/v1/session-fetch?session_id=${session_id}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-          'apikey': (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) as string,
-          'Content-Type': 'application/json'
-        }
+      // Fetch questions and passages
+      const { data: fetchData, error: fetchError } = await supabase.functions.invoke('session-fetch', {
+        body: { session_id }
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch session data');
-      }
-
-      const fetchData = await response.json();
+      if (fetchError) throw fetchError;
 
       const { questions, passages } = fetchData;
 

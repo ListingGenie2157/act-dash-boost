@@ -313,29 +313,14 @@ export default function Diagnostic() {
       }
 
       // Call the finish-diagnostic edge function
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('No active session');
+      const { data: result, error: functionError } = await supabase.functions.invoke('finish-diagnostic', {
+        body: { section, blocks }
+      });
+
+      if (functionError) {
+        throw new Error(functionError.message || 'Failed to save diagnostic');
       }
 
-      const response = await fetch(
-        `https://hhbkmxrzxcswwokmbtbz.supabase.co/functions/v1/finish-diagnostic`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ section, blocks }),
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to save diagnostic');
-      }
-
-      const result = await response.json();
       console.log('Diagnostic saved:', result);
 
       // Track completed sections

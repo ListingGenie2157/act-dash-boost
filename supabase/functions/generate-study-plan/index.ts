@@ -483,6 +483,17 @@ serve(async (req) => {
       });
     }
 
+    // Set has_study_plan flag to true in profiles
+    const { error: profileUpdateError } = await supabase
+      .from('profiles')
+      .update({ has_study_plan: true })
+      .eq('id', user.id);
+
+    if (profileUpdateError) {
+      console.error('Error updating has_study_plan flag:', profileUpdateError);
+      // Don't fail the whole function for this, just log it
+    }
+
     // Create individual study tasks
     const studyTasks = selectedTasks.map(task => ({
       user_id: user.id,

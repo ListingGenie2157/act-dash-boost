@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { CountdownHeader } from '@/components/CountdownHeader';
 import { StudyPlanWidget } from '@/components/StudyPlanWidget';
 import { LessonsQuickAccess } from '@/components/LessonsQuickAccess';
@@ -35,11 +35,11 @@ const Index = () => {
               setIsAuthenticated(true);
               
               // Check if user has completed onboarding
-              // Query profiles table for test_date and onboarding_complete
+              // Query profiles table for test_date, onboarding_complete, and has_study_plan
               try {
                 const { data: profile, error: profileError } = await supabase
                   .from('profiles')
-                  .select('test_date, onboarding_complete')
+                  .select('test_date, onboarding_complete, has_study_plan')
                   .eq('id', session.user.id)
                   .maybeSingle();
                 
@@ -204,6 +204,27 @@ const Index = () => {
   }
 
   // Authenticated user dashboard
+  const [hasStudyPlan, setHasStudyPlan] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('has_study_plan')
+          .eq('id', user.id)
+          .maybeSingle();
+        
+        setHasStudyPlan(profile?.has_study_plan ?? false);
+      }
+    };
+    
+    if (isAuthenticated) {
+      fetchUserProfile();
+    }
+  }, [isAuthenticated]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
       <CountdownHeader />
@@ -218,19 +239,61 @@ const Index = () => {
           <div className="mb-2">
             <h1 className="text-3xl font-bold mb-2">Welcome back! 👋</h1>
             <p className="text-muted-foreground">
-              Your personalized study plan for today
+              {hasStudyPlan ? 'Your personalized study plan for today' : 'Continue your ACT preparation'}
             </p>
           </div>
 
-          {/* Main 2-Column Layout */}
-          <div className="grid lg:grid-cols-2 gap-8">
-            <StudyPlanWidget />
-            <LessonsQuickAccess />
-          </div>
-          
-          {/* Full Width Sections */}
-          <MasteryDashboard />
-          <WeakAreasCard />
+          {/* Conditional Dashboard Content Based on has_study_plan Flag */}
+          {hasStudyPlan ? (
+            // Structured Study Plan Dashboard
+            <>
+              <div className="grid lg:grid-cols-2 gap-8">
+                <StudyPlanWidget hasStudyPlan={true} />
+                <LessonsQuickAccess />
+              </div>
+              
+              <MasteryDashboard />
+              <WeakAreasCard />
+            </>
+          ) : (
+            // Self-Directed Learning Dashboard
+            <div className="space-y-8">
+              <div className="grid md:grid-cols-3 gap-6">
+                <Link to="/lessons-library">
+                  <div className="p-6 border rounded-xl hover:shadow-lg transition-shadow bg-card h-full">
+                    <div className="text-4xl mb-3">📚</div>
+                    <h3 className="text-xl font-bold mb-2">Lessons Library</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Browse and learn concepts at your own pace
+                    </p>
+                  </div>
+                </Link>
+                
+                <Link to="/drill-runner">
+                  <div className="p-6 border rounded-xl hover:shadow-lg transition-shadow bg-card h-full">
+                    <div className="text-4xl mb-3">🎯</div>
+                    <h3 className="text-xl font-bold mb-2">Timed Drills</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Practice specific skills with timed questions
+                    </p>
+                  </div>
+                </Link>
+                
+                <Link to="/simulation">
+                  <div className="p-6 border rounded-xl hover:shadow-lg transition-shadow bg-card h-full">
+                    <div className="text-4xl mb-3">⏱️</div>
+                    <h3 className="text-xl font-bold mb-2">Practice Simulations</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Take full-length section tests with real timing
+                    </p>
+                  </div>
+                </Link>
+              </div>
+              
+              <MasteryDashboard />
+              <WeakAreasCard />
+            </div>
+          )}
         </div>
       </div>
     </div>

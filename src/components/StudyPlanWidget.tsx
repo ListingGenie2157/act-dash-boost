@@ -51,7 +51,11 @@ const TASK_CONFIG = {
   }
 };
 
-export function StudyPlanWidget() {
+interface StudyPlanWidgetProps {
+  hasStudyPlan?: boolean;
+}
+
+export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
   const [tasks, setTasks] = useState<StudyTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -128,7 +132,7 @@ export function StudyPlanWidget() {
     );
   }
 
-  if (tasks.length === 0) {
+  if (tasks.length === 0 && hasStudyPlan) {
     return (
       <div className="space-y-4">
         <div className="text-center py-12 bg-card border rounded-xl">
@@ -148,6 +152,11 @@ export function StudyPlanWidget() {
         </div>
       </div>
     );
+  }
+  
+  // Don't render anything if user doesn't have study plan mode
+  if (!hasStudyPlan) {
+    return null;
   }
 
   return (

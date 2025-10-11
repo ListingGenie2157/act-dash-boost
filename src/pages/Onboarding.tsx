@@ -167,20 +167,16 @@ export default function Onboarding() {
       
       // Navigate based on user preference
       if (form.startWith === 'diagnostic') {
+        // Diagnostic path - has_study_plan will be set to true after diagnostic completion
         navigate('/diagnostic');
       } else {
-        // Generate study plan for daily practice path
-        toast.info('Creating your study plan...');
-        const { error: planError } = await supabase.functions.invoke('generate-study-plan', {
-          method: 'POST'
-        });
+        // Self-directed learning path - set has_study_plan to false
+        await supabase
+          .from('profiles')
+          .update({ has_study_plan: false })
+          .eq('id', user.id);
         
-        if (planError) {
-          console.error('Error generating study plan:', planError);
-          toast.error('Failed to generate study plan, but you can create one later');
-        } else {
-          toast.success('Study plan ready!');
-        }
+        toast.success('Setup complete! Starting self-directed learning mode.');
         
         // Go to main app
         navigate('/');
@@ -503,9 +499,9 @@ export default function Onboarding() {
             <RadioGroupItem value="daily" id="daily" />
             <Label htmlFor="daily" className="flex-1">
               <div>
-                <div className="font-medium">Start Daily Practice</div>
+                <div className="font-medium">Start Learning Immediately</div>
                 <div className="text-sm text-muted-foreground">
-                  Jump right into your personalized daily study plan
+                  Explore lessons, drills, and simulations at your own pace
                 </div>
               </div>
             </Label>
