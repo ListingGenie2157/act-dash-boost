@@ -15,6 +15,7 @@ const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [session, setSession] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [hasStudyPlan, setHasStudyPlan] = useState<boolean | null>(null);
   const navigate = useNavigate();
 
   // Enhanced auth state management with proper listeners
@@ -206,8 +207,6 @@ const Index = () => {
   }
 
   // Authenticated user dashboard
-  const [hasStudyPlan, setHasStudyPlan] = useState<boolean | null>(null);
-
   useEffect(() => {
     const fetchUserProfile = async () => {
       const { data: { session: currentSession } } = await supabase.auth.getSession();
