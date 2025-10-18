@@ -3,6 +3,15 @@ import type { Database } from '@/integrations/supabase/types';
 
 type StagingItem = Database['public']['Tables']['staging_items']['Row'];
 
+export interface CheckpointQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+}
+
 export interface EnhancedLesson {
   skill_code: string;
   skill_name: string;
@@ -19,8 +28,7 @@ export interface EnhancedLesson {
   common_traps?: string | null;
   independent_practice?: string | null;
   independent_practice_answers?: string | null;
-  checkpoint_quiz?: string | null;
-  checkpoint_quiz_answers?: string | null;
+  checkpoint_quiz_questions?: CheckpointQuestion[];
   recap?: string | null;
   
   // Practice content (from staging_items)
@@ -98,8 +106,7 @@ export async function getEnhancedLesson(skillCode: string): Promise<{
       common_traps: richContent?.common_traps || null,
       independent_practice: richContent?.independent_practice || null,
       independent_practice_answers: richContent?.independent_practice_answers || null,
-      checkpoint_quiz: richContent?.checkpoint_quiz || null,
-      checkpoint_quiz_answers: richContent?.checkpoint_quiz_answers || null,
+      checkpoint_quiz_questions: (richContent?.checkpoint_quiz_questions as unknown as CheckpointQuestion[]) || [],
       recap: richContent?.recap || null,
       
       // Practice content

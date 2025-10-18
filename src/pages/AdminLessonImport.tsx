@@ -24,14 +24,27 @@ interface ExtractedContent {
   common_traps?: string;
   independent_practice?: string;
   independent_practice_answers?: string;
-  checkpoint_quiz?: string;
-  checkpoint_quiz_answers?: string;
+  checkpoint_quiz_q1?: string;
+  checkpoint_quiz_q2?: string;
+  checkpoint_quiz_q3?: string;
+  checkpoint_quiz_q4?: string;
+  checkpoint_quiz_q5?: string;
+  checkpoint_quiz_q6?: string;
+  checkpoint_quiz_q7?: string;
+  checkpoint_quiz_q8?: string;
+  checkpoint_quiz_q9?: string;
+  checkpoint_quiz_q10?: string;
   recap?: string;
   error_analysis?: string;
+  objectives?: string;
+  estimated_minutes?: number;
+  difficulty?: string;
 }
 
 export default function AdminLessonImport() {
   const [htmlContent, setHtmlContent] = useState('');
+  const [tsvContent, setTsvContent] = useState('');
+  const [importMode, setImportMode] = useState<'html' | 'tsv'>('tsv');
   const [skills, setSkills] = useState<Skill[]>([]);
   const [selectedSkill, setSelectedSkill] = useState('');
   const [extractedContent, setExtractedContent] = useState<ExtractedContent | null>(null);
@@ -64,6 +77,67 @@ export default function AdminLessonImport() {
   };
 
   const extractSections = () => {
+    if (importMode === 'tsv') {
+      parseTsvContent();
+    } else {
+      parseHtmlContent();
+    }
+  };
+
+  const parseTsvContent = () => {
+    if (!tsvContent.trim()) {
+      toast({
+        title: 'No content',
+        description: 'Please paste TSV content first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const lines = tsvContent.trim().split('\n');
+      if (lines.length < 2) {
+        throw new Error('TSV must have header and at least one data row');
+      }
+
+      const headers = lines[0].split('\t').map(h => h.trim());
+      const values = lines[1].split('\t').map(v => v.trim());
+
+      const content: ExtractedContent = {};
+      
+      headers.forEach((header, idx) => {
+        const value = values[idx];
+        if (value && value !== '') {
+          (content as any)[header as keyof ExtractedContent] = value;
+        }
+      });
+
+      if (!content.overview_html || !content.concept_explanation) {
+        throw new Error('TSV must contain at least overview_html and concept_explanation columns');
+      }
+
+      const skillCodeIdx = headers.indexOf('skill_code');
+      if (skillCodeIdx !== -1 && values[skillCodeIdx]) {
+        setSelectedSkill(values[skillCodeIdx]);
+      }
+
+      setExtractedContent(content);
+      
+      const quizCount = Object.keys(content).filter(k => k.startsWith('checkpoint_quiz_q')).length;
+      toast({
+        title: 'TSV parsed successfully',
+        description: `Found ${Object.keys(content).length} fields${quizCount > 0 ? `, including ${quizCount} checkpoint questions` : ''}`,
+      });
+    } catch (error) {
+      toast({
+        title: 'TSV parsing failed',
+        description: error instanceof Error ? error.message : 'Invalid TSV format',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const parseHtmlContent = () => {
     if (!htmlContent.trim()) {
       toast({
         title: 'No content',
@@ -87,8 +161,6 @@ export default function AdminLessonImport() {
         'common-traps',
         'independent-practice',
         'independent-practice-answers',
-        'checkpoint-quiz',
-        'checkpoint-quiz-answers',
         'recap',
         'error-analysis'
       ];
@@ -101,7 +173,7 @@ export default function AdminLessonImport() {
           
           // Map id to field name
           const fieldName = id.replace(/-/g, '_') as keyof ExtractedContent;
-          sections[fieldName] = html;
+          (sections as any)[fieldName] = html;
         }
       });
 
@@ -192,24 +264,66 @@ export default function AdminLessonImport() {
       </div>
 
       <div className="grid gap-6">
-        {/* Step 1: Paste HTML */}
+        {/* Import Mode Selector */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Import Mode</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-4">
+              <Button
+                variant={importMode === 'tsv' ? 'default' : 'outline'}
+                onClick={() => setImportMode('tsv')}
+              >
+                TSV Format (Recommended)
+              </Button>
+              <Button
+                variant={importMode === 'html' ? 'default' : 'outline'}
+                onClick={() => setImportMode('html')}
+              >
+                HTML Format (Legacy)
+              </Button>
+            </div>
+            <Alert>
+              <AlertDescription>
+                {importMode === 'tsv' 
+                  ? 'Paste TSV with columns: skill_code, overview_html, concept_explanation, guided_practice, etc.'
+                  : 'Paste HTML with sections marked by IDs: overview, concept-explanation, etc.'}
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+
+        {/* Step 1: Paste Content */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Step 1: Paste HTML Content
+              Step 1: Paste {importMode === 'tsv' ? 'TSV' : 'HTML'} Content
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Textarea
-              value={htmlContent}
-              onChange={(e) => setHtmlContent(e.target.value)}
-              placeholder="Paste your complete HTML lesson document here..."
-              className="min-h-[200px] font-mono text-sm"
-            />
-            <Button onClick={extractSections} disabled={!htmlContent.trim()}>
+            {importMode === 'tsv' ? (
+              <Textarea
+                value={tsvContent}
+                onChange={(e) => setTsvContent(e.target.value)}
+                placeholder="Paste your TSV content here (tab-separated with headers)..."
+                className="min-h-[200px] font-mono text-sm"
+              />
+            ) : (
+              <Textarea
+                value={htmlContent}
+                onChange={(e) => setHtmlContent(e.target.value)}
+                placeholder="Paste your complete HTML lesson document here..."
+                className="min-h-[200px] font-mono text-sm"
+              />
+            )}
+            <Button 
+              onClick={extractSections} 
+              disabled={importMode === 'tsv' ? !tsvContent.trim() : !htmlContent.trim()}
+            >
               <Upload className="mr-2 h-4 w-4" />
-              Extract Sections
+              {importMode === 'tsv' ? 'Parse TSV' : 'Extract Sections'}
             </Button>
           </CardContent>
         </Card>

@@ -14,9 +14,10 @@ import { MasteryBadge } from '@/components/MasteryBadge';
 import { MasteryProgressBar } from '@/components/MasteryProgressBar';
 import { sanitizeHTML } from '@/lib/sanitize';
 import { supabase } from '@/integrations/supabase/client';
-import { updateMastery } from '@/lib/mastery';
+import { updateMastery, batchUpdateMastery } from '@/lib/mastery';
 import { toast } from 'sonner';
 import { shuffleQuestionChoices } from '@/lib/shuffle';
+import { QuizComponent } from '@/components/QuizComponent';
 
 function cnLocal(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(' ');
@@ -535,6 +536,42 @@ export default function EnhancedLessonViewer() {
 
         {/* Test Yourself Tab */}
         <TabsContent value="test" className="space-y-6 mt-6">
+          {/* Interactive Checkpoint Quiz */}
+          {lesson.checkpoint_quiz_questions && lesson.checkpoint_quiz_questions.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5" />
+                  Checkpoint Quiz
+                </CardTitle>
+                <CardDescription>Test your mastery with instant feedback</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <QuizComponent
+                  questions={lesson.checkpoint_quiz_questions}
+                  title="Checkpoint Quiz"
+                  onComplete={async (score, wrongAnswers) => {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (user && lesson) {
+                      const results = lesson.checkpoint_quiz_questions!.map((q) => ({
+                        skillId: lesson.skill_code,
+                        correct: !wrongAnswers.some(wa => wa.questionId === q.id),
+                        timeMs: 45000
+                      }));
+                      await batchUpdateMastery(user.id, results);
+                      void refetchMastery();
+                      toast.success(
+                        score >= 70 
+                          ? `✅ Great job! You scored ${score}%` 
+                          : `📝 Keep practicing! You scored ${score}%`
+                      );
+                    }
+                  }}
+                />
+              </CardContent>
+            </Card>
+          )}
+
           {/* Common Traps */}
           {lesson.common_traps && (
             <Card className="border-yellow-500/50 bg-yellow-50/50 dark:bg-yellow-950/20">
@@ -589,41 +626,6 @@ export default function EnhancedLessonViewer() {
             </Card>
           )}
 
-          {/* Checkpoint Quiz */}
-          {lesson.checkpoint_quiz && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5" />
-                  Checkpoint Quiz
-                </CardTitle>
-                <CardDescription>Test your mastery of this topic</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div 
-                  className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.checkpoint_quiz) }}
-                />
-                
-                {lesson.checkpoint_quiz_answers && (
-                  <Accordion type="single" collapsible className="mt-6">
-                    <AccordionItem value="quiz-answers">
-                      <AccordionTrigger className="text-base font-semibold">
-                        Show Quiz Answer Key
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div 
-                          className="prose prose-sm max-w-none dark:prose-invert pt-4"
-                          dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.checkpoint_quiz_answers) }}
-                        />
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
           {/* Recap */}
           {lesson.recap && (
             <Card className="border-primary/50 bg-primary/5">
@@ -643,7 +645,7 @@ export default function EnhancedLessonViewer() {
             </Card>
           )}
 
-          {!lesson.common_traps && !lesson.independent_practice && !lesson.checkpoint_quiz && !lesson.recap && (
+          {!lesson.checkpoint_quiz_questions?.length && !lesson.common_traps && !lesson.independent_practice && !lesson.recap && (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground">
                 <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />

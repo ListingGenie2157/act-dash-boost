@@ -240,6 +240,7 @@ export type Database = {
         Row: {
           checkpoint_quiz: string | null
           checkpoint_quiz_answers: string | null
+          checkpoint_quiz_questions: Json | null
           common_traps: string | null
           concept_explanation: string
           created_at: string | null
@@ -258,6 +259,7 @@ export type Database = {
         Insert: {
           checkpoint_quiz?: string | null
           checkpoint_quiz_answers?: string | null
+          checkpoint_quiz_questions?: Json | null
           common_traps?: string | null
           concept_explanation: string
           created_at?: string | null
@@ -276,6 +278,7 @@ export type Database = {
         Update: {
           checkpoint_quiz?: string | null
           checkpoint_quiz_answers?: string | null
+          checkpoint_quiz_questions?: Json | null
           common_traps?: string | null
           concept_explanation?: string
           created_at?: string | null
