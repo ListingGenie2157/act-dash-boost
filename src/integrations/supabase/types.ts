@@ -364,7 +364,15 @@ export type Database = {
           total?: number
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "mastery_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       parent_links: {
         Row: {
@@ -831,6 +839,7 @@ export type Database = {
           difficulty: string
           explanation: string | null
           form_id: string
+          lesson_code: string | null
           ord: number
           passage_id: string | null
           passage_text: string | null
@@ -851,6 +860,7 @@ export type Database = {
           difficulty: string
           explanation?: string | null
           form_id: string
+          lesson_code?: string | null
           ord: number
           passage_id?: string | null
           passage_text?: string | null
@@ -871,6 +881,7 @@ export type Database = {
           difficulty?: string
           explanation?: string | null
           form_id?: string
+          lesson_code?: string | null
           ord?: number
           passage_id?: string | null
           passage_text?: string | null
@@ -882,7 +893,15 @@ export type Database = {
           staging_id?: number
           topic?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "staging_items_lesson_code_fkey"
+            columns: ["lesson_code"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       study_plan_days: {
         Row: {
@@ -1146,7 +1165,10 @@ export type Database = {
           effective_median_time_ms: number | null
           last_seen_progress: string | null
           last_task_date: string | null
+          last_updated: string | null
+          mastery_correct: number | null
           mastery_level: number | null
+          mastery_total: number | null
           progress_median_time_ms: number | null
           recent_avg_accuracy: number | null
           recent_avg_time_ms: number | null
