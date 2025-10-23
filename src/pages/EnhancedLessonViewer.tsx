@@ -33,23 +33,43 @@ export default function EnhancedLessonViewer() {
 
   const { data: mastery } = useSkillMastery(topic);
 
-  const parsedRules = useMemo(() => 
-    lesson?.concept_explanation ? parseConceptRules(lesson.concept_explanation) : []
-  , [lesson?.concept_explanation]);
+  const parsedRules = useMemo(() => {
+    try {
+      return lesson?.concept_explanation ? parseConceptRules(lesson.concept_explanation) : [];
+    } catch (err) {
+      console.error('Error parsing concept rules:', err);
+      return [];
+    }
+  }, [lesson?.concept_explanation]);
 
-  const parsedExamples = useMemo(() => 
-    lesson?.guided_practice ? parseGuidedPractice(lesson.guided_practice) : []
-  , [lesson?.guided_practice]);
+  const parsedExamples = useMemo(() => {
+    try {
+      return lesson?.guided_practice ? parseGuidedPractice(lesson.guided_practice) : [];
+    } catch (err) {
+      console.error('Error parsing guided practice:', err);
+      return [];
+    }
+  }, [lesson?.guided_practice]);
 
-  const parsedTraps = useMemo(() => 
-    lesson?.common_traps ? parseCommonTraps(lesson.common_traps) : []
-  , [lesson?.common_traps]);
+  const parsedTraps = useMemo(() => {
+    try {
+      return lesson?.common_traps ? parseCommonTraps(lesson.common_traps) : [];
+    } catch (err) {
+      console.error('Error parsing common traps:', err);
+      return [];
+    }
+  }, [lesson?.common_traps]);
 
-  const parsedIndependentPractice = useMemo(() => 
-    lesson?.independent_practice 
-      ? parseIndependentPractice(lesson.independent_practice, lesson.independent_practice_answers || null)
-      : []
-  , [lesson?.independent_practice, lesson?.independent_practice_answers]);
+  const parsedIndependentPractice = useMemo(() => {
+    try {
+      return lesson?.independent_practice 
+        ? parseIndependentPractice(lesson.independent_practice, lesson.independent_practice_answers || null)
+        : [];
+    } catch (err) {
+      console.error('Error parsing independent practice:', err);
+      return [];
+    }
+  }, [lesson?.independent_practice, lesson?.independent_practice_answers]);
 
   useEffect(() => {
     const fetchLesson = async () => {

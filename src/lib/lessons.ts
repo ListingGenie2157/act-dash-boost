@@ -120,17 +120,20 @@ export function parseConceptRules(html: string): ParsedRule[] {
   if (!html) return [];
   
   const rules: ParsedRule[] = [];
-  // Parse plain text format: "Rule 1 – Content here. Rule 2 – More content."
-  const rulePattern = /Rule\s+(\d+)\s*[–-]\s*([^]+?)(?=Rule\s+\d+\s*[–-]|$)/gi;
+  // Split by "Rule X –" or "Rule X-" pattern
+  const sections = html.split(/Rule\s+(\d+)\s*[–-]\s*/i);
   
-  let match;
-  while ((match = rulePattern.exec(html)) !== null) {
-    const content = match[2].trim();
-    rules.push({
-      number: parseInt(match[1]),
-      title: `Rule ${match[1]}`,
-      content: content,
-    });
+  // Pattern creates [intro, num1, content1, num2, content2...]
+  for (let i = 1; i < sections.length; i += 2) {
+    const ruleNum = parseInt(sections[i]);
+    const content = sections[i + 1]?.trim();
+    if (content) {
+      rules.push({
+        number: ruleNum,
+        title: `Rule ${ruleNum}`,
+        content: content,
+      });
+    }
   }
   
   return rules;
@@ -143,15 +146,19 @@ export function parseGuidedPractice(html: string): ParsedExample[] {
   if (!html) return [];
   
   const examples: ParsedExample[] = [];
-  // Parse plain text format: "Example 1: Content here. Example 2: More content."
-  const examplePattern = /Example\s+(\d+):\s*([^]+?)(?=Example\s+\d+:|$)/gis;
+  // Split by "Example X:" pattern
+  const sections = html.split(/Example\s+(\d+):\s*/i);
   
-  let match;
-  while ((match = examplePattern.exec(html)) !== null) {
-    examples.push({
-      number: parseInt(match[1]),
-      content: match[2].trim(),
-    });
+  // Pattern creates [intro, num1, content1, num2, content2...]
+  for (let i = 1; i < sections.length; i += 2) {
+    const exampleNum = parseInt(sections[i]);
+    const content = sections[i + 1]?.trim();
+    if (content) {
+      examples.push({
+        number: exampleNum,
+        content: content,
+      });
+    }
   }
   
   return examples;
@@ -164,13 +171,15 @@ export function parseCommonTraps(html: string): string[] {
   if (!html) return [];
   
   const traps: string[] = [];
+  // Split by "X –" or "X-" where X is a number
+  const sections = html.split(/(\d+)\s*[–-]\s*/);
   
-  // Parse plain text format: "1 – Trap description. 2 – Another trap."
-  const numberedPattern = /(\d+)\s*[–-]\s*([^.]+?)(?=\s*\d+\s*[–-]|$)/g;
-  let match;
-  while ((match = numberedPattern.exec(html)) !== null) {
-    const text = match[2].trim();
-    if (text) traps.push(text);
+  // Pattern creates [intro, num1, content1, num2, content2...]
+  for (let i = 2; i < sections.length; i += 2) {
+    const text = sections[i]?.trim();
+    if (text) {
+      traps.push(text);
+    }
   }
   
   return traps;
