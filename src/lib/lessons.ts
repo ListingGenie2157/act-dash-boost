@@ -4,7 +4,7 @@ export interface CheckpointQuestion {
   id: string;
   question: string;
   options: string[];
-  correctAnswer: number | string; // Can be numeric index or letter string from database
+  correctAnswer: number;
   explanation: string;
   difficulty: 'easy' | 'medium' | 'hard';
 }

@@ -268,12 +268,15 @@ export default function EnhancedLessonViewer() {
               </CardHeader>
               <CardContent>
                 <QuizComponent 
-                  questions={lesson.checkpoint_quiz_questions.map(q => ({
-                    ...q,
-                    correctAnswer: typeof q.correctAnswer === 'string' 
-                      ? q.correctAnswer.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0)
-                      : q.correctAnswer
-                  }))} 
+                  questions={lesson.checkpoint_quiz_questions.map(q => {
+                    const answer = q.correctAnswer as unknown;
+                    return {
+                      ...q,
+                      correctAnswer: typeof answer === 'string' 
+                        ? (answer as string).toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0)
+                        : q.correctAnswer
+                    };
+                  })} 
                   title="Checkpoint Quiz" 
                   onComplete={async () => {}} 
                 />
