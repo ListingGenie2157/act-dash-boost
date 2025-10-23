@@ -1,27 +1,28 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, Target, Clock, Award, CheckCircle, AlertTriangle, Lightbulb } from 'lucide-react';
+import { ArrowLeft, BookOpen, Clock, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { getEnhancedLesson, type EnhancedLesson } from '@/lib/lessons';
+import { 
+  getEnhancedLesson, 
+  type EnhancedLesson,
+  parseConceptRules,
+  parseGuidedPractice,
+  parseCommonTraps,
+  parseIndependentPractice
+} from '@/lib/lessons';
 import { useSkillMastery } from '@/hooks/useMastery';
 import { MasteryBadge } from '@/components/MasteryBadge';
 import { MasteryProgressBar } from '@/components/MasteryProgressBar';
 import { sanitizeHTML } from '@/lib/sanitize';
-import { supabase } from '@/integrations/supabase/client';
-import { updateMastery, batchUpdateMastery } from '@/lib/mastery';
-import { toast } from 'sonner';
-import { shuffleQuestionChoices } from '@/lib/shuffle';
+import { RuleCard } from '@/components/lesson/RuleCard';
+import { GuidedExampleCard } from '@/components/lesson/GuidedExampleCard';
+import { CommonTrapsAlert } from '@/components/lesson/CommonTrapsAlert';
+import { IndependentPracticeCard } from '@/components/lesson/IndependentPracticeCard';
 import { QuizComponent } from '@/components/QuizComponent';
-
-function cnLocal(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(' ');
-}
 
 export default function EnhancedLessonViewer() {
   const { topic } = useParams<{ topic?: string }>();
@@ -29,36 +30,32 @@ export default function EnhancedLessonViewer() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState('learn');
-  
-  // Practice tracking
-  const [practiceAnswers, setPracticeAnswers] = useState<Record<string, number>>({});
-  const [showingPracticeResults, setShowingPracticeResults] = useState(false);
-  const [practiceStartTime, setPracticeStartTime] = useState<number>(Date.now());
-  const [userId, setUserId] = useState<string | null>(null);
 
-  // Mastery data
-  const { data: mastery, refetch: refetchMastery } = useSkillMastery(topic);
+  const { data: mastery } = useSkillMastery(topic);
 
-  // Shuffle practice questions
-  const shuffledPractice = useMemo(() => {
-    if (!lesson || !userId) return [];
-    return lesson.practiceQuestions.map(q => {
-      const seed = `${userId}-${q.staging_id}`;
-      return shuffleQuestionChoices(q, seed);
-    });
-  }, [lesson, userId]);
+  const parsedRules = useMemo(() => 
+    lesson?.concept_explanation ? parseConceptRules(lesson.concept_explanation) : []
+  , [lesson?.concept_explanation]);
+
+  const parsedExamples = useMemo(() => 
+    lesson?.guided_practice ? parseGuidedPractice(lesson.guided_practice) : []
+  , [lesson?.guided_practice]);
+
+  const parsedTraps = useMemo(() => 
+    lesson?.common_traps ? parseCommonTraps(lesson.common_traps) : []
+  , [lesson?.common_traps]);
+
+  const parsedIndependentPractice = useMemo(() => 
+    lesson?.independent_practice 
+      ? parseIndependentPractice(lesson.independent_practice, lesson.independent_practice_answers || null)
+      : []
+  , [lesson?.independent_practice, lesson?.independent_practice_answers]);
 
   useEffect(() => {
     const fetchLesson = async () => {
       setLoading(true);
       setError(null);
       try {
-        // Get user ID first
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          setUserId(user.id);
-        }
-
         const code = topic ?? '';
         const { data, error: fetchError } = await getEnhancedLesson(code);
         if (fetchError) {
@@ -74,57 +71,6 @@ export default function EnhancedLessonViewer() {
     };
     void fetchLesson();
   }, [topic]);
-
-  const handlePracticeAnswer = (questionId: string, answerIndex: number) => {
-    setPracticeAnswers(prev => ({
-      ...prev,
-      [questionId]: answerIndex,
-    }));
-  };
-
-  const handleSubmitPractice = async () => {
-    if (!lesson) return;
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast.error('Please log in to track your progress');
-      return;
-    }
-
-    // Calculate results using shuffled answers
-    let correct = 0;
-    const totalTime = Date.now() - practiceStartTime;
-    
-    shuffledPractice.forEach((shuffledQ) => {
-      const questionId = shuffledQ.original.staging_id.toString();
-      const userAnswerIndex = practiceAnswers[questionId];
-      
-      // Check if user's answer index matches correct index in shuffled array
-      if (userAnswerIndex === shuffledQ.correctIndex) {
-        correct++;
-      }
-    });
-
-    const accuracy = lesson.practiceQuestions.length > 0
-      ? (correct / lesson.practiceQuestions.length) * 100
-      : 0;
-
-    // Update mastery
-    const avgTimePerQuestion = Math.round(totalTime / lesson.practiceQuestions.length);
-    await updateMastery(
-      user.id,
-      lesson.skill_code,
-      accuracy >= 70, // Consider correct if 70%+ accuracy
-      avgTimePerQuestion
-    );
-
-    setShowingPracticeResults(true);
-    void refetchMastery();
-
-    toast.success(
-      `Practice complete! ${correct}/${lesson.practiceQuestions.length} correct (${accuracy.toFixed(0)}%)`
-    );
-  };
 
   if (loading) {
     return (
@@ -162,9 +108,7 @@ export default function EnhancedLessonViewer() {
         <Card>
           <CardHeader>
             <CardTitle>Lesson Not Found</CardTitle>
-            <CardDescription>
-              This lesson doesn't have content yet.
-            </CardDescription>
+            <CardDescription>This lesson doesn't have content yet.</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>
@@ -176,18 +120,8 @@ export default function EnhancedLessonViewer() {
     );
   }
 
-  const practiceComplete = shuffledPractice.length > 0 &&
-    shuffledPractice.every(sq => practiceAnswers[sq.original.staging_id.toString()] !== undefined);
-
-  const practiceScore = shuffledPractice.filter(sq => {
-    const questionId = sq.original.staging_id.toString();
-    const userAnswerIndex = practiceAnswers[questionId];
-    return userAnswerIndex === sq.correctIndex;
-  }).length;
-
   return (
     <div className="container mx-auto p-6 max-w-5xl">
-      {/* Header */}
       <div className="mb-6">
         <Button variant="ghost" size="sm" asChild className="mb-4">
           <Link to="/lessons">
@@ -203,9 +137,6 @@ export default function EnhancedLessonViewer() {
               <Badge variant="outline">{lesson.section}</Badge>
             </div>
             <h1 className="text-3xl font-bold mb-2">{lesson.skill_name}</h1>
-            {lesson.topic && lesson.topic !== lesson.skill_name && (
-              <p className="text-lg text-muted-foreground">{lesson.topic}</p>
-            )}
           </div>
 
           {mastery && mastery.total > 0 && (
@@ -220,12 +151,7 @@ export default function EnhancedLessonViewer() {
           )}
         </div>
 
-        {/* Lesson Stats */}
         <div className="flex items-center gap-4 mt-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Target className="h-4 w-4" />
-            {lesson.totalQuestions} questions
-          </div>
           <div className="flex items-center gap-1">
             <Clock className="h-4 w-4" />
             ~{lesson.estimatedMinutes} minutes
@@ -236,7 +162,6 @@ export default function EnhancedLessonViewer() {
           </div>
         </div>
 
-        {/* Mastery Progress */}
         {mastery && mastery.total > 0 && (
           <div className="mt-4">
             <MasteryProgressBar 
@@ -250,406 +175,90 @@ export default function EnhancedLessonViewer() {
 
       <Separator className="my-6" />
 
-      {/* Tabbed Content */}
       <Tabs value={currentTab} onValueChange={setCurrentTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="learn">
             <BookOpen className="h-4 w-4 mr-2" />
             Learn
           </TabsTrigger>
-          <TabsTrigger value="examples">
-            Examples ({lesson.examples.length})
-          </TabsTrigger>
-          <TabsTrigger value="practice">
-            Practice ({lesson.practiceQuestions.length})
-          </TabsTrigger>
-          <TabsTrigger value="test">
-            Test Yourself
-          </TabsTrigger>
+          <TabsTrigger value="practice">Practice</TabsTrigger>
+          <TabsTrigger value="test">Test Yourself</TabsTrigger>
         </TabsList>
 
-        {/* Learn Tab */}
         <TabsContent value="learn" className="space-y-6 mt-6">
-          {/* Overview */}
           <Card>
             <CardHeader>
               <CardTitle>Overview</CardTitle>
             </CardHeader>
             <CardContent>
-              <div 
-                className="prose prose-sm max-w-none dark:prose-invert"
-                dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.overview) }}
-              />
+              <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.overview) }} />
             </CardContent>
           </Card>
 
-          {/* Concept Explanation */}
-          {lesson.concept_explanation && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Concept Explanation</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div 
-                  className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.concept_explanation) }}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Guided Practice */}
-          {lesson.guided_practice && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Guided Practice</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div 
-                  className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.guided_practice) }}
-                />
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        {/* Examples Tab */}
-        <TabsContent value="examples" className="space-y-4 mt-6">
-          {lesson.examples.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-12 text-muted-foreground">
-                <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>No example questions available for this lesson.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            lesson.examples.map((example, idx) => (
-              <Card key={example.staging_id}>
-                <CardHeader>
-                  <CardTitle className="text-lg">Example {idx + 1}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {example.passage_text && (
-                    <div className="p-4 bg-muted rounded-lg">
-                      <h4 className="font-semibold mb-2">Passage:</h4>
-                      <p className="text-sm whitespace-pre-wrap">{example.passage_text}</p>
-                    </div>
-                  )}
-                  
-                  <div>
-                    <h4 className="font-semibold mb-3">{example.question}</h4>
-                    <div className="space-y-2">
-                      <div className="p-3 rounded-lg border">A) {example.choice_a}</div>
-                      <div className="p-3 rounded-lg border">B) {example.choice_b}</div>
-                      <div className="p-3 rounded-lg border">C) {example.choice_c}</div>
-                      <div className="p-3 rounded-lg border">D) {example.choice_d}</div>
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Award className="h-4 w-4 text-green-600" />
-                      <span className="font-semibold text-green-700 dark:text-green-400">
-                        Correct Answer: {example.answer}
-                      </span>
-                    </div>
-                    {example.explanation && (
-                      <p className="text-sm text-green-700 dark:text-green-300 mt-2">
-                        {example.explanation}
-                      </p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </TabsContent>
-
-        {/* Practice Tab */}
-        <TabsContent value="practice" className="space-y-6 mt-6">
-          {lesson.practiceQuestions.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-12 text-muted-foreground">
-                <Target className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>No practice questions available for this lesson.</p>
-              </CardContent>
-            </Card>
-          ) : (
+          {parsedRules.length > 0 && (
             <>
-              <Card className="border-blue-200 dark:border-blue-800">
-                <CardHeader>
-                  <CardTitle>Practice Questions</CardTitle>
-                  <CardDescription>
-                    Answer all questions to update your mastery level
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {!showingPracticeResults && (
-                    <div className="mb-4">
-                      <div className="flex items-center justify-between text-sm mb-2">
-                        <span>Progress</span>
-                        <span className="text-muted-foreground">
-                          {Object.keys(practiceAnswers).length} / {lesson.practiceQuestions.length}
-                        </span>
-                      </div>
-                      <Progress 
-                        value={(Object.keys(practiceAnswers).length / lesson.practiceQuestions.length) * 100} 
-                      />
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <h2 className="text-xl font-semibold">Key Rules</h2>
+              {parsedRules.map((rule) => (
+                <RuleCard key={rule.number} number={rule.number} title={rule.title} content={rule.content} />
+              ))}
+            </>
+          )}
 
-              {/* Practice Questions - Shuffled */}
-              <div className="space-y-4">
-                {shuffledPractice.map((shuffledQ, idx) => {
-                  const questionId = shuffledQ.original.staging_id.toString();
-                  const userAnswerIndex = practiceAnswers[questionId];
-                  const isCorrect = userAnswerIndex === shuffledQ.correctIndex;
-                  const hasAnswered = userAnswerIndex !== undefined;
-
-                  return (
-                    <Card 
-                      key={shuffledQ.original.staging_id}
-                      className={cnLocal(
-                        showingPracticeResults && hasAnswered && (
-                          isCorrect 
-                            ? 'border-green-300 bg-green-50 dark:bg-green-900/10' 
-                            : 'border-red-300 bg-red-50 dark:bg-red-900/10'
-                        )
-                      )}
-                    >
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-base">
-                            Question {idx + 1}
-                          </CardTitle>
-                          {showingPracticeResults && hasAnswered && (
-                            <Badge variant={isCorrect ? 'default' : 'destructive'}>
-                              {isCorrect ? '✓ Correct' : '✗ Incorrect'}
-                            </Badge>
-                          )}
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        {shuffledQ.original.passage_text && (
-                          <div className="p-4 bg-muted rounded-lg">
-                            <p className="text-sm whitespace-pre-wrap">{shuffledQ.original.passage_text}</p>
-                          </div>
-                        )}
-
-                        <p className="font-medium">{shuffledQ.original.question}</p>
-
-                        <div className="space-y-2">
-                          {shuffledQ.choices.map((choiceText, choiceIdx) => {
-                            const isSelected = userAnswerIndex === choiceIdx;
-                            const isCorrectAnswer = choiceIdx === shuffledQ.correctIndex;
-                            
-                            return (
-                              <button
-                                key={choiceIdx}
-                                onClick={() => !showingPracticeResults && handlePracticeAnswer(questionId, choiceIdx)}
-                                disabled={showingPracticeResults}
-                                className={cnLocal(
-                                  'w-full text-left p-3 rounded-lg border-2 transition-colors',
-                                  !showingPracticeResults && 'hover:border-primary cursor-pointer',
-                                  isSelected && !showingPracticeResults && 'border-primary bg-primary/5',
-                                  showingPracticeResults && isCorrectAnswer && 'border-green-500 bg-green-50 dark:bg-green-900/20',
-                                  showingPracticeResults && isSelected && !isCorrect && 'border-red-500 bg-red-50 dark:bg-red-900/20',
-                                  showingPracticeResults && 'cursor-default'
-                                )}
-                              >
-                                <div className="flex items-start gap-2">
-                                  <span className="font-semibold min-w-[1.5rem]">
-                                    {String.fromCharCode(65 + choiceIdx)})
-                                  </span>
-                                  <span className="flex-1">{choiceText}</span>
-                                  {showingPracticeResults && isCorrectAnswer && (
-                                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-                                  )}
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-
-                        {showingPracticeResults && shuffledQ.original.explanation && (
-                          <div className="pt-4 border-t">
-                            <p className="text-sm font-semibold mb-2">Explanation:</p>
-                            <p className="text-sm text-muted-foreground">
-                              {shuffledQ.original.explanation}
-                            </p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-
-              {/* Submit/Reset Buttons */}
-              {!showingPracticeResults ? (
-                <div className="flex justify-end">
-                  <Button 
-                    size="lg"
-                    onClick={handleSubmitPractice}
-                    disabled={!practiceComplete}
-                  >
-                    Submit Practice
-                  </Button>
-                </div>
-              ) : (
-                <Card className="border-blue-200 dark:border-blue-800">
-                  <CardContent className="pt-6">
-                    <div className="text-center space-y-4">
-                      <div>
-                        <p className="text-2xl font-bold mb-1">
-                          {practiceScore} / {shuffledPractice.length}
-                        </p>
-                        <p className="text-muted-foreground">
-                          {Math.round((practiceScore / shuffledPractice.length) * 100)}% Correct
-                        </p>
-                      </div>
-                      <div className="flex gap-3 justify-center">
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setPracticeAnswers({});
-                            setShowingPracticeResults(false);
-                            setPracticeStartTime(Date.now());
-                          }}
-                        >
-                          Try Again
-                        </Button>
-                        <Button asChild>
-                          <Link to="/lessons">Browse More Lessons</Link>
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+          {parsedExamples.length > 0 && (
+            <>
+              <h2 className="text-xl font-semibold mt-8">Guided Examples</h2>
+              {parsedExamples.map((example) => (
+                <GuidedExampleCard key={example.number} number={example.number} content={example.content} />
+              ))}
             </>
           )}
         </TabsContent>
 
-        {/* Test Yourself Tab */}
-        <TabsContent value="test" className="space-y-6 mt-6">
-          {/* Interactive Checkpoint Quiz */}
-          {lesson.checkpoint_quiz_questions && lesson.checkpoint_quiz_questions.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5" />
-                  Checkpoint Quiz
-                </CardTitle>
-                <CardDescription>Test your mastery with instant feedback</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <QuizComponent
-                  questions={lesson.checkpoint_quiz_questions}
-                  title="Checkpoint Quiz"
-                  onComplete={async (score, wrongAnswers) => {
-                    const { data: { user } } = await supabase.auth.getUser();
-                    if (user && lesson) {
-                      const results = lesson.checkpoint_quiz_questions!.map((q) => ({
-                        skillId: lesson.skill_code,
-                        correct: !wrongAnswers.some(wa => wa.questionId === q.id),
-                        timeMs: 45000
-                      }));
-                      await batchUpdateMastery(user.id, results);
-                      void refetchMastery();
-                      toast.success(
-                        score >= 70 
-                          ? `✅ Great job! You scored ${score}%` 
-                          : `📝 Keep practicing! You scored ${score}%`
-                      );
-                    }
-                  }}
-                />
-              </CardContent>
-            </Card>
-          )}
+        <TabsContent value="practice" className="space-y-6 mt-6">
+          {parsedTraps.length > 0 && <CommonTrapsAlert traps={parsedTraps} />}
 
-          {/* Common Traps */}
-          {lesson.common_traps && (
-            <Card className="border-yellow-500/50 bg-yellow-50/50 dark:bg-yellow-950/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 h-5 text-yellow-600 dark:text-yellow-400" />
-                  Common Traps
-                </CardTitle>
-                <CardDescription>Watch out for these frequent mistakes</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div 
-                  className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.common_traps) }}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Independent Practice */}
-          {lesson.independent_practice && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5" />
-                  Independent Practice
-                </CardTitle>
-                <CardDescription>Try these on your own before checking answers</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div 
-                  className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.independent_practice) }}
-                />
-                
-                {lesson.independent_practice_answers && (
-                  <Accordion type="single" collapsible className="mt-6">
-                    <AccordionItem value="answers">
-                      <AccordionTrigger className="text-base font-semibold">
-                        Show Answer Key & Explanations
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div 
-                          className="prose prose-sm max-w-none dark:prose-invert pt-4"
-                          dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.independent_practice_answers) }}
-                        />
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Recap */}
-          {lesson.recap && (
-            <Card className="border-primary/50 bg-primary/5">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Lightbulb className="h-5 w-5" />
-                  Recap
-                </CardTitle>
-                <CardDescription>Key takeaways from this lesson</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div 
-                  className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.recap) }}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {!lesson.checkpoint_quiz_questions?.length && !lesson.common_traps && !lesson.independent_practice && !lesson.recap && (
+          {parsedIndependentPractice.length > 0 ? (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Practice Questions</CardTitle>
+                  <CardDescription>Try these on your own. Click to reveal answers.</CardDescription>
+                </CardHeader>
+              </Card>
+              {parsedIndependentPractice.map((q) => (
+                <IndependentPracticeCard key={q.number} number={q.number} question={q.question} answer={q.answer} />
+              ))}
+            </>
+          ) : (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground">
                 <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Additional test materials coming soon!</p>
+                <p>Practice questions coming soon!</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="test" className="space-y-6 mt-6">
+          {lesson.checkpoint_quiz_questions && lesson.checkpoint_quiz_questions.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Checkpoint Quiz</CardTitle>
+                <CardDescription>Test your mastery</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <QuizComponent questions={lesson.checkpoint_quiz_questions} title="Checkpoint Quiz" onComplete={async () => {}} />
+              </CardContent>
+            </Card>
+          )}
+
+          {lesson.recap && (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardHeader>
+                <CardTitle>Lesson Recap</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.recap) }} />
               </CardContent>
             </Card>
           )}

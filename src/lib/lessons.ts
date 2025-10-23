@@ -1,7 +1,4 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { Database } from '@/integrations/supabase/types';
-
-type StagingItem = Database['public']['Tables']['staging_items']['Row'];
 
 export interface CheckpointQuestion {
   id: string;
@@ -12,6 +9,23 @@ export interface CheckpointQuestion {
   difficulty: 'easy' | 'medium' | 'hard';
 }
 
+export interface ParsedRule {
+  number: number;
+  title: string;
+  content: string;
+}
+
+export interface ParsedExample {
+  number: number;
+  content: string;
+}
+
+export interface ParsedIndependentQuestion {
+  number: number;
+  question: string;
+  answer?: string;
+}
+
 export interface EnhancedLesson {
   skill_code: string;
   skill_name: string;
@@ -19,7 +33,7 @@ export interface EnhancedLesson {
   section: string;
   topic: string | null;
   
-  // Rich content (optional from lesson_content table)
+  // Rich content from lesson_content table
   overview: string;
   objectives?: string[] | null;
   concept_explanation?: string | null;
@@ -31,18 +45,13 @@ export interface EnhancedLesson {
   checkpoint_quiz_questions?: CheckpointQuestion[];
   recap?: string | null;
   
-  // Practice content (from staging_items)
-  examples: StagingItem[];
-  practiceQuestions: StagingItem[];
-  totalQuestions: number;
-  
   // Metadata
   difficulty: 'easy' | 'medium' | 'hard';
   estimatedMinutes: number;
 }
 
 /**
- * Get enhanced lesson with questions from staging_items
+ * Get enhanced lesson from lesson_content table only
  */
 export async function getEnhancedLesson(skillCode: string): Promise<{
   data: EnhancedLesson | null;
@@ -60,61 +69,39 @@ export async function getEnhancedLesson(skillCode: string): Promise<{
       return { data: null, error: skillError || new Error('Skill not found') };
     }
 
-    // Try to get rich lesson content
-    const { data: richContent } = await supabase
+    // Get rich lesson content
+    const { data: richContent, error: contentError } = await supabase
       .from('lesson_content')
       .select('*')
       .eq('skill_code', skillCode)
       .maybeSingle();
 
-    // Get questions from staging_items
-    const { data: items, error: itemsError } = await supabase
-      .from('staging_items')
-      .select('*')
-      .eq('skill_code', skillCode)
-      .order('ord', { ascending: true });
-
-    if (itemsError) {
-      return { data: null, error: itemsError };
+    if (contentError || !richContent) {
+      return { data: null, error: contentError || new Error('Lesson content not found') };
     }
-
-    const questions = items || [];
-    const section = questions[0]?.section || 'MATH';
-    const topic = questions[0]?.topic || skill.name;
-
-    // Split into examples and practice
-    const exampleCount = Math.min(3, Math.floor(questions.length * 0.3));
-    const examples = questions.slice(0, exampleCount);
-    const practiceQuestions = questions.slice(exampleCount);
-
-    // Use rich content if available, otherwise generate
-    const overview = richContent?.overview_html || createOverviewFromQuestions(questions, skill.name);
 
     const lesson: EnhancedLesson = {
       skill_code: skillCode,
       skill_name: skill.name,
       subject: skill.subject,
-      section,
-      topic,
+      section: skill.subject, // Use subject as section
+      topic: skill.name,
       
-      // Rich content (if available)
-      overview,
-      objectives: richContent?.objectives || null,
-      concept_explanation: richContent?.concept_explanation || null,
-      guided_practice: richContent?.guided_practice || null,
-      error_analysis: richContent?.error_analysis || null,
-      common_traps: richContent?.common_traps || null,
-      independent_practice: richContent?.independent_practice || null,
-      independent_practice_answers: richContent?.independent_practice_answers || null,
-      checkpoint_quiz_questions: (richContent?.checkpoint_quiz_questions as unknown as CheckpointQuestion[]) || [],
-      recap: richContent?.recap || null,
+      // Rich content from lesson_content table
+      overview: richContent.overview_html || `<p>This lesson covers ${skill.name}.</p>`,
+      objectives: richContent.objectives || null,
+      concept_explanation: richContent.concept_explanation || null,
+      guided_practice: richContent.guided_practice || null,
+      error_analysis: richContent.error_analysis || null,
+      common_traps: richContent.common_traps || null,
+      independent_practice: richContent.independent_practice || null,
+      independent_practice_answers: richContent.independent_practice_answers || null,
+      checkpoint_quiz_questions: (richContent.checkpoint_quiz_questions as unknown as CheckpointQuestion[]) || [],
+      recap: richContent.recap || null,
       
-      // Practice content
-      examples,
-      practiceQuestions,
-      totalQuestions: questions.length,
-      difficulty: (richContent?.difficulty as 'easy' | 'medium' | 'hard') || 'medium',
-      estimatedMinutes: richContent?.estimated_minutes || Math.ceil(questions.length * 2),
+      // Metadata
+      difficulty: (richContent.difficulty as 'easy' | 'medium' | 'hard') || 'medium',
+      estimatedMinutes: richContent.estimated_minutes || 15,
     };
 
     return { data: lesson, error: null };
@@ -127,38 +114,107 @@ export async function getEnhancedLesson(skillCode: string): Promise<{
 }
 
 /**
- * Create a basic overview from question content
+ * Parse concept explanation into individual rule cards
  */
-function createOverviewFromQuestions(questions: StagingItem[], skillName: string): string {
-  if (questions.length === 0) {
-    return `This lesson covers ${skillName}. Complete the practice questions to build mastery.`;
+export function parseConceptRules(html: string): ParsedRule[] {
+  if (!html) return [];
+  
+  const rules: ParsedRule[] = [];
+  const rulePattern = /<h3[^>]*>Rule\s+(\d+)[:\s]*([^<]*)<\/h3>([\s\S]*?)(?=<h3[^>]*>Rule\s+\d+|$)/gi;
+  
+  let match;
+  while ((match = rulePattern.exec(html)) !== null) {
+    rules.push({
+      number: parseInt(match[1]),
+      title: match[2].trim() || `Rule ${match[1]}`,
+      content: match[3].trim(),
+    });
   }
+  
+  return rules;
+}
 
-  const topic = questions[0].topic || skillName;
-  const hasPassages = questions.some(q => q.passage_text);
+/**
+ * Parse guided practice into individual example cards
+ */
+export function parseGuidedPractice(html: string): ParsedExample[] {
+  if (!html) return [];
   
-  let overview = `<h2>${skillName}</h2>\n\n`;
-  overview += `<p>This lesson focuses on <strong>${topic}</strong>.</p>\n\n`;
+  const examples: ParsedExample[] = [];
+  const examplePattern = /<h3[^>]*>Example\s+(\d+)[:\s]*<\/h3>([\s\S]*?)(?=<h3[^>]*>Example\s+\d+|$)/gi;
   
-  if (hasPassages) {
-    overview += `<p>You'll work with reading passages and answer comprehension questions.</p>\n\n`;
+  let match;
+  while ((match = examplePattern.exec(html)) !== null) {
+    examples.push({
+      number: parseInt(match[1]),
+      content: match[2].trim(),
+    });
   }
   
-  overview += `<h3>What You'll Learn:</h3>\n`;
-  overview += `<ul>\n`;
-  overview += `  <li>Master ${skillName.toLowerCase()} concepts</li>\n`;
-  overview += `  <li>Practice with ${questions.length} questions</li>\n`;
-  overview += `  <li>Build confidence through repetition</li>\n`;
-  overview += `</ul>\n\n`;
+  return examples;
+}
+
+/**
+ * Parse common traps into an array of trap descriptions
+ */
+export function parseCommonTraps(html: string): string[] {
+  if (!html) return [];
   
-  overview += `<h3>Study Tips:</h3>\n`;
-  overview += `<ul>\n`;
-  overview += `  <li>Read each question carefully</li>\n`;
-  overview += `  <li>Review explanations for any you get wrong</li>\n`;
-  overview += `  <li>Try to understand the concept, not just memorize</li>\n`;
-  overview += `</ul>\n`;
+  const traps: string[] = [];
   
-  return overview;
+  // Try to parse as list items first
+  const listPattern = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+  let match;
+  while ((match = listPattern.exec(html)) !== null) {
+    const text = match[1].replace(/<[^>]+>/g, '').trim();
+    if (text) traps.push(text);
+  }
+  
+  // If no list items, try numbered pattern
+  if (traps.length === 0) {
+    const numberedPattern = /(?:^|\n)\s*\d+\.\s*([^\n]+)/g;
+    while ((match = numberedPattern.exec(html)) !== null) {
+      traps.push(match[1].trim());
+    }
+  }
+  
+  return traps;
+}
+
+/**
+ * Parse independent practice into questions with answers
+ */
+export function parseIndependentPractice(
+  practiceHtml: string, 
+  answersHtml: string | null
+): ParsedIndependentQuestion[] {
+  if (!practiceHtml) return [];
+  
+  const questions: ParsedIndependentQuestion[] = [];
+  
+  // Parse questions
+  const questionPattern = /(?:^|\n)\s*(\d+)\.\s*([^\n]+(?:\n(?!\s*\d+\.)[^\n]+)*)/g;
+  let match;
+  while ((match = questionPattern.exec(practiceHtml)) !== null) {
+    questions.push({
+      number: parseInt(match[1]),
+      question: match[2].trim(),
+    });
+  }
+  
+  // Parse answers if available
+  if (answersHtml) {
+    const answerPattern = /(?:^|\n)\s*(\d+)\.\s*([^\n]+)/g;
+    while ((match = answerPattern.exec(answersHtml)) !== null) {
+      const questionNum = parseInt(match[1]);
+      const question = questions.find(q => q.number === questionNum);
+      if (question) {
+        question.answer = match[2].trim();
+      }
+    }
+  }
+  
+  return questions;
 }
 
 /**
