@@ -120,14 +120,16 @@ export function parseConceptRules(html: string): ParsedRule[] {
   if (!html) return [];
   
   const rules: ParsedRule[] = [];
-  const rulePattern = /<h3[^>]*>Rule\s+(\d+)[:\s]*([^<]*)<\/h3>([\s\S]*?)(?=<h3[^>]*>Rule\s+\d+|$)/gi;
+  // Parse plain text format: "Rule 1 – Content here. Rule 2 – More content."
+  const rulePattern = /Rule\s+(\d+)\s*[–-]\s*([^]+?)(?=Rule\s+\d+\s*[–-]|$)/gi;
   
   let match;
   while ((match = rulePattern.exec(html)) !== null) {
+    const content = match[2].trim();
     rules.push({
       number: parseInt(match[1]),
-      title: match[2].trim() || `Rule ${match[1]}`,
-      content: match[3].trim(),
+      title: `Rule ${match[1]}`,
+      content: content,
     });
   }
   
@@ -141,7 +143,8 @@ export function parseGuidedPractice(html: string): ParsedExample[] {
   if (!html) return [];
   
   const examples: ParsedExample[] = [];
-  const examplePattern = /<h3[^>]*>Example\s+(\d+)[:\s]*<\/h3>([\s\S]*?)(?=<h3[^>]*>Example\s+\d+|$)/gi;
+  // Parse plain text format: "Example 1: Content here. Example 2: More content."
+  const examplePattern = /Example\s+(\d+):\s*([^]+?)(?=Example\s+\d+:|$)/gis;
   
   let match;
   while ((match = examplePattern.exec(html)) !== null) {
@@ -162,20 +165,12 @@ export function parseCommonTraps(html: string): string[] {
   
   const traps: string[] = [];
   
-  // Try to parse as list items first
-  const listPattern = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+  // Parse plain text format: "1 – Trap description. 2 – Another trap."
+  const numberedPattern = /(\d+)\s*[–-]\s*([^.]+?)(?=\s*\d+\s*[–-]|$)/g;
   let match;
-  while ((match = listPattern.exec(html)) !== null) {
-    const text = match[1].replace(/<[^>]+>/g, '').trim();
+  while ((match = numberedPattern.exec(html)) !== null) {
+    const text = match[2].trim();
     if (text) traps.push(text);
-  }
-  
-  // If no list items, try numbered pattern
-  if (traps.length === 0) {
-    const numberedPattern = /(?:^|\n)\s*\d+\.\s*([^\n]+)/g;
-    while ((match = numberedPattern.exec(html)) !== null) {
-      traps.push(match[1].trim());
-    }
   }
   
   return traps;
@@ -203,13 +198,29 @@ export function parseIndependentPractice(
   }
   
   // Parse answers if available
+  // Format can be: "1 answer; 2 answer; 3 answer" or "1. answer\n2. answer"
   if (answersHtml) {
-    const answerPattern = /(?:^|\n)\s*(\d+)\.\s*([^\n]+)/g;
-    while ((match = answerPattern.exec(answersHtml)) !== null) {
+    // Try semicolon-separated format first
+    const semicolonPattern = /(\d+)\s+([^;]+)/g;
+    let foundAny = false;
+    while ((match = semicolonPattern.exec(answersHtml)) !== null) {
       const questionNum = parseInt(match[1]);
       const question = questions.find(q => q.number === questionNum);
       if (question) {
         question.answer = match[2].trim();
+        foundAny = true;
+      }
+    }
+    
+    // If no semicolon format, try numbered newline format
+    if (!foundAny) {
+      const answerPattern = /(?:^|\n)\s*(\d+)\.\s*([^\n]+)/g;
+      while ((match = answerPattern.exec(answersHtml)) !== null) {
+        const questionNum = parseInt(match[1]);
+        const question = questions.find(q => q.number === questionNum);
+        if (question) {
+          question.answer = match[2].trim();
+        }
       }
     }
   }
