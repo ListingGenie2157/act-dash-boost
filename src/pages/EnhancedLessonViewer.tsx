@@ -215,13 +215,25 @@ export default function EnhancedLessonViewer() {
             </CardContent>
           </Card>
 
-          {parsedRules.length > 0 && (
+          {parsedRules.length > 0 ? (
             <>
               <h2 className="text-xl font-semibold">Key Rules</h2>
               {parsedRules.map((rule) => (
                 <RuleCard key={rule.number} number={rule.number} title={rule.title} content={rule.content} />
               ))}
             </>
+          ) : lesson.concept_explanation && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Concept Explanation</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div 
+                  className="prose prose-sm max-w-none dark:prose-invert" 
+                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(lesson.concept_explanation) }} 
+                />
+              </CardContent>
+            </Card>
           )}
 
           {parsedExamples.length > 0 && (
