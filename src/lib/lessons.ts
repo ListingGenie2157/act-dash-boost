@@ -4,7 +4,7 @@ export interface CheckpointQuestion {
   id: string;
   question: string;
   options: string[];
-  correctAnswer: number;
+  correctAnswer: number | string; // Can be numeric index or letter string from database
   explanation: string;
   difficulty: 'easy' | 'medium' | 'hard';
 }
@@ -196,14 +196,19 @@ export function parseIndependentPractice(
   
   const questions: ParsedIndependentQuestion[] = [];
   
-  // Parse questions
-  const questionPattern = /(?:^|\n)\s*(\d+)\.\s*([^\n]+(?:\n(?!\s*\d+\.)[^\n]+)*)/g;
-  let match;
-  while ((match = questionPattern.exec(practiceHtml)) !== null) {
-    questions.push({
-      number: parseInt(match[1]),
-      question: match[2].trim(),
-    });
+  // Split by "X. " pattern to handle single-line format: "1. Question. 2. Another question."
+  const parts = practiceHtml.split(/(\d+)\.\s+/);
+  
+  // Pattern creates [intro, num1, question1, num2, question2...]
+  for (let i = 1; i < parts.length; i += 2) {
+    const number = parseInt(parts[i]);
+    const text = parts[i + 1]?.trim();
+    if (text) {
+      questions.push({
+        number,
+        question: text,
+      });
+    }
   }
   
   // Parse answers if available
@@ -211,6 +216,7 @@ export function parseIndependentPractice(
   if (answersHtml) {
     // Try semicolon-separated format first
     const semicolonPattern = /(\d+)\s+([^;]+)/g;
+    let match;
     let foundAny = false;
     while ((match = semicolonPattern.exec(answersHtml)) !== null) {
       const questionNum = parseInt(match[1]);
