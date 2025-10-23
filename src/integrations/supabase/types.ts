@@ -1192,10 +1192,7 @@ export type Database = {
       }
     }
     Functions: {
-      is_admin: {
-        Args: { user_email?: string }
-        Returns: boolean
-      }
+      is_admin: { Args: { user_email?: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
