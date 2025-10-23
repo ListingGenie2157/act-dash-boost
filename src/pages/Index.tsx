@@ -193,7 +193,7 @@ const Index = () => {
             // Self-Directed Learning Dashboard
             <div className="space-y-8">
               <div className="grid md:grid-cols-3 gap-6">
-                <Link to="/lessons-library">
+                <Link to="/lessons">
                   <div className="p-6 border rounded-xl hover:shadow-lg transition-shadow bg-card h-full">
                     <div className="text-4xl mb-3">📚</div>
                     <h3 className="text-xl font-bold mb-2">Lessons Library</h3>
