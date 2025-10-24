@@ -352,8 +352,9 @@ serve(async (req) => {
 
     console.log(`📚 Lessons: ${lessonsRemaining} remaining, ${lessonsPerDay} per day needed (${daysLeft} days left)`);
 
-    // Check for test week special scheduling
-    if (daysLeft !== null && daysLeft <= 7) {
+    // Check for test week special scheduling (strictly within 7 days)
+    if (daysLeft !== null && daysLeft > 0 && daysLeft <= 7) {
+      console.warn(`Test week mode: ${daysLeft} days until test`);
       const specialTasks = getTestWeekTasks(daysLeft, user.id, todayStr);
       if (specialTasks.length > 0) {
         const { error: planError } = await supabase

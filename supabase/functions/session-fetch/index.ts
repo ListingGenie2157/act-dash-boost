@@ -37,8 +37,16 @@ serve(async (req) => {
       });
     }
 
-    const url = new URL(req.url);
-    const session_id = url.searchParams.get('session_id');
+    // Get session_id from query params (GET) or body (POST)
+    let session_id: string | null = null;
+    
+    if (req.method === 'GET') {
+      const url = new URL(req.url);
+      session_id = url.searchParams.get('session_id');
+    } else if (req.method === 'POST') {
+      const body = await req.json();
+      session_id = body.session_id;
+    }
 
     if (!session_id) {
       return new Response(JSON.stringify({ error: 'Missing session_id parameter' }), {

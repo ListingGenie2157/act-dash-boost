@@ -176,31 +176,42 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
                     No tasks scheduled
                   </div>
                 ) : (
-                  day.tasks.map((task, taskIdx) => (
-                    <button
-                      key={taskIdx}
-                      onClick={() => handleTaskClick(day.date, taskIdx)}
-                      className="w-full text-left p-2 rounded-md hover:bg-accent transition-colors flex items-start gap-2"
-                    >
-                      {task.status === 'COMPLETED' ? (
-                        <CheckCircle2 className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
-                      ) : task.status === 'IN_PROGRESS' ? (
-                        <AlertCircle className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
-                      ) : (
-                        <BookOpen className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">
-                          {task.title || `${task.type} Task`}
-                        </div>
-                        {task.estimatedMins && (
-                          <div className="text-xs text-muted-foreground">
-                            {task.estimatedMins} min
+                  day.tasks
+                    .filter(task => task.type !== 'SIM')
+                    .map((task, taskIdx) => {
+                      const to = `/task/${day.date}/${taskIdx}`;
+                      return (
+                        <a
+                          key={taskIdx}
+                          href={to}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleTaskClick(day.date, taskIdx);
+                          }}
+                          className="w-full text-left p-2 rounded-md hover:bg-accent transition-colors flex items-start gap-2 cursor-pointer no-underline"
+                          role="button"
+                          tabIndex={0}
+                        >
+                          {task.status === 'COMPLETED' ? (
+                            <CheckCircle2 className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+                          ) : task.status === 'IN_PROGRESS' ? (
+                            <AlertCircle className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
+                          ) : (
+                            <BookOpen className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">
+                              {task.title || `${task.type} Task`}
+                            </div>
+                            {task.estimatedMins && (
+                              <div className="text-xs text-muted-foreground">
+                                {task.estimatedMins} min
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </button>
-                  ))
+                        </a>
+                      );
+                    })
                 )}
               </CardContent>
             </Card>

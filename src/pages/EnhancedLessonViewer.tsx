@@ -247,7 +247,7 @@ export default function EnhancedLessonViewer() {
         </TabsContent>
 
         <TabsContent value="practice" className="space-y-6 mt-6">
-          {parsedTraps.length > 0 && <CommonTrapsAlert traps={parsedTraps} />}
+          {lesson.common_traps && <CommonTrapsAlert traps={parsedTraps} />}
 
           {parsedIndependentPractice.length > 0 ? (
             <>

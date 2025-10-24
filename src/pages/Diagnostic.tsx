@@ -62,54 +62,43 @@ export const DiagnosticEvaluation = ({
       try {
         const questions: Question[] = [];
         
-        // Fetch questions from the questions table
-        // Get skills for each subject
-        const { data: skills, error: skillsError } = await supabase
-          .from('skills')
-          .select('id, subject');
-        
-        if (skillsError) throw skillsError;
-        
-        // Group skills by subject
-        const skillsBySubject: Record<string, string[]> = {
-          english: [],
-          math: [],
-          reading: [],
-          science: []
+        // Fetch diagnostic questions from v_form_section (Form A)
+        const sections = ['EN', 'MATH', 'RD', 'SCI'];
+        const subjectMap: Record<string, 'english' | 'math' | 'reading' | 'science'> = {
+          'EN': 'english',
+          'MATH': 'math',
+          'RD': 'reading',
+          'SCI': 'science'
         };
         
-        skills?.forEach(skill => {
-          const subjectKey = skill.subject.toLowerCase();
-          if (skillsBySubject[subjectKey]) {
-            skillsBySubject[subjectKey].push(skill.id);
-          }
-        });
-        
-        // Fetch 12 questions per subject (mix of difficulties)
-        for (const [subject, skillIds] of Object.entries(skillsBySubject)) {
-          if (skillIds.length === 0) continue;
-          
+        for (const section of sections) {
           const { data, error } = await supabase
-            .from('questions')
-            .select('*')
-            .in('skill_id', skillIds)
+            .from('v_form_section')
+            .select('question_id, question, choice_a, choice_b, choice_c, choice_d, answer, explanation')
+            .eq('form_id', 'A')
+            .eq('section', section)
             .limit(12);
           
-          if (error) throw error;
+          if (error) {
+            console.error(`Error fetching ${section} questions:`, error);
+            continue;
+          }
           
           if (data) {
             data.forEach((item) => {
-              questions.push({
-                id: item.id,
-                subject: subject as 'english' | 'math' | 'reading' | 'science',
-                topic: item.skill_id || 'general',
-                difficulty: item.difficulty <= 2 ? 'easy' : item.difficulty <= 4 ? 'medium' : 'hard',
-                question: item.stem,
-                options: [item.choice_a, item.choice_b, item.choice_c, item.choice_d],
-                correctAnswer: item.answer.charCodeAt(0) - 65, // A=0, B=1, C=2, D=3
-                explanation: item.explanation || '',
-                timeLimit: item.time_limit_secs || 60
-              });
+              if (item.question && item.choice_a && item.choice_b && item.choice_c && item.choice_d && item.answer) {
+                questions.push({
+                  id: item.question_id || '',
+                  subject: subjectMap[section],
+                  topic: section,
+                  difficulty: 'medium',
+                  question: item.question,
+                  options: [item.choice_a, item.choice_b, item.choice_c, item.choice_d],
+                  correctAnswer: item.answer.charCodeAt(0) - 65, // A=0, B=1, C=2, D=3
+                  explanation: item.explanation || '',
+                  timeLimit: 60
+                });
+              }
             });
           }
         }

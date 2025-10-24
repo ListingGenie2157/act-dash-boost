@@ -21,19 +21,21 @@ export default function TimedDrills() {
     async function fetchSubjects() {
       try {
         const { data, error } = await supabase
-          .from('staging_items')
-          .select('section');
+          .from('v_form_section')
+          .select('section, form_id');
 
         if (error) {
-          console.error('Error fetching staging items:', error);
+          console.error('Error fetching questions:', error);
           setLoading(false);
           return;
         }
 
-        // Count questions per section/subject
+        // Count questions per section
         const counts: Record<string, number> = {};
         data.forEach(item => {
-          counts[item.section] = (counts[item.section] || 0) + 1;
+          if (item.section) {
+            counts[item.section] = (counts[item.section] || 0) + 1;
+          }
         });
 
         const stats: SubjectStats[] = Object.entries(counts).map(([subject, count]) => ({

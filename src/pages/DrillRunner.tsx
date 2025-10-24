@@ -37,10 +37,10 @@ export default function DrillRunner() {
         const nParam = searchParams.get('n');
         const n = nParam ? parseInt(nParam, 10) : 10;
 
-        // Fetch questions from staging_items instead of questions table
+        // Fetch questions from v_form_section instead of staging_items
         const { data, error: qError } = await supabase
-          .from('staging_items')
-          .select('*')
+          .from('v_form_section')
+          .select('question_id, question, choice_a, choice_b, choice_c, choice_d, answer, explanation')
           .eq('section', decodeURIComponent(subject))
           .limit(n);
 
@@ -49,17 +49,17 @@ export default function DrillRunner() {
         } else if (!data || data.length === 0) {
           setError('No questions found for this section');
         } else {
-          // Map staging_items to Question type
-          const mappedQuestions: Question[] = data.map((q, idx) => ({
-            id: `${subject}_${idx}`,
-            stem: q.question,
-            choice_a: q.choice_a,
-            choice_b: q.choice_b,
-            choice_c: q.choice_c,
-            choice_d: q.choice_d,
-            answer: q.answer as 'A' | 'B' | 'C' | 'D',
+          // Map v_form_section to Question type
+          const mappedQuestions: Question[] = data.map((q) => ({
+            id: q.question_id || '',
+            stem: q.question || '',
+            choice_a: q.choice_a || '',
+            choice_b: q.choice_b || '',
+            choice_c: q.choice_c || '',
+            choice_d: q.choice_d || '',
+            answer: (q.answer as 'A' | 'B' | 'C' | 'D') || 'A',
             explanation: q.explanation ?? undefined,
-            skill_code: q.skill_code,
+            skill_code: undefined,
           }));
           setQuestions(mappedQuestions);
         }
