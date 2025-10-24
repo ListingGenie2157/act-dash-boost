@@ -25,27 +25,36 @@ const Index = () => {
     const syncAuthAndProfile = async (session: any) => {
       if (!mounted) return;
 
+      console.log('[Index] syncAuthAndProfile called', { hasSession: !!session });
+
       if (session) {
         setSession(session);
         setIsAuthenticated(true);
         
         try {
+          console.log('[Index] Fetching profile for user:', session.user.id);
+          
           // Check if user has completed onboarding
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('test_date, onboarding_complete, has_study_plan')
             .eq('id', session.user.id)
             .maybeSingle();
           
+          console.log('[Index] Profile result:', { profile, profileError });
+          
           // Also check user_profiles for onboarding flags
-          const { data: userProfile } = await supabase
+          const { data: userProfile, error: userProfileError } = await supabase
             .from('user_profiles')
             .select('age_verified, tos_accepted')
             .eq('user_id', session.user.id)
             .maybeSingle();
 
+          console.log('[Index] User profile result:', { userProfile, userProfileError });
+
           // If user has test_date AND user_profile exists, stay on dashboard
           if (profile?.test_date && userProfile && mounted) {
+            console.log('[Index] User has completed onboarding, showing dashboard');
             setProfile(profile);
             setHasStudyPlan(profile.has_study_plan ?? false);
             setIsLoading(false);
@@ -54,16 +63,18 @@ const Index = () => {
           
           // Otherwise, redirect to onboarding
           if (mounted) {
+            console.log('[Index] Redirecting to onboarding');
             navigate('/onboarding', { replace: true });
             return;
           }
         } catch (error) {
-          console.error('Profile check failed:', error);
+          console.error('[Index] Profile check failed:', error);
           if (mounted) {
             navigate('/onboarding', { replace: true });
           }
         }
       } else {
+        console.log('[Index] No session, showing landing page');
         setSession(null);
         setIsAuthenticated(false);
         setProfile(null);
