@@ -51,6 +51,7 @@ const App = () => (
           <Suspense fallback={<PageLoadingSpinner />}>
             <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/dashboard" element={<Index />} />
           {/* Login route to handle user authentication. */}
           <Route path="/login" element={<Login />} />
           <Route path="/simple-login" element={<SimpleLogin />} />
