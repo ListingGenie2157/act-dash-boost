@@ -11,11 +11,12 @@ import { supabase } from '@/integrations/supabase/client';
 interface QuizComponentProps {
   questions: LegacyQuestion[];
   title: string;
+  skillCode: string; // Added skillCode for mastery tracking
   onComplete: (score: number, wrongAnswers: QuizAnswers) => void;
   onBack?: () => void;
 }
 
-export const QuizComponent = ({ questions, title, onComplete, onBack }: QuizComponentProps) => {
+export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack }: QuizComponentProps) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<number[]>(new Array(questions.length).fill(-1));
   const [showResults, setShowResults] = useState(false);
@@ -65,20 +66,30 @@ export const QuizComponent = ({ questions, title, onComplete, onBack }: QuizComp
     
     const score = Math.round(((questions.length - wrongAnswers.length) / questions.length) * 100);
     
-    // Update mastery for all questions
+    // Update mastery for the lesson skill
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const masteryResults = questions.map((question, index) => ({
-          skillId: question.id, // Using question.id as skillId for curriculum questions
+          skillId: skillCode, // Use the lesson's skill code for all questions
           correct: answers[index] === question.correctAnswer,
-          timeMs: 30000, // Default 30 seconds per question (can be enhanced with actual timing)
+          timeMs: 30000, // Default 30 seconds per question
         }));
         
         await batchUpdateMastery(user.id, masteryResults);
+        
+        toast({
+          title: 'Progress saved!',
+          description: 'Your mastery for this skill has been updated.',
+        });
       }
     } catch (error) {
       console.error('Error updating mastery:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save progress. Please try again.',
+        variant: 'destructive',
+      });
     }
     
     onComplete(score, wrongAnswers);

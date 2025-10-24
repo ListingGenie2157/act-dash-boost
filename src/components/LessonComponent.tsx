@@ -146,6 +146,7 @@ export const LessonComponent = ({ lesson, onComplete, onBack }: LessonComponentP
           <QuizComponent
             questions={lesson.practiceQuestions}
             title="Practice Questions"
+            skillCode={lesson.id}
             onComplete={handlePracticeComplete}
             onBack={() => setActiveTab('concept')}
           />
@@ -155,6 +156,7 @@ export const LessonComponent = ({ lesson, onComplete, onBack }: LessonComponentP
           <QuizComponent
             questions={lesson.quiz}
             title="Lesson Quiz"
+            skillCode={lesson.id}
             onComplete={handleQuizComplete}
             onBack={() => setActiveTab('practice')}
           />

@@ -120,19 +120,67 @@ export function parseConceptRules(html: string): ParsedRule[] {
   if (!html) return [];
   
   const rules: ParsedRule[] = [];
-  // Split by "Rule X –" or "Rule X-" pattern
-  const sections = html.split(/Rule\s+(\d+)\s*[–-]\s*/i);
   
-  // Pattern creates [intro, num1, content1, num2, content2...]
-  for (let i = 1; i < sections.length; i += 2) {
-    const ruleNum = parseInt(sections[i]);
-    const content = sections[i + 1]?.trim();
-    if (content) {
-      rules.push({
-        number: ruleNum,
-        title: `Rule ${ruleNum}`,
-        content: content,
-      });
+  // Try multiple parsing strategies
+  const strategies = [
+    // Strategy 1: "Rule X –" or "Rule X:" pattern
+    () => {
+      const sections = html.split(/Rule\s+(\d+)\s*[–:-]\s*/i);
+      const tempRules: ParsedRule[] = [];
+      for (let i = 1; i < sections.length; i += 2) {
+        const ruleNum = parseInt(sections[i]);
+        const content = sections[i + 1]?.trim();
+        if (content && content.length > 10) {
+          // Extract title from first line if present
+          const lines = content.split(/\n/);
+          const firstLine = lines[0].replace(/<[^>]+>/g, '').trim();
+          const title = firstLine.length < 100 ? firstLine : `Rule ${ruleNum}`;
+          tempRules.push({ number: ruleNum, title, content });
+        }
+      }
+      return tempRules;
+    },
+    
+    // Strategy 2: Numbered list "1. Title\nContent"
+    () => {
+      const pattern = /(\d+)\.\s+([A-Z][^\n]{10,100})\n([\s\S]+?)(?=\d+\.|$)/g;
+      const tempRules: ParsedRule[] = [];
+      let match;
+      while ((match = pattern.exec(html)) !== null) {
+        tempRules.push({
+          number: parseInt(match[1]),
+          title: match[2].trim(),
+          content: match[3].trim(),
+        });
+      }
+      return tempRules;
+    },
+    
+    // Strategy 3: Headers <h3>Rule X</h3> or <strong>Rule X</strong>
+    () => {
+      const pattern = /<(?:h\d|strong)[^>]*>\s*Rule\s+(\d+)[^<]*<\/(?:h\d|strong)>([\s\S]+?)(?=<(?:h\d|strong)[^>]*>Rule\s+\d+|$)/gi;
+      const tempRules: ParsedRule[] = [];
+      let match;
+      while ((match = pattern.exec(html)) !== null) {
+        const content = match[2].trim();
+        if (content.length > 10) {
+          tempRules.push({
+            number: parseInt(match[1]),
+            title: `Rule ${match[1]}`,
+            content,
+          });
+        }
+      }
+      return tempRules;
+    }
+  ];
+  
+  // Try each strategy until one returns results
+  for (const strategy of strategies) {
+    const result = strategy();
+    if (result.length > 0) {
+      rules.push(...result);
+      break;
     }
   }
   
@@ -196,48 +244,126 @@ export function parseIndependentPractice(
   
   const questions: ParsedIndependentQuestion[] = [];
   
-  // Split by "X. " pattern to handle single-line format: "1. Question. 2. Another question."
-  const parts = practiceHtml.split(/(\d+)\.\s+/);
+  // Try multiple question parsing strategies
+  const questionStrategies = [
+    // Strategy 1: "X. " numbered format
+    () => {
+      const parts = practiceHtml.split(/(\d+)\.\s+/);
+      const tempQuestions: ParsedIndependentQuestion[] = [];
+      for (let i = 1; i < parts.length; i += 2) {
+        const number = parseInt(parts[i]);
+        let text = parts[i + 1]?.trim();
+        // Remove trailing number from next question
+        text = text?.replace(/\s*\d+$/, '');
+        if (text && text.length > 5) {
+          tempQuestions.push({ number, question: text });
+        }
+      }
+      return tempQuestions;
+    },
+    
+    // Strategy 2: <li> list items
+    () => {
+      const pattern = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+      const tempQuestions: ParsedIndependentQuestion[] = [];
+      let match;
+      let number = 1;
+      while ((match = pattern.exec(practiceHtml)) !== null) {
+        const text = match[1].replace(/<[^>]+>/g, '').trim();
+        if (text.length > 5) {
+          tempQuestions.push({ number: number++, question: text });
+        }
+      }
+      return tempQuestions;
+    },
+    
+    // Strategy 3: <p> paragraphs with numbers
+    () => {
+      const pattern = /<p[^>]*>\s*(\d+)\.\s*([\s\S]*?)<\/p>/gi;
+      const tempQuestions: ParsedIndependentQuestion[] = [];
+      let match;
+      while ((match = pattern.exec(practiceHtml)) !== null) {
+        const number = parseInt(match[1]);
+        const text = match[2].replace(/<[^>]+>/g, '').trim();
+        if (text.length > 5) {
+          tempQuestions.push({ number, question: text });
+        }
+      }
+      return tempQuestions;
+    }
+  ];
   
-  // Pattern creates [intro, num1, question1, num2, question2...]
-  for (let i = 1; i < parts.length; i += 2) {
-    const number = parseInt(parts[i]);
-    const text = parts[i + 1]?.trim();
-    if (text) {
-      questions.push({
-        number,
-        question: text,
-      });
+  // Try each strategy until one returns results
+  for (const strategy of questionStrategies) {
+    const result = strategy();
+    if (result.length > 0) {
+      questions.push(...result);
+      break;
     }
   }
   
   // Parse answers if available
-  // Format can be: "1 answer; 2 answer; 3 answer" or "1. answer\n2. answer"
-  if (answersHtml) {
-    // Try semicolon-separated format first
-    const semicolonPattern = /(\d+)\s+([^;]+)/g;
-    let match;
-    let foundAny = false;
-    while ((match = semicolonPattern.exec(answersHtml)) !== null) {
-      const questionNum = parseInt(match[1]);
-      const question = questions.find(q => q.number === questionNum);
-      if (question) {
-        question.answer = match[2].trim();
-        foundAny = true;
-      }
-    }
+  if (answersHtml && questions.length > 0) {
+    const cleanAnswers = answersHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     
-    // If no semicolon format, try numbered newline format
-    if (!foundAny) {
-      const answerPattern = /(?:^|\n)\s*(\d+)\.\s*([^\n]+)/g;
-      while ((match = answerPattern.exec(answersHtml)) !== null) {
-        const questionNum = parseInt(match[1]);
-        const question = questions.find(q => q.number === questionNum);
-        if (question) {
-          question.answer = match[2].trim();
+    const answerStrategies = [
+      // Strategy 1: Semicolon-separated "1 answer; 2 answer; 3 answer"
+      () => {
+        const parts = cleanAnswers.split(';');
+        let foundAny = false;
+        parts.forEach((part, idx) => {
+          const match = part.match(/(\d+)\s+(.+)/);
+          if (match) {
+            const questionNum = parseInt(match[1]);
+            const question = questions.find(q => q.number === questionNum);
+            if (question) {
+              question.answer = match[2].trim();
+              foundAny = true;
+            }
+          } else if (idx < questions.length) {
+            // Try direct mapping if no number
+            questions[idx].answer = part.trim();
+            foundAny = true;
+          }
+        });
+        return foundAny;
+      },
+      
+      // Strategy 2: Numbered "1. answer\n2. answer"
+      () => {
+        const pattern = /(\d+)\.\s*([^\d][^\n.]{3,}?)(?=\s*\d+\.|$)/g;
+        const answerMap = new Map<number, string>();
+        let match;
+        while ((match = pattern.exec(cleanAnswers)) !== null) {
+          answerMap.set(parseInt(match[1]), match[2].trim());
         }
+        if (answerMap.size > 0) {
+          questions.forEach(q => {
+            const answer = answerMap.get(q.number);
+            if (answer) q.answer = answer;
+          });
+          return true;
+        }
+        return false;
+      },
+      
+      // Strategy 3: Split by sentences/lines and match by position
+      () => {
+        const sentences = cleanAnswers.split(/[;\n]/).map(s => s.trim()).filter(s => s.length > 5);
+        if (sentences.length >= questions.length) {
+          questions.forEach((q, idx) => {
+            if (idx < sentences.length) {
+              q.answer = sentences[idx].replace(/^\d+\.?\s*/, '').trim();
+            }
+          });
+          return true;
+        }
+        return false;
       }
-    }
+    ];
+    
+    // Try each answer strategy until one works
+    answerStrategies.some(strategy => strategy());
   }
   
   return questions;

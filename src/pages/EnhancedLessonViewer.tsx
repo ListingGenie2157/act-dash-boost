@@ -143,9 +143,9 @@ export default function EnhancedLessonViewer() {
   return (
     <div className="container mx-auto p-6 max-w-5xl">
       <div className="mb-6">
-        <Button variant="ghost" size="sm" asChild className="mb-4">
+        <Button variant="outline" size="default" asChild className="mb-6">
           <Link to="/lessons">
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="h-5 w-5 mr-2" />
             Back to Lessons
           </Link>
         </Button>
@@ -289,7 +289,8 @@ export default function EnhancedLessonViewer() {
                         : q.correctAnswer
                     };
                   })} 
-                  title="Checkpoint Quiz" 
+                  title="Checkpoint Quiz"
+                  skillCode={topic || ''}
                   onComplete={async () => {}} 
                 />
               </CardContent>
