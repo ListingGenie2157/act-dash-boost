@@ -90,6 +90,8 @@ export default function Onboarding() {
           age_verified: form.ageVerified,
           tos_accepted: form.tosAccepted,
           privacy_accepted: form.privacyAccepted,
+        }, {
+          onConflict: 'user_id'
         })
       );
 
@@ -131,6 +133,8 @@ export default function Onboarding() {
           email_notifications: form.emailNotifications,
           quiet_start_hour: parseInt(form.quietStartHour, 10),
           quiet_end_hour: parseInt(form.quietEndHour, 10),
+        }, {
+          onConflict: 'user_id'
         })
       );
 
@@ -139,6 +143,8 @@ export default function Onboarding() {
         supabase.from('user_goals').upsert({
           user_id: user.id,
           start_with: form.startWith,
+        }, {
+          onConflict: 'user_id'
         })
       );
 
