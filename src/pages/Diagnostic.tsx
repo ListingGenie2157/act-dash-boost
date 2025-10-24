@@ -62,47 +62,55 @@ export const DiagnosticEvaluation = ({
       try {
         const questions: Question[] = [];
         
-        // Map section names to subjects
-        const sectionMap = {
-          english: ['English', 'EN'],
-          math: ['Math', 'MATH'],
-          reading: ['Reading', 'RD'],
-          science: ['Science', 'SCI']
+        // Fetch questions from the questions table
+        // Get skills for each subject
+        const { data: skills, error: skillsError } = await supabase
+          .from('skills')
+          .select('id, subject');
+        
+        if (skillsError) throw skillsError;
+        
+        // Group skills by subject
+        const skillsBySubject: Record<string, string[]> = {
+          english: [],
+          math: [],
+          reading: [],
+          science: []
         };
         
-        // Fetch 12 questions per subject (4 easy, 6 medium, 2 hard)
-        for (const [subject, sectionNames] of Object.entries(sectionMap)) {
-          const difficulties = [
-            { level: 'Easy', count: 4 },
-            { level: 'Medium', count: 6 },
-            { level: 'Hard', count: 2 }
-          ];
+        skills?.forEach(skill => {
+          const subjectKey = skill.subject.toLowerCase();
+          if (skillsBySubject[subjectKey]) {
+            skillsBySubject[subjectKey].push(skill.id);
+          }
+        });
+        
+        // Fetch 12 questions per subject (mix of difficulties)
+        for (const [subject, skillIds] of Object.entries(skillsBySubject)) {
+          if (skillIds.length === 0) continue;
           
-          for (const { level, count } of difficulties) {
-            const { data, error } = await supabase
-              .from('staging_items')
-              .select('*')
-              .in('section', sectionNames)
-              .eq('difficulty', level)
-              .limit(count);
-            
-            if (error) throw error;
-            
-            if (data) {
-              data.forEach((item) => {
-                questions.push({
-                  id: item.staging_id.toString(),
-                  subject: subject as 'english' | 'math' | 'reading' | 'science',
-                  topic: item.skill_code || 'general',
-                  difficulty: level.toLowerCase() as 'easy' | 'medium' | 'hard',
-                  question: item.question,
-                  options: [item.choice_a, item.choice_b, item.choice_c, item.choice_d],
-                  correctAnswer: item.answer.charCodeAt(0) - 65, // A=0, B=1, C=2, D=3
-                  explanation: item.explanation || '',
-                  timeLimit: 60
-                });
+          const { data, error } = await supabase
+            .from('questions')
+            .select('*')
+            .in('skill_id', skillIds)
+            .limit(12);
+          
+          if (error) throw error;
+          
+          if (data) {
+            data.forEach((item) => {
+              questions.push({
+                id: item.id,
+                subject: subject as 'english' | 'math' | 'reading' | 'science',
+                topic: item.skill_id || 'general',
+                difficulty: item.difficulty <= 2 ? 'easy' : item.difficulty <= 4 ? 'medium' : 'hard',
+                question: item.stem,
+                options: [item.choice_a, item.choice_b, item.choice_c, item.choice_d],
+                correctAnswer: item.answer.charCodeAt(0) - 65, // A=0, B=1, C=2, D=3
+                explanation: item.explanation || '',
+                timeLimit: item.time_limit_secs || 60
               });
-            }
+            });
           }
         }
         
