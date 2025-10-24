@@ -34,26 +34,26 @@ const Index = () => {
         try {
           console.log('[Index] Fetching profile for user:', session.user.id);
           
-          // Check if user has completed onboarding
-          const { data: profile, error: profileError } = await supabase
+          // Add timeout to prevent hanging
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Query timeout')), 5000)
+          );
+          
+          const profilePromise = supabase
             .from('profiles')
             .select('test_date, onboarding_complete, has_study_plan')
             .eq('id', session.user.id)
             .maybeSingle();
           
-          console.log('[Index] Profile result:', { profile, profileError });
+          const { data: profile, error: profileError } = await Promise.race([
+            profilePromise,
+            timeoutPromise
+          ]) as any;
           
-          // Also check user_profiles for onboarding flags
-          const { data: userProfile, error: userProfileError } = await supabase
-            .from('user_profiles')
-            .select('age_verified, tos_accepted')
-            .eq('user_id', session.user.id)
-            .maybeSingle();
+          console.log('[Index] Profile result:', { profile, profileError });
 
-          console.log('[Index] User profile result:', { userProfile, userProfileError });
-
-          // If user has test_date AND user_profile exists, stay on dashboard
-          if (profile?.test_date && userProfile && mounted) {
+          // If user has test_date, stay on dashboard
+          if (profile?.test_date && mounted) {
             console.log('[Index] User has completed onboarding, showing dashboard');
             setProfile(profile);
             setHasStudyPlan(profile.has_study_plan ?? false);
@@ -64,12 +64,14 @@ const Index = () => {
           // Otherwise, redirect to onboarding
           if (mounted) {
             console.log('[Index] Redirecting to onboarding');
+            setIsLoading(false);
             navigate('/onboarding', { replace: true });
             return;
           }
         } catch (error) {
           console.error('[Index] Profile check failed:', error);
           if (mounted) {
+            setIsLoading(false);
             navigate('/onboarding', { replace: true });
           }
         }
