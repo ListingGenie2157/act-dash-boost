@@ -1,11 +1,13 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
-import { getQuestionsBySkill } from '@/lib/content';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { Question } from '@/types';
 import { shuffleQuestionChoices } from '@/lib/shuffle';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 export default function DrillRunner() {
+  const navigate = useNavigate();
   const { subject } = useParams<{ subject?: string }>();
   const [searchParams] = useSearchParams();
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -25,24 +27,39 @@ export default function DrillRunner() {
           return;
         }
         setUserId(user.id);
+
+        if (!subject) {
+          setError('No subject specified');
+          setLoading(false);
+          return;
+        }
+
         const nParam = searchParams.get('n');
         const n = nParam ? parseInt(nParam, 10) : 10;
-        const code = subject ?? '';
-        const { data, error: qError } = await getQuestionsBySkill(code, n);
+
+        // Fetch questions from staging_items instead of questions table
+        const { data, error: qError } = await supabase
+          .from('staging_items')
+          .select('*')
+          .eq('section', decodeURIComponent(subject))
+          .limit(n);
+
         if (qError) {
           setError(qError.message);
+        } else if (!data || data.length === 0) {
+          setError('No questions found for this section');
         } else {
-          // Map DB questions to Question type with proper defaults
-          const mappedQuestions: Question[] = (data ?? []).map(q => ({
-            id: q.id,
-            stem: q.stem,
+          // Map staging_items to Question type
+          const mappedQuestions: Question[] = data.map((q, idx) => ({
+            id: `${subject}_${idx}`,
+            stem: q.question,
             choice_a: q.choice_a,
             choice_b: q.choice_b,
             choice_c: q.choice_c,
             choice_d: q.choice_d,
-            answer: q.answer,
+            answer: q.answer as 'A' | 'B' | 'C' | 'D',
             explanation: q.explanation ?? undefined,
-            skill_code: q.skill_id,
+            skill_code: q.skill_code,
           }));
           setQuestions(mappedQuestions);
         }
@@ -97,10 +114,46 @@ export default function DrillRunner() {
     return shuffleQuestionChoices(questions[current], seed);
   }, [current, questions, userId]);
 
-  if (loading) return <div className="p-4">Loading questions...</div>;
-  if (error) return <div className="p-4 text-destructive">{error}</div>;
-  if (completed) return <div className="p-4">Drill complete! Nice work.</div>;
-  if (questions.length === 0) return <div className="p-4">No questions found.</div>;
+  if (loading) return (
+    <div className="container mx-auto p-4">
+      <Button variant="outline" onClick={() => navigate('/drill-runner')}>
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back to Drills
+      </Button>
+      <div className="mt-4">Loading questions...</div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="container mx-auto p-4">
+      <Button variant="outline" onClick={() => navigate('/drill-runner')}>
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back to Drills
+      </Button>
+      <div className="mt-4 text-destructive">{error}</div>
+    </div>
+  );
+
+  if (completed) return (
+    <div className="container mx-auto p-4">
+      <Button variant="outline" onClick={() => navigate('/drill-runner')}>
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back to Drills
+      </Button>
+      <div className="mt-4">Drill complete! Nice work.</div>
+    </div>
+  );
+
+  if (questions.length === 0) return (
+    <div className="container mx-auto p-4">
+      <Button variant="outline" onClick={() => navigate('/drill-runner')}>
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back to Drills
+      </Button>
+      <div className="mt-4">No questions found.</div>
+    </div>
+  );
+
   if (!shuffled) return <div className="p-4">Loading question...</div>;
 
   const handleShuffledAnswer = async (shuffledIndex: number) => {
@@ -113,6 +166,14 @@ export default function DrillRunner() {
 
   return (
     <div className="container mx-auto p-4">
+      <Button
+        variant="outline"
+        onClick={() => navigate('/drill-runner')}
+        className="mb-4"
+      >
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back to Drills
+      </Button>
       <h2 className="font-bold mb-4">Drill Question {current + 1} of {questions.length}</h2>
       <p className="mb-4">{shuffled.original.stem}</p>
       <div className="space-y-2">
