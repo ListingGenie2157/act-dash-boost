@@ -4,6 +4,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as DayPicker } from '@/components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
 import { addYears, format, startOfToday } from 'date-fns';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -22,6 +23,43 @@ export function CalendarField({
   placeholder = 'Select date'
 }: Props) {
   const [calendarMonth, setCalendarMonth] = React.useState<Date>(value || startOfToday());
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <div className="space-y-2">
+        <Button
+          variant="outline"
+          className={cn(
+            'w-full justify-start text-left font-normal',
+            !value && 'text-muted-foreground'
+          )}
+          disabled
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {value ? format(value, 'PPP') : placeholder}
+        </Button>
+        <DayPicker
+          mode="single"
+          selected={value || undefined}
+          onSelect={(d) => {
+            if (!d) return;
+            onChange(d);
+            setCalendarMonth(d);
+          }}
+          month={calendarMonth}
+          onMonthChange={setCalendarMonth}
+          captionLayout="dropdown-buttons"
+          fromDate={minDate}
+          toDate={maxDate}
+          showOutsideDays
+          fixedWeeks
+          disabled={{ before: minDate }}
+          className={cn("p-3 pointer-events-auto rounded-md border")}
+        />
+      </div>
+    );
+  }
 
   return (
     <Popover>
@@ -37,7 +75,7 @@ export function CalendarField({
           {value ? format(value, 'PPP') : placeholder}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent side="bottom" avoidCollisions={false} sideOffset={8} className="w-auto p-0 z-[60]" align="start">
         <DayPicker
           mode="single"
           selected={value || undefined}

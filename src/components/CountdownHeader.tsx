@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
 interface DaysLeftResponse {
@@ -226,6 +227,7 @@ interface SetTestDateDialogProps {
 function SetTestDateDialog({ selectedDate, onDateSelect, onConfirm, saving }: SetTestDateDialogProps) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const isMobile = useIsMobile();
 
   return (
     <DialogContent className="sm:max-w-md">
@@ -239,30 +241,53 @@ function SetTestDateDialog({ selectedDate, onDateSelect, onConfirm, saving }: Se
         </p>
         
         <div className="flex flex-col space-y-3">
-          <Popover>
-            <PopoverTrigger asChild>
+          {isMobile ? (
+            <>
               <Button
                 variant="outline"
                 className={cn(
                   "w-full justify-start text-left font-normal",
                   !selectedDate && "text-muted-foreground"
                 )}
+                disabled
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {selectedDate ? format(selectedDate, "PPP") : "Pick a test date"}
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
               <CalendarComponent
                 mode="single"
                 selected={selectedDate}
                 onSelect={onDateSelect}
                 disabled={(date) => date < today}
-                initialFocus
-                className="p-3 pointer-events-auto"
+                className="p-3 pointer-events-auto rounded-md border"
               />
-            </PopoverContent>
-          </Popover>
+            </>
+          ) : (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !selectedDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedDate ? format(selectedDate, "PPP") : "Pick a test date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent side="bottom" avoidCollisions={false} sideOffset={8} className="w-auto p-0 z-[60]" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={onDateSelect}
+                  disabled={(date) => date < today}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+          )}
           
           <div className="flex gap-2 justify-end">
             <Button

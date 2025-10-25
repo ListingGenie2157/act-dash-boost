@@ -216,17 +216,21 @@ export function parseGuidedPractice(html: string): ParsedExample[] {
  * Parse common traps into an array of trap descriptions
  */
 export function parseCommonTraps(html: string): string[] {
-  if (!html) return [];
+  if (!html || html.trim() === '') return [];
   
+  // Strip HTML tags and normalize whitespace
+  const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!text) return [];
+  
+  // Support both "1. text" and "1 – text" formats using regex
+  const re = /(?:^|\s)(\d+)[\.\-–]\s*(.+?)(?=\s+\d+[\.\-–]\s+|$)/g;
   const traps: string[] = [];
-  // Split by "X –" or "X-" where X is a number
-  const sections = html.split(/(\d+)\s*[–-]\s*/);
+  let match;
   
-  // Pattern creates [intro, num1, content1, num2, content2...]
-  for (let i = 2; i < sections.length; i += 2) {
-    const text = sections[i]?.trim();
-    if (text) {
-      traps.push(text);
+  while ((match = re.exec(text)) !== null) {
+    const trap = match[2].trim();
+    if (trap.length > 5) {
+      traps.push(trap);
     }
   }
   
@@ -307,8 +311,9 @@ export function parseIndependentPractice(
     const cleanAnswers = answersHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     
     const answerStrategies = [
-      // Strategy 1: Semicolon-separated "1 answer; 2 answer; 3 answer"
+      // Strategy 1: Semicolon-separated "1 answer; 2 answer; 3 answer" (only if semicolons exist)
       () => {
+        if (!cleanAnswers.includes(';')) return false;
         const parts = cleanAnswers.split(';');
         let foundAny = false;
         parts.forEach((part, idx) => {

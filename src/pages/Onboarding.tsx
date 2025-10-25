@@ -8,6 +8,7 @@ import {
 } from '@/components/ui';
 import { CalendarIcon, CheckCircle } from 'lucide-react';
 import { addYears, format, startOfToday } from 'date-fns';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -239,68 +240,106 @@ export default function Onboarding() {
     </Card>
   );
 
-  const renderStep2 = () => (
-    <Card>
-      <CardHeader>
-        <CardTitle>When is your ACT test?</CardTitle>
-        <CardDescription>
-          Select your upcoming ACT test date to help us create your personalized study plan.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <Label>Test Date</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  'w-full justify-start text-left font-normal',
-                  !form.testDate && 'text-muted-foreground'
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {form.testDate ? format(form.testDate, 'PPP') : 'Select test date'}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={form.testDate || undefined}
-                onSelect={(d) => {
-                  if (!d) return;
-                  setForm(f => ({ ...f, testDate: d }));
-                  setCalendarMonth(d);
-                }}
-                month={calendarMonth}
-                onMonthChange={setCalendarMonth}
-                captionLayout="dropdown-buttons"
-                fromDate={today}
-                toDate={addYears(today, 2)}
-                showOutsideDays
-                fixedWeeks
-                disabled={{ before: today }}
-                initialFocus
-                className={cn("p-3 pointer-events-auto")}
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
-            Back
-          </Button>
-          <Button
-            onClick={() => setStep(3)}
-            disabled={!canProceedStep2}
-            className="flex-1"
-          >
-            Continue
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  const renderStep2 = () => {
+    const isMobile = useIsMobile();
+    
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>When is your ACT test?</CardTitle>
+          <CardDescription>
+            Select your upcoming ACT test date to help us create your personalized study plan.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Test Date</Label>
+            {isMobile ? (
+              <div className="space-y-2">
+                <Button
+                  variant="outline"
+                  className={cn(
+                    'w-full justify-start text-left font-normal',
+                    !form.testDate && 'text-muted-foreground'
+                  )}
+                  disabled
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {form.testDate ? format(form.testDate, 'PPP') : 'Select test date'}
+                </Button>
+                <Calendar
+                  mode="single"
+                  selected={form.testDate || undefined}
+                  onSelect={(d) => {
+                    if (!d) return;
+                    setForm(f => ({ ...f, testDate: d }));
+                    setCalendarMonth(d);
+                  }}
+                  month={calendarMonth}
+                  onMonthChange={setCalendarMonth}
+                  captionLayout="dropdown-buttons"
+                  fromDate={today}
+                  toDate={addYears(today, 2)}
+                  showOutsideDays
+                  fixedWeeks
+                  disabled={{ before: today }}
+                  className={cn("p-3 pointer-events-auto rounded-md border")}
+                />
+              </div>
+            ) : (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start text-left font-normal',
+                      !form.testDate && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {form.testDate ? format(form.testDate, 'PPP') : 'Select test date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent side="bottom" avoidCollisions={false} sideOffset={8} className="w-auto p-0 z-[60]" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={form.testDate || undefined}
+                    onSelect={(d) => {
+                      if (!d) return;
+                      setForm(f => ({ ...f, testDate: d }));
+                      setCalendarMonth(d);
+                    }}
+                    month={calendarMonth}
+                    onMonthChange={setCalendarMonth}
+                    captionLayout="dropdown-buttons"
+                    fromDate={today}
+                    toDate={addYears(today, 2)}
+                    showOutsideDays
+                    fixedWeeks
+                    disabled={{ before: today }}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
+              Back
+            </Button>
+            <Button
+              onClick={() => setStep(3)}
+              disabled={!canProceedStep2}
+              className="flex-1"
+            >
+              Continue
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   const renderStep3 = () => (
     <Card>

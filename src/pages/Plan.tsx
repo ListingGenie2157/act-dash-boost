@@ -53,7 +53,11 @@ export default function Plan() {
       ) : (
         <div className="space-y-4">
           {plans.map((plan, idx) => {
-            const tasks: StudyPlanTask[] = plan.tasks_json ?? [];
+            const allTasks: StudyPlanTask[] = plan.tasks_json ?? [];
+            const tasks = allTasks.filter(t => t.type !== 'SIM');
+            
+            if (tasks.length === 0) return null;
+            
             return (
               <div key={idx} className="border p-4 rounded">
                 <h2 className="font-semibold">{plan.the_date}</h2>
