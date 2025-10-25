@@ -156,7 +156,7 @@ function getStudyMode(daysLeft: number | null): StudyMode {
   }
 }
 
-// Test week special scheduling
+// Test week special scheduling - focused on final review
 function getTestWeekTasks(daysLeft: number, userId: string, dateStr: string): Array<{
   type: string;
   section?: string;
@@ -170,12 +170,12 @@ function getTestWeekTasks(daysLeft: number, userId: string, dateStr: string): Ar
     estimated_mins: number;
   }> = [];
   
-  if (daysLeft === 7 || daysLeft === 5 || daysLeft === 3) {
+  // Final week focuses on review and light practice, not full simulations
+  if (daysLeft >= 3 && daysLeft <= 7) {
     tasks.push({
-      type: 'SIM',
-      section: 'english',
-      size: 75,
-      estimated_mins: 45
+      type: 'REVIEW',
+      size: 15,
+      estimated_mins: 30
     });
   } else if (daysLeft === 2) {
     tasks.push({

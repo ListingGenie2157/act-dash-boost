@@ -331,7 +331,7 @@ export function parseIndependentPractice(
       
       // Strategy 2: Numbered "1. answer\n2. answer"
       () => {
-        const pattern = /(\d+)\.\s*([^\d][^\n.]{3,}?)(?=\s*\d+\.|$)/g;
+        const pattern = /(\d+)\.\s*(.+?)(?=\s*\d+\.\s+|$)/gs;
         const answerMap = new Map<number, string>();
         let match;
         while ((match = pattern.exec(cleanAnswers)) !== null) {
