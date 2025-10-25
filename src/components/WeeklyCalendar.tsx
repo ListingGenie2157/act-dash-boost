@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -30,7 +30,6 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
   const [weekData, setWeekData] = useState<WeekDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [daysUntilTest, setDaysUntilTest] = useState<number | null>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchWeeklyPlan = async () => {
@@ -115,10 +114,6 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
     fetchWeeklyPlan();
   }, [userId, testDate]);
 
-  const handleTaskClick = (date: string, taskIndex: number) => {
-    navigate(`/task/${date}/${taskIndex}`);
-  };
-
   if (loading) {
     return (
       <Card>
@@ -178,40 +173,31 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
                 ) : (
                   day.tasks
                     .filter(task => task.type !== 'SIM')
-                    .map((task, taskIdx) => {
-                      const to = `/task/${day.date}/${taskIdx}`;
-                      return (
-                        <a
-                          key={taskIdx}
-                          href={to}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleTaskClick(day.date, taskIdx);
-                          }}
-                          className="w-full text-left p-2 rounded-md hover:bg-accent transition-colors flex items-start gap-2 cursor-pointer no-underline"
-                          role="button"
-                          tabIndex={0}
-                        >
-                          {task.status === 'COMPLETED' ? (
-                            <CheckCircle2 className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
-                          ) : task.status === 'IN_PROGRESS' ? (
-                            <AlertCircle className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
-                          ) : (
-                            <BookOpen className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium truncate">
-                              {task.title || `${task.type} Task`}
-                            </div>
-                            {task.estimatedMins && (
-                              <div className="text-xs text-muted-foreground">
-                                {task.estimatedMins} min
-                              </div>
-                            )}
+                    .map((task, taskIdx) => (
+                      <Link
+                        key={taskIdx}
+                        to={`/task/${day.date}/${taskIdx}`}
+                        className="w-full text-left p-2 rounded-md hover:bg-accent transition-colors flex items-start gap-2 cursor-pointer no-underline"
+                      >
+                        {task.status === 'COMPLETED' ? (
+                          <CheckCircle2 className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+                        ) : task.status === 'IN_PROGRESS' ? (
+                          <AlertCircle className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
+                        ) : (
+                          <BookOpen className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate">
+                            {task.title || `${task.type} Task`}
                           </div>
-                        </a>
-                      );
-                    })
+                          {task.estimatedMins && (
+                            <div className="text-xs text-muted-foreground">
+                              {task.estimatedMins} min
+                            </div>
+                          )}
+                        </div>
+                      </Link>
+                    ))
                 )}
               </CardContent>
             </Card>

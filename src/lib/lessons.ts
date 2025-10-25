@@ -370,7 +370,7 @@ export function parseIndependentPractice(
 }
 
 /**
- * Get all available lessons (from both lesson_content and staging_items)
+ * Get all available lessons (only from lesson_content)
  */
 export async function getAllLessons(): Promise<{
   data: Array<{
@@ -383,50 +383,23 @@ export async function getAllLessons(): Promise<{
   error: Error | null;
 }> {
   try {
-    // Get all lessons from lesson_content
+    // Get all lessons from lesson_content only
     const { data: lessonContent, error: contentError } = await supabase
       .from('lesson_content')
       .select('skill_code');
 
     if (contentError) {
-      console.error('Error fetching lesson_content:', contentError);
+      return { data: [], error: contentError };
     }
 
-    // Get all skills that have content in staging_items
-    const { data: items, error: itemsError } = await supabase
-      .from('staging_items')
-      .select('skill_code, section');
-
-    if (itemsError) {
-      console.error('Error fetching staging_items:', itemsError);
-    }
-
-    // Group by skill_code and count questions from staging_items
-    const skillMap = new Map<string, { section: string; count: number }>();
-    
-    (items || []).forEach(item => {
-      const current = skillMap.get(item.skill_code);
-      if (current) {
-        current.count++;
-      } else {
-        skillMap.set(item.skill_code, { section: item.section, count: 1 });
-      }
-    });
-
-    // Add lesson_content skill codes (with 0 questions if not in staging_items)
-    (lessonContent || []).forEach(lesson => {
-      if (!skillMap.has(lesson.skill_code)) {
-        skillMap.set(lesson.skill_code, { section: 'English', count: 0 });
-      }
-    });
-
-    // Get skill details for all unique skill codes
-    const skillCodes = Array.from(skillMap.keys());
-    
-    if (skillCodes.length === 0) {
+    if (!lessonContent || lessonContent.length === 0) {
       return { data: [], error: null };
     }
 
+    // Get skill codes that have lesson content
+    const skillCodes = lessonContent.map(lc => lc.skill_code);
+
+    // Get skill details for these skill codes
     const { data: skills, error: skillsError } = await supabase
       .from('skills')
       .select('id, name, subject, cluster')
@@ -437,19 +410,25 @@ export async function getAllLessons(): Promise<{
       return { data: [], error: skillsError };
     }
 
-    const lessons = (skills || []).map(skill => {
-      const meta = skillMap.get(skill.id)!;
-      // Derive section from subject if not available
-      const section = meta.section || skill.subject;
-      
-      return {
-        skill_code: skill.id,
-        skill_name: skill.name,
-        subject: skill.subject,
-        section,
-        questionCount: meta.count,
-      };
+    // Count practice questions in staging_items for these skills
+    const { data: items } = await supabase
+      .from('staging_items')
+      .select('skill_code')
+      .in('skill_code', skillCodes);
+
+    // Create question count map
+    const questionCounts = new Map<string, number>();
+    (items || []).forEach(item => {
+      questionCounts.set(item.skill_code, (questionCounts.get(item.skill_code) || 0) + 1);
     });
+
+    const lessons = (skills || []).map(skill => ({
+      skill_code: skill.id,
+      skill_name: skill.name,
+      subject: skill.subject,
+      section: skill.subject,
+      questionCount: questionCounts.get(skill.id) || 0,
+    }));
 
     return { data: lessons, error: null };
   } catch (error) {
