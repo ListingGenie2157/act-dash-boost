@@ -43,6 +43,86 @@ interface OnboardingForm {
   notes: string;
 }
 
+// Extracted TestDatePicker component for cleaner calendar logic
+function TestDatePicker(props: {
+  value: Date | null;
+  onChange: (d: Date) => void;
+  calendarMonth: Date;
+  setCalendarMonth: (d: Date) => void;
+  today: Date;
+  isMobile: boolean;
+}) {
+  const { value, onChange, calendarMonth, setCalendarMonth, today, isMobile } = props;
+
+  const calendarEl = (
+    <Calendar
+      mode="single"
+      selected={value ?? undefined}
+      onSelect={(date) => {
+        if (!date) return;
+        onChange(date);
+        setCalendarMonth(date);
+      }}
+      month={calendarMonth}
+      onMonthChange={setCalendarMonth}
+      captionLayout="dropdown-buttons"
+      fromDate={today}
+      toDate={addYears(today, 2)}
+      showOutsideDays
+      fixedWeeks
+      disabled={{ before: today }}
+      className="p-3 pointer-events-auto rounded-md border"
+    />
+  );
+
+  // Mobile: show inline calendar under disabled-looking button
+  if (isMobile) {
+    return (
+      <div className="flex flex-col gap-2">
+        <Button
+          variant="outline"
+          className={cn(
+            'w-full justify-start text-left font-normal',
+            !value && 'text-muted-foreground'
+          )}
+          disabled
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {value ? format(value, 'PPP') : 'Select test date'}
+        </Button>
+        {calendarEl}
+      </div>
+    );
+  }
+
+  // Desktop: button opens popover with calendar
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className={cn(
+            'w-full justify-start text-left font-normal',
+            !value && 'text-muted-foreground'
+          )}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {value ? format(value, 'PPP') : 'Select test date'}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        side="bottom"
+        avoidCollisions={false}
+        sideOffset={8}
+        align="start"
+        className="w-auto p-0 z-[60]"
+      >
+        {calendarEl}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function Onboarding() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -241,104 +321,41 @@ export default function Onboarding() {
     </Card>
   );
 
-  const renderStep2 = () => {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>When is your ACT test?</CardTitle>
-          <CardDescription>
-            Select your upcoming ACT test date to help us create your personalized study plan.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label>Test Date</Label>
-            {isMobile ? (
-              <div className="space-y-2">
-                <Button
-                  variant="outline"
-                  className={cn(
-                    'w-full justify-start text-left font-normal',
-                    !form.testDate && 'text-muted-foreground'
-                  )}
-                  disabled
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {form.testDate ? format(form.testDate, 'PPP') : 'Select test date'}
-                </Button>
-                <Calendar
-                  mode="single"
-                  selected={form.testDate || undefined}
-                  onSelect={(d) => {
-                    if (!d) return;
-                    setForm(f => ({ ...f, testDate: d }));
-                    setCalendarMonth(d);
-                  }}
-                  month={calendarMonth}
-                  onMonthChange={setCalendarMonth}
-                  captionLayout="dropdown-buttons"
-                  fromDate={today}
-                  toDate={addYears(today, 2)}
-                  showOutsideDays
-                  fixedWeeks
-                  disabled={{ before: today }}
-                  className={cn("p-3 pointer-events-auto rounded-md border")}
-                />
-              </div>
-            ) : (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      !form.testDate && 'text-muted-foreground'
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.testDate ? format(form.testDate, 'PPP') : 'Select test date'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent side="bottom" avoidCollisions={false} sideOffset={8} className="w-auto p-0 z-[60]" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={form.testDate || undefined}
-                    onSelect={(d) => {
-                      if (!d) return;
-                      setForm(f => ({ ...f, testDate: d }));
-                      setCalendarMonth(d);
-                    }}
-                    month={calendarMonth}
-                    onMonthChange={setCalendarMonth}
-                    captionLayout="dropdown-buttons"
-                    fromDate={today}
-                    toDate={addYears(today, 2)}
-                    showOutsideDays
-                    fixedWeeks
-                    disabled={{ before: today }}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                </PopoverContent>
-              </Popover>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
-              Back
-            </Button>
-            <Button
-              onClick={() => setStep(3)}
-              disabled={!canProceedStep2}
-              className="flex-1"
-            >
-              Continue
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
+  const renderStep2 = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle>When is your ACT test?</CardTitle>
+        <CardDescription>
+          Select your upcoming ACT test date to help us create your personalized study plan.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <Label>Test Date</Label>
+          <TestDatePicker
+            value={form.testDate}
+            onChange={(d) => setForm(f => ({ ...f, testDate: d }))}
+            calendarMonth={calendarMonth}
+            setCalendarMonth={setCalendarMonth}
+            today={today}
+            isMobile={isMobile}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
+            Back
+          </Button>
+          <Button
+            onClick={() => setStep(3)}
+            disabled={!canProceedStep2}
+            className="flex-1"
+          >
+            Continue
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   const renderStep3 = () => (
     <Card>
