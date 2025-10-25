@@ -155,59 +155,74 @@ export default function Onboarding() {
     setLoading(true);
     try {
       // Get authenticated user first
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error('User not authenticated');
       }
 
-      // Save all onboarding data
-      const updates = [];
+      // Sequential writes to avoid race conditions and get clear errors
 
-      // 1. Create user profile
-      updates.push(
-        supabase.from('user_profiles').upsert({
+      // 1. Save legal info to user_profiles
+      const { error: profilesError } = await supabase
+        .from('user_profiles')
+        .upsert({
           user_id: user.id,
           age_verified: form.ageVerified,
           tos_accepted: form.tosAccepted,
           privacy_accepted: form.privacyAccepted,
-        }, {
-          onConflict: 'user_id'
-        })
-      );
+        }, { onConflict: 'user_id' });
 
-      // 2. Set test date and mark onboarding complete in profile
-      if (form.testDate) {
-        updates.push(
-          supabase.functions.invoke('set-test-date', {
-            body: { testDate: format(form.testDate, 'yyyy-MM-dd') },
-          })
-        );
-        updates.push(
-          supabase.from('profiles').upsert({
-            id: user.id,
-            test_date: format(form.testDate, 'yyyy-MM-dd'),
-            daily_time_cap_mins: parseInt(form.dailyMinutes, 10),
-            onboarding_complete: true
-          })
-        );
+      if (profilesError) {
+        toast.error('Failed to save legal information');
+        throw profilesError;
       }
 
-      // 3. Save accommodations
+      // 2. Set test date via edge function first (it updates profiles.test_date)
+      if (form.testDate) {
+        const { error: testDateError } = await supabase.functions.invoke('set-test-date', {
+          body: { testDate: format(form.testDate, 'yyyy-MM-dd') },
+        });
+
+        if (testDateError) {
+          toast.error('Failed to set test date');
+          throw testDateError;
+        }
+      }
+
+      // 3. Update profiles with other fields (not test_date, since set-test-date handles it)
+      const { error: profileUpdateError } = await supabase
+        .from('profiles')
+        .update({
+          daily_time_cap_mins: parseInt(form.dailyMinutes, 10),
+          onboarding_complete: true
+        })
+        .eq('id', user.id);
+
+      if (profileUpdateError) {
+        toast.error('Failed to update profile');
+        throw profileUpdateError;
+      }
+
+      // 4. Save accommodations if needed
       if (form.timeMultiplier !== '100') {
-        updates.push(
-          supabase.from('accommodations').upsert({
+        const { error: accommodationsError } = await supabase
+          .from('accommodations')
+          .upsert({
             user_id: user.id,
             time_multiplier: parseFloat(form.timeMultiplier) / 100,
             accommodation_type: form.timeMultiplier === '150' ? 'time_and_half' : 'double_time',
-          })
-        );
+          }, { onConflict: 'user_id' });
+
+        if (accommodationsError) {
+          toast.error('Failed to save accommodations');
+          throw accommodationsError;
+        }
       }
 
-      // 4. Save preferences
-      updates.push(
-        supabase.from('user_preferences').upsert({
+      // 5. Save preferences
+      const { error: preferencesError } = await supabase
+        .from('user_preferences')
+        .upsert({
           user_id: user.id,
           daily_minutes: parseInt(form.dailyMinutes, 10),
           preferred_start_hour: parseInt(form.preferredStartHour, 10),
@@ -215,22 +230,27 @@ export default function Onboarding() {
           email_notifications: form.emailNotifications,
           quiet_start_hour: parseInt(form.quietStartHour, 10),
           quiet_end_hour: parseInt(form.quietEndHour, 10),
-        }, {
-          onConflict: 'user_id'
-        })
-      );
+        }, { onConflict: 'user_id' });
 
-      // 5. Save starting preference
-      updates.push(
-        supabase.from('user_goals').upsert({
+      if (preferencesError) {
+        toast.error('Failed to save preferences');
+        throw preferencesError;
+      }
+
+      // 6. Save starting preference
+      const { error: goalsError } = await supabase
+        .from('user_goals')
+        .upsert({
           user_id: user.id,
           start_with: form.startWith,
-        }, {
-          onConflict: 'user_id'
-        })
-      );
+        }, { onConflict: 'user_id' });
 
-      // 6. Save baseline scores if provided
+      if (goalsError) {
+        toast.error('Failed to save starting preference');
+        throw goalsError;
+      }
+
+      // 7. Save baseline scores if provided
       const numericScores: Record<string, number> = {};
       Object.entries(form.scores).forEach(([section, score]) => {
         const trimmed = score.trim();
@@ -241,21 +261,34 @@ export default function Onboarding() {
       });
 
       if (Object.keys(numericScores).length > 0) {
-        updates.push(
-          supabase.functions.invoke('set-baseline', {
-            body: { scores: numericScores, notes: form.notes.trim() || undefined }
-          })
-        );
+        const { error: baselineError } = await supabase.functions.invoke('set-baseline', {
+          body: { scores: numericScores, notes: form.notes.trim() || undefined }
+        });
+
+        if (baselineError) {
+          toast.error('Failed to save baseline scores');
+          throw baselineError;
+        }
       }
 
-      // Execute all updates
-      await Promise.all(updates);
+      // 8. Verify profile was saved with test_date
+      const { data: verifyProfile } = await supabase
+        .from('profiles')
+        .select('test_date, onboarding_complete')
+        .eq('id', user.id)
+        .single();
+
+      console.log('Onboarding complete. Profile:', verifyProfile);
+
+      if (!verifyProfile?.onboarding_complete) {
+        toast.error('Could not verify onboarding completion. Please try again.');
+        return;
+      }
 
       toast.success('Onboarding completed successfully!');
-      
-      // Navigate based on user preference
+
+      // 9. Navigate based on user preference
       if (form.startWith === 'diagnostic') {
-        // Diagnostic path - has_study_plan will be set to true after diagnostic completion
         navigate('/diagnostic');
       } else {
         // Self-directed learning path - set has_study_plan to false
@@ -263,15 +296,13 @@ export default function Onboarding() {
           .from('profiles')
           .update({ has_study_plan: false })
           .eq('id', user.id);
-        
+
         toast.success('Setup complete! Starting self-directed learning mode.');
-        
-        // Go to main app
         navigate('/');
       }
     } catch (error) {
       console.error('Error completing onboarding:', error);
-      toast.error('Failed to complete onboarding');
+      toast.error('Failed to complete onboarding. Please try again.');
     } finally {
       setLoading(false);
     }

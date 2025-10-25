@@ -27,44 +27,60 @@ export default function DiagnosticResults() {
 
   // Fallback: fetch latest diagnostic if state is missing
   useEffect(() => {
-    if (!state?.results && formId) {
+    if (!state?.results) {
       const fetchLatestDiagnostic = async () => {
         try {
-          const { data: user } = await supabase.auth.getUser();
-          if (!user.user) return;
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) {
+            console.error('No user found for diagnostic results fallback');
+            navigate('/', { replace: true });
+            return;
+          }
 
-          const section = formId.startsWith('D2') ? formId.slice(2) : formId;
-          const { data: diagnostic } = await supabase
+          // Fetch the most recent completed diagnostic across all sections
+          const { data: diagnostics, error } = await supabase
             .from('diagnostics')
             .select('*')
-            .eq('user_id', user.user.id)
-            .eq('section', section)
+            .eq('user_id', user.id)
+            .not('completed_at', 'is', null)
             .order('completed_at', { ascending: false })
-            .limit(1)
-            .single();
+            .limit(1);
 
-          if (diagnostic && diagnostic.responses) {
-            // Reconstruct results from database
-            const responses = diagnostic.responses as any;
-            navigate(`/diagnostic-results/${formId}`, {
-              state: {
-                results: {
-                  predicted_section_score: diagnostic.score || 0,
-                  top_5_weak_skills: responses.top_5_weak_skills || [],
-                  diagnostic_id: diagnostic.id
-                },
-                formId
-              },
-              replace: true
-            });
+          if (error || !diagnostics || diagnostics.length === 0) {
+            console.error('No diagnostic found:', error);
+            toast.error('No diagnostic results found. Please take the diagnostic test.');
+            navigate('/diagnostic', { replace: true });
+            return;
           }
+
+          const diagnostic = diagnostics[0];
+          
+          // Reconstruct results from the most recent diagnostic
+          const responses = (diagnostic.responses || []) as any;
+          const reconstructedResults = {
+            predicted_section_score: diagnostic.score || 0,
+            top_5_weak_skills: Array.isArray(responses) && responses.length > 0 
+              ? responses[0]?.top_5_weak_skills || []
+              : [],
+            diagnostic_id: diagnostic.id
+          };
+
+          navigate('/diagnostic-results', {
+            state: {
+              results: reconstructedResults,
+              formId: `D2${diagnostic.section.slice(0, 2).toUpperCase()}`
+            },
+            replace: true
+          });
         } catch (error) {
           console.error('Error fetching diagnostic:', error);
+          toast.error('Failed to load diagnostic results');
+          navigate('/', { replace: true });
         }
       };
       fetchLatestDiagnostic();
     }
-  }, [state, formId, navigate]);
+  }, [state, navigate]);
 
   if (!state?.results) {
     return (

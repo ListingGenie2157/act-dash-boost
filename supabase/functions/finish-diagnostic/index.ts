@@ -159,24 +159,33 @@ Deno.serve(async (req) => {
     }
 
     // Seed review queue with missed items (due now for immediate review)
+    // Only insert valid UUIDs (staging_items use bigint staging_id, not UUIDs)
     if (missedQuestions.length > 0) {
-      const reviewItems = missedQuestions.map(item => ({
-        user_id: user.id,
-        question_id: item.questionId,
-        due_at: new Date().toISOString(),
-        interval_days: 0,
-        ease: 250,
-        lapses: 1
-      }));
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      
+      const validReviewItems = missedQuestions
+        .filter(item => uuidRegex.test(item.questionId))
+        .map(item => ({
+          user_id: user.id,
+          question_id: item.questionId,
+          due_at: new Date().toISOString(),
+          interval_days: 0,
+          ease: 250,
+          lapses: 1
+        }));
 
-      const { error: reviewError } = await supabase
-        .from('review_queue')
-        .insert(reviewItems);
+      if (validReviewItems.length > 0) {
+        const { error: reviewError } = await supabase
+          .from('review_queue')
+          .insert(validReviewItems);
 
-      if (reviewError) {
-        console.error('Error seeding review queue:', reviewError);
+        if (reviewError) {
+          console.error('Error seeding review queue:', reviewError);
+        } else {
+          console.log('Seeded review queue with', validReviewItems.length, 'missed questions');
+        }
       } else {
-        console.log('Seeded review queue with', reviewItems.length, 'missed questions');
+        console.log('No valid UUID question IDs found for review queue seeding');
       }
     }
 

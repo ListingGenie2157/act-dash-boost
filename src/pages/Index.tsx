@@ -52,8 +52,8 @@ const Index = () => {
           
           console.log('[Index] Profile result:', { profile, profileError });
 
-          // If user has test_date, stay on dashboard
-          if (profile?.test_date && mounted) {
+          // If user has completed onboarding OR has test_date, stay on dashboard
+          if ((profile?.onboarding_complete || profile?.test_date) && mounted) {
             console.log('[Index] User has completed onboarding, showing dashboard');
             setProfile(profile);
             setHasStudyPlan(profile.has_study_plan ?? false);
@@ -63,7 +63,7 @@ const Index = () => {
           
           // Otherwise, redirect to onboarding
           if (mounted) {
-            console.log('[Index] Redirecting to onboarding');
+            console.log('[Index] Redirecting to onboarding - no onboarding_complete or test_date');
             setIsLoading(false);
             navigate('/onboarding', { replace: true });
             return;

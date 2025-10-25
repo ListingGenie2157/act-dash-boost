@@ -316,6 +316,11 @@ export default function Diagnostic() {
         return;
       }
 
+      toast({
+        title: `${section} section saved`,
+        description: "Processing your results...",
+      });
+
       // Call the finish-diagnostic edge function
       const { data: result, error: functionError } = await supabase.functions.invoke('finish-diagnostic', {
         body: { section, blocks }
@@ -338,7 +343,13 @@ export default function Diagnostic() {
           description: "Your results have been saved and your study plan is being generated.",
         });
 
-        navigate('/diagnostic-results');
+        // Navigate with results state
+        navigate('/diagnostic-results', {
+          state: {
+            results: result,
+            formId: `D2${section.slice(0, 2).toUpperCase()}`
+          }
+        });
       }
     } catch (error) {
       console.error('Error saving diagnostic results:', error);
