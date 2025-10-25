@@ -40,17 +40,18 @@ const SimMath = () => {
   useEffect(() => {
     const loadQuestions = async () => {
       try {
+        // Query staging_items for simulation forms only (FA, FB, FC)
         const { data, error } = await supabase
-          .from('v_form_section')
+          .from('staging_items')
           .select('*')
-          .eq('form_id', 'A')
+          .like('form_id', 'F%')
           .eq('section', 'MATH')
           .order('ord', { ascending: true });
 
         if (error) throw error;
         
         const formattedQuestions = (data || []).map(d => ({
-          id: d.question_id ?? '',
+          id: String(d.staging_id ?? ''),
           stem: d.question ?? '',
           choice_a: d.choice_a ?? '',
           choice_b: d.choice_b ?? '',

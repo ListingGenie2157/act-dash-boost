@@ -62,8 +62,14 @@ export const DiagnosticEvaluation = ({
       try {
         const questions: Question[] = [];
         
-        // Fetch diagnostic questions from v_form_section (Form A)
+        // Fetch diagnostic questions from staging_items (D2* forms)
         const sections = ['EN', 'MATH', 'RD', 'SCI'];
+        const formMap: Record<string, string> = {
+          'EN': 'D2EN',
+          'MATH': 'D2MA',
+          'RD': 'D2RD',
+          'SCI': 'D2SC'
+        };
         const subjectMap: Record<string, 'english' | 'math' | 'reading' | 'science'> = {
           'EN': 'english',
           'MATH': 'math',
@@ -73,11 +79,12 @@ export const DiagnosticEvaluation = ({
         
         for (const section of sections) {
           const { data, error } = await supabase
-            .from('v_form_section')
-            .select('question_id, question, choice_a, choice_b, choice_c, choice_d, answer, explanation')
-            .eq('form_id', 'A')
+            .from('staging_items')
+            .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, answer, explanation')
+            .eq('form_id', formMap[section])
             .eq('section', section)
-            .limit(12);
+            .order('ord')
+            .limit(25);
           
           if (error) {
             console.error(`Error fetching ${section} questions:`, error);
@@ -88,7 +95,7 @@ export const DiagnosticEvaluation = ({
             data.forEach((item) => {
               if (item.question && item.choice_a && item.choice_b && item.choice_c && item.choice_d && item.answer) {
                 questions.push({
-                  id: item.question_id || '',
+                  id: String(item.staging_id || ''),
                   subject: subjectMap[section],
                   topic: section,
                   difficulty: 'medium',
@@ -380,7 +387,7 @@ export default function Diagnostic() {
                   <CheckCircle2 className="w-5 h-5 text-green-600" />
                   <div>
                     <p className="font-medium">Questions</p>
-                    <p className="text-sm text-muted-foreground">48 questions (12 per subject)</p>
+                    <p className="text-sm text-muted-foreground">100 questions (25 per subject)</p>
                   </div>
                 </div>
               </div>

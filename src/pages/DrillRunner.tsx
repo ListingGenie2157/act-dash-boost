@@ -37,11 +37,14 @@ export default function DrillRunner() {
         const nParam = searchParams.get('n');
         const n = nParam ? parseInt(nParam, 10) : 10;
 
-        // Fetch questions from v_form_section instead of staging_items
+        // Fetch questions from staging_items (practice banks only)
+        // Exclude simulation forms (FA, FB, FC) and diagnostic forms (D2*)
         const { data, error: qError } = await supabase
-          .from('v_form_section')
-          .select('question_id, question, choice_a, choice_b, choice_c, choice_d, answer, explanation')
+          .from('staging_items')
+          .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, answer, explanation, skill_code, form_id')
           .eq('section', decodeURIComponent(subject))
+          .not('form_id', 'like', 'F%')
+          .not('form_id', 'like', 'D2%')
           .limit(n);
 
         if (qError) {
@@ -49,17 +52,18 @@ export default function DrillRunner() {
         } else if (!data || data.length === 0) {
           setError('No questions found for this section');
         } else {
-          // Map v_form_section to Question type
+          // Map staging_items to Question type
           const mappedQuestions: Question[] = data.map((q) => ({
-            id: q.question_id || '',
+            id: String(q.staging_id || ''),
             stem: q.question || '',
             choice_a: q.choice_a || '',
             choice_b: q.choice_b || '',
             choice_c: q.choice_c || '',
             choice_d: q.choice_d || '',
-            answer: (q.answer as 'A' | 'B' | 'C' | 'D') || 'A',
+            answer: (q.answer.toUpperCase() as 'A' | 'B' | 'C' | 'D') || 'A',
             explanation: q.explanation ?? undefined,
-            skill_code: undefined,
+            skill_code: q.skill_code ?? undefined,
+            form_id: q.form_id ?? undefined,
           }));
           setQuestions(mappedQuestions);
         }
