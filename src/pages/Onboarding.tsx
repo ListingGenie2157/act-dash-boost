@@ -47,6 +47,7 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const isMobile = useIsMobile();
   const [form, setForm] = useState<OnboardingForm>({
     ageVerified: false,
     tosAccepted: false,
@@ -241,8 +242,6 @@ export default function Onboarding() {
   );
 
   const renderStep2 = () => {
-    const isMobile = useIsMobile();
-    
     return (
       <Card>
         <CardHeader>
