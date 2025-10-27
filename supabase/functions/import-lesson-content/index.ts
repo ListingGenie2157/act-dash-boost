@@ -5,14 +5,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface CheckpointQuestion {
-  id: string;
-  question: string;
-  options: string[];
-  correctAnswer: number;
-  explanation: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-}
+// Checkpoint questions are stored as simple arrays in the database
+// Format: [question, optA, optB, optC, optD, answer_letter, explanation, difficulty]
 
 interface LessonContentInput {
   skill_code: string;
@@ -24,22 +18,25 @@ interface LessonContentInput {
   common_traps?: string;
   independent_practice?: string;
   independent_practice_answers?: string;
-  checkpoint_quiz_q1?: string;
-  checkpoint_quiz_q2?: string;
-  checkpoint_quiz_q3?: string;
-  checkpoint_quiz_q4?: string;
-  checkpoint_quiz_q5?: string;
-  checkpoint_quiz_q6?: string;
-  checkpoint_quiz_q7?: string;
-  checkpoint_quiz_q8?: string;
-  checkpoint_quiz_q9?: string;
-  checkpoint_quiz_q10?: string;
+  checkpoint_quiz_q1?: string | string[];
+  checkpoint_quiz_q2?: string | string[];
+  checkpoint_quiz_q3?: string | string[];
+  checkpoint_quiz_q4?: string | string[];
+  checkpoint_quiz_q5?: string | string[];
+  checkpoint_quiz_q6?: string | string[];
+  checkpoint_quiz_q7?: string | string[];
+  checkpoint_quiz_q8?: string | string[];
+  checkpoint_quiz_q9?: string | string[];
+  checkpoint_quiz_q10?: string | string[];
   recap?: string;
   estimated_minutes?: number;
   difficulty?: 'easy' | 'medium' | 'hard';
 }
 
-function parseCheckpointQuestion(raw: string, questionNumber: number): CheckpointQuestion | null {
+// Parse checkpoint question from pipe-delimited string to array format
+// Input: "question || A) opt || B) opt || C) opt || D) opt || ANSWER: B || explanation || medium"
+// Output: [question, optA, optB, optC, optD, "B", explanation, difficulty]
+function parseCheckpointQuestion(raw: string, questionNumber: number): string[] | null {
   if (!raw || raw.trim() === '') return null;
   
   const parts = raw.split('||').map(s => s.trim());
@@ -64,19 +61,13 @@ function parseCheckpointQuestion(raw: string, questionNumber: number): Checkpoin
     console.warn(`Question ${questionNumber} has invalid answer format: ${answerPart}`);
     return null;
   }
-  const correctAnswer = answerMatch[1].toUpperCase().charCodeAt(0) - 65;
+  const answerLetter = answerMatch[1].toUpperCase();
   
   const explanation = parts[6].replace(/^["']|["']$/g, '');
   const difficulty = parts[7] || 'medium';
   
-  return {
-    id: `checkpoint_q${questionNumber}`,
-    question,
-    options,
-    correctAnswer,
-    explanation,
-    difficulty: difficulty as 'easy' | 'medium' | 'hard'
-  };
+  // Return as simple array: [question, optA, optB, optC, optD, answer, explanation, difficulty]
+  return [question, ...options, answerLetter, explanation, difficulty];
 }
 
 Deno.serve(async (req) => {
@@ -145,14 +136,21 @@ Deno.serve(async (req) => {
               : lesson.objectives)
           : [];
 
-        // Parse checkpoint quiz questions
-        const checkpointQuestions: CheckpointQuestion[] = [];
+        // Parse checkpoint quiz questions into individual columns
+        const quizData: Record<string, string[] | null> = {};
         for (let i = 1; i <= 10; i++) {
           const key = `checkpoint_quiz_q${i}` as keyof LessonContentInput;
           const rawQ = lesson[key];
-          if (rawQ && typeof rawQ === 'string') {
-            const parsed = parseCheckpointQuestion(rawQ, i);
-            if (parsed) checkpointQuestions.push(parsed);
+          if (rawQ) {
+            if (typeof rawQ === 'string') {
+              const parsed = parseCheckpointQuestion(rawQ, i);
+              quizData[`checkpoint_quiz_q${i}`] = parsed;
+            } else if (Array.isArray(rawQ)) {
+              // Already an array, use as-is
+              quizData[`checkpoint_quiz_q${i}`] = rawQ;
+            }
+          } else {
+            quizData[`checkpoint_quiz_q${i}`] = null;
           }
         }
 
@@ -169,7 +167,16 @@ Deno.serve(async (req) => {
             common_traps: lesson.common_traps || null,
             independent_practice: lesson.independent_practice || null,
             independent_practice_answers: lesson.independent_practice_answers || null,
-            checkpoint_quiz_questions: checkpointQuestions,
+            checkpoint_quiz_q1: quizData.checkpoint_quiz_q1,
+            checkpoint_quiz_q2: quizData.checkpoint_quiz_q2,
+            checkpoint_quiz_q3: quizData.checkpoint_quiz_q3,
+            checkpoint_quiz_q4: quizData.checkpoint_quiz_q4,
+            checkpoint_quiz_q5: quizData.checkpoint_quiz_q5,
+            checkpoint_quiz_q6: quizData.checkpoint_quiz_q6,
+            checkpoint_quiz_q7: quizData.checkpoint_quiz_q7,
+            checkpoint_quiz_q8: quizData.checkpoint_quiz_q8,
+            checkpoint_quiz_q9: quizData.checkpoint_quiz_q9,
+            checkpoint_quiz_q10: quizData.checkpoint_quiz_q10,
             recap: lesson.recap || null,
             estimated_minutes: lesson.estimated_minutes || 15,
             difficulty: lesson.difficulty || 'medium',
@@ -185,8 +192,9 @@ Deno.serve(async (req) => {
           });
           console.error(`❌ Error importing ${skill.name}:`, upsertError);
         } else {
+          const quizCount = Object.values(quizData).filter(q => q !== null).length;
           results.success.push(skill.name);
-          console.log(`✅ Imported: ${skill.name} (${checkpointQuestions.length} checkpoint questions)`);
+          console.log(`✅ Imported: ${skill.name} (${quizCount} checkpoint questions)`);
         }
       } catch (err) {
         results.errors.push({

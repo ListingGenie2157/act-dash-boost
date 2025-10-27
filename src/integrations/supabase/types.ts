@@ -238,71 +238,81 @@ export type Database = {
       }
       lesson_content: {
         Row: {
-          checkpoint_quiz: string | null
-          checkpoint_quiz_answers: string | null
-          checkpoint_quiz_questions: Json | null
+          checkpoint_quiz_q1: Json[] | null
+          checkpoint_quiz_q10: Json[] | null
+          checkpoint_quiz_q2: Json[] | null
+          checkpoint_quiz_q3: Json[] | null
+          checkpoint_quiz_q4: Json[] | null
+          checkpoint_quiz_q5: Json[] | null
+          checkpoint_quiz_q6: Json[] | null
+          checkpoint_quiz_q7: Json[] | null
+          checkpoint_quiz_q8: Json[] | null
+          checkpoint_quiz_q9: Json[] | null
           common_traps: string | null
-          concept_explanation: string
-          created_at: string | null
+          concept_explanation: string | null
           difficulty: string | null
           error_analysis: string | null
           estimated_minutes: number | null
           guided_practice: string | null
+          id: number
           independent_practice: string | null
           independent_practice_answers: string | null
-          objectives: string[] | null
+          objectives: string | null
           overview_html: string
           recap: string | null
           skill_code: string
-          updated_at: string | null
         }
         Insert: {
-          checkpoint_quiz?: string | null
-          checkpoint_quiz_answers?: string | null
-          checkpoint_quiz_questions?: Json | null
+          checkpoint_quiz_q1?: Json[] | null
+          checkpoint_quiz_q10?: Json[] | null
+          checkpoint_quiz_q2?: Json[] | null
+          checkpoint_quiz_q3?: Json[] | null
+          checkpoint_quiz_q4?: Json[] | null
+          checkpoint_quiz_q5?: Json[] | null
+          checkpoint_quiz_q6?: Json[] | null
+          checkpoint_quiz_q7?: Json[] | null
+          checkpoint_quiz_q8?: Json[] | null
+          checkpoint_quiz_q9?: Json[] | null
           common_traps?: string | null
-          concept_explanation: string
-          created_at?: string | null
+          concept_explanation?: string | null
           difficulty?: string | null
           error_analysis?: string | null
           estimated_minutes?: number | null
           guided_practice?: string | null
+          id?: number
           independent_practice?: string | null
           independent_practice_answers?: string | null
-          objectives?: string[] | null
+          objectives?: string | null
           overview_html: string
           recap?: string | null
           skill_code: string
-          updated_at?: string | null
         }
         Update: {
-          checkpoint_quiz?: string | null
-          checkpoint_quiz_answers?: string | null
-          checkpoint_quiz_questions?: Json | null
+          checkpoint_quiz_q1?: Json[] | null
+          checkpoint_quiz_q10?: Json[] | null
+          checkpoint_quiz_q2?: Json[] | null
+          checkpoint_quiz_q3?: Json[] | null
+          checkpoint_quiz_q4?: Json[] | null
+          checkpoint_quiz_q5?: Json[] | null
+          checkpoint_quiz_q6?: Json[] | null
+          checkpoint_quiz_q7?: Json[] | null
+          checkpoint_quiz_q8?: Json[] | null
+          checkpoint_quiz_q9?: Json[] | null
           common_traps?: string | null
-          concept_explanation?: string
-          created_at?: string | null
+          concept_explanation?: string | null
           difficulty?: string | null
           error_analysis?: string | null
           estimated_minutes?: number | null
           guided_practice?: string | null
+          id?: number
           independent_practice?: string | null
           independent_practice_answers?: string | null
-          objectives?: string[] | null
+          objectives?: string | null
           overview_html?: string
           recap?: string | null
           skill_code?: string
-          updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "lesson_content_skill_code_fkey"
-            columns: ["skill_code"]
-            isOneToOne: true
-            referencedRelation: "skills"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       lesson_schedule: {
         Row: {

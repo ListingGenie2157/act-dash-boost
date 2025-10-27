@@ -89,14 +89,48 @@ export async function getEnhancedLesson(skillCode: string): Promise<{
       
       // Rich content from lesson_content table
       overview: richContent.overview_html || `<p>This lesson covers ${skill.name}.</p>`,
-      objectives: richContent.objectives || null,
+      // Parse objectives from pipe-separated text
+      objectives: richContent.objectives 
+        ? richContent.objectives.split('|').map(s => s.trim()).filter(Boolean)
+        : null,
       concept_explanation: richContent.concept_explanation || null,
       guided_practice: richContent.guided_practice || null,
       error_analysis: richContent.error_analysis || null,
       common_traps: richContent.common_traps || null,
       independent_practice: richContent.independent_practice || null,
       independent_practice_answers: richContent.independent_practice_answers || null,
-      checkpoint_quiz_questions: (richContent.checkpoint_quiz_questions as unknown as CheckpointQuestion[]) || [],
+      // Collect checkpoint quiz questions from individual columns
+      checkpoint_quiz_questions: (() => {
+        const questions: CheckpointQuestion[] = [];
+        const quizColumns = [
+          richContent.checkpoint_quiz_q1,
+          richContent.checkpoint_quiz_q2,
+          richContent.checkpoint_quiz_q3,
+          richContent.checkpoint_quiz_q4,
+          richContent.checkpoint_quiz_q5,
+          richContent.checkpoint_quiz_q6,
+          richContent.checkpoint_quiz_q7,
+          richContent.checkpoint_quiz_q8,
+          richContent.checkpoint_quiz_q9,
+          richContent.checkpoint_quiz_q10,
+        ];
+        quizColumns.forEach((rawQ, index) => {
+          if (rawQ && Array.isArray(rawQ) && rawQ.length >= 8) {
+            // Array format: [question, optA, optB, optC, optD, answerLetter, explanation, difficulty]
+            const answerLetter = rawQ[5] as string;
+            const answerIndex = answerLetter.toUpperCase().charCodeAt(0) - 65; // Convert A->0, B->1, etc.
+            questions.push({
+              id: `checkpoint_q${index + 1}`,
+              question: rawQ[0] as string,
+              options: [rawQ[1], rawQ[2], rawQ[3], rawQ[4]] as string[],
+              correctAnswer: answerIndex,
+              explanation: rawQ[6] as string,
+              difficulty: (rawQ[7] as 'easy' | 'medium' | 'hard') || 'medium',
+            });
+          }
+        });
+        return questions;
+      })(),
       recap: richContent.recap || null,
       
       // Metadata
