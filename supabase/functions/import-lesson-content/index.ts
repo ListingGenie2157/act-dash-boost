@@ -180,17 +180,16 @@ Deno.serve(async (req) => {
             recap: lesson.recap || null,
             estimated_minutes: lesson.estimated_minutes || 15,
             difficulty: lesson.difficulty || 'medium',
-            updated_at: new Date().toISOString(),
           }, {
             onConflict: 'skill_code',
           });
 
         if (upsertError) {
+          console.error(`❌ FULL ERROR for ${lesson.skill_code}:`, JSON.stringify(upsertError, null, 2));
           results.errors.push({
             skill_code: lesson.skill_code,
             error: upsertError.message,
           });
-          console.error(`❌ Error importing ${skill.name}:`, upsertError);
         } else {
           const quizCount = Object.values(quizData).filter(q => q !== null).length;
           results.success.push(skill.name);
