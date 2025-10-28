@@ -312,7 +312,15 @@ export type Database = {
           recap?: string | null
           skill_code?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "lesson_content_skill_code_fkey"
+            columns: ["skill_code"]
+            isOneToOne: true
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lesson_schedule: {
         Row: {
