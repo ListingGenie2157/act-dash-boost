@@ -157,7 +157,43 @@ export function parseConceptRules(html: string): ParsedRule[] {
   
   // Try multiple parsing strategies
   const strategies = [
-    // Strategy 1: "Rule X –" or "Rule X:" pattern
+    // Strategy 1: Headers with "Core idea X", "Key concept X", etc.
+    () => {
+      const pattern = /<(h[2-6]|strong)[^>]*>\s*(?:Core idea|Key concept|Main point|Important point)\s+(\d+)[:\s]*([^<]*)<\/\1>([\s\S]+?)(?=<(?:h[2-6]|strong)[^>]*>(?:Core idea|Key concept|Main point|Important point)\s+\d+|$)/gi;
+      const tempRules: ParsedRule[] = [];
+      let match;
+      while ((match = pattern.exec(html)) !== null) {
+        const content = match[4].trim();
+        if (content.length > 10) {
+          tempRules.push({
+            number: parseInt(match[2]),
+            title: (match[3]?.trim() || `Core Idea ${match[2]}`),
+            content,
+          });
+        }
+      }
+      return tempRules;
+    },
+    
+    // Strategy 2: Headers <h3>Rule X</h3> or <strong>Rule X</strong>
+    () => {
+      const pattern = /<(?:h\d|strong)[^>]*>\s*Rule\s+(\d+)[^<]*<\/(?:h\d|strong)>([\s\S]+?)(?=<(?:h\d|strong)[^>]*>Rule\s+\d+|$)/gi;
+      const tempRules: ParsedRule[] = [];
+      let match;
+      while ((match = pattern.exec(html)) !== null) {
+        const content = match[2].trim();
+        if (content.length > 10) {
+          tempRules.push({
+            number: parseInt(match[1]),
+            title: `Rule ${match[1]}`,
+            content,
+          });
+        }
+      }
+      return tempRules;
+    },
+    
+    // Strategy 3: "Rule X –" or "Rule X:" pattern
     () => {
       const sections = html.split(/Rule\s+(\d+)\s*[–:-]\s*/i);
       const tempRules: ParsedRule[] = [];
@@ -175,7 +211,7 @@ export function parseConceptRules(html: string): ParsedRule[] {
       return tempRules;
     },
     
-    // Strategy 2: Numbered list "1. Title\nContent"
+    // Strategy 4: Numbered list "1. Title\nContent"
     () => {
       const pattern = /(\d+)\.\s+([A-Z][^\n]{10,100})\n([\s\S]+?)(?=\d+\.|$)/g;
       const tempRules: ParsedRule[] = [];
@@ -188,24 +224,6 @@ export function parseConceptRules(html: string): ParsedRule[] {
         });
       }
       return tempRules;
-    },
-    
-    // Strategy 3: Headers <h3>Rule X</h3> or <strong>Rule X</strong>
-    () => {
-      const pattern = /<(?:h\d|strong)[^>]*>\s*Rule\s+(\d+)[^<]*<\/(?:h\d|strong)>([\s\S]+?)(?=<(?:h\d|strong)[^>]*>Rule\s+\d+|$)/gi;
-      const tempRules: ParsedRule[] = [];
-      let match;
-      while ((match = pattern.exec(html)) !== null) {
-        const content = match[2].trim();
-        if (content.length > 10) {
-          tempRules.push({
-            number: parseInt(match[1]),
-            title: `Rule ${match[1]}`,
-            content,
-          });
-        }
-      }
-      return tempRules;
     }
   ];
   
@@ -216,6 +234,15 @@ export function parseConceptRules(html: string): ParsedRule[] {
       rules.push(...result);
       break;
     }
+  }
+  
+  // Fallback: if no strategies matched and content is substantial, treat as single rule
+  if (rules.length === 0 && html.length > 100) {
+    rules.push({
+      number: 1,
+      title: 'Concept Overview',
+      content: html,
+    });
   }
   
   return rules;
