@@ -205,6 +205,35 @@ const Index = () => {
           ) : (
             // Self-Directed Learning Dashboard
             <div className="space-y-8">
+              {/* Choose Your Path Section */}
+              <div className="bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 rounded-xl p-8">
+                <div className="max-w-3xl mx-auto text-center space-y-4">
+                  <h2 className="text-2xl font-bold">Choose Your Study Path</h2>
+                  <p className="text-muted-foreground">
+                    Browse lessons and drills at your own pace, or let us create a personalized study plan based on your test date and goals.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="gap-2"
+                    >
+                      📚 Continue Self-Guided Learning
+                    </Button>
+                    <Button
+                      size="lg"
+                      className="gap-2 bg-primary"
+                      onClick={() => {
+                        // TODO: Open study plan wizard
+                        alert('Study plan wizard coming soon! This will collect test date, daily time, diagnostic choice, etc.');
+                      }}
+                    >
+                      🎯 Create Personalized Study Plan
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid md:grid-cols-3 gap-6">
                 <Link to="/lessons">
                   <div className="p-6 border rounded-xl hover:shadow-lg transition-shadow bg-card h-full">
