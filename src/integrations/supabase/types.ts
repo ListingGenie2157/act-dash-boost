@@ -238,16 +238,16 @@ export type Database = {
       }
       lesson_content: {
         Row: {
-          checkpoint_quiz_q1: Json[] | null
-          checkpoint_quiz_q10: Json[] | null
-          checkpoint_quiz_q2: Json[] | null
-          checkpoint_quiz_q3: Json[] | null
-          checkpoint_quiz_q4: Json[] | null
-          checkpoint_quiz_q5: Json[] | null
-          checkpoint_quiz_q6: Json[] | null
-          checkpoint_quiz_q7: Json[] | null
-          checkpoint_quiz_q8: Json[] | null
-          checkpoint_quiz_q9: Json[] | null
+          checkpoint_quiz_q1: string[] | null
+          checkpoint_quiz_q10: string[] | null
+          checkpoint_quiz_q2: string[] | null
+          checkpoint_quiz_q3: string[] | null
+          checkpoint_quiz_q4: string[] | null
+          checkpoint_quiz_q5: string[] | null
+          checkpoint_quiz_q6: string[] | null
+          checkpoint_quiz_q7: string[] | null
+          checkpoint_quiz_q8: string[] | null
+          checkpoint_quiz_q9: string[] | null
           common_traps: string | null
           concept_explanation: string | null
           difficulty: string | null
@@ -263,16 +263,16 @@ export type Database = {
           skill_code: string
         }
         Insert: {
-          checkpoint_quiz_q1?: Json[] | null
-          checkpoint_quiz_q10?: Json[] | null
-          checkpoint_quiz_q2?: Json[] | null
-          checkpoint_quiz_q3?: Json[] | null
-          checkpoint_quiz_q4?: Json[] | null
-          checkpoint_quiz_q5?: Json[] | null
-          checkpoint_quiz_q6?: Json[] | null
-          checkpoint_quiz_q7?: Json[] | null
-          checkpoint_quiz_q8?: Json[] | null
-          checkpoint_quiz_q9?: Json[] | null
+          checkpoint_quiz_q1?: string[] | null
+          checkpoint_quiz_q10?: string[] | null
+          checkpoint_quiz_q2?: string[] | null
+          checkpoint_quiz_q3?: string[] | null
+          checkpoint_quiz_q4?: string[] | null
+          checkpoint_quiz_q5?: string[] | null
+          checkpoint_quiz_q6?: string[] | null
+          checkpoint_quiz_q7?: string[] | null
+          checkpoint_quiz_q8?: string[] | null
+          checkpoint_quiz_q9?: string[] | null
           common_traps?: string | null
           concept_explanation?: string | null
           difficulty?: string | null
@@ -288,16 +288,16 @@ export type Database = {
           skill_code: string
         }
         Update: {
-          checkpoint_quiz_q1?: Json[] | null
-          checkpoint_quiz_q10?: Json[] | null
-          checkpoint_quiz_q2?: Json[] | null
-          checkpoint_quiz_q3?: Json[] | null
-          checkpoint_quiz_q4?: Json[] | null
-          checkpoint_quiz_q5?: Json[] | null
-          checkpoint_quiz_q6?: Json[] | null
-          checkpoint_quiz_q7?: Json[] | null
-          checkpoint_quiz_q8?: Json[] | null
-          checkpoint_quiz_q9?: Json[] | null
+          checkpoint_quiz_q1?: string[] | null
+          checkpoint_quiz_q10?: string[] | null
+          checkpoint_quiz_q2?: string[] | null
+          checkpoint_quiz_q3?: string[] | null
+          checkpoint_quiz_q4?: string[] | null
+          checkpoint_quiz_q5?: string[] | null
+          checkpoint_quiz_q6?: string[] | null
+          checkpoint_quiz_q7?: string[] | null
+          checkpoint_quiz_q8?: string[] | null
+          checkpoint_quiz_q9?: string[] | null
           common_traps?: string | null
           concept_explanation?: string | null
           difficulty?: string | null

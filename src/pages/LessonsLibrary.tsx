@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Search, BookOpen, ArrowLeft, Filter, Target } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Search, BookOpen, ArrowLeft, Filter, Target, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function LessonsLibrary() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const highlightedCardRef = useRef<HTMLDivElement>(null);
   const [lessons, setLessons] = useState<Array<{
     skill_code: string;
     skill_name: string;
@@ -24,27 +26,43 @@ export default function LessonsLibrary() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [subjectFilter, setSubjectFilter] = useState<string>('all');
+  const [refreshing, setRefreshing] = useState(false);
 
   const { data: masteryMap } = useUserMastery();
+  const highlightSkill = searchParams.get('highlight');
+
+  const fetchLessons = async () => {
+    try {
+      const { data, error } = await getAllLessons();
+      if (error) {
+        console.error('Error fetching lessons:', error);
+      } else {
+        setLessons(data);
+      }
+    } catch (error) {
+      console.error('Error fetching lessons:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchLessons() {
-      try {
-        const { data, error } = await getAllLessons();
-        if (error) {
-          console.error('Error fetching lessons:', error);
-        } else {
-          setLessons(data);
-        }
-      } catch (error) {
-        console.error('Error fetching lessons:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
     void fetchLessons();
   }, []);
+
+  useEffect(() => {
+    if (highlightSkill && highlightedCardRef.current) {
+      setTimeout(() => {
+        highlightedCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+    }
+  }, [highlightSkill, lessons]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchLessons();
+  };
 
   // Filter lessons
   const filteredLessons = lessons.filter(lesson => {
@@ -68,14 +86,24 @@ export default function LessonsLibrary() {
     <div className="container mx-auto p-6 max-w-7xl">
       {/* Header */}
       <div className="mb-8">
-        <Button
-          variant="outline"
-          onClick={() => navigate('/')}
-          className="mb-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Dashboard
-        </Button>
+        <div className="flex items-center justify-between mb-4">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/')}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Button>
+          
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={refreshing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
 
         <div className="flex items-center gap-3 mb-2">
           <BookOpen className="h-8 w-8 text-primary" />
@@ -146,10 +174,16 @@ export default function LessonsLibrary() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {subjectLessons.map(lesson => {
                   const mastery = masteryMap?.get(lesson.skill_code);
+                  const isHighlighted = highlightSkill === lesson.skill_code;
 
                   return (
                     <Link key={lesson.skill_code} to={`/lesson/${lesson.skill_code}`}>
-                      <Card className="h-full hover:shadow-lg hover:border-primary transition-all cursor-pointer group">
+                      <Card 
+                        ref={isHighlighted ? highlightedCardRef : null}
+                        className={`h-full hover:shadow-lg hover:border-primary transition-all cursor-pointer group ${
+                          isHighlighted ? 'ring-2 ring-primary shadow-lg' : ''
+                        }`}
+                      >
                         <CardHeader>
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <Badge variant="outline" className="text-xs">
@@ -166,6 +200,9 @@ export default function LessonsLibrary() {
                           </div>
                           <CardTitle className="text-lg group-hover:text-primary transition-colors">
                             {lesson.skill_name}
+                            {isHighlighted && (
+                              <Badge variant="default" className="ml-2 text-xs">NEW</Badge>
+                            )}
                           </CardTitle>
                           <CardDescription className="flex items-center gap-2 text-xs">
                             <Target className="h-3 w-3" />

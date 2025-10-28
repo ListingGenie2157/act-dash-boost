@@ -222,24 +222,45 @@ export default function AdminLessonImport() {
     setImporting(true);
 
     try {
-      const { error } = await supabase.functions.invoke('import-lesson-content', {
-        body: {
-          lessons: [{
-            skill_code: selectedSkill,
-            ...extractedContent,
-          }],
-        },
+      const { data, error } = await supabase.functions.invoke('import-lesson-content', {
+        body: [{
+          skill_code: selectedSkill,
+          ...extractedContent,
+        }],
       });
 
       if (error) throw error;
 
-      toast({
-        title: 'Import successful',
-        description: `Lesson content imported for skill: ${skills.find(s => s.id === selectedSkill)?.name}`,
-      });
+      const skillName = skills.find(s => s.id === selectedSkill)?.name;
+      const result = data as { success: any[]; failed: any[] };
+      
+      if (result?.failed?.length > 0) {
+        toast({
+          title: 'Partial import failure',
+          description: `${result.success?.length || 0} succeeded, ${result.failed.length} failed. Check console for details.`,
+          variant: 'destructive',
+        });
+        console.error('Import failures:', result.failed);
+      } else {
+        toast({
+          title: '✅ Import successful!',
+          description: (
+            <div className="space-y-1">
+              <div>Lesson imported: {skillName}</div>
+              <a 
+                href={`/lessons?highlight=${selectedSkill}`} 
+                className="text-primary underline hover:text-primary/80"
+              >
+                View in Library →
+              </a>
+            </div>
+          ),
+        });
+      }
 
       // Reset form
       setHtmlContent('');
+      setTsvContent('');
       setExtractedContent(null);
       setSelectedSkill('');
       setShowPreview(false);
