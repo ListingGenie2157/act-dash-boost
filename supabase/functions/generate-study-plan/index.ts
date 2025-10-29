@@ -275,16 +275,20 @@ serve(async (req) => {
     const today = getTodayInChicago();
     const todayStr = today.toISOString().split('T')[0];
 
-    // Check if plan already generated for today
-    const { data: existingPlan } = await supabase
+    // Check if plan already generated for this week
+    const weekEnd = new Date(today);
+    weekEnd.setDate(today.getDate() + 6);
+    const weekEndStr = weekEnd.toISOString().split('T')[0];
+
+    const { data: existingPlans } = await supabase
       .from('study_plan_days')
       .select('*')
       .eq('user_id', user.id)
-      .eq('the_date', todayStr)
-      .single();
+      .gte('the_date', todayStr)
+      .lte('the_date', weekEndStr);
 
-    if (existingPlan) {
-      console.warn('Plan already exists for today');
+    if (existingPlans && existingPlans.length === 7) {
+      console.warn('7-day plan already exists for this week');
       
       // Set has_study_plan flag even for existing plans
       const { error: profileUpdateError } = await supabase
@@ -297,8 +301,10 @@ serve(async (req) => {
       }
       
       return new Response(JSON.stringify({
-        the_date: todayStr,
-        tasks: existingPlan.tasks_json || []
+        days: existingPlans.map(p => ({
+          the_date: p.the_date,
+          tasks: p.tasks_json || []
+        }))
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -374,66 +380,14 @@ serve(async (req) => {
 
     console.log(`📚 Lessons: ${lessonsRemaining} remaining, ${lessonsPerDay} per day needed (${daysLeft} days left)`);
 
-    // Check for test week special scheduling (strictly within 7 days)
-    if (daysLeft !== null && daysLeft > 0 && daysLeft <= 7) {
-      console.warn(`Test week mode: ${daysLeft} days until test`);
-      const specialTasks = getTestWeekTasks(daysLeft, user.id, todayStr);
-      if (specialTasks.length > 0) {
-        const { error: planError } = await supabase
-          .from('study_plan_days')
-          .upsert({
-            user_id: user.id,
-            the_date: todayStr,
-            tasks_json: specialTasks,
-            generated_at: new Date().toISOString()
-          });
-
-        if (planError) {
-          console.error('Error saving test week plan:', planError);
-        } else {
-          const studyTasks = specialTasks.map((task: { type: string; skill_id?: string; size: number }) => ({
-            user_id: user.id,
-            the_date: todayStr,
-            type: task.type,
-            skill_id: task.skill_id || null,
-            size: task.size,
-            status: 'PENDING',
-            reward_cents: task.type === 'SIM' ? 50 : task.type === 'REVIEW' ? 10 : 25
-          }));
-
-          if (studyTasks.length > 0) {
-            // Delete existing tasks for today first (avoids NULL handling issues with upsert)
-            await supabase
-              .from('study_tasks')
-              .delete()
-              .eq('user_id', user.id)
-              .eq('the_date', todayStr);
-
-            // Then insert new tasks
-            await supabase.from('study_tasks').insert(studyTasks);
-          }
-
-          return new Response(JSON.stringify({
-            the_date: todayStr,
-            tasks: specialTasks,
-            mode: 'TEST_WEEK',
-            days_left: daysLeft,
-            lessons_remaining: lessonsRemaining,
-            lessons_per_day: lessonsPerDay
-          }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-      }
-    }
-
+    // Fetch review and weakness data once for all days
     const { data: dueReviews } = await supabase
       .from('review_queue')
       .select('question_id, due_at')
       .eq('user_id', user.id)
       .lte('due_at', new Date().toISOString())
       .order('due_at', { ascending: true })
-      .limit(10);
+      .limit(50); // Fetch more for 7 days
 
     const { data: latestDiagnostics } = await supabase
       .from('diagnostics')
@@ -456,97 +410,155 @@ serve(async (req) => {
       .eq('user_id', user.id)
       .gt('seen', 0)
       .order('mastery_level', { ascending: true })
-      .limit(3);
+      .limit(10); // More skills for 7 days
 
-    const combinedWeakSkills = weakestSkills || [];
+    // Generate plans for 7 days
+    const allPlans: Array<{ the_date: string; tasks: any[] }> = [];
+    const allStudyTasks: any[] = [];
+    const assignedReviewIds = new Set<string>();
+    const assignedSkillIds = new Set<string>(completedSkillIds);
 
-    // Build priority task list
-    const priorities: Task[] = [];
+    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+      const targetDate = new Date(today);
+      targetDate.setDate(today.getDate() + dayOffset);
+      const dateStr = targetDate.toISOString().split('T')[0];
+      const dayDaysLeft = daysLeft !== null ? daysLeft - dayOffset : null;
+      const dayMode = getStudyMode(dayDaysLeft);
 
-    // 1. REVIEW tasks (highest priority)
-    dueReviews?.forEach((review, index) => {
-      priorities.push({
-        type: 'REVIEW',
-        questionId: review.question_id,
-        size: 1,
-        estimatedMins: Math.round(2 * timeMultiplier),
-        priority: mode.reviewWeight * 1000 + (100 - index)
+      console.log(`\n📅 Generating plan for ${dateStr} (${dayOffset + 1}/7)`);
+
+      // Check for test week special scheduling
+      if (dayDaysLeft !== null && dayDaysLeft > 0 && dayDaysLeft <= 7) {
+        console.warn(`Test week mode: ${dayDaysLeft} days until test`);
+        const specialTasks = getTestWeekTasks(dayDaysLeft, user.id, dateStr);
+        if (specialTasks.length > 0) {
+          allPlans.push({ the_date: dateStr, tasks: specialTasks });
+          specialTasks.forEach((task: any) => {
+            allStudyTasks.push({
+              user_id: user.id,
+              the_date: dateStr,
+              type: task.type,
+              skill_id: task.skill_id || null,
+              size: task.size,
+              status: 'PENDING',
+              reward_cents: task.type === 'SIM' ? 50 : task.type === 'REVIEW' ? 10 : 25
+            });
+          });
+          continue; // Skip normal task generation for test week
+        }
+      }
+
+      // Build priority task list for this day
+      const priorities: Task[] = [];
+      let reviewsUsed = 0;
+
+      // 1. REVIEW tasks - distribute across 7 days
+      dueReviews?.forEach((review, index) => {
+        if (!assignedReviewIds.has(review.question_id) && reviewsUsed < 3) {
+          priorities.push({
+            type: 'REVIEW',
+            questionId: review.question_id,
+            size: 1,
+            estimatedMins: Math.round(2 * timeMultiplier),
+            priority: dayMode.reviewWeight * 1000 + (100 - index)
+          });
+          assignedReviewIds.add(review.question_id);
+          reviewsUsed++;
+        }
       });
-    });
 
-    // 2. DRILL tasks (medium priority)
-    combinedWeakSkills?.forEach((skill, index) => {
-      priorities.push({
-        type: 'DRILL',
-        skillId: skill.skill_id,
-        size: 5,
-        estimatedMins: Math.round(8 * timeMultiplier),
-        priority: mode.drillWeight * 1000 + (50 - index)
+      // 2. DRILL tasks - cycle through weak skills
+      const availableWeakSkills = weakestSkills?.filter(s => !assignedSkillIds.has(s.skill_id)) || [];
+      availableWeakSkills.slice(0, 2).forEach((skill, index) => {
+        priorities.push({
+          type: 'DRILL',
+          skillId: skill.skill_id,
+          size: 5,
+          estimatedMins: Math.round(8 * timeMultiplier),
+          priority: dayMode.drillWeight * 1000 + (50 - index)
+        });
       });
-    });
 
-    // 3. LEARN tasks (time-adaptive, lesson-count aware)
-    if (mode.allowLearn && lessonsPerDay > 0) {
-      const baselineDiagnostics = Object.entries(diagnosticsBySection).map(([section, data]) => ({
-        section,
-        score: data.score
+      // 3. LEARN tasks
+      if (dayMode.allowLearn && lessonsPerDay > 0) {
+        const baselineDiagnostics = Object.entries(diagnosticsBySection).map(([section, data]) => ({
+          section,
+          score: data.score
+        }));
+
+        const dailyLessons = selectLessonsForDay(
+          lessonsPerDay,
+          dayDaysLeft,
+          baselineDiagnostics,
+          allSkills || [],
+          assignedSkillIds
+        );
+
+        dailyLessons.forEach((skillId, index) => {
+          priorities.push({
+            type: 'LEARN',
+            skillId: skillId,
+            size: 3,
+            estimatedMins: Math.round(12 * timeMultiplier),
+            priority: dayMode.learnWeight * 1000 + (25 - index)
+          });
+          assignedSkillIds.add(skillId);
+        });
+      }
+
+      // Sort by priority
+      priorities.sort((a, b) => b.priority - a.priority);
+
+      // Select tasks within time cap
+      const selectedTasks = selectPlaylist(priorities, dailyTimeCap);
+      console.log(`Selected ${selectedTasks.length} tasks for ${dateStr}`);
+
+      // Convert to JSON format
+      const tasksJson = selectedTasks.map(task => ({
+        type: task.type,
+        skill_id: task.skillId || null,
+        question_id: task.questionId || null,
+        size: task.size,
+        estimated_mins: task.estimatedMins
       }));
 
-      const todaysLessons = selectLessonsForDay(
-        lessonsPerDay,
-        daysLeft,
-        baselineDiagnostics,
-        allSkills || [],
-        completedSkillIds
-      );
+      allPlans.push({ the_date: dateStr, tasks: tasksJson });
 
-      todaysLessons.forEach((skillId, index) => {
-        priorities.push({
-          type: 'LEARN',
-          skillId: skillId,
-          size: 3,
-          estimatedMins: Math.round(12 * timeMultiplier),
-          priority: mode.learnWeight * 1000 + (25 - index)
+      // Add to study tasks
+      selectedTasks.forEach(task => {
+        allStudyTasks.push({
+          user_id: user.id,
+          the_date: dateStr,
+          type: task.type,
+          skill_id: task.skillId || null,
+          size: task.size,
+          status: 'PENDING',
+          reward_cents: task.type === 'REVIEW' ? 10 : task.type === 'DRILL' ? 15 : 20
         });
       });
     }
 
-    // Sort by priority (higher numbers first)
-    priorities.sort((a, b) => b.priority - a.priority);
-
-    // Select tasks within time cap
-    const selectedTasks = selectPlaylist(priorities, dailyTimeCap);
-
-    console.warn(`Selected ${selectedTasks.length} tasks for ${dailyTimeCap} minutes`);
-
-    // Save to database
-    const tasksJson = selectedTasks.map(task => ({
-      type: task.type,
-      skill_id: task.skillId || null,
-      question_id: task.questionId || null,
-      size: task.size,
-      estimated_mins: task.estimatedMins
+    // Save all plans to database
+    const planRecords = allPlans.map(plan => ({
+      user_id: user.id,
+      the_date: plan.the_date,
+      tasks_json: plan.tasks,
+      generated_at: new Date().toISOString()
     }));
 
-    // Upsert study plan
     const { error: planError } = await supabase
       .from('study_plan_days')
-      .upsert({
-        user_id: user.id,
-        the_date: todayStr,
-        tasks_json: tasksJson,
-        generated_at: new Date().toISOString()
-      });
+      .upsert(planRecords, { onConflict: 'user_id,the_date' });
 
     if (planError) {
-      console.error('Error saving study plan:', planError);
+      console.error('Error saving 7-day study plan:', planError);
       return new Response(JSON.stringify({ error: 'Failed to save study plan' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Set has_study_plan flag to true in profiles
+    // Set has_study_plan flag
     const { error: profileUpdateError } = await supabase
       .from('profiles')
       .update({ has_study_plan: true })
@@ -556,32 +568,25 @@ serve(async (req) => {
       console.error('Error updating has_study_plan flag:', profileUpdateError);
     }
 
-    // Create individual study tasks
-    const studyTasks = selectedTasks.map(task => ({
-      user_id: user.id,
-      the_date: todayStr,
-      type: task.type,
-      skill_id: task.skillId || null,
-      size: task.size,
-      status: 'PENDING',
-      reward_cents: task.type === 'REVIEW' ? 10 : task.type === 'DRILL' ? 15 : 20
-    }));
-
-    if (studyTasks.length > 0) {
-      // Delete existing tasks for today first
+    // Save all study tasks
+    if (allStudyTasks.length > 0) {
+      // Delete existing tasks for the 7-day range first
       await supabase
         .from('study_tasks')
         .delete()
         .eq('user_id', user.id)
-        .eq('the_date', todayStr);
+        .gte('the_date', todayStr)
+        .lte('the_date', weekEndStr);
 
       // Insert new tasks
       const { error: tasksError } = await supabase
         .from('study_tasks')
-        .insert(studyTasks);
+        .insert(allStudyTasks);
 
       if (tasksError) {
         console.error('Error saving study tasks:', tasksError);
+      } else {
+        console.log(`✅ Saved ${allStudyTasks.length} study tasks across 7 days`);
       }
     }
 
@@ -636,15 +641,15 @@ serve(async (req) => {
     }
 
     const response = {
-      the_date: todayStr,
-      tasks: tasksJson,
+      days: allPlans,
       mode: mode.name,
       days_left: daysLeft,
       lessons_remaining: lessonsRemaining,
-      lessons_per_day: lessonsPerDay
+      lessons_per_day: lessonsPerDay,
+      total_tasks: allStudyTasks.length
     };
 
-    console.warn('Study plan generated successfully:', response);
+    console.warn('7-day study plan generated successfully:', response);
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
