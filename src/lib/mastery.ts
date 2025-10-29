@@ -188,6 +188,8 @@ export async function updateMastery(
       total: newTotal,
       avg_time_ms: newAvgTime,
       last_updated: new Date().toISOString(),
+    }, {
+      onConflict: 'user_id,skill_id'
     });
 
   if (error) {

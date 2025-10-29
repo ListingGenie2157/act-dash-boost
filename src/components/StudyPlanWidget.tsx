@@ -16,6 +16,10 @@ interface StudyTask {
   median_time_ms: number | null;
   reward_cents: number;
   the_date: string;
+  skills?: {
+    name: string;
+    subject: string;
+  } | null;
 }
 
 const TASK_CONFIG = {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, CalendarIcon, Clock } from 'lucide-react';
+import { CalendarIcon, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -153,22 +153,8 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
     }
 
     if (!daysLeft?.test_date) {
-      return (
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Calendar className="h-4 w-4" />
-              Set Test Date
-            </Button>
-          </DialogTrigger>
-          <SetTestDateDialog
-            selectedDate={selectedDate}
-            onDateSelect={setSelectedDate}
-            onConfirm={handleSetTestDate}
-            saving={saving}
-          />
-        </Dialog>
-      );
+      // Hide the countdown header completely when no test date is set
+      return null;
     }
 
     const daysLeftNum = daysLeft.days_left;

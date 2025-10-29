@@ -476,16 +476,16 @@ export async function getAllLessons(): Promise<{
       return { data: [], error: skillsError };
     }
 
-    // Count practice questions in staging_items for these skills
-    const { data: items } = await supabase
-      .from('staging_items')
-      .select('skill_code')
+    // Get estimated_minutes from lesson_content for duration instead of question count
+    const { data: lessonContentData } = await supabase
+      .from('lesson_content')
+      .select('skill_code, estimated_minutes')
       .in('skill_code', skillCodes);
 
-    // Create question count map
-    const questionCounts = new Map<string, number>();
-    (items || []).forEach(item => {
-      questionCounts.set(item.skill_code, (questionCounts.get(item.skill_code) || 0) + 1);
+    // Create duration map
+    const durationMap = new Map<string, number>();
+    (lessonContentData || []).forEach(lc => {
+      durationMap.set(lc.skill_code, lc.estimated_minutes || 15);
     });
 
     const lessons = (skills || []).map(skill => ({
@@ -493,7 +493,7 @@ export async function getAllLessons(): Promise<{
       skill_name: skill.name,
       subject: skill.subject,
       section: skill.subject,
-      questionCount: questionCounts.get(skill.id) || 0,
+      questionCount: durationMap.get(skill.id) || 15, // Store duration in questionCount for now
     }));
 
     return { data: lessons, error: null };

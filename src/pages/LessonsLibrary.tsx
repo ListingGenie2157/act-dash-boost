@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, BookOpen, ArrowLeft, Filter, Target, RefreshCw } from 'lucide-react';
+import { Search, BookOpen, ArrowLeft, Filter, Clock, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -205,8 +205,8 @@ export default function LessonsLibrary() {
                             )}
                           </CardTitle>
                           <CardDescription className="flex items-center gap-2 text-xs">
-                            <Target className="h-3 w-3" />
-                            {lesson.questionCount} questions
+                            <Clock className="h-3 w-3" />
+                            ~{lesson.questionCount} min lesson
                           </CardDescription>
                         </CardHeader>
                         <CardContent>

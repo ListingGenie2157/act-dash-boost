@@ -17,8 +17,26 @@ interface QuizComponentProps {
 }
 
 export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack }: QuizComponentProps) => {
+  // Normalize questions to ensure correctAnswer is always a number (0-3)
+  const normalizedQuestions = questions.map(q => {
+    const correctAnswer = q.correctAnswer as string | number;
+    let normalizedAnswer: number;
+    
+    if (typeof correctAnswer === 'string') {
+      // Convert string like "A", "B", "C", "D" to 0, 1, 2, 3
+      normalizedAnswer = correctAnswer.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+    } else {
+      normalizedAnswer = correctAnswer as number;
+    }
+    
+    return {
+      ...q,
+      correctAnswer: normalizedAnswer
+    };
+  });
+
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<number[]>(new Array(questions.length).fill(-1));
+  const [answers, setAnswers] = useState<number[]>(new Array(normalizedQuestions.length).fill(-1));
   const [showResults, setShowResults] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -33,7 +51,7 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack 
     setAnswers(newAnswers);
 
     // Show immediate feedback. Notify the user if their selection is correct or not.
-    const isCorrect = answerIndex === questions[currentQuestion].correctAnswer;
+    const isCorrect = answerIndex === normalizedQuestions[currentQuestion].correctAnswer;
     toast({
       title: isCorrect ? 'Correct!' : 'Incorrect',
       description: isCorrect ? undefined : 'Keep going!',
@@ -41,7 +59,7 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack 
   };
 
   const handleNext = () => {
-    if (currentQuestion < questions.length - 1) {
+    if (currentQuestion < normalizedQuestions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     }
   };
@@ -56,21 +74,21 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack 
     setSubmitted(true);
     setShowResults(true);
     
-    const wrongAnswers = questions
+    const wrongAnswers = normalizedQuestions
       .map((question, index) => ({
         questionId: question.id,
         question,
         userAnswer: answers[index]
       }))
-      .filter((_item, index) => answers[index] !== questions[index].correctAnswer);
+      .filter((_item, index) => answers[index] !== normalizedQuestions[index].correctAnswer);
     
-    const score = Math.round(((questions.length - wrongAnswers.length) / questions.length) * 100);
+    const score = Math.round(((normalizedQuestions.length - wrongAnswers.length) / normalizedQuestions.length) * 100);
     
     // Update mastery for the lesson skill
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const masteryResults = questions.map((question, index) => ({
+        const masteryResults = normalizedQuestions.map((question, index) => ({
           skillId: skillCode, // Use the lesson's skill code for all questions
           correct: answers[index] === question.correctAnswer,
           timeMs: 30000, // Default 30 seconds per question
@@ -95,13 +113,13 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack 
     onComplete(score, wrongAnswers);
   };
 
-  const currentQ = questions[currentQuestion];
-  const progress = ((currentQuestion + 1) / questions.length) * 100;
+  const currentQ = normalizedQuestions[currentQuestion];
+  const progress = ((currentQuestion + 1) / normalizedQuestions.length) * 100;
   const allAnswered = answers.every(answer => answer !== -1);
 
   if (showResults) {
-    const correctCount = answers.filter((answer, index) => answer === questions[index].correctAnswer).length;
-    const score = Math.round((correctCount / questions.length) * 100);
+    const correctCount = answers.filter((answer, index) => answer === normalizedQuestions[index].correctAnswer).length;
+    const score = Math.round((correctCount / normalizedQuestions.length) * 100);
     
     return (
       <div className="space-y-6">
@@ -113,7 +131,7 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack 
             <h2 className="text-2xl font-bold">Quiz Complete!</h2>
             <div className="text-3xl font-bold text-primary">{score}%</div>
             <p className="text-muted-foreground">
-              You got {correctCount} out of {questions.length} questions correct
+              You got {correctCount} out of {normalizedQuestions.length} questions correct
             </p>
           </div>
         </Card>
@@ -121,7 +139,7 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack 
         {/* Answer Review */}
         <div className="space-y-4">
           <h3 className="font-semibold text-lg">Answer Review</h3>
-          {questions.map((question, index) => {
+          {normalizedQuestions.map((question, index) => {
             const userAnswer = answers[index];
             const isCorrect = userAnswer === question.correctAnswer;
             
@@ -173,7 +191,7 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack 
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold">{title}</h2>
           <span className="text-sm text-muted-foreground">
-            {currentQuestion + 1} of {questions.length}
+            {currentQuestion + 1} of {normalizedQuestions.length}
           </span>
         </div>
         <Progress value={progress} className="h-2" />
@@ -234,7 +252,7 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack 
         </Button>
 
         <div className="flex gap-2">
-          {currentQuestion < questions.length - 1 ? (
+          {currentQuestion < normalizedQuestions.length - 1 ? (
             <Button
               onClick={handleNext}
               disabled={answers[currentQuestion] === -1}
