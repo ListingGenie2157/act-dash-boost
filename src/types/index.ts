@@ -154,7 +154,8 @@ export interface StudyPlanTask {
   type: string;
   size?: number;
   estimated_mins?: number;
-  skill_code?: string;
+  skill_code?: string; // Legacy field name
+  skill_id?: string; // Current field name
   content_hint?: string;
   title?: string;
 }

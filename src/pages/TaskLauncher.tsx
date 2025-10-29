@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { StudyPlanTask } from '@/types';
+import { toast } from 'sonner';
 
 export default function TaskLauncher() {
   const { date, idx } = useParams<{ date?: string; idx?: string }>();
@@ -60,7 +61,14 @@ export default function TaskLauncher() {
       }
 
       const type = String(task.type || '').toUpperCase();
-      const code = task.skill_code || 'EN';
+      const code = task.skill_id || '';
+      
+      if (!code && type === 'LEARN') {
+        toast.error('Task configuration error: missing skill');
+        navigate('/plan', { replace: true });
+        return;
+      }
+      
       const n = task.size ?? 10;
 
       switch (type) {
