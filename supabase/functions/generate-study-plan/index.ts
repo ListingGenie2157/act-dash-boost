@@ -219,6 +219,34 @@ function chooseWeakSkills(baseline: Array<{ section: string; score: number }>, p
   return weakSkillIds.slice(0, 5);
 }
 
+function getTaskTitle(type: string, skillId: string | null, skillNameMap: Map<string, string>, size: number): string {
+  if (skillId && skillNameMap.has(skillId)) {
+    const skillName = skillNameMap.get(skillId);
+    switch(type) {
+      case 'LEARN':
+        return `Learn: ${skillName}`;
+      case 'DRILL':
+        return `Practice: ${skillName}`;
+      case 'REVIEW':
+        return `Review: ${skillName}`;
+      default:
+        return skillName || `${type} Task`;
+    }
+  }
+  
+  // Fallback for tasks without skill_id
+  switch(type) {
+    case 'LEARN':
+      return 'New Lesson';
+    case 'DRILL':
+      return `Practice Drill (${size} questions)`;
+    case 'REVIEW':
+      return `Review ${size} question${size > 1 ? 's' : ''}`;
+    default:
+      return `${type} Task`;
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -344,6 +372,12 @@ serve(async (req) => {
       .from('skills')
       .select('id, name, subject, cluster, order_index')
       .order('order_index', { ascending: true });
+
+    // Create skill name lookup map
+    const skillNameMap = new Map<string, string>();
+    allSkills?.forEach(skill => {
+      skillNameMap.set(skill.id, skill.name);
+    });
 
     const timeMultiplier = accommodations?.time_multiplier || 1.0;
     const testDate = profile?.test_date ? new Date(profile.test_date + 'T00:00:00') : null;
@@ -519,7 +553,8 @@ serve(async (req) => {
         skill_id: task.skillId || null,
         question_id: task.questionId || null,
         size: task.size,
-        estimated_mins: task.estimatedMins
+        estimated_mins: task.estimatedMins,
+        title: getTaskTitle(task.type, task.skillId, skillNameMap, task.size)
       }));
 
       allPlans.push({ the_date: dateStr, tasks: tasksJson });
