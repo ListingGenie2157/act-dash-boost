@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { CountdownHeader } from '@/components/CountdownHeader';
 import { StudyPlanWidget } from '@/components/StudyPlanWidget';
+import { StudyPlanWizard } from '@/components/StudyPlanWizard';
 import { TestWeekBanner } from '@/components/TestWeekBanner';
 import { ParentBanner } from '@/components/ParentBanner';
 import { MasteryDashboard } from '@/components/MasteryDashboard';
@@ -16,6 +17,7 @@ const Index = () => {
   const [session, setSession] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [hasStudyPlan, setHasStudyPlan] = useState<boolean | null>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const navigate = useNavigate();
 
   // Enhanced auth state management with proper listeners
@@ -223,10 +225,7 @@ const Index = () => {
                     <Button
                       size="lg"
                       className="gap-2 bg-primary"
-                      onClick={() => {
-                        // TODO: Open study plan wizard
-                        alert('Study plan wizard coming soon! This will collect test date, daily time, diagnostic choice, etc.');
-                      }}
+                      onClick={() => setWizardOpen(true)}
                     >
                       🎯 Create Personalized Study Plan
                     </Button>
@@ -272,6 +271,9 @@ const Index = () => {
           )}
         </div>
       </div>
+
+      {/* Study Plan Wizard Modal */}
+      <StudyPlanWizard open={wizardOpen} onOpenChange={setWizardOpen} />
     </div>
   );
 };
