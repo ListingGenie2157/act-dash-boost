@@ -233,17 +233,7 @@ serve(async (req) => {
   }
 
   try {
-    // Initialize Supabase client with proper env validation
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing required environment variables: SUPABASE_URL or SUPABASE_ANON_KEY');
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Get the authorization header
+    // Get the authorization header first
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
       console.warn('No authorization header provided');
@@ -253,10 +243,27 @@ serve(async (req) => {
       });
     }
 
+    // Initialize Supabase client with proper env validation and auth header
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing required environment variables: SUPABASE_URL or SUPABASE_ANON_KEY');
+    }
+
+    // Create client with Authorization header so RLS works properly
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      global: {
+        headers: {
+          Authorization: authHeader
+        }
+      }
+    });
+
     // Verify the JWT token
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
+
     if (authError || !user) {
       console.warn('Authentication failed:', authError?.message);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
