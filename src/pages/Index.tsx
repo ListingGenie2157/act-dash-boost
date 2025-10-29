@@ -38,7 +38,7 @@ const Index = () => {
 
           // Add timeout but handle it gracefully
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Query timeout')), 30000)
+            setTimeout(() => reject(new Error('Query timeout')), 5000)
           );
 
           const profilePromise = supabase
@@ -66,16 +66,31 @@ const Index = () => {
           if ((profile?.onboarding_complete || profile?.test_date) && mounted) {
             console.log('[Index] User has completed onboarding, showing dashboard');
             setProfile(profile);
-            
+
             // Verify study plan exists in database (override profile flag if needed)
-            const { data: planCheck } = await supabase
-              .from('study_plan_days')
-              .select('the_date')
-              .eq('user_id', session.user.id)
-              .limit(1);
-            
-            const actuallyHasPlan = profile.has_study_plan || (planCheck && planCheck.length > 0);
-            setHasStudyPlan(actuallyHasPlan);
+            try {
+              const planCheckPromise = supabase
+                .from('study_plan_days')
+                .select('the_date')
+                .eq('user_id', session.user.id)
+                .limit(1);
+
+              const planCheckTimeout = new Promise((resolve) =>
+                setTimeout(() => resolve({ data: null }), 3000)
+              );
+
+              const { data: planCheck } = await Promise.race([
+                planCheckPromise,
+                planCheckTimeout
+              ]) as any;
+
+              const actuallyHasPlan = profile.has_study_plan || (planCheck && planCheck.length > 0);
+              setHasStudyPlan(actuallyHasPlan);
+            } catch {
+              // If plan check fails, just use profile flag
+              setHasStudyPlan(profile.has_study_plan ?? false);
+            }
+
             setIsLoading(false);
             return;
           }
@@ -89,17 +104,10 @@ const Index = () => {
           }
         } catch (error) {
           console.error('[Index] Profile check failed:', error);
-          // On timeout or error, check if plan exists directly
+          // On timeout or error, show dashboard anyway (user is authenticated)
           if (mounted) {
-            const { data: planCheck } = await supabase
-              .from('study_plan_days')
-              .select('the_date')
-              .eq('user_id', session.user.id)
-              .limit(1);
-            
-            const hasPlan = planCheck && planCheck.length > 0;
-            setProfile({ onboarding_complete: true, has_study_plan: hasPlan });
-            setHasStudyPlan(hasPlan);
+            setProfile({ onboarding_complete: true, has_study_plan: false, test_date: null });
+            setHasStudyPlan(false);
             setIsLoading(false);
           }
         }
