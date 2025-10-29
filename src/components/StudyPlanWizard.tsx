@@ -18,11 +18,11 @@ import { CalendarIcon, CheckCircle2, ArrowLeft, ArrowRight } from 'lucide-react'
 import { format, addYears, startOfToday } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 
 interface StudyPlanWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onPlanGenerated?: () => void;
 }
 
 interface WizardForm {
@@ -35,7 +35,7 @@ interface WizardForm {
   accommodations: string;
 }
 
-export function StudyPlanWizard({ open, onOpenChange }: StudyPlanWizardProps) {
+export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPlanWizardProps) {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -55,8 +55,6 @@ export function StudyPlanWizard({ open, onOpenChange }: StudyPlanWizardProps) {
   const canProceedStep1 = form.testDate !== null;
   const canProceedStep2 = form.targetScore.trim() !== '';
   const canProceedStep3 = form.dailyMinutes !== '';
-  const canProceedStep4 = form.diagnosticChoice !== 'skip'; // Always can proceed
-  const canProceedStep5 = true; // Practice exam days are optional
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -156,8 +154,8 @@ export function StudyPlanWizard({ open, onOpenChange }: StudyPlanWizardProps) {
           toast.error('Failed to generate study plan');
         } else {
           toast.success('Your personalized study plan is ready!');
-          // Reload page to show study plan
-          window.location.reload();
+          // Notify parent to update state
+          onPlanGenerated?.();
         }
       } else {
         // Take diagnostic first

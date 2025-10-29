@@ -284,7 +284,14 @@ const Index = () => {
       </div>
 
       {/* Study Plan Wizard Modal */}
-      <StudyPlanWizard open={wizardOpen} onOpenChange={setWizardOpen} />
+      <StudyPlanWizard 
+        open={wizardOpen} 
+        onOpenChange={setWizardOpen}
+        onPlanGenerated={() => {
+          setHasStudyPlan(true);
+          setProfile((prev: any) => ({ ...prev, has_study_plan: true }));
+        }}
+      />
     </div>
   );
 };
