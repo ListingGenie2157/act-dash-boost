@@ -214,11 +214,34 @@ const Index = () => {
       <div className="container max-w-7xl mx-auto px-4 py-8">
         <div className="space-y-8">
           {/* Welcome Section */}
-          <div className="mb-2">
-            <h1 className="text-3xl font-bold mb-2">Welcome back! 👋</h1>
-            <p className="text-muted-foreground">
-              {hasStudyPlan ? 'Your personalized study plan for today' : 'Continue your ACT preparation'}
-            </p>
+          <div className="mb-2 flex items-start justify-between">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Welcome back! 👋</h1>
+              <p className="text-muted-foreground">
+                {hasStudyPlan ? 'Your personalized study plan for today' : 'Continue your ACT preparation'}
+              </p>
+            </div>
+            {hasStudyPlan && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  if (confirm('Switch to self-directed learning mode? Your study plan will remain saved.')) {
+                    const { error } = await supabase
+                      .from('profiles')
+                      .update({ has_study_plan: false })
+                      .eq('id', session?.user?.id);
+
+                    if (!error) {
+                      setHasStudyPlan(false);
+                      setProfile((prev: any) => ({ ...prev, has_study_plan: false }));
+                    }
+                  }
+                }}
+              >
+                Switch to Self-Directed
+              </Button>
+            )}
           </div>
 
           {/* Conditional Dashboard Content Based on has_study_plan Flag */}

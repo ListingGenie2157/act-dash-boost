@@ -242,6 +242,14 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
             View Full Plan
           </Button>
         </Link>
+        <Button
+          variant="secondary"
+          className="flex-1"
+          onClick={generatePlan}
+          disabled={generating}
+        >
+          {generating ? 'Regenerating...' : 'Regenerate Plan'}
+        </Button>
       </div>
     </div>
   );

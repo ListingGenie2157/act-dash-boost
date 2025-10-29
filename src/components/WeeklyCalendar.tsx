@@ -10,6 +10,8 @@ interface StudyTask {
   type: string;
   title?: string;
   skillId?: string;
+  skill_id?: string; // Database field name
+  skill_code?: string; // Legacy field name
   estimatedMins?: number;
   status?: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
 }
@@ -53,9 +55,9 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
         if (planError) throw planError;
 
         // Extract skill IDs and fetch skill names for title generation
-        const skillIds = planDays?.flatMap(day => 
+        const skillIds = planDays?.flatMap(day =>
           ((day.tasks_json || []) as any[])
-            .map((t: any) => t.skill_id || t.skillId)
+            .map((t: any) => t.skill_id || t.skillId || t.skill_code)
             .filter(Boolean)
         ) || [];
 
@@ -95,8 +97,9 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
         // Helper function to generate task titles
         const generateTitle = (task: StudyTask): string => {
           if (task.title) return task.title; // Use existing title if present
-          
-          const skillName = task.skillId ? skillNameMap.get(task.skillId) : null;
+
+          const skillId = task.skillId || task.skill_id || task.skill_code;
+          const skillName = skillId ? skillNameMap.get(skillId) : null;
           if (skillName) {
             switch(task.type) {
               case 'LEARN': return `Learn: ${skillName}`;
@@ -118,11 +121,14 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
           const dateObj = new Date(dateStr);
           
           // Enhance tasks with status and generated titles
-          const enhancedTasks = tasks.map(task => ({
-            ...task,
-            title: generateTitle(task),
-            status: (completionMap.get(dateStr)?.get(task.skillId || '') || 'PENDING') as 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'
-          }));
+          const enhancedTasks = tasks.map(task => {
+            const skillId = task.skillId || task.skill_id || task.skill_code || '';
+            return {
+              ...task,
+              title: generateTitle(task),
+              status: (completionMap.get(dateStr)?.get(skillId) || 'PENDING') as 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'
+            };
+          });
 
           return {
             date: dateStr,
