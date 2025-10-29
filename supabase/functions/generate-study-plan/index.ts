@@ -640,6 +640,54 @@ serve(async (req) => {
       }
     }
 
+    // Schedule practice simulations based on time until test
+    if (daysLeft && daysLeft >= 7) {
+      const simDates = [];
+
+      if (daysLeft >= 90) {
+        // 3+ months: schedule once per month
+        for (let day = 30; day <= daysLeft; day += 30) {
+          const simDate = new Date(today);
+          simDate.setDate(today.getDate() + day);
+          simDates.push(simDate.toISOString().split('T')[0]);
+        }
+      } else if (daysLeft >= 21) {
+        // 3+ weeks: schedule once per week
+        for (let day = 7; day <= daysLeft - 7; day += 7) {
+          const simDate = new Date(today);
+          simDate.setDate(today.getDate() + day);
+          simDates.push(simDate.toISOString().split('T')[0]);
+        }
+      } else {
+        // 1-3 weeks: schedule 1 sim mid-way
+        const midPoint = Math.floor(daysLeft / 2);
+        const simDate = new Date(today);
+        simDate.setDate(today.getDate() + midPoint);
+        simDates.push(simDate.toISOString().split('T')[0]);
+      }
+
+      // Create SIM tasks for scheduled dates
+      for (const dateStr of simDates) {
+        const simTask = {
+          user_id: user.id,
+          the_date: dateStr,
+          type: 'SIM',
+          skill_id: null,
+          size: 60, // Full section simulation
+          status: 'PENDING',
+          reward_cents: 50
+        };
+
+        await supabase
+          .from('study_tasks')
+          .insert(simTask);
+      }
+
+      if (simDates.length > 0) {
+        console.log(`🎯 Scheduled ${simDates.length} practice simulations`);
+      }
+    }
+
     const response = {
       days: allPlans,
       mode: mode.name,
