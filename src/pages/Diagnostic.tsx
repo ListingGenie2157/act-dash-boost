@@ -332,11 +332,11 @@ export default function Diagnostic() {
 
       console.log('Diagnostic saved:', result);
 
-      // Track completed sections
-      setCompletedSections(prev => new Set(prev).add(section));
+      // Track completed sections and check if all done
+      const newCompletedSections = new Set(completedSections).add(section);
+      setCompletedSections(newCompletedSections);
 
       // Check if all 4 sections are complete
-      const newCompletedSections = new Set(completedSections).add(section);
       if (newCompletedSections.size === 4) {
         toast({
           title: "Diagnostic Complete!",
