@@ -317,6 +317,10 @@ const Index = () => {
                       size="lg"
                       variant="outline"
                       className="gap-2"
+                      onClick={() => {
+                        // Scroll to the lessons section below
+                        document.querySelector('.grid.md\\:grid-cols-3')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }}
                     >
                       📚 Continue Self-Guided Learning
                     </Button>
