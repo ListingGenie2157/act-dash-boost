@@ -80,10 +80,12 @@ const Index = () => {
           }
         } catch (error) {
           console.error('[Index] Profile check failed:', error);
-          // On timeout or error, assume they need onboarding
+          // On timeout or error, show dashboard anyway (user is authenticated)
+          // They can access settings to update profile if needed
           if (mounted) {
+            setProfile({ onboarding_complete: true, has_study_plan: false });
+            setHasStudyPlan(false);
             setIsLoading(false);
-            navigate('/onboarding', { replace: true });
           }
         }
       } else {
