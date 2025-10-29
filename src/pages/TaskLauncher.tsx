@@ -83,7 +83,7 @@ export default function TaskLauncher() {
           navigate(`/quiz/${code}?n=${n}&date=${encodeURIComponent(date)}&i=${i}`, { replace: true });
           break;
         case 'SIM':
-          navigate(`/sim-english?date=${encodeURIComponent(date)}&i=${i}`, { replace: true });
+          navigate(`/simulation?date=${encodeURIComponent(date)}&i=${i}`, { replace: true });
           break;
         default:
           navigate('/plan', { replace: true });
