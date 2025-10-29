@@ -9,6 +9,7 @@ import { MasteryDashboard } from '@/components/MasteryDashboard';
 import { WeakAreasCard } from '@/components/WeakAreasCard';
 import { WeeklyCalendar } from '@/components/WeeklyCalendar';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
@@ -17,6 +18,7 @@ const Index = () => {
   const [session, setSession] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [hasStudyPlan, setHasStudyPlan] = useState<boolean | null>(null);
+  const [hasDiagnostic, setHasDiagnostic] = useState<boolean>(false);
   const [wizardOpen, setWizardOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -89,6 +91,20 @@ const Index = () => {
             } catch {
               // If plan check fails, just use profile flag
               setHasStudyPlan(profile.has_study_plan ?? false);
+            }
+
+            // Check if user has completed a diagnostic
+            try {
+              const { data: diagnosticData } = await supabase
+                .from('diagnostics')
+                .select('id')
+                .eq('user_id', session.user.id)
+                .not('completed_at', 'is', null)
+                .limit(1);
+              
+              setHasDiagnostic((diagnosticData?.length ?? 0) > 0);
+            } catch {
+              setHasDiagnostic(false);
             }
 
             setIsLoading(false);
@@ -259,6 +275,30 @@ const Index = () => {
               <StudyPlanWidget hasStudyPlan={true} />
               <WeeklyCalendar userId={session?.user?.id || ''} testDate={profile?.test_date} />
               <MasteryDashboard />
+              
+              {/* Diagnostic CTA - Only show if not completed */}
+              {!hasDiagnostic && (
+                <Card className="border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
+                  <CardContent className="pt-6">
+                    <div className="flex flex-col md:flex-row items-center gap-6">
+                      <div className="text-6xl">🎯</div>
+                      <div className="flex-1 text-center md:text-left">
+                        <h3 className="text-xl font-bold mb-2">Haven't taken the diagnostic yet?</h3>
+                        <p className="text-muted-foreground mb-4">
+                          Take a quick diagnostic to identify your strengths and weaknesses across all ACT sections. 
+                          This helps us personalize your study plan and focus on areas that need the most attention.
+                        </p>
+                        <Button size="lg" asChild className="w-full md:w-auto">
+                          <Link to="/diagnostic">
+                            Take Diagnostic Exam →
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
               <WeakAreasCard />
             </>
           ) : (
@@ -323,6 +363,30 @@ const Index = () => {
               </div>
               
               <MasteryDashboard />
+              
+              {/* Diagnostic CTA - Only show if not completed */}
+              {!hasDiagnostic && (
+                <Card className="border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
+                  <CardContent className="pt-6">
+                    <div className="flex flex-col md:flex-row items-center gap-6">
+                      <div className="text-6xl">🎯</div>
+                      <div className="flex-1 text-center md:text-left">
+                        <h3 className="text-xl font-bold mb-2">Haven't taken the diagnostic yet?</h3>
+                        <p className="text-muted-foreground mb-4">
+                          Take a quick diagnostic to identify your strengths and weaknesses across all ACT sections. 
+                          This helps us personalize your study plan and focus on areas that need the most attention.
+                        </p>
+                        <Button size="lg" asChild className="w-full md:w-auto">
+                          <Link to="/diagnostic">
+                            Take Diagnostic Exam →
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
               <WeakAreasCard />
             </div>
           )}
