@@ -93,12 +93,13 @@ const Index = () => {
               setHasStudyPlan(profile.has_study_plan ?? false);
             }
 
-            // Check if user has completed a diagnostic
+            // Check if user has completed a diagnostic (exclude test/self-generated records)
             try {
               const { data: diagnosticData } = await supabase
                 .from('diagnostics')
                 .select('id')
                 .eq('user_id', session.user.id)
+                .eq('source', 'diagnostic')  // Only count actual diagnostic assessments
                 .not('completed_at', 'is', null)
                 .limit(1);
               
