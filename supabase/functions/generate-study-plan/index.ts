@@ -391,10 +391,15 @@ serve(async (req) => {
           }));
 
           if (studyTasks.length > 0) {
-            await supabase.from('study_tasks').upsert(studyTasks, { 
-              onConflict: 'user_id,the_date,type,skill_id',
-              ignoreDuplicates: false 
-            });
+            // Delete existing tasks for today first (avoids NULL handling issues with upsert)
+            await supabase
+              .from('study_tasks')
+              .delete()
+              .eq('user_id', user.id)
+              .eq('the_date', todayStr);
+
+            // Then insert new tasks
+            await supabase.from('study_tasks').insert(studyTasks);
           }
 
           return new Response(JSON.stringify({
@@ -552,12 +557,17 @@ serve(async (req) => {
     }));
 
     if (studyTasks.length > 0) {
+      // Delete existing tasks for today first
+      await supabase
+        .from('study_tasks')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('the_date', todayStr);
+
+      // Insert new tasks
       const { error: tasksError } = await supabase
         .from('study_tasks')
-        .upsert(studyTasks, { 
-          onConflict: 'user_id,the_date,type,skill_id',
-          ignoreDuplicates: false 
-        });
+        .insert(studyTasks);
 
       if (tasksError) {
         console.error('Error saving study tasks:', tasksError);
