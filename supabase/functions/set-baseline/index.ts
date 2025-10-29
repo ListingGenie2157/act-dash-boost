@@ -81,13 +81,22 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Upsert baseline entries for each provided section
+    // Delete existing baselines and insert new ones for each provided section
     const savedBaselines = [];
-    
+
     for (const [section, score] of Object.entries(body.scores)) {
+      // Delete existing baseline for this section first
+      await supabase
+        .from('diagnostics')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('section', section)
+        .eq('source', 'self');
+
+      // Insert new baseline
       const { data, error } = await supabase
         .from('diagnostics')
-        .upsert({
+        .insert({
           user_id: user.id,
           section: section,
           source: 'self',
@@ -96,9 +105,6 @@ Deno.serve(async (req) => {
           notes: body.notes || null,
           block: 0, // Default block for self-reported baselines
           responses: null,
-        }, {
-          onConflict: 'user_id,section,source',
-          ignoreDuplicates: false
         })
         .select()
         .single();
