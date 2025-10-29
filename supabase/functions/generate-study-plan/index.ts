@@ -285,6 +285,17 @@ serve(async (req) => {
 
     if (existingPlan) {
       console.warn('Plan already exists for today');
+      
+      // Set has_study_plan flag even for existing plans
+      const { error: profileUpdateError } = await supabase
+        .from('profiles')
+        .update({ has_study_plan: true })
+        .eq('id', user.id);
+      
+      if (profileUpdateError) {
+        console.error('Error updating has_study_plan flag:', profileUpdateError);
+      }
+      
       return new Response(JSON.stringify({
         the_date: todayStr,
         tasks: existingPlan.tasks_json || []
