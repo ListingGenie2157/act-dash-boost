@@ -66,7 +66,16 @@ const Index = () => {
           if ((profile?.onboarding_complete || profile?.test_date) && mounted) {
             console.log('[Index] User has completed onboarding, showing dashboard');
             setProfile(profile);
-            setHasStudyPlan(profile.has_study_plan ?? false);
+            
+            // Verify study plan exists in database (override profile flag if needed)
+            const { data: planCheck } = await supabase
+              .from('study_plan_days')
+              .select('the_date')
+              .eq('user_id', session.user.id)
+              .limit(1);
+            
+            const actuallyHasPlan = profile.has_study_plan || (planCheck && planCheck.length > 0);
+            setHasStudyPlan(actuallyHasPlan);
             setIsLoading(false);
             return;
           }
@@ -80,11 +89,17 @@ const Index = () => {
           }
         } catch (error) {
           console.error('[Index] Profile check failed:', error);
-          // On timeout or error, show dashboard anyway (user is authenticated)
-          // They can access settings to update profile if needed
+          // On timeout or error, check if plan exists directly
           if (mounted) {
-            setProfile({ onboarding_complete: true, has_study_plan: false });
-            setHasStudyPlan(false);
+            const { data: planCheck } = await supabase
+              .from('study_plan_days')
+              .select('the_date')
+              .eq('user_id', session.user.id)
+              .limit(1);
+            
+            const hasPlan = planCheck && planCheck.length > 0;
+            setProfile({ onboarding_complete: true, has_study_plan: hasPlan });
+            setHasStudyPlan(hasPlan);
             setIsLoading(false);
           }
         }

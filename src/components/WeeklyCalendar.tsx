@@ -52,6 +52,25 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
 
         if (planError) throw planError;
 
+        // Extract skill IDs and fetch skill names for title generation
+        const skillIds = planDays?.flatMap(day => 
+          ((day.tasks_json || []) as any[])
+            .map((t: any) => t.skill_id || t.skillId)
+            .filter(Boolean)
+        ) || [];
+
+        let skillNameMap = new Map<string, string>();
+        if (skillIds.length > 0) {
+          const { data: skills } = await supabase
+            .from('skills')
+            .select('id, name')
+            .in('id', skillIds);
+          
+          skills?.forEach(skill => {
+            skillNameMap.set(skill.id, skill.name);
+          });
+        }
+
         // Fetch task completion status
         const { data: completedTasks, error: tasksError } = await supabase
           .from('study_tasks')
@@ -69,9 +88,25 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
           }
           const status = (task.status || 'PENDING') as 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
           if (task.skill_id) {
-            completionMap.get(task.the_date)?.set(task.skill_id, status);
+          completionMap.get(task.the_date)?.set(task.skill_id, status);
           }
         });
+
+        // Helper function to generate task titles
+        const generateTitle = (task: StudyTask): string => {
+          if (task.title) return task.title; // Use existing title if present
+          
+          const skillName = task.skillId ? skillNameMap.get(task.skillId) : null;
+          if (skillName) {
+            switch(task.type) {
+              case 'LEARN': return `Learn: ${skillName}`;
+              case 'DRILL': return `Practice: ${skillName}`;
+              case 'REVIEW': return `Review: ${skillName}`;
+              default: return skillName;
+            }
+          }
+          return `${task.type} Task`; // Final fallback
+        };
 
         // Build week data
         const week: WeekDay[] = dates.map(dateStr => {
@@ -82,9 +117,10 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
             : [];
           const dateObj = new Date(dateStr);
           
-          // Enhance tasks with status
+          // Enhance tasks with status and generated titles
           const enhancedTasks = tasks.map(task => ({
             ...task,
+            title: generateTitle(task),
             status: (completionMap.get(dateStr)?.get(task.skillId || '') || 'PENDING') as 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'
           }));
 
