@@ -88,10 +88,11 @@ export function StudyPlanWizard({ open, onOpenChange }: StudyPlanWizardProps) {
         }
       });
 
-      if (Object.keys(scores).length > 0 || form.targetScore) {
+      // Only call set-baseline if we have actual scores to save
+      if (Object.keys(scores).length > 0) {
         const { error: baselineError } = await supabase.functions.invoke('set-baseline', {
           body: {
-            scores: Object.keys(scores).length > 0 ? scores : undefined,
+            scores: scores,
             notes: form.targetScore ? `Target composite: ${form.targetScore}` : undefined
           }
         });
