@@ -38,7 +38,7 @@ const Index = () => {
 
           // Add timeout but handle it gracefully
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Query timeout')), 10000)
+            setTimeout(() => reject(new Error('Query timeout')), 30000)
           );
 
           const profilePromise = supabase
