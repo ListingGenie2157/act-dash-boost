@@ -35,23 +35,13 @@ const Index = () => {
         
         try {
           console.log('[Index] Fetching profile for user:', session.user.id);
-          
-          // Add timeout to prevent hanging
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Query timeout')), 5000)
-          );
-          
-          const profilePromise = supabase
+
+          const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('test_date, onboarding_complete, has_study_plan')
             .eq('id', session.user.id)
             .maybeSingle();
-          
-          const { data: profile, error: profileError } = await Promise.race([
-            profilePromise,
-            timeoutPromise
-          ]) as any;
-          
+
           console.log('[Index] Profile result:', { profile, profileError });
 
           // If user has completed onboarding OR has test_date, stay on dashboard
@@ -62,7 +52,7 @@ const Index = () => {
             setIsLoading(false);
             return;
           }
-          
+
           // Otherwise, redirect to onboarding
           if (mounted) {
             console.log('[Index] Redirecting to onboarding - no onboarding_complete or test_date');
@@ -72,9 +62,10 @@ const Index = () => {
           }
         } catch (error) {
           console.error('[Index] Profile check failed:', error);
+          // Don't redirect on error - just stop loading and show dashboard
+          // The user is authenticated, so let them see the page
           if (mounted) {
             setIsLoading(false);
-            navigate('/onboarding', { replace: true });
           }
         }
       } else {
