@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
           score: score,
           completed_at: new Date().toISOString(),
           notes: body.notes || null,
-          block: 0, // Default block for self-reported baselines
+          block: 1, // Default block for self-reported baselines (must be >= 1)
           responses: null,
         })
         .select()
