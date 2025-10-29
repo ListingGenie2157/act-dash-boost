@@ -61,7 +61,8 @@ export default function TaskLauncher() {
       }
 
       const type = String(task.type || '').toUpperCase();
-      const code = task.skill_id || '';
+      // Support both skill_code (lesson_content) and skill_id (study_tasks)
+      const code = task.skill_code || task.skill_id || '';
       
       if (!code && type === 'LEARN') {
         toast.error('Task configuration error: missing skill');
