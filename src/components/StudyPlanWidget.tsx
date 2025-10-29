@@ -76,7 +76,7 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
 
       const { data, error } = await supabase
         .from('study_tasks')
-        .select('*')
+        .select('*, skills(name, subject)')
         .eq('user_id', user.id)
         .eq('the_date', today)
         .order('created_at', { ascending: true });
@@ -203,9 +203,16 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
                 <h3 className="text-xl font-bold mb-2">
                   {config.description}
                 </h3>
-                <p className="text-white/90 text-sm mb-4">
-                  {task.size} questions {isCompleted ? '• Completed ✓' : ''}
-                </p>
+                <div className="space-y-1 mb-4">
+                  {task.skills && (
+                    <p className="text-white/90 text-sm font-medium">
+                      {task.skills.subject} • {task.skills.name}
+                    </p>
+                  )}
+                  <p className="text-white/80 text-sm">
+                    {task.size} questions {isCompleted ? '• Completed ✓' : ''}
+                  </p>
+                </div>
                 
                 {!isCompleted && (
                   <Button 

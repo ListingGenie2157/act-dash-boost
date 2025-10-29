@@ -52,7 +52,7 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
         const { data, error } = await supabase
           .from('study_tasks')
           .select(
-            'id, user_id, type, skill_id, the_date, status, size, accuracy, median_time_ms, reward_cents, created_at'
+            'id, user_id, type, skill_id, the_date, status, size, accuracy, median_time_ms, reward_cents, created_at, skills(name, subject)'
           )
           .eq('the_date', today)
           .eq('user_id', user.id)
@@ -84,7 +84,7 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
           ACT Prep Dashboard
         </h1>
         <p className="text-muted-foreground">
-          {daysUntilTest > 0 ? `${daysUntilTest} days until test` : daysUntilTest === 0 ? 'Test Day!' : 'Test date passed'} • Intensive prep mode
+          {daysUntilTest > 0 ? `${daysUntilTest} days until test` : daysUntilTest === 0 ? 'Test Day!' : 'Test date passed'} • {daysUntilTest > 30 ? 'Regular prep mode' : 'Intensive prep mode'}
         </p>
       </div>
 
@@ -106,10 +106,24 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
                 <div key={task.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className={`w-2 h-2 rounded-full ${
-                      task.type === 'REVIEW' ? 'bg-primary' : 
+                      task.type === 'REVIEW' ? 'bg-primary' :
                       task.type === 'DRILL' ? 'bg-secondary' : 'bg-accent'
                     }`} />
-                    <span className="font-medium capitalize">{task.type.toLowerCase()}</span>
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium capitalize">{task.type.toLowerCase()}</span>
+                        {task.skills && (
+                          <Badge variant="secondary" className="text-xs">
+                            {task.skills.subject}
+                          </Badge>
+                        )}
+                      </div>
+                      {task.skills && (
+                        <span className="text-xs text-muted-foreground">
+                          {task.skills.name}
+                        </span>
+                      )}
+                    </div>
                     <span className="text-sm text-muted-foreground">
                       {task.size} question{task.size !== 1 ? 's' : ''}
                     </span>

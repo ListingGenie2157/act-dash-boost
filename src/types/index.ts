@@ -137,6 +137,11 @@ export interface StudyTask {
   median_time_ms: number | null;
   reward_cents: number | null;
   created_at: string | null;
+  // Joined skill data (optional)
+  skills?: {
+    name: string;
+    subject: string;
+  } | null;
 }
 
 export interface Skill {
