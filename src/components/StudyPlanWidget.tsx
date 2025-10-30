@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Target, GraduationCap, RotateCcw, Zap, Clock, Play, ArrowRight, BookOpen, Timer, TestTube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -57,7 +57,6 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   useEffect(() => {
     loadTodaysTasks();
@@ -210,7 +209,7 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
           </div>
         </div>
 
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {tasks.map((task, idx) => {
             const config = TASK_CONFIG[task.type];
             if (!config) return null;
@@ -222,48 +221,43 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
               <Link 
                 key={idx} 
                 to={`/task/${today}/${idx}`}
-                className="block"
+                className="block group"
               >
-                <div
+                <Card
                   className={`
-                    relative overflow-hidden rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all
+                    relative overflow-hidden p-5 text-white transition-all duration-300
                     bg-gradient-to-br ${config.gradient}
+                    hover:scale-105 hover:shadow-xl border-0
                   `}
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
-                      <Icon className="h-6 w-6" />
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2.5">
+                      <Icon className="h-5 w-5" />
                     </div>
-                    <Badge className="bg-white/20 backdrop-blur-sm text-white border-0">
+                    <Badge className="bg-white/20 backdrop-blur-sm text-white border-0 text-xs">
                       {config.label}
                     </Badge>
                   </div>
                   
-                  <h3 className="text-xl font-bold mb-2">
+                  <h3 className="text-base font-bold mb-2 line-clamp-1">
                     {config.description}
                   </h3>
-                  <div className="space-y-1 mb-4">
+                  <div className="space-y-0.5 mb-3">
                     {task.skill_name && task.subject && (
-                      <p className="text-white/90 text-sm font-medium">
+                      <p className="text-white/90 text-xs font-medium line-clamp-1">
                         {task.subject} • {task.skill_name}
                       </p>
                     )}
-                    <p className="text-white/80 text-sm">
+                    <p className="text-white/80 text-xs">
                       {task.size} questions
                     </p>
                   </div>
                   
-                  <Button 
-                    className="w-full bg-white text-gray-900 hover:bg-white/90 font-medium"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      navigate(`/task/${today}/${idx}`);
-                    }}
-                  >
-                    Start Now
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
+                  <div className="flex items-center gap-1.5 text-white/90 text-xs font-medium group-hover:text-white transition-colors">
+                    <span>Start Now</span>
+                    <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </Card>
               </Link>
             );
           })}

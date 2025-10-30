@@ -78,13 +78,16 @@ export default function EnhancedLessonViewer() {
       try {
         const code = topic ?? '';
         const { data, error: fetchError } = await getEnhancedLesson(code);
-        if (fetchError) {
-          setError(fetchError.message);
+        if (fetchError || !data) {
+          // If no enhanced lesson content, still show a basic view
+          setError(null);
+          setLesson(null);
         } else {
           setLesson(data);
         }
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Failed to load lesson');
+        setError(null);
+        setLesson(null);
       } finally {
         setLoading(false);
       }
@@ -124,16 +127,60 @@ export default function EnhancedLessonViewer() {
 
   if (!lesson) {
     return (
-      <div className="container mx-auto p-6">
-        <Card>
+      <div className="container mx-auto p-6 max-w-3xl">
+        <Button variant="outline" size="default" asChild className="mb-6">
+          <Link to="/lessons">
+            <ArrowLeft className="h-5 w-5 mr-2" />
+            Back to Lessons
+          </Link>
+        </Button>
+        
+        <Card className="border-warning bg-warning/5">
           <CardHeader>
-            <CardTitle>Lesson Not Found</CardTitle>
-            <CardDescription>This lesson doesn't have content yet.</CardDescription>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-3 rounded-lg bg-warning/20">
+                <BookOpen className="h-6 w-6 text-warning" />
+              </div>
+              <div>
+                <CardTitle>Lesson Content Coming Soon</CardTitle>
+                <CardDescription className="mt-1">
+                  Detailed lesson content for this skill is being prepared.
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
-            <Button asChild>
-              <Link to="/lessons">← Browse Other Lessons</Link>
-            </Button>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              While we're working on comprehensive lesson content, you can still practice this skill through:
+            </p>
+            <div className="grid gap-3">
+              <Link to="/drills">
+                <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer border-2 hover:border-primary">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-secondary/10">
+                      <Clock className="h-5 w-5 text-secondary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Practice with Timed Drills</p>
+                      <p className="text-xs text-muted-foreground">Build speed and accuracy</p>
+                    </div>
+                  </div>
+                </Card>
+              </Link>
+              <Link to="/lessons">
+                <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer border-2 hover:border-primary">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <BookOpen className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Browse Other Lessons</p>
+                      <p className="text-xs text-muted-foreground">Explore available content</p>
+                    </div>
+                  </div>
+                </Card>
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>
