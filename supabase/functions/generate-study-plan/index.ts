@@ -25,13 +25,17 @@ function selectLessonsForDay(
     .filter(d => d.score < 0.6)
     .map(d => d.section.toLowerCase());
 
-  // Sort by priority: weak sections first, then by order_index
+  // Sort by order_index FIRST (foundational lessons), then prioritize weak sections
   const prioritizedSkills = learnableSkills.sort((a, b) => {
+    // Primary sort: Always respect curriculum order
+    if (a.order_index !== b.order_index) {
+      return a.order_index - b.order_index;
+    }
+    
+    // Secondary sort: Prefer weak sections when order_index is the same
     const aIsWeak = weakSections.includes(a.subject.toLowerCase()) ? 1 : 0;
     const bIsWeak = weakSections.includes(b.subject.toLowerCase()) ? 1 : 0;
-
-    if (aIsWeak !== bIsWeak) return bIsWeak - aIsWeak; // Weak first
-    return a.order_index - b.order_index; // Then by order
+    return bIsWeak - aIsWeak;
   });
 
   // Time-based strategy

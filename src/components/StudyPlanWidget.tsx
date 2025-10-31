@@ -283,44 +283,44 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
       {/* Quick Access Section */}
       <div className="space-y-3">
         <h3 className="text-lg font-semibold">Quick Access</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <Link to="/lessons">
-            <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer border-2 hover:border-primary">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <BookOpen className="h-5 w-5 text-primary" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Link to="/lessons" className="block group">
+            <Card className="p-6 transition-all duration-300 hover:scale-105 hover:shadow-xl border-2 hover:border-primary">
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className="p-3 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                  <BookOpen className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <p className="font-medium">Lessons Library</p>
-                  <p className="text-xs text-muted-foreground">Browse all topics</p>
+                  <p className="font-semibold text-base mb-1">Lessons Library</p>
+                  <p className="text-sm text-muted-foreground">Browse all topics</p>
                 </div>
               </div>
             </Card>
           </Link>
           
-          <Link to="/drills">
-            <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer border-2 hover:border-primary">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-secondary/10">
-                  <Timer className="h-5 w-5 text-secondary" />
+          <Link to="/drills" className="block group">
+            <Card className="p-6 transition-all duration-300 hover:scale-105 hover:shadow-xl border-2 hover:border-primary">
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className="p-3 rounded-xl bg-secondary/10 group-hover:bg-secondary/20 transition-colors">
+                  <Timer className="h-6 w-6 text-secondary" />
                 </div>
                 <div>
-                  <p className="font-medium">Timed Drills</p>
-                  <p className="text-xs text-muted-foreground">Practice under pressure</p>
+                  <p className="font-semibold text-base mb-1">Timed Drills</p>
+                  <p className="text-sm text-muted-foreground">Practice under pressure</p>
                 </div>
               </div>
             </Card>
           </Link>
           
-          <Link to="/simulation">
-            <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer border-2 hover:border-primary">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-destructive/10">
-                  <TestTube className="h-5 w-5 text-destructive" />
+          <Link to="/simulation" className="block group">
+            <Card className="p-6 transition-all duration-300 hover:scale-105 hover:shadow-xl border-2 hover:border-primary">
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className="p-3 rounded-xl bg-destructive/10 group-hover:bg-destructive/20 transition-colors">
+                  <TestTube className="h-6 w-6 text-destructive" />
                 </div>
                 <div>
-                  <p className="font-medium">Full Simulations</p>
-                  <p className="text-xs text-muted-foreground">Take practice tests</p>
+                  <p className="font-semibold text-base mb-1">Full Simulations</p>
+                  <p className="text-sm text-muted-foreground">Take practice tests</p>
                 </div>
               </div>
             </Card>
