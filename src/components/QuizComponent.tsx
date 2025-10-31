@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -7,6 +7,7 @@ import type { LegacyQuestion, QuizAnswers } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { batchUpdateMastery } from '@/lib/mastery';
 import { supabase } from '@/integrations/supabase/client';
+import { seededRandom } from '@/lib/shuffle';
 
 interface QuizComponentProps {
   questions: LegacyQuestion[];
@@ -17,28 +18,55 @@ interface QuizComponentProps {
 }
 
 export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack }: QuizComponentProps) => {
-  // Normalize questions to ensure correctAnswer is always a number (0-3)
-  const normalizedQuestions = questions.map(q => {
-    const correctAnswer = q.correctAnswer as string | number;
-    let normalizedAnswer: number;
-    
-    if (typeof correctAnswer === 'string') {
-      // Convert string like "A", "B", "C", "D" to 0, 1, 2, 3
-      normalizedAnswer = correctAnswer.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
-    } else {
-      normalizedAnswer = correctAnswer as number;
-    }
-    
-    return {
-      ...q,
-      correctAnswer: normalizedAnswer
-    };
-  });
-
+  const [userId, setUserId] = useState<string | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<number[]>(new Array(normalizedQuestions.length).fill(-1));
+  const [answers, setAnswers] = useState<number[]>(new Array(questions.length).fill(-1));
   const [showResults, setShowResults] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id || null);
+    };
+    void fetchUser();
+  }, []);
+
+  // Normalize and shuffle questions
+  const shuffledQuestions = useMemo(() => {
+    return questions.map((q, idx) => {
+      const correctAnswer = q.correctAnswer as string | number;
+      let normalizedAnswer: number;
+      
+      if (typeof correctAnswer === 'string') {
+        normalizedAnswer = correctAnswer.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+      } else {
+        normalizedAnswer = correctAnswer as number;
+      }
+      
+      // Create shuffle order for choices
+      const seed = userId ? `${userId}-${q.id}-${idx}` : `${q.id}-${idx}`;
+      const random = seededRandom(seed);
+      const choiceOrder = [0, 1, 2, 3];
+      
+      for (let i = choiceOrder.length - 1; i > 0; i--) {
+        const j = Math.floor(random() * (i + 1));
+        [choiceOrder[i], choiceOrder[j]] = [choiceOrder[j], choiceOrder[i]];
+      }
+      
+      // Apply shuffle to options
+      const shuffledOptions = choiceOrder.map(index => q.options[index]);
+      const newCorrectIndex = choiceOrder.indexOf(normalizedAnswer);
+      
+      return {
+        ...q,
+        options: shuffledOptions,
+        correctAnswer: newCorrectIndex,
+        originalCorrectAnswer: normalizedAnswer,
+        choiceOrder
+      };
+    });
+  }, [questions, userId]);
 
   // Toast API for immediate feedback on answer selection.
   const { toast } = useToast();
@@ -50,8 +78,7 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack 
     newAnswers[currentQuestion] = answerIndex;
     setAnswers(newAnswers);
 
-    // Show immediate feedback. Notify the user if their selection is correct or not.
-    const isCorrect = answerIndex === normalizedQuestions[currentQuestion].correctAnswer;
+    const isCorrect = answerIndex === shuffledQuestions[currentQuestion].correctAnswer;
     toast({
       title: isCorrect ? 'Correct!' : 'Incorrect',
       description: isCorrect ? undefined : 'Keep going!',
@@ -59,7 +86,7 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack 
   };
 
   const handleNext = () => {
-    if (currentQuestion < normalizedQuestions.length - 1) {
+    if (currentQuestion < shuffledQuestions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     }
   };
@@ -74,24 +101,23 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack 
     setSubmitted(true);
     setShowResults(true);
     
-    const wrongAnswers = normalizedQuestions
+    const wrongAnswers = shuffledQuestions
       .map((question, index) => ({
         questionId: question.id,
         question,
         userAnswer: answers[index]
       }))
-      .filter((_item, index) => answers[index] !== normalizedQuestions[index].correctAnswer);
+      .filter((_item, index) => answers[index] !== shuffledQuestions[index].correctAnswer);
     
-    const score = Math.round(((normalizedQuestions.length - wrongAnswers.length) / normalizedQuestions.length) * 100);
+    const score = Math.round(((shuffledQuestions.length - wrongAnswers.length) / shuffledQuestions.length) * 100);
     
-    // Update mastery for the lesson skill
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const masteryResults = normalizedQuestions.map((question, index) => ({
-          skillId: skillCode, // Use the lesson's skill code for all questions
+        const masteryResults = shuffledQuestions.map((question, index) => ({
+          skillId: skillCode,
           correct: answers[index] === question.correctAnswer,
-          timeMs: 30000, // Default 30 seconds per question
+          timeMs: 30000,
         }));
         
         await batchUpdateMastery(user.id, masteryResults);
@@ -113,13 +139,13 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack 
     onComplete(score, wrongAnswers);
   };
 
-  const currentQ = normalizedQuestions[currentQuestion];
-  const progress = ((currentQuestion + 1) / normalizedQuestions.length) * 100;
+  const currentQ = shuffledQuestions[currentQuestion];
+  const progress = ((currentQuestion + 1) / shuffledQuestions.length) * 100;
   const allAnswered = answers.every(answer => answer !== -1);
 
   if (showResults) {
-    const correctCount = answers.filter((answer, index) => answer === normalizedQuestions[index].correctAnswer).length;
-    const score = Math.round((correctCount / normalizedQuestions.length) * 100);
+    const correctCount = answers.filter((answer, index) => answer === shuffledQuestions[index].correctAnswer).length;
+    const score = Math.round((correctCount / shuffledQuestions.length) * 100);
     
     return (
       <div className="space-y-6">
@@ -131,15 +157,14 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack 
             <h2 className="text-2xl font-bold">Quiz Complete!</h2>
             <div className="text-3xl font-bold text-primary">{score}%</div>
             <p className="text-muted-foreground">
-              You got {correctCount} out of {normalizedQuestions.length} questions correct
+              You got {correctCount} out of {shuffledQuestions.length} questions correct
             </p>
           </div>
         </Card>
 
-        {/* Answer Review */}
         <div className="space-y-4">
           <h3 className="font-semibold text-lg">Answer Review</h3>
-          {normalizedQuestions.map((question, index) => {
+          {shuffledQuestions.map((question, index) => {
             const userAnswer = answers[index];
             const isCorrect = userAnswer === question.correctAnswer;
             
@@ -191,7 +216,7 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack 
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold">{title}</h2>
           <span className="text-sm text-muted-foreground">
-            {currentQuestion + 1} of {normalizedQuestions.length}
+            {currentQuestion + 1} of {shuffledQuestions.length}
           </span>
         </div>
         <Progress value={progress} className="h-2" />
@@ -252,7 +277,7 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack 
         </Button>
 
         <div className="flex gap-2">
-          {currentQuestion < normalizedQuestions.length - 1 ? (
+          {currentQuestion < shuffledQuestions.length - 1 ? (
             <Button
               onClick={handleNext}
               disabled={answers[currentQuestion] === -1}

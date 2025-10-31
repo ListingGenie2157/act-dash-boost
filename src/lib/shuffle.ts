@@ -77,7 +77,7 @@ export function shuffleQuestions<T>(questions: T[], seed?: string): T[] {
  * Simple seeded random number generator
  * Returns a function that generates pseudo-random numbers based on seed
  */
-function seededRandom(seed: string): () => number {
+export function seededRandom(seed: string): () => number {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
     const char = seed.charCodeAt(i);
