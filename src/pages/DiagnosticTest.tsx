@@ -94,7 +94,7 @@ export default function DiagnosticTest() {
         return;
       }
 
-      // Load questions
+      // Load questions with skill mapping
       const { data, error } = await supabase
         .from('v_form_section')
         .select('*')
@@ -104,11 +104,41 @@ export default function DiagnosticTest() {
 
       if (error) throw error;
 
+      // Fetch skill mappings for each question
+      const questionsWithSkills = await Promise.all(
+        (data || []).map(async (q) => {
+          // Get skill_code from staging_items
+          const { data: stagingData } = await supabase
+            .from('staging_items')
+            .select('skill_code')
+            .eq('form_id', formId)
+            .eq('ord', q.ord || 0)
+            .maybeSingle();
+          
+          // Resolve skill_code to skill_id from skills table
+          let skill_id: string | null = null;
+          if (stagingData?.skill_code) {
+            const { data: skillData } = await supabase
+              .from('skills')
+              .select('id')
+              .eq('id', stagingData.skill_code)
+              .maybeSingle();
+            
+            skill_id = skillData?.id || null;
+          }
+          
+          return {
+            ...q,
+            skill_id
+          };
+        })
+      );
+
       // Debug missing passages
-      const questionsWithMissingPassages = (data || []).filter(q =>
+      const questionsWithMissingPassages = questionsWithSkills.filter(q =>
         q.section === 'RD' && (!q.passage_text || !q.passage_title)
       );
-      const questionsWithMissingScience = (data || []).filter(q =>
+      const questionsWithMissingScience = questionsWithSkills.filter(q =>
         q.section === 'SCI' && (!q.passage_text || !q.passage_title)
       );
 
@@ -124,8 +154,8 @@ export default function DiagnosticTest() {
         );
       }
 
-      // Map to Question type with defaults for nullable fields
-      const mappedQuestions: Question[] = (data || []).map(q => ({
+      // Map to Question type with defaults for nullable fields and skill_id
+      const mappedQuestions: (Question & { skill_id?: string | null })[] = questionsWithSkills.map(q => ({
         ord: q.ord ?? 0,
         question_id: q.question_id ?? '',
         question: q.question ?? '',
@@ -137,6 +167,7 @@ export default function DiagnosticTest() {
         explanation: q.explanation ?? '',
         passage_text: q.passage_text ?? undefined,
         passage_title: q.passage_title ?? undefined,
+        skill_id: q.skill_id
       }));
 
       setQuestions(mappedQuestions);
@@ -246,14 +277,14 @@ export default function DiagnosticTest() {
       if (!user.user) return;
 
       
-      // Call finish-diagnostic edge function
+      // Call finish-diagnostic edge function with real skill IDs
       const { data, error } = await supabase.functions.invoke('finish-diagnostic', {
         body: {
           section: formId.startsWith('D2') ? formId.slice(2) : formId,
           blocks: [{
             questions: questions.map(q => ({ 
               id: q.question_id, 
-              skill_tags: [q.passage_title || 'general'] 
+              skill_tags: (q as any).skill_id ? [(q as any).skill_id] : []
             })),
             answers: Object.entries(attempts).map(([questionId, attempt]) => ({
               questionId,
@@ -268,13 +299,20 @@ export default function DiagnosticTest() {
 
       console.log('Diagnostic results:', data);
 
-      // Navigate to results with data
-      navigate(`/diagnostic-results/${formId}`, {
-        state: {
-          results: data,
-          formId: formId
-        }
+      // Mark this section as complete in localStorage
+      const completed = JSON.parse(localStorage.getItem('diagnostic_completed_sections') || '[]');
+      if (!completed.includes(formId)) {
+        completed.push(formId);
+        localStorage.setItem('diagnostic_completed_sections', JSON.stringify(completed));
+      }
+
+      // Navigate back to diagnostic orchestrator
+      toast({
+        title: "Section Complete!",
+        description: `${formId} section saved successfully.`,
       });
+
+      navigate('/diagnostic');
 
     } catch (error) {
       console.error('Error submitting diagnostic:', error);

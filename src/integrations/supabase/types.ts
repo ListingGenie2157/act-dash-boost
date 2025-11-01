@@ -475,6 +475,7 @@ export type Database = {
         Row: {
           created_at: string | null
           daily_time_cap_mins: number | null
+          diagnostic_completed: boolean | null
           has_study_plan: boolean | null
           id: string
           onboarding_complete: boolean | null
@@ -485,6 +486,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           daily_time_cap_mins?: number | null
+          diagnostic_completed?: boolean | null
           has_study_plan?: boolean | null
           id: string
           onboarding_complete?: boolean | null
@@ -495,6 +497,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           daily_time_cap_mins?: number | null
+          diagnostic_completed?: boolean | null
           has_study_plan?: boolean | null
           id?: string
           onboarding_complete?: boolean | null

@@ -22,24 +22,10 @@ interface DiagnosticRequest {
   blocks: DiagnosticBlock[];
 }
 
-// Rough skill mapping for diagnostic questions
-const skillMapping: Record<string, string[]> = {
-  'algebra': ['math-algebra-linear', 'math-algebra-systems'],
-  'geometry': ['math-geometry-coordinate', 'math-geometry-plane'],
-  'trigonometry': ['math-trigonometry-basic', 'math-trigonometry-graphs'],
-  'grammar': ['english-grammar-usage', 'english-grammar-punctuation'],
-  'rhetoric': ['english-rhetoric-strategy', 'english-rhetoric-organization'],
-  'reading-comprehension': ['reading-main-ideas', 'reading-details'],
-  'scientific-reasoning': ['science-data-representation', 'science-research-summaries']
-};
-
+// Get skill ID directly from tags (now coming from skills table)
 function getSkillFromTags(tags: string[] = []): string | null {
-  for (const tag of tags) {
-    if (skillMapping[tag]) {
-      return skillMapping[tag][0]; // Return first matching skill
-    }
-  }
-  return null;
+  // Tags now contain actual skill_ids from the skills table
+  return tags.length > 0 ? tags[0] : null;
 }
 
 function scoreDiagnostic(blocks: DiagnosticBlock[]): { score: number; skillAccuracy: Record<string, { correct: number; total: number }> } {

@@ -30,6 +30,7 @@ import {
 } from "./components/LazyComponents";
 import DiagnosticTest from "./pages/DiagnosticTest";
 import DiagnosticResults from "./pages/DiagnosticResults";
+import DiagnosticResultsComplete from "./pages/DiagnosticResultsComplete";
 import Plan from "./pages/Plan";
 import TaskLauncher from "./pages/TaskLauncher";
 import EnhancedLessonViewer from "./pages/EnhancedLessonViewer";
@@ -68,6 +69,7 @@ const App = () => (
           {/* Diagnostic test routes */}
           <Route path="/diagnostic-test/:formId" element={<DiagnosticTest />} />
           <Route path="/diagnostic-results/:formId" element={<DiagnosticResults />} />
+          <Route path="/diagnostic-results-complete" element={<DiagnosticResultsComplete />} />
           {/* New simulation system */}
           <Route path="/simulation" element={<Simulation />} />
           {/* Legacy simulation routes */}
