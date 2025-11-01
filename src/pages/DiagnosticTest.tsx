@@ -121,7 +121,7 @@ export default function DiagnosticTest() {
             const { data: skillData } = await supabase
               .from('skills')
               .select('id')
-              .eq('id', stagingData.skill_code)
+              .eq('skill_code', stagingData.skill_code)
               .maybeSingle();
             
             skill_id = skillData?.id || null;
@@ -134,25 +134,6 @@ export default function DiagnosticTest() {
         })
       );
 
-      // Debug missing passages
-      const questionsWithMissingPassages = questionsWithSkills.filter(q =>
-        q.section === 'RD' && (!q.passage_text || !q.passage_title)
-      );
-      const questionsWithMissingScience = questionsWithSkills.filter(q =>
-        q.section === 'SCI' && (!q.passage_text || !q.passage_title)
-      );
-
-      if (questionsWithMissingPassages.length > 0) {
-        console.warn(`Found ${questionsWithMissingPassages.length} reading questions without passages:`,
-          questionsWithMissingPassages.map(q => ({ id: q.question_id, ord: q.ord }))
-        );
-      }
-
-      if (questionsWithMissingScience.length > 0) {
-        console.warn(`Found ${questionsWithMissingScience.length} science questions without data:`,
-          questionsWithMissingScience.map(q => ({ id: q.question_id, ord: q.ord }))
-        );
-      }
 
       // Map to Question type with defaults for nullable fields and skill_id
       const mappedQuestions: (Question & { skill_id?: string | null })[] = questionsWithSkills.map(q => ({
@@ -278,7 +259,7 @@ export default function DiagnosticTest() {
 
       
       // Call finish-diagnostic edge function with real skill IDs
-      const { data, error } = await supabase.functions.invoke('finish-diagnostic', {
+      const { error } = await supabase.functions.invoke('finish-diagnostic', {
         body: {
           section: formId.startsWith('D2') ? formId.slice(2) : formId,
           blocks: [{
@@ -296,8 +277,6 @@ export default function DiagnosticTest() {
       });
 
       if (error) throw error;
-
-      console.log('Diagnostic results:', data);
 
       // Mark this section as complete in localStorage
       const completed = JSON.parse(localStorage.getItem('diagnostic_completed_sections') || '[]');
@@ -326,23 +305,6 @@ export default function DiagnosticTest() {
     }
   };
 
-  // Results calculated server-side by finish-diagnostic function
-  /* const _calculateResults = () => {
-    let correct = 0;
-    let total = 0;
-
-    questions.forEach(question => {
-      const attempt = attempts[question.question_id];
-      if (attempt && attempt.selected_idx !== undefined) {
-        total++;
-        if (attempt.selected_idx === attempt.correct_idx) {
-          correct++;
-        }
-      }
-    });
-
-    return { correct, total, percentage: total > 0 ? (correct / total) * 100 : 0 };
-  }; */
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

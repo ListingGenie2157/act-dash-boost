@@ -160,9 +160,9 @@ export default function DiagnosticResultsComplete() {
   };
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 50) return 'text-yellow-600';
-    return 'text-red-600';
+    if (score >= 80) return 'text-success';
+    if (score >= 50) return 'text-warning';
+    return 'text-destructive';
   };
 
   const getSectionLabel = (section: string) => {
@@ -190,7 +190,7 @@ export default function DiagnosticResultsComplete() {
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header */}
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950">
+        <Card className="bg-primary/5 border-primary/10">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
               <Brain className="w-16 h-16 text-primary" />

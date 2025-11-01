@@ -97,39 +97,10 @@ export default function DiagnosticResults() {
   const { results } = state;
   const { predicted_section_score, top_5_weak_skills } = results;
 
-  // Auto-generate study plan after diagnostic completion
-  useEffect(() => {
-    const generatePlan = async () => {
-      try {
-        toast.info('✨ Generating your personalized study plan...');
-        
-        const { error } = await supabase.functions.invoke('generate-study-plan', {
-          method: 'POST'
-        });
-
-        if (error) throw error;
-
-        toast.success('🎯 Your study plan is ready!');
-        
-        // Auto-redirect to dashboard after 2 seconds
-        setTimeout(() => {
-          navigate('/');
-        }, 2000);
-      } catch (error) {
-        console.error('Error generating study plan:', error);
-        // Don't block the user - they can still navigate manually
-      }
-    };
-
-    if (results) {
-      generatePlan();
-    }
-  }, [results, navigate]);
-
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 50) return 'text-yellow-600';
-    return 'text-red-600';
+    if (score >= 80) return 'text-success';
+    if (score >= 50) return 'text-warning';
+    return 'text-destructive';
   };
 
   const getRecommendation = (score: number) => {
