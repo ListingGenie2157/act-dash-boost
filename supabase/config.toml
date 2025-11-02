@@ -24,8 +24,14 @@ verify_jwt = true
 [functions.import-questions]
 verify_jwt = true
 
-[functions.import-practice-questions]
+[functions.import-lesson-content]
 verify_jwt = true
 
-[functions.import-lesson-content]
+[functions.session-start]
+verify_jwt = true
+
+[functions.session-fetch]
+verify_jwt = true
+
+[functions.session-finish]
 verify_jwt = true
