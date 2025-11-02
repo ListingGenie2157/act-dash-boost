@@ -26,25 +26,13 @@ export default function Onboarding() {
         throw new Error('User not authenticated');
       }
 
-      // Save legal info to user_profiles
-      const { error: profilesError } = await supabase
-        .from('user_profiles')
-        .upsert({
-          user_id: user.id,
-          age_verified: form.ageVerified,
-          tos_accepted: form.tosAccepted,
-          privacy_accepted: form.privacyAccepted,
-        }, { onConflict: 'user_id' });
-
-      if (profilesError) {
-        toast.error('Failed to save legal information');
-        throw profilesError;
-      }
-
-      // Mark onboarding complete and set defaults for backend functions
+      // Save legal info and mark onboarding complete
       const { error: profileUpdateError } = await supabase
         .from('profiles')
         .update({
+          age_verified: form.ageVerified,
+          tos_accepted: form.tosAccepted,
+          privacy_accepted: form.privacyAccepted,
           onboarding_complete: true,
           has_study_plan: false,
           daily_time_cap_mins: 30 // Default 30 minutes per day

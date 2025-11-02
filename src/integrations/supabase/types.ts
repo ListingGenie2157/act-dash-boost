@@ -332,41 +332,6 @@ export type Database = {
           },
         ]
       }
-      lesson_schedule: {
-        Row: {
-          created_at: string | null
-          priority: number | null
-          skill_id: string
-          status: string | null
-          the_date: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          priority?: number | null
-          skill_id: string
-          status?: string | null
-          the_date: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          priority?: number | null
-          skill_id?: string
-          status?: string | null
-          the_date?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lesson_schedule_skill_id_fkey"
-            columns: ["skill_id"]
-            isOneToOne: false
-            referencedRelation: "skills"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       mastery: {
         Row: {
           avg_time_ms: number
@@ -483,6 +448,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          age_verified: boolean | null
           created_at: string | null
           daily_time_cap_mins: number | null
           diagnostic_completed: boolean | null
@@ -490,10 +456,13 @@ export type Database = {
           id: string
           onboarding_complete: boolean | null
           onboarding_step: string | null
+          privacy_accepted: boolean | null
           test_date: string | null
+          tos_accepted: boolean | null
           updated_at: string | null
         }
         Insert: {
+          age_verified?: boolean | null
           created_at?: string | null
           daily_time_cap_mins?: number | null
           diagnostic_completed?: boolean | null
@@ -501,10 +470,13 @@ export type Database = {
           id: string
           onboarding_complete?: boolean | null
           onboarding_step?: string | null
+          privacy_accepted?: boolean | null
           test_date?: string | null
+          tos_accepted?: boolean | null
           updated_at?: string | null
         }
         Update: {
+          age_verified?: boolean | null
           created_at?: string | null
           daily_time_cap_mins?: number | null
           diagnostic_completed?: boolean | null
@@ -512,7 +484,9 @@ export type Database = {
           id?: string
           onboarding_complete?: boolean | null
           onboarding_step?: string | null
+          privacy_accepted?: boolean | null
           test_date?: string | null
+          tos_accepted?: boolean | null
           updated_at?: string | null
         }
         Relationships: []
@@ -1123,36 +1097,6 @@ export type Database = {
           preferred_start_hour?: number | null
           quiet_end_hour?: number | null
           quiet_start_hour?: number | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      user_profiles: {
-        Row: {
-          age_verified: boolean
-          created_at: string
-          id: string
-          privacy_accepted: boolean
-          tos_accepted: boolean
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          age_verified?: boolean
-          created_at?: string
-          id?: string
-          privacy_accepted?: boolean
-          tos_accepted?: boolean
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          age_verified?: boolean
-          created_at?: string
-          id?: string
-          privacy_accepted?: boolean
-          tos_accepted?: boolean
           updated_at?: string
           user_id?: string
         }
