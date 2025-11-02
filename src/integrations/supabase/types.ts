@@ -261,6 +261,7 @@ export type Database = {
           overview_html: string
           recap: string | null
           skill_code: string
+          skill_id: string | null
         }
         Insert: {
           checkpoint_quiz_q1?: string[] | null
@@ -286,6 +287,7 @@ export type Database = {
           overview_html: string
           recap?: string | null
           skill_code: string
+          skill_id?: string | null
         }
         Update: {
           checkpoint_quiz_q1?: string[] | null
@@ -311,12 +313,20 @@ export type Database = {
           overview_html?: string
           recap?: string | null
           skill_code?: string
+          skill_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "lesson_content_skill_code_fkey"
             columns: ["skill_code"]
             isOneToOne: true
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_content_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
             referencedRelation: "skills"
             referencedColumns: ["id"]
           },

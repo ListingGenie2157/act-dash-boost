@@ -76,15 +76,40 @@ export default function DrillRunner() {
     void fetchData();
   }, [subject, searchParams]);
 
-  const handleAnswer = async (_selectedIdx: number) => {
+  const handleAnswer = async (selectedIdx: number) => {
     if (!userId) return;
     const q = questions[current];
     if (!q) return;
     
-    // TODO: Implement complete-task function call with per-question answers
-    // This will enable proper spaced repetition via _shared/review.ts
+    const correctIdx = ['A', 'B', 'C', 'D'].indexOf(q.answer);
     
-    // Move to next question immediately for better UX
+    try {
+      // Track attempt in database
+      await supabase.from('attempts').insert({
+        user_id: userId,
+        question_id: q.id,
+        form_id: q.form_id ?? 'drill',
+        question_ord: current + 1,
+        choice_order: [0, 1, 2, 3],
+        correct_idx: correctIdx,
+        selected_idx: selectedIdx,
+      });
+      
+      // Add to review queue if incorrect (spaced repetition)
+      if (selectedIdx !== correctIdx) {
+        const dueDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+        await supabase.from('review_queue').insert({
+          user_id: userId,
+          question_id: q.id,
+          due_at: dueDate.toISOString(),
+          interval_days: 2,
+        });
+      }
+    } catch (err) {
+      console.error('Error tracking drill answer:', err);
+    }
+    
+    // Move to next question
     if (current + 1 < questions.length) {
       setCurrent(current + 1);
     } else {

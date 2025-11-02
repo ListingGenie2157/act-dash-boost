@@ -70,57 +70,37 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
 
       const today = new Date().toISOString().split('T')[0];
 
-      // Load from study_plan_days and parse tasks_json
-      const { data: planData, error: planError } = await supabase
-        .from('study_plan_days')
-        .select('tasks_json')
+      // Load directly from study_tasks table (fixes desync issue)
+      const { data: tasksData, error: tasksError } = await supabase
+        .from('study_tasks')
+        .select('*, skills(id, name, subject)')
         .eq('user_id', user.id)
         .eq('the_date', today)
-        .single();
+        .order('created_at');
 
-      if (planError) {
-        if (planError.code !== 'PGRST116') { // Not a "no rows" error
-          throw planError;
+      if (tasksError) {
+        if (tasksError.code !== 'PGRST116') { // Not a "no rows" error
+          throw tasksError;
         }
         setTasks([]);
         return;
       }
 
-      if (!planData?.tasks_json) {
+      if (!tasksData || tasksData.length === 0) {
         setTasks([]);
         return;
       }
 
-      // Parse tasks and enrich with skill data
-      const tasksArray = Array.isArray(planData.tasks_json) ? planData.tasks_json : [];
-      const skillIds = tasksArray
-        .map((t: any) => t.skill_id)
-        .filter((id): id is string => id != null);
+      // Map to StudyTask format
+      const mappedTasks = tasksData.map((task: any) => ({
+        type: task.type,
+        skill_id: task.skill_id,
+        size: task.size,
+        skill_name: task.skills?.name,
+        subject: task.skills?.subject,
+      }));
 
-      // Fetch skill names if we have skill_ids
-      let skillsMap = new Map();
-      if (skillIds.length > 0) {
-        const { data: skillsData } = await supabase
-          .from('skills')
-          .select('id, name, subject')
-          .in('id', skillIds);
-
-        if (skillsData) {
-          skillsMap = new Map(skillsData.map(s => [s.id, s]));
-        }
-      }
-
-      // Enrich tasks with skill information
-      const enrichedTasks = tasksArray.map((task: any) => {
-        const skill = task.skill_id ? skillsMap.get(task.skill_id) : null;
-        return {
-          ...task,
-          skill_name: skill?.name,
-          subject: skill?.subject,
-        };
-      });
-
-      setTasks(enrichedTasks);
+      setTasks(mappedTasks);
     } catch (error) {
       console.error('Error loading tasks:', error);
       setTasks([]);

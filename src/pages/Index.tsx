@@ -273,7 +273,7 @@ const Index = () => {
           {hasStudyPlan ? (
             // Structured Study Plan Dashboard
             <>
-              <StudyPlanWidget hasStudyPlan={true} />
+              <StudyPlanWidget hasStudyPlan={hasStudyPlan ?? false} />
               <WeeklyCalendar userId={session?.user?.id || ''} testDate={profile?.test_date} />
               <MasteryDashboard />
               
