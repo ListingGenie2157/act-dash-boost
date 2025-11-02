@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useProgress } from '@/hooks/useProgress';
+import { useWeakAreasDb, transformToLegacyFormat } from '@/hooks/useWeakAreasDb';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { StudyTask } from '@/types';
@@ -11,13 +11,11 @@ import { MasteryDashboard } from './MasteryDashboard';
 import { WeakAreasCard } from './WeakAreasCard';
 
 interface DashboardProps {
-  onStartDay: (day: number) => void;
   onViewReview: () => void;
-  onStudyNow?: () => void;
 }
 
-export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
-  const { progress } = useProgress();
+export const Dashboard = ({ onViewReview }: DashboardProps) => {
+  const { data: weakAreasDb = [] } = useWeakAreasDb(3);
   const [daysLeft, setDaysLeft] = useState<number | null>(null);
   const [todaysTasks, setTodaysTasks] = useState<StudyTask[]>([]);
 
@@ -27,7 +25,7 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
         const { data, error } = await supabase.functions.invoke('days-left');
         if (error) {
           console.error('Error fetching days left:', error);
-          setDaysLeft(5);
+          setDaysLeft(null);
           return;
         }
         if (data && typeof (data as { days_left?: number }).days_left === 'number') {
@@ -37,7 +35,7 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
         }
       } catch (error) {
         console.error('Error fetching days left:', error);
-        setDaysLeft(5);
+        setDaysLeft(null);
       }
     };
 
@@ -49,7 +47,8 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
         } = await supabase.auth.getUser();
         if (!user) return;
 
-        const { data, error } = await supabase
+        // 1) Try study_tasks first (primary source)
+        const { data: tasks, error: tasksError } = await supabase
           .from('study_tasks')
           .select(
             'id, user_id, type, skill_id, the_date, status, size, accuracy, median_time_ms, reward_cents, created_at, skills(name, subject)'
@@ -59,11 +58,43 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
           .eq('status', 'PENDING')
           .order('created_at', { ascending: true });
 
-        if (!error && data) {
-          setTodaysTasks(data);
+        if (!tasksError && tasks && tasks.length > 0) {
+          setTodaysTasks(tasks as StudyTask[]);
+          return;
         }
+
+        // 2) Fallback to study_plan_days JSON (for newly generated plans)
+        const { data: plan, error: planError } = await supabase
+          .from('study_plan_days')
+          .select('tasks_json')
+          .eq('user_id', user.id)
+          .eq('the_date', today)
+          .single();
+
+        if (!planError && plan?.tasks_json) {
+          const arr = Array.isArray(plan.tasks_json) ? plan.tasks_json : [];
+          const normalized = arr.map((t: any, idx: number) => ({
+            id: `json-${idx}`,
+            type: t.type,
+            skill_id: t.skill_id ?? null,
+            the_date: today,
+            status: 'PENDING',
+            size: t.size ?? 5,
+            reward_cents: t.estimated_mins ? t.estimated_mins * 1 : 0,
+            skills: null,
+            user_id: user.id,
+            accuracy: null,
+            median_time_ms: null,
+            created_at: null,
+          }));
+          setTodaysTasks(normalized);
+          return;
+        }
+
+        setTodaysTasks([]);
       } catch (error) {
         console.error("Error fetching today's tasks:", error);
+        setTodaysTasks([]);
       }
     };
 
@@ -71,10 +102,7 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
     void fetchTodaysTasks();
   }, []);
 
-  const daysUntilTest = daysLeft ?? 5;
-  const topWeakAreas = progress.weakAreas
-    .sort((a, b) => b.errorCount - a.errorCount)
-    .slice(0, 3);
+  const topWeakAreas = transformToLegacyFormat(weakAreasDb);
 
   return (
     <div className="space-y-6">
@@ -84,7 +112,13 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
           ACT Prep Dashboard
         </h1>
         <p className="text-muted-foreground">
-          {daysUntilTest > 0 ? `${daysUntilTest} days until test` : daysUntilTest === 0 ? 'Test Day!' : 'Test date passed'} • {daysUntilTest > 30 ? 'Regular prep mode' : 'Intensive prep mode'}
+          {daysLeft === null 
+            ? 'Set your test date to see countdown' 
+            : daysLeft > 0 
+              ? `${daysLeft} days until test` 
+              : daysLeft === 0 
+                ? 'Test Day!' 
+                : 'Test date passed'} • {(daysLeft ?? 0) > 30 ? 'Regular prep mode' : 'Intensive prep mode'}
         </p>
       </div>
 
@@ -191,17 +225,11 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
             <p className="text-sm text-muted-foreground">
               Practice with timed rapid-fire questions
             </p>
-            <Button 
-              variant="drill" 
-              className="w-full"
-              onClick={() => {
-                console.warn("Math drill button clicked from Dashboard");
-                // Direct to Day 9 where new drills are available
-                onStartDay(9);
-              }}
-            >
-              🔢 Start Math Drill (60s)
-            </Button>
+            <Link to="/drills">
+              <Button variant="drill" className="w-full">
+                🔢 Start Math Drill (60s)
+              </Button>
+            </Link>
           </div>
         </Card>
 
@@ -215,17 +243,11 @@ export const Dashboard = ({ onStartDay, onViewReview }: DashboardProps) => {
               Quick grammar rules practice
             </p>
             <div className="space-y-2">
-              <Button 
-                variant="success" 
-                className="w-full"
-                onClick={() => {
-                  console.warn("Grammar drill button clicked from Dashboard");
-                  // Direct to Day 9 where new drills are available
-                  onStartDay(9);
-                }}
-              >
-                ✏️ Start Grammar Drill (90s)
-              </Button>
+              <Link to="/drills">
+                <Button variant="success" className="w-full">
+                  ✏️ Start Grammar Drill (90s)
+                </Button>
+              </Link>
               <Link to="/sim-english">
                 <Button variant="outline" size="sm" className="w-full">
                   Start English SIM

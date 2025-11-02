@@ -128,7 +128,7 @@ export interface DiagnosticResults {
 export interface StudyTask {
   id: string;
   user_id: string;
-  type: string;
+  type: 'DRILL' | 'REVIEW' | 'LEARN' | 'SIM' | 'FLASH';
   skill_id: string | null;
   the_date: string;
   status: string | null;
