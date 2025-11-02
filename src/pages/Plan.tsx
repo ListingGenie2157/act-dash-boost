@@ -5,7 +5,8 @@ import type { StudyPlanDay, StudyPlanTask } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Target, GraduationCap, RotateCcw, Zap, Clock, Calendar } from 'lucide-react';
+import { ArrowLeft, Target, GraduationCap, RotateCcw, Zap, Clock, Calendar, TrendingUp } from 'lucide-react';
+import { CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 
 const TASK_CONFIG: Record<string, { icon: any; gradient: string; label: string }> = {
   LEARN: { icon: GraduationCap, gradient: 'from-primary to-primary/80', label: 'Lesson' },
@@ -130,6 +131,77 @@ export default function Plan() {
       </div>
 
       <div className="max-w-5xl mx-auto p-6">
+        {/* Subject Balance Overview */}
+        {plans.length > 0 && (() => {
+          // Calculate subject distribution
+          const subjectCounts: Record<string, number> = {
+            Math: 0,
+            English: 0,
+            Reading: 0,
+            Science: 0
+          };
+          
+          plans.forEach(plan => {
+            (plan.tasks_json || []).forEach((task: StudyPlanTask) => {
+              if (task.type === 'LEARN' || task.type === 'DRILL') {
+                // Extract subject from title or use type
+                const subject = task.title?.split(':')[0]?.trim() || 'Other';
+                if (subjectCounts[subject] !== undefined) {
+                  subjectCounts[subject]++;
+                }
+              }
+            });
+          });
+          
+          const total = Object.values(subjectCounts).reduce((a, b) => a + b, 0);
+          
+          if (total > 0) {
+            return (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    Subject Balance Overview
+                  </CardTitle>
+                  <CardDescription>
+                    Distribution of learning tasks across all 4 ACT subjects
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {Object.entries(subjectCounts).map(([subject, count]) => {
+                      const percentage = total > 0 ? (count / total) * 100 : 0;
+                      const colors: Record<string, string> = {
+                        Math: 'bg-blue-500',
+                        English: 'bg-green-500',
+                        Reading: 'bg-orange-500',
+                        Science: 'bg-purple-500'
+                      };
+                      
+                      return (
+                        <div key={subject}>
+                          <div className="flex items-center justify-between mb-1 text-sm">
+                            <span className="font-medium">{subject}</span>
+                            <span className="text-muted-foreground">
+                              {count} task{count !== 1 ? 's' : ''} ({percentage.toFixed(0)}%)
+                            </span>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full ${colors[subject]} transition-all`}
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          }
+          return null;
+        })()}
         {plans.length === 0 ? (
           <Card className="p-12 text-center">
             <Calendar className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />

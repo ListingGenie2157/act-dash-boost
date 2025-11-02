@@ -15,9 +15,10 @@ interface QuizComponentProps {
   skillCode: string; // Added skillCode for mastery tracking
   onComplete: (score: number, wrongAnswers: QuizAnswers) => void;
   onBack?: () => void;
+  onNeedsPractice?: (skillCode: string, score: number, wrongCount: number) => void;
 }
 
-export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack }: QuizComponentProps) => {
+export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack, onNeedsPractice }: QuizComponentProps) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<number[]>(new Array(questions.length).fill(-1));
@@ -134,6 +135,14 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack 
         description: 'Failed to save progress. Please try again.',
         variant: 'destructive',
       });
+    }
+    
+    // Check if mastery threshold met
+    const masteryThreshold = 80;
+    const needsMorePractice = score < masteryThreshold;
+    
+    if (needsMorePractice && onNeedsPractice && skillCode) {
+      onNeedsPractice(skillCode, score, wrongAnswers.length);
     }
     
     onComplete(score, wrongAnswers);

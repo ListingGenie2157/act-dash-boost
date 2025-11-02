@@ -313,17 +313,15 @@ const Index = () => {
                     Browse lessons and drills at your own pace, or let us create a personalized study plan based on your test date and goals.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="gap-2"
-                      onClick={() => {
-                        // Scroll to the lessons section below
-                        document.querySelector('.grid.md\\:grid-cols-3')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      }}
-                    >
-                      📚 Continue Self-Guided Learning
-                    </Button>
+                    <Link to="/lessons">
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="gap-2 w-full sm:w-auto"
+                      >
+                        📚 Browse All Lessons
+                      </Button>
+                    </Link>
                     <Button
                       size="lg"
                       className="gap-2 bg-primary"

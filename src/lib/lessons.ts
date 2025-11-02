@@ -435,6 +435,28 @@ export function parseIndependentPractice(
   return questions;
 }
 
+export async function getPracticeQuestions(
+  skillCode: string, 
+  count: number
+): Promise<CheckpointQuestion[]> {
+  const { data, error } = await supabase
+    .from('staging_items')
+    .select('*')
+    .eq('skill_code', skillCode)
+    .limit(count);
+
+  if (error) throw error;
+
+  return (data || []).map((item, idx) => ({
+    id: `practice_${skillCode}_${idx}`,
+    question: item.question,
+    options: [item.choice_a, item.choice_b, item.choice_c, item.choice_d],
+    correctAnswer: item.answer.charCodeAt(0) - 65, // 'A' → 0, 'B' → 1, etc.
+    explanation: item.explanation || 'No explanation available.',
+    difficulty: (item.difficulty || 'medium') as 'easy' | 'medium' | 'hard'
+  }));
+}
+
 /**
  * Get all available lessons (only from lesson_content)
  */

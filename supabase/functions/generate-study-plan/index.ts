@@ -7,70 +7,104 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
 };
 
-// Helper function to select lessons for a specific day
+// Helper function to select lessons for a specific day with subject balancing
 function selectLessonsForDay(
   lessonsNeeded: number,
-  daysLeft: number | null,
+  dayOffset: number, // 0-6 for the 7 days
   diagnosticResults: Array<{ section: string; score: number }>,
   availableSkills: Array<{ id: string; subject: string; name: string; order_index: number }>,
   completedSkillIds: Set<string>
 ): string[] {
-  const selectedSkillIds: string[] = [];
-
-  // Filter out completed skills
-  const learnableSkills = availableSkills.filter(s => !completedSkillIds.has(s.id));
-
-  // Identify weak sections (score < 0.6)
-  const weakSections = diagnosticResults
-    .filter(d => d.score < 0.6)
-    .map(d => d.section.toLowerCase());
-
-  // Sort by order_index FIRST (foundational lessons), then prioritize weak sections
-  const prioritizedSkills = learnableSkills.sort((a, b) => {
-    // Primary sort: Always respect curriculum order
-    if (a.order_index !== b.order_index) {
-      return a.order_index - b.order_index;
-    }
-    
-    // Secondary sort: Prefer weak sections when order_index is the same
-    const aIsWeak = weakSections.includes(a.subject.toLowerCase()) ? 1 : 0;
-    const bIsWeak = weakSections.includes(b.subject.toLowerCase()) ? 1 : 0;
-    return bIsWeak - aIsWeak;
-  });
-
-  // Time-based strategy
-  if (daysLeft !== null && daysLeft < 30) {
-    // URGENT: Focus only on weak areas
-    const weakSkills = prioritizedSkills.filter(s =>
-      weakSections.includes(s.subject.toLowerCase())
-    );
-    selectedSkillIds.push(...weakSkills.slice(0, lessonsNeeded).map(s => s.id));
-
-    // If not enough weak skills, add foundational ones
-    if (selectedSkillIds.length < lessonsNeeded) {
-      const remaining = lessonsNeeded - selectedSkillIds.length;
-      const foundational = prioritizedSkills
-        .filter(s => !selectedSkillIds.includes(s.id))
-        .slice(0, remaining);
-      selectedSkillIds.push(...foundational.map(s => s.id));
-    }
-  } else {
-    // BALANCED: Mix of weak + new
-    const weakCount = Math.ceil(lessonsNeeded * 0.6);
-    const newCount = lessonsNeeded - weakCount;
-
-    const weakSkills = prioritizedSkills
-      .filter(s => weakSections.includes(s.subject.toLowerCase()))
-      .slice(0, weakCount);
-
-    const newSkills = prioritizedSkills
-      .filter(s => !weakSections.includes(s.subject.toLowerCase()))
-      .slice(0, newCount);
-
-    selectedSkillIds.push(...weakSkills.map(s => s.id), ...newSkills.map(s => s.id));
+  if (lessonsNeeded <= 0 || !availableSkills || availableSkills.length === 0) {
+    return [];
   }
 
-  return selectedSkillIds.slice(0, lessonsNeeded);
+  // Group skills by subject
+  const skillsBySubject: Record<string, typeof availableSkills> = {
+    Math: [],
+    English: [],
+    Reading: [],
+    Science: []
+  };
+
+  availableSkills.forEach(skill => {
+    if (skillsBySubject[skill.subject]) {
+      skillsBySubject[skill.subject].push(skill);
+    }
+  });
+
+  // Sort each subject's skills by order_index
+  Object.values(skillsBySubject).forEach(skills => {
+    skills.sort((a, b) => a.order_index - b.order_index);
+  });
+
+  // Identify weak subjects from diagnostics
+  const weakSubjects = new Set<string>();
+  const sectionToSubject: Record<string, string> = {
+    'Math': 'Math',
+    'English': 'English',
+    'Reading': 'Reading',
+    'Science': 'Science'
+  };
+
+  diagnosticResults.forEach(diag => {
+    if (diag.score < 24) { // < 75% accuracy
+      const subject = sectionToSubject[diag.section];
+      if (subject) weakSubjects.add(subject);
+    }
+  });
+
+  // If no weak subjects identified, treat all as equal
+  if (weakSubjects.size === 0) {
+    ['Math', 'English', 'Reading', 'Science'].forEach(s => weakSubjects.add(s));
+  }
+
+  // Rotate primary subject based on day (ensures balance across 7 days)
+  const subjects = ['Math', 'English', 'Reading', 'Science'];
+  const primarySubject = subjects[dayOffset % 4];
+
+  // Select lessons: 60% from weak subjects, 40% from others, prioritize primary subject
+  const result: string[] = [];
+  const weakSubjectsList = Array.from(weakSubjects);
+  
+  // Start with primary subject if it's weak
+  if (weakSubjects.has(primarySubject)) {
+    const primarySkills = skillsBySubject[primarySubject].filter(s => !completedSkillIds.has(s.id));
+    if (primarySkills.length > 0) {
+      result.push(primarySkills[0].id);
+      completedSkillIds.add(primarySkills[0].id);
+    }
+  }
+
+  // Fill remaining slots with balanced selection
+  let attempts = 0;
+  while (result.length < lessonsNeeded && attempts < 100) {
+    attempts++;
+    
+    // Alternate between weak subjects
+    const subjectToUse = weakSubjectsList[result.length % weakSubjectsList.length];
+    const availableSkills = skillsBySubject[subjectToUse]?.filter(s => !completedSkillIds.has(s.id)) || [];
+    
+    if (availableSkills.length > 0) {
+      result.push(availableSkills[0].id);
+      completedSkillIds.add(availableSkills[0].id);
+    } else {
+      // If no skills available in this subject, try others
+      let found = false;
+      for (const subject of subjects) {
+        const skills = skillsBySubject[subject]?.filter(s => !completedSkillIds.has(s.id)) || [];
+        if (skills.length > 0) {
+          result.push(skills[0].id);
+          completedSkillIds.add(skills[0].id);
+          found = true;
+          break;
+        }
+      }
+      if (!found) break;
+    }
+  }
+
+  return result;
 }
 
 // Pure function for task selection with time cap
@@ -303,6 +337,12 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    
+    // Parse request body for force flag
+    const body = await req.json();
+    const force = body?.force === true;
+    
+    console.log(`Generate study plan called. Force: ${force}, User: ${user.id}`);
 
     const today = getTodayInChicago();
     const todayStr = today.toISOString().split('T')[0];
@@ -311,35 +351,66 @@ serve(async (req) => {
     const weekEnd = new Date(today);
     weekEnd.setDate(today.getDate() + 6);
     const weekEndStr = weekEnd.toISOString().split('T')[0];
-
-    const { data: existingPlans } = await supabase
-      .from('study_plan_days')
-      .select('*')
-      .eq('user_id', user.id)
-      .gte('the_date', todayStr)
-      .lte('the_date', weekEndStr);
-
-    if (existingPlans && existingPlans.length === 7) {
-      console.warn('7-day plan already exists for this week');
+    
+    // If force=true, delete existing pending tasks
+    if (force) {
+      console.log('Force regeneration: Deleting existing plans...');
       
-      // Set has_study_plan flag even for existing plans
-      const { error: profileUpdateError } = await supabase
-        .from('profiles')
-        .update({ has_study_plan: true })
-        .eq('id', user.id);
+      const { error: deleteDaysError } = await supabase
+        .from('study_plan_days')
+        .delete()
+        .eq('user_id', user.id)
+        .gte('the_date', todayStr);
       
-      if (profileUpdateError) {
-        console.error('Error updating has_study_plan flag:', profileUpdateError);
+      if (deleteDaysError) {
+        console.error('Error deleting study_plan_days:', deleteDaysError);
       }
       
-      return new Response(JSON.stringify({
-        days: existingPlans.map(p => ({
-          the_date: p.the_date,
-          tasks: p.tasks_json || []
-        }))
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      const { error: deleteTasksError } = await supabase
+        .from('study_tasks')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('status', 'PENDING')
+        .gte('the_date', todayStr);
+      
+      if (deleteTasksError) {
+        console.error('Error deleting study_tasks:', deleteTasksError);
+      }
+      
+      console.log('Existing plans deleted. Proceeding with fresh generation...');
+    }
+
+    // Check if plan already exists (skip if force=true)
+    if (!force) {
+      const { data: existingPlans } = await supabase
+        .from('study_plan_days')
+        .select('*')
+        .eq('user_id', user.id)
+        .gte('the_date', todayStr)
+        .lte('the_date', weekEndStr);
+
+      if (existingPlans && existingPlans.length === 7) {
+        console.warn('7-day plan already exists for this week');
+        
+        // Set has_study_plan flag even for existing plans
+        const { error: profileUpdateError } = await supabase
+          .from('profiles')
+          .update({ has_study_plan: true })
+          .eq('id', user.id);
+        
+        if (profileUpdateError) {
+          console.error('Error updating has_study_plan flag:', profileUpdateError);
+        }
+        
+        return new Response(JSON.stringify({
+          days: existingPlans.map(p => ({
+            the_date: p.the_date,
+            tasks: p.tasks_json || []
+          }))
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
 
     // Get user profile
@@ -506,7 +577,25 @@ serve(async (req) => {
       });
 
       // 2. DRILL tasks - cycle through weak skills
-      const availableWeakSkills = weakestSkills?.filter(s => !assignedSkillIds.has(s.skill_id)) || [];
+      let availableWeakSkills = weakestSkills?.filter(s => !assignedSkillIds.has(s.skill_id)) || [];
+      
+      // If no weak skills (new user), pick 2 skills from each subject
+      if (availableWeakSkills.length === 0) {
+        const subjects = ['Math', 'English', 'Reading', 'Science'];
+        const drillSkills: string[] = [];
+        
+        subjects.forEach(subject => {
+          const subjectSkills = (allSkills || [])
+            .filter(s => s.subject === subject && !assignedSkillIds.has(s.id))
+            .sort((a, b) => a.order_index - b.order_index)
+            .slice(0, 2)
+            .map(s => s.id);
+          drillSkills.push(...subjectSkills);
+        });
+        
+        availableWeakSkills = drillSkills.slice(0, 8).map(skillId => ({ skill_id: skillId, mastery_level: 0, correct: 0, seen: 0 }));
+      }
+      
       availableWeakSkills.slice(0, 2).forEach((skill, index) => {
         priorities.push({
           type: 'DRILL',
@@ -526,7 +615,7 @@ serve(async (req) => {
 
         const dailyLessons = selectLessonsForDay(
           lessonsPerDay,
-          dayDaysLeft,
+          dayOffset, // Pass day offset for subject rotation
           baselineDiagnostics,
           allSkills || [],
           assignedSkillIds

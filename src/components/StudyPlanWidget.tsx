@@ -113,22 +113,22 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
     try {
       setGenerating(true);
       const { error } = await supabase.functions.invoke('generate-study-plan', {
-        method: 'POST'
+        body: { force: true } // Always force regeneration
       });
 
       if (error) throw error;
 
       toast({
-        title: 'Study Plan Generated',
-        description: 'Your personalized 7-day plan is ready!',
+        title: 'Study Plan Regenerated',
+        description: 'Your 7-day plan has been updated with fresh tasks.',
       });
 
       await loadTodaysTasks();
     } catch (error) {
       console.error('Error generating plan:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to generate study plan. Please try again.',
+        title: 'Generation Failed',
+        description: 'Could not generate study plan. Please try again.',
         variant: 'destructive'
       });
     } finally {
@@ -251,10 +251,11 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
           </Link>
           <Button
             variant="secondary"
-            className="flex-1"
+            className="flex-1 gap-2"
             onClick={generatePlan}
             disabled={generating}
           >
+            <RotateCcw className={`h-4 w-4 ${generating ? 'animate-spin' : ''}`} />
             {generating ? 'Regenerating...' : 'Regenerate Plan'}
           </Button>
         </div>

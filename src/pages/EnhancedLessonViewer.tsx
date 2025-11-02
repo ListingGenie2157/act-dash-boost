@@ -8,7 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { 
   getEnhancedLesson, 
+  getPracticeQuestions,
   type EnhancedLesson,
+  type CheckpointQuestion,
   parseConceptRules,
   parseGuidedPractice,
   parseCommonTraps,
@@ -23,6 +25,8 @@ import { GuidedExampleCard } from '@/components/lesson/GuidedExampleCard';
 import { CommonTrapsAlert } from '@/components/lesson/CommonTrapsAlert';
 import { IndependentPracticeCard } from '@/components/lesson/IndependentPracticeCard';
 import { QuizComponent } from '@/components/QuizComponent';
+import { AlertCircle, Target } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function EnhancedLessonViewer() {
   const { topic } = useParams<{ topic?: string }>();
@@ -30,8 +34,13 @@ export default function EnhancedLessonViewer() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState('learn');
+  const [showPracticeQuiz, setShowPracticeQuiz] = useState(false);
+  const [practiceQuestions, setPracticeQuestions] = useState<CheckpointQuestion[]>([]);
+  const [needsMorePractice, setNeedsMorePractice] = useState(false);
+  const [lastScore, setLastScore] = useState<number>(0);
 
   const { data: mastery } = useSkillMastery(topic);
+  const { toast } = useToast();
 
   const parsedRules = useMemo(() => {
     try {
@@ -94,6 +103,49 @@ export default function EnhancedLessonViewer() {
     };
     void fetchLesson();
   }, [topic]);
+
+  const handleNeedsPractice = async (_skillCode: string, score: number, wrongCount: number) => {
+    setLastScore(score);
+    setNeedsMorePractice(true);
+    
+    toast({
+      title: 'Keep Practicing!',
+      description: `Score: ${score}%. Let's practice ${wrongCount} more questions to master this skill.`,
+    });
+  };
+  
+  const handlePracticeMore = async () => {
+    try {
+      const questions = await getPracticeQuestions(topic || '', 10);
+      setPracticeQuestions(questions);
+      setShowPracticeQuiz(true);
+      setNeedsMorePractice(false);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to load practice questions',
+        variant: 'destructive',
+      });
+    }
+  };
+  
+  const handlePracticeComplete = (score: number) => {
+    setShowPracticeQuiz(false);
+    
+    if (score >= 80) {
+      toast({
+        title: 'Mastery Achieved! 🎉',
+        description: `Great job! You scored ${score}% and mastered this skill.`,
+      });
+      setNeedsMorePractice(false);
+    } else {
+      setNeedsMorePractice(true);
+      toast({
+        title: 'Keep Going!',
+        description: `Score: ${score}%. Try a few more questions.`,
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -319,30 +371,69 @@ export default function EnhancedLessonViewer() {
         </TabsContent>
 
         <TabsContent value="test" className="space-y-6 mt-6">
-          {lesson.checkpoint_quiz_questions && lesson.checkpoint_quiz_questions.length > 0 && (
+          {showPracticeQuiz ? (
             <Card>
               <CardHeader>
-                <CardTitle>Checkpoint Quiz</CardTitle>
-                <CardDescription>Test your mastery</CardDescription>
+                <CardTitle>Practice: {lesson?.skill_name}</CardTitle>
+                <CardDescription>Additional practice questions to master this skill</CardDescription>
               </CardHeader>
               <CardContent>
-                <QuizComponent 
-                  questions={lesson.checkpoint_quiz_questions.map(q => {
-                    const answer = q.correctAnswer as unknown;
-                    return {
-                      ...q,
-                      correctAnswer: typeof answer === 'string' 
-                        ? (answer as string).toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0)
-                        : q.correctAnswer
-                    };
-                  })} 
-                  title="Checkpoint Quiz"
+                <QuizComponent
+                  questions={practiceQuestions}
+                  title={`Practice: ${lesson?.skill_name}`}
                   skillCode={topic || ''}
-                  onComplete={async () => {}} 
+                  onComplete={handlePracticeComplete}
+                  onBack={() => setShowPracticeQuiz(false)}
                 />
               </CardContent>
             </Card>
-          )}
+          ) : lesson.checkpoint_quiz_questions && lesson.checkpoint_quiz_questions.length > 0 ? (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Checkpoint Quiz</CardTitle>
+                  <CardDescription>Test your mastery</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <QuizComponent 
+                    questions={lesson.checkpoint_quiz_questions.map(q => {
+                      const answer = q.correctAnswer as unknown;
+                      return {
+                        ...q,
+                        correctAnswer: typeof answer === 'string' 
+                          ? (answer as string).toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0)
+                          : q.correctAnswer
+                      };
+                    })} 
+                    title="Checkpoint Quiz"
+                    skillCode={topic || ''}
+                    onComplete={(score) => setLastScore(score)}
+                    onNeedsPractice={handleNeedsPractice}
+                  />
+                </CardContent>
+              </Card>
+              
+              {needsMorePractice && (
+                <Card className="border-warning">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3 mb-3">
+                      <AlertCircle className="h-6 w-6 text-warning" />
+                      <div>
+                        <h4 className="font-semibold">Practice More to Master This Skill</h4>
+                        <p className="text-sm text-muted-foreground">
+                          You scored {lastScore}%. Complete additional practice to reach mastery (80%+).
+                        </p>
+                      </div>
+                    </div>
+                    <Button onClick={handlePracticeMore} className="w-full" variant="outline">
+                      <Target className="h-4 w-4 mr-2" />
+                      Practice 10 More Questions
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          ) : null}
 
           {lesson.recap && (
             <Card className="border-primary/30 bg-primary/5">
