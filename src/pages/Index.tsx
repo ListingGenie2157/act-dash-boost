@@ -29,14 +29,14 @@ const Index = () => {
     const syncAuthAndProfile = async (session: any) => {
       if (!mounted) return;
 
-      console.log('[Index] syncAuthAndProfile called', { hasSession: !!session });
+      if (import.meta.env.DEV) console.log('[Index] syncAuthAndProfile called', { hasSession: !!session });
 
       if (session) {
         setSession(session);
         setIsAuthenticated(true);
         
         try {
-          console.log('[Index] Fetching profile for user:', session.user.id);
+          if (import.meta.env.DEV) console.log('[Index] Fetching profile for user:', session.user.id);
 
           // Add timeout but handle it gracefully
           const timeoutPromise = new Promise((_, reject) =>
@@ -54,7 +54,7 @@ const Index = () => {
             timeoutPromise
           ]) as any;
 
-          console.log('[Index] Profile result:', { profile, profileError });
+          if (import.meta.env.DEV) console.log('[Index] Profile result:', { profile, profileError });
 
           if (profileError && mounted) {
             console.error('[Index] Profile query error:', profileError);
@@ -66,7 +66,7 @@ const Index = () => {
 
           // If user has completed onboarding OR has test_date, stay on dashboard
           if ((profile?.onboarding_complete || profile?.test_date) && mounted) {
-            console.log('[Index] User has completed onboarding, showing dashboard');
+            if (import.meta.env.DEV) console.log('[Index] User has completed onboarding, showing dashboard');
             setProfile(profile);
 
             // Verify study plan exists in database (override profile flag if needed)
@@ -114,7 +114,7 @@ const Index = () => {
 
           // Otherwise, redirect to onboarding
           if (mounted) {
-            console.log('[Index] Redirecting to onboarding - no onboarding_complete or test_date');
+            if (import.meta.env.DEV) console.log('[Index] Redirecting to onboarding - no onboarding_complete or test_date');
             setIsLoading(false);
             navigate('/onboarding', { replace: true });
             return;
@@ -129,7 +129,7 @@ const Index = () => {
           }
         }
       } else {
-        console.log('[Index] No session, showing landing page');
+        if (import.meta.env.DEV) console.log('[Index] No session, showing landing page');
         setSession(null);
         setIsAuthenticated(false);
         setProfile(null);
@@ -144,7 +144,7 @@ const Index = () => {
     // Set up single auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', { event, session: !!session });
+        if (import.meta.env.DEV) console.log('Auth state changed:', { event, session: !!session });
         await syncAuthAndProfile(session);
       }
     );

@@ -1,4 +1,7 @@
 export { Button } from "./button";
+export { buttonVariants } from "./button-variants";
+export { toggleVariants } from "./toggle-variants";
+export { navigationMenuTriggerStyle } from "./navigation-menu-variants";
 export { Input } from "./input";
 export { Label } from "./label";
 export { Switch } from "./switch";

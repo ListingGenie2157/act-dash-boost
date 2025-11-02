@@ -115,6 +115,6 @@ export async function importLessonE1C() {
     throw error;
   }
 
-  console.log('Import result:', data);
+  if (import.meta.env.DEV) console.log('Import result:', data);
   return data;
 }

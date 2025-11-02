@@ -25,15 +25,15 @@ const Login = () => {
   // Clear any cached auth state on component mount
   useEffect(() => {
     const clearCachedAuth = async () => {
-      console.log('Clearing cached auth state...');
+      if (import.meta.env.DEV) {
+        console.log('Clearing cached auth state...');
+        console.log('Supabase client config:', {
+          url: import.meta.env.VITE_SUPABASE_URL ? 'Set' : 'Missing',
+          key: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ? 'Set' : 'Missing'
+        });
+      }
       localStorage.removeItem('supabase.auth.token');
       sessionStorage.clear();
-      
-      // Verify Supabase client configuration
-      console.log('Supabase client config:', {
-        url: import.meta.env.VITE_SUPABASE_URL ? 'Set' : 'Missing',
-        key: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ? 'Set' : 'Missing'
-      });
     };
     clearCachedAuth();
   }, []);
@@ -44,7 +44,7 @@ const Login = () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-          console.log('User already authenticated, redirecting...');
+          if (import.meta.env.DEV) console.log('User already authenticated, redirecting...');
           navigate('/');
         }
       } catch (error) {
@@ -60,7 +60,7 @@ const Login = () => {
     setLoading(true);
     setError(null);
     
-    console.log('Attempting authentication...', { isSignUp, email });
+    if (import.meta.env.DEV) console.log('Attempting authentication...', { isSignUp, email });
     
     try {
       if (isSignUp) {
@@ -73,7 +73,7 @@ const Login = () => {
           }
         });
 
-        console.log('Signup response:', { data, error: signUpError });
+        if (import.meta.env.DEV) console.log('Signup response:', { data, error: signUpError });
         if (signUpError) {
           console.error('Signup error:', signUpError);
           setError(`Signup failed: ${signUpError.message}`);
@@ -87,9 +87,9 @@ const Login = () => {
       }
 
       // Sign in with the provided credentials
-      console.log('Attempting sign in with:', { email, passwordLength: password.length });
+      if (import.meta.env.DEV) console.log('Attempting sign in with:', { email, passwordLength: password.length });
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      console.log('Sign in response:', { data: signInData, error: signInError });
+      if (import.meta.env.DEV) console.log('Sign in response:', { data: signInData, error: signInError });
       
       if (signInError) {
         console.error('Sign in error:', signInError);
