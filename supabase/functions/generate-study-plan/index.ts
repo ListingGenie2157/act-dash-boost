@@ -629,55 +629,7 @@ serve(async (req) => {
       }
     }
 
-    // Generate and save 7-day lesson schedule
-    if (lessonsPerDay > 0 && daysLeft) {
-      const scheduleEntries = [];
-      const seenSkills = new Set<string>(completedSkillIds);
-
-      for (let i = 0; i < Math.min(daysLeft, 30); i++) {
-        const targetDate = new Date(today);
-        targetDate.setDate(today.getDate() + i);
-        const dateStr = targetDate.toISOString().split('T')[0];
-
-        const baselineDiagnostics = Object.entries(diagnosticsBySection).map(([section, data]) => ({
-          section,
-          score: data.score
-        }));
-
-        const dailyLessons = selectLessonsForDay(
-          lessonsPerDay,
-          daysLeft - i,
-          baselineDiagnostics,
-          allSkills || [],
-          seenSkills
-        );
-
-        dailyLessons.forEach((skillId, index) => {
-          if (!seenSkills.has(skillId)) {
-            seenSkills.add(skillId);
-            scheduleEntries.push({
-              user_id: user.id,
-              the_date: dateStr,
-              skill_id: skillId,
-              priority: index,
-              status: 'PENDING'
-            });
-          }
-        });
-      }
-
-      if (scheduleEntries.length > 0) {
-        const { error: scheduleError } = await supabase
-          .from('lesson_schedule')
-          .upsert(scheduleEntries, { onConflict: 'user_id,the_date,skill_id' });
-
-        if (scheduleError) {
-          console.error('Error saving lesson schedule:', scheduleError);
-        } else {
-          console.log(`📅 Saved ${scheduleEntries.length} lessons to schedule`);
-        }
-      }
-    }
+    // lesson_schedule table removed - all task tracking now unified in study_tasks
 
     // Schedule practice simulations based on time until test
     if (daysLeft && daysLeft >= 7) {

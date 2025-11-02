@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import type { StudyPlanTask } from '@/types';
 import { toast } from 'sonner';
 
 export default function TaskLauncher() {
@@ -33,20 +32,18 @@ export default function TaskLauncher() {
         return;
       }
 
-      // Fetch study plan for the date, scoped by user_id
-      const { data, error } = await supabase
-        .from('study_plan_days')
-        .select('tasks_json, user_id, the_date')
+      // Fetch tasks for the date from study_tasks table
+      const { data: tasks, error } = await supabase
+        .from('study_tasks')
+        .select('id, type, skill_id, size, skills(name, subject)')
         .eq('the_date', date)
         .eq('user_id', user.id)
-        .maybeSingle();
+        .order('created_at');
 
-      if (error || !data?.tasks_json) {
+      if (error || !tasks || tasks.length === 0) {
         navigate('/plan', { replace: true });
         return;
       }
-
-      const tasks = data.tasks_json as unknown as StudyPlanTask[];
       
       // Validate idx is in range
       if (i < 0 || i >= tasks.length) {
@@ -61,8 +58,7 @@ export default function TaskLauncher() {
       }
 
       const type = String(task.type || '').toUpperCase();
-      // Support both skill_code (lesson_content) and skill_id (study_tasks)
-      const code = task.skill_code || task.skill_id || '';
+      const code = task.skill_id || '';
       
       if (!code && type === 'LEARN') {
         toast.error('Task configuration error: missing skill');

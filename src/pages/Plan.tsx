@@ -34,17 +34,42 @@ export default function Plan() {
         const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
           .toISOString()
           .split('T')[0];
-        const { data, error: fetchError } = await supabase
-          .from('study_plan_days')
-          .select('the_date, tasks_json, user_id, generated_at')
+        const { data: rawTasks, error: fetchError } = await supabase
+          .from('study_tasks')
+          .select('id, user_id, type, skill_id, the_date, size, status, skills(name, subject)')
           .eq('user_id', user.id)
           .gte('the_date', today)
           .lte('the_date', sevenDaysFromNow)
-          .order('the_date', { ascending: true });
+          .order('the_date, created_at');
+        
         if (fetchError) {
           throw fetchError;
         }
-        setPlans((data ?? []) as StudyPlanDay[]);
+
+        // Group tasks by date to match StudyPlanDay structure
+        const groupedByDate = (rawTasks || []).reduce((acc, task) => {
+          const dateKey = task.the_date;
+          if (!acc[dateKey]) {
+            acc[dateKey] = {
+              the_date: dateKey,
+              user_id: task.user_id,
+              tasks_json: [],
+              generated_at: new Date().toISOString()
+            };
+          }
+          const dayPlan = acc[dateKey];
+          if (dayPlan?.tasks_json) {
+            dayPlan.tasks_json.push({
+              type: task.type,
+              skill_id: task.skill_id || undefined,
+              size: task.size,
+              title: task.skills ? `${task.type}: ${task.skills.name}` : `${task.type} Task`
+            });
+          }
+          return acc;
+        }, {} as Record<string, StudyPlanDay>);
+
+        setPlans(Object.values(groupedByDate));
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load plan';
         setError(errorMessage);
