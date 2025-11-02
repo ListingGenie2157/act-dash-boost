@@ -44,89 +44,56 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
           dates.push(date.toISOString().split('T')[0]);
         }
 
-        // Fetch study plan days
-        const { data: planDays, error: planError } = await supabase
-          .from('study_plan_days')
-          .select('the_date, tasks_json')
+        // Fetch study tasks
+        const { data: tasks, error: tasksError } = await supabase
+          .from('study_tasks')
+          .select('the_date, type, skill_id, size, status, skills(name, subject)')
           .eq('user_id', userId)
           .in('the_date', dates)
-          .order('the_date', { ascending: true });
-
-        if (planError) throw planError;
-
-        // Extract skill IDs and fetch skill names for title generation
-        const skillIds = planDays?.flatMap(day =>
-          ((day.tasks_json || []) as any[])
-            .map((t: any) => t.skill_id || t.skillId || t.skill_code)
-            .filter(Boolean)
-        ) || [];
-
-        let skillNameMap = new Map<string, string>();
-        if (skillIds.length > 0) {
-          const { data: skills } = await supabase
-            .from('skills')
-            .select('id, name')
-            .in('id', skillIds);
-          
-          skills?.forEach(skill => {
-            skillNameMap.set(skill.id, skill.name);
-          });
-        }
-
-        // Fetch task completion status
-        const { data: completedTasks, error: tasksError } = await supabase
-          .from('study_tasks')
-          .select('the_date, skill_id, status')
-          .eq('user_id', userId)
-          .in('the_date', dates);
+          .order('the_date, created_at');
 
         if (tasksError) throw tasksError;
 
-        // Build completion map
-        const completionMap = new Map<string, Map<string, 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'>>();
-        completedTasks?.forEach(task => {
-          if (!completionMap.has(task.the_date)) {
-            completionMap.set(task.the_date, new Map());
-          }
-          const status = (task.status || 'PENDING') as 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
-          if (task.skill_id) {
-          completionMap.get(task.the_date)?.set(task.skill_id, status);
+        // Build skill name map
+        const skillNameMap = new Map<string, string>();
+        tasks?.forEach(task => {
+          if (task.skill_id && task.skills) {
+            skillNameMap.set(task.skill_id, (task.skills as any).name);
           }
         });
 
-        // Helper function to generate task titles
-        const generateTitle = (task: StudyTask): string => {
-          if (task.title) return task.title; // Use existing title if present
-
-          const skillId = task.skillId || task.skill_id || task.skill_code;
-          const skillName = skillId ? skillNameMap.get(skillId) : null;
-          if (skillName) {
-            switch(task.type) {
-              case 'LEARN': return `Learn: ${skillName}`;
-              case 'DRILL': return `Practice: ${skillName}`;
-              case 'REVIEW': return `Review: ${skillName}`;
-              default: return skillName;
-            }
+        // Group tasks by date
+        const tasksByDate: Record<string, Array<{type: string; skill_id: string | null; status: string | null; skills: any}>> = {};
+        tasks?.forEach(task => {
+          if (!tasksByDate[task.the_date]) {
+            tasksByDate[task.the_date] = [];
           }
-          return `${task.type} Task`; // Final fallback
-        };
+          tasksByDate[task.the_date].push(task);
+        });
 
         // Build week data
         const week: WeekDay[] = dates.map(dateStr => {
-          const planDay = planDays?.find(p => p.the_date === dateStr);
-          const rawTasks = (planDay?.tasks_json || []) as unknown[];
-          const tasks: StudyTask[] = Array.isArray(rawTasks) 
-            ? rawTasks.map(t => t as StudyTask)
-            : [];
+          const dateTasks = tasksByDate[dateStr] || [];
           const dateObj = new Date(dateStr);
           
-          // Enhance tasks with status and generated titles
-          const enhancedTasks = tasks.map(task => {
-            const skillId = task.skillId || task.skill_id || task.skill_code || '';
+          const enhancedTasks: StudyTask[] = dateTasks.map(task => {
+            const skillName = task.skill_id ? skillNameMap.get(task.skill_id) : null;
+            let title = `${task.type} Task`;
+            
+            if (skillName) {
+              switch(task.type) {
+                case 'LEARN': title = `Learn: ${skillName}`; break;
+                case 'DRILL': title = `Practice: ${skillName}`; break;
+                case 'REVIEW': title = `Review: ${skillName}`; break;
+                default: title = skillName;
+              }
+            }
+
             return {
-              ...task,
-              title: generateTitle(task),
-              status: (completionMap.get(dateStr)?.get(skillId) || 'PENDING') as 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'
+              type: task.type,
+              title,
+              skill_id: task.skill_id || undefined,
+              status: (task.status || 'PENDING') as 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'
             };
           });
 

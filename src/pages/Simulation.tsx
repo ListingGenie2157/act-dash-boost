@@ -48,7 +48,6 @@ export default function Simulation() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [questionStartTime, setQuestionStartTime] = useState(Date.now());
 
   // Load existing session or responses if user refreshes
   useEffect(() => {
@@ -116,7 +115,6 @@ export default function Simulation() {
       });
       setTimeLeft(time_limit_sec);
       setState('active');
-      setQuestionStartTime(Date.now());
 
       toast({
         title: "Session Started",
@@ -138,31 +136,9 @@ export default function Simulation() {
   const submitAnswer = useCallback(async (questionId: string, selectedAnswer: string) => {
     if (!sessionData) return;
 
-    const timeSpent = Date.now() - questionStartTime;
-
-    try {
-      const { error } = await supabase.functions.invoke('response-submit', {
-        body: {
-          session_id: sessionData.session_id,
-          question_id: questionId,
-          selected: selectedAnswer,
-          time_ms: timeSpent
-        }
-      });
-
-      if (error) throw error;
-
-      setAnswers(prev => ({ ...prev, [questionId]: selectedAnswer }));
-
-    } catch (error) {
-      console.error('Error submitting answer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save answer. Please try again.",
-        variant: "destructive",
-      });
-    }
-  }, [sessionData, questionStartTime, toast]);
+    // Track answer locally - session-finish will process all responses
+    setAnswers(prev => ({ ...prev, [questionId]: selectedAnswer }));
+  }, [sessionData]);
 
   const handleAnswerSelect = (questionId: string, answer: string) => {
     submitAnswer(questionId, answer);
@@ -170,7 +146,6 @@ export default function Simulation() {
 
   const navigateToQuestion = (index: number) => {
     setCurrentQuestionIndex(index);
-    setQuestionStartTime(Date.now());
   };
 
   const handleNext = () => {
