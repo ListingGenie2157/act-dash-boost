@@ -72,8 +72,8 @@ const Index = () => {
             // Verify study plan exists in database (override profile flag if needed)
             try {
               const planCheckPromise = supabase
-                .from('study_plan_days')
-                .select('the_date')
+                .from('study_tasks')
+                .select('id')
                 .eq('user_id', session.user.id)
                 .limit(1);
 
