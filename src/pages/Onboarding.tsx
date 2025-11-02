@@ -41,12 +41,13 @@ export default function Onboarding() {
         throw profilesError;
       }
 
-      // Mark onboarding complete and set to self-directed mode (no study plan yet)
+      // Mark onboarding complete and set defaults for backend functions
       const { error: profileUpdateError } = await supabase
         .from('profiles')
         .update({
           onboarding_complete: true,
-          has_study_plan: false
+          has_study_plan: false,
+          daily_time_cap_mins: 30 // Default 30 minutes per day
         })
         .eq('id', user.id);
 

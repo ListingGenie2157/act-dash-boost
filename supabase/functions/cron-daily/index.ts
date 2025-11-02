@@ -57,13 +57,18 @@ serve(async (req) => {
     // Get users who already have plans for today
     const { data: existingPlans } = await supabase
       .from('study_plan_days')
-      .select('user_id')
+      .select('user_id, generated_at')
       .eq('the_date', todayStr);
 
     const usersWithPlans = new Set(existingPlans?.map(p => p.user_id) || []);
 
-    // Filter users who need plan generation
-    const usersNeedingPlans = activeUsers.filter(user => !usersWithPlans.has(user.id));
+    // Filter users who need plan refresh (plans older than 7 days)
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const usersNeedingPlans = activeUsers.filter(user => {
+      const existingPlan = existingPlans?.find(p => p.user_id === user.id);
+      // Only refresh if plan is older than 7 days or doesn't exist
+      return !existingPlan || new Date(existingPlan.generated_at) < sevenDaysAgo;
+    });
 
     console.log(`${usersNeedingPlans.length} users need plan generation`);
 

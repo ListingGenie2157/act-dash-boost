@@ -144,7 +144,25 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
       onOpenChange(false);
 
       if (form.diagnosticChoice === 'skip') {
-        // Generate plan immediately without diagnostic
+        // Create placeholder diagnostics so generate-study-plan has data to work with
+        const placeholderSections = [
+          { section: 'EN', score: 18, notes: 'Estimated baseline' },
+          { section: 'MA', score: 18, notes: 'Estimated baseline' },
+          { section: 'RD', score: 18, notes: 'Estimated baseline' },
+          { section: 'SCI', score: 18, notes: 'Estimated baseline' }
+        ];
+
+        const { error: diagnosticError } = await supabase.functions.invoke('finish-diagnostic', {
+          body: { sections: placeholderSections }
+        });
+
+        if (diagnosticError) {
+          console.error('Error creating baseline:', diagnosticError);
+          toast.error('Failed to create baseline');
+          return;
+        }
+
+        // Generate plan immediately after creating baseline
         const { error: planError } = await supabase.functions.invoke('generate-study-plan', {
           method: 'POST'
         });
@@ -154,7 +172,6 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
           toast.error('Failed to generate study plan');
         } else {
           toast.success('Your personalized study plan is ready!');
-          // Notify parent to update state
           onPlanGenerated?.();
         }
       } else {
