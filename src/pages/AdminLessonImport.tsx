@@ -332,6 +332,14 @@ export default function AdminLessonImport() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <Button 
+              onClick={extractSections} 
+              disabled={importMode === 'tsv' ? !tsvContent.trim() : !htmlContent.trim()}
+              className="w-full"
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              {importMode === 'tsv' ? 'Parse TSV' : 'Extract Sections'}
+            </Button>
             {importMode === 'tsv' ? (
               <Textarea
                 value={tsvContent}
@@ -347,13 +355,6 @@ export default function AdminLessonImport() {
                 className="min-h-[200px] font-mono text-sm"
               />
             )}
-            <Button 
-              onClick={extractSections} 
-              disabled={importMode === 'tsv' ? !tsvContent.trim() : !htmlContent.trim()}
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              {importMode === 'tsv' ? 'Parse TSV' : 'Extract Sections'}
-            </Button>
           </CardContent>
         </Card>
 
