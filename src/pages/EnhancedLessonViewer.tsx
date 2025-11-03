@@ -25,8 +25,10 @@ import { GuidedExampleCard } from '@/components/lesson/GuidedExampleCard';
 import { CommonTrapsAlert } from '@/components/lesson/CommonTrapsAlert';
 import { IndependentPracticeCard } from '@/components/lesson/IndependentPracticeCard';
 import { QuizComponent } from '@/components/QuizComponent';
-import { AlertCircle, Target } from 'lucide-react';
+import { AlertCircle, Target, FlaskConical } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { PeriodicTable } from '@/components/lesson/PeriodicTable';
+import { YouTubeEmbed, extractYouTubeId } from '@/components/lesson/YouTubeEmbed';
 
 export default function EnhancedLessonViewer() {
   const { topic } = useParams<{ topic?: string }>();
@@ -295,13 +297,17 @@ export default function EnhancedLessonViewer() {
       <Separator className="my-6" />
 
       <Tabs value={currentTab} onValueChange={setCurrentTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="learn">
             <BookOpen className="h-4 w-4 mr-2" />
             Learn
           </TabsTrigger>
           <TabsTrigger value="practice">Practice</TabsTrigger>
           <TabsTrigger value="test">Test Yourself</TabsTrigger>
+          <TabsTrigger value="resources">
+            <FlaskConical className="h-4 w-4 mr-2" />
+            Resources
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="learn" className="space-y-6 mt-6">
@@ -445,6 +451,58 @@ export default function EnhancedLessonViewer() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="resources" className="space-y-6 mt-6">
+          <PeriodicTable />
+          
+          {/* Example of how to embed YouTube videos in lesson content */}
+          {lesson.overview.includes('youtube.com') || lesson.overview.includes('youtu.be') ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Video Resources</CardTitle>
+                <CardDescription>Supplementary video content for this lesson</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {(() => {
+                  const urlPattern = /(https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)[\w-]+)/g;
+                  const matches = lesson.overview.match(urlPattern) || [];
+                  return matches.map((url, idx) => {
+                    const videoId = extractYouTubeId(url);
+                    return videoId ? (
+                      <YouTubeEmbed key={idx} videoId={videoId} title={`Video ${idx + 1}`} />
+                    ) : null;
+                  });
+                })()}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Additional Resources</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <BookOpen className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium">Practice Problems</p>
+                  <p className="text-muted-foreground text-xs">Work through the practice tab for hands-on experience</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Target className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium">Checkpoint Quiz</p>
+                  <p className="text-muted-foreground text-xs">Test your understanding in the Test Yourself tab</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
