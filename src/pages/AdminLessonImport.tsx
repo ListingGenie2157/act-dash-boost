@@ -39,6 +39,16 @@ interface LessonPreview extends ExtractedContent {
   validation_errors: string[];
 }
 
+// Normalize skill codes to handle formatting issues
+function normalizeSkillCode(code: string): string {
+  return code
+    .replace(/[\u200B-\u200D\u2060\uFEFF]/g, '') // Remove zero-width characters
+    .replace(/[·•‧⋅・｡。．]/g, '.') // Replace dot-like chars with period
+    .replace(/\s*\.\s*/g, '.') // Collapse spaces around separators
+    .trim()
+    .toUpperCase();
+}
+
 export default function AdminLessonImport() {
   const [htmlContent, setHtmlContent] = useState('');
   const [tsvContent, setTsvContent] = useState('');
@@ -94,6 +104,15 @@ export default function AdminLessonImport() {
         });
 
         if (lesson.skill_code) {
+          // Normalize skill_code immediately
+          const originalCode = lesson.skill_code;
+          const normalizedCode = normalizeSkillCode(originalCode);
+          lesson.skill_code = normalizedCode;
+          
+          if (originalCode !== normalizedCode) {
+            console.log(`Normalized skill code: "${originalCode}" → "${normalizedCode}"`);
+          }
+          
           lessons.push(lesson as ExtractedContent);
         }
       }
@@ -102,43 +121,49 @@ export default function AdminLessonImport() {
         throw new Error('No valid lessons found. Each row must include a skill_code column.');
       }
 
-      // Validate lessons and fetch skill names
-      const previews: LessonPreview[] = await Promise.all(
-        lessons.map(async (lesson) => {
-          const errors: string[] = [];
+      // Batch validate all skill codes with a single query
+      const uniqueSkillCodes = Array.from(new Set(lessons.map(l => l.skill_code)));
+      const { data: skills, error: skillsError } = await supabase
+        .from('skills')
+        .select('id, name')
+        .in('id', uniqueSkillCodes);
 
-          if (!lesson.skill_code) {
-            errors.push('Missing skill_code');
-          }
+      if (skillsError) {
+        throw new Error(`Failed to validate skill codes: ${skillsError.message}`);
+      }
 
-          if (!lesson.overview_html || lesson.overview_html.trim() === '') {
-            errors.push('Missing overview_html');
-          }
+      // Create a map of skill_code -> skill_name for quick lookup
+      const skillMap = new Map<string, string>();
+      skills?.forEach(skill => {
+        skillMap.set(skill.id, skill.name);
+      });
 
-          // Fetch skill name
-          let skill_name = 'Unknown';
-          if (lesson.skill_code) {
-            const { data: skill } = await supabase
-              .from('skills')
-              .select('name')
-              .eq('id', lesson.skill_code)
-              .single();
+      // Validate each lesson
+      const previews: LessonPreview[] = lessons.map((lesson) => {
+        const errors: string[] = [];
 
-            if (skill) {
-              skill_name = skill.name;
-            } else {
-              errors.push('Invalid skill_code');
-            }
-          }
+        if (!lesson.skill_code) {
+          errors.push('Missing skill_code');
+        }
 
-          return {
-            ...lesson,
-            skill_name,
-            validation_status: errors.length === 0 ? 'valid' : 'invalid',
-            validation_errors: errors,
-          } as LessonPreview;
-        })
-      );
+        if (!lesson.overview_html || lesson.overview_html.trim() === '') {
+          errors.push('Missing overview_html');
+        }
+
+        // Check if skill exists
+        const skill_name = skillMap.get(lesson.skill_code);
+        if (!skill_name) {
+          errors.push(`Invalid skill_code (not found after normalization)`);
+          console.warn(`Skill not found: "${lesson.skill_code}"`);
+        }
+
+        return {
+          ...lesson,
+          skill_name: skill_name || 'Unknown',
+          validation_status: errors.length === 0 ? 'valid' : 'invalid',
+          validation_errors: errors,
+        } as LessonPreview;
+      });
 
       setExtractedLessons(previews);
       setShowPreview(true);
@@ -254,17 +279,17 @@ export default function AdminLessonImport() {
 
       setImportStatus({
         totalProcessed: data?.total_processed || validLessons.length,
-        successCount: data?.success_count || 0,
-        errorCount: data?.error_count || 0,
-        errors: data?.errors || [],
+        successCount: data?.success_count || data?.imported || 0,
+        errorCount: data?.error_count || data?.failed || 0,
+        errors: data?.errors || (data?.details?.errors || []).map((e: any) => `${e.skill_code}: ${e.error}`) || [],
       });
 
       toast({
         title: 'Import complete',
-        description: `${data?.success_count || 0} lesson(s) imported successfully.`,
+        description: `${data?.success_count || data?.imported || 0} lesson(s) imported successfully.`,
       });
 
-      if (data?.error_count === 0) {
+      if ((data?.error_count || data?.failed) === 0) {
         setHtmlContent('');
         setTsvContent('');
         setExtractedLessons([]);

@@ -8,6 +8,16 @@ const corsHeaders = {
 // Checkpoint questions are stored as simple arrays in the database
 // Format: [question, optA, optB, optC, optD, answer_letter, explanation, difficulty]
 
+// Normalize skill codes to handle formatting issues
+function normalizeSkillCode(code: string): string {
+  return code
+    .replace(/[\u200B-\u200D\u2060\uFEFF]/g, '') // Remove zero-width characters
+    .replace(/[·•‧⋅・｡。．]/g, '.') // Replace dot-like chars with period
+    .replace(/\s*\.\s*/g, '.') // Collapse spaces around separators
+    .trim()
+    .toUpperCase();
+}
+
 interface LessonContentInput {
   skill_code: string;
   overview_html: string;
@@ -114,18 +124,27 @@ Deno.serve(async (req) => {
 
     for (const lesson of lessons) {
       try {
+        // Normalize skill_code
+        const originalCode = lesson.skill_code;
+        const normalizedCode = normalizeSkillCode(originalCode);
+        
+        if (originalCode !== normalizedCode) {
+          console.log(`Normalized skill code: "${originalCode}" → "${normalizedCode}"`);
+        }
+        
         // Validate skill_code exists
         const { data: skill, error: skillError } = await supabase
           .from('skills')
           .select('id, name')
-          .eq('id', lesson.skill_code)
+          .eq('id', normalizedCode)
           .maybeSingle();
 
         if (skillError || !skill) {
           results.errors.push({
-            skill_code: lesson.skill_code,
-            error: 'Skill not found in database',
+            skill_code: originalCode,
+            error: `Skill not found in database (normalized to: ${normalizedCode})`,
           });
+          console.warn(`Skill not found: original="${originalCode}", normalized="${normalizedCode}"`);
           continue;
         }
 
@@ -158,7 +177,7 @@ Deno.serve(async (req) => {
         const { error: upsertError } = await supabase
           .from('lesson_content')
           .upsert({
-            skill_code: lesson.skill_code,
+            skill_code: normalizedCode,
             overview_html: lesson.overview_html,
             objectives: objectives,
             concept_explanation: lesson.concept_explanation,
