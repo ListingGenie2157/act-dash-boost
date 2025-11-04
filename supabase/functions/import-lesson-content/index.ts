@@ -164,13 +164,13 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Parse objectives
+        // Parse objectives (array) and also prepare text version for DB
         const objectives = lesson.objectives 
           ? (typeof lesson.objectives === 'string' 
               ? lesson.objectives.split('|').map(s => s.trim()).filter(Boolean)
               : lesson.objectives)
           : [];
-
+        const objectivesText = Array.isArray(objectives) ? objectives.join('\n') : String((objectives as any) ?? '');
         // Parse checkpoint quiz questions into individual columns
         const quizData: Record<string, string[] | null> = {};
         for (let i = 1; i <= 10; i++) {
@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
             skill_code: normalizedSkillCode, // Human-readable code
             skill_id: skill.id, // FK to skills.id (may be UUID or code)
             overview_html: lesson.overview_html,
-            objectives: objectives,
+            objectives: objectivesText,
             concept_explanation: lesson.concept_explanation,
             guided_practice: lesson.guided_practice || '',
             error_analysis: lesson.error_analysis || '',
@@ -215,7 +215,7 @@ Deno.serve(async (req) => {
             checkpoint_quiz_q10: quizData.checkpoint_quiz_q10,
             recap: lesson.recap || null,
             estimated_minutes: lesson.estimated_minutes || 15,
-            difficulty: lesson.difficulty || 'medium',
+            difficulty: (() => { const d = (lesson.difficulty || 'medium').toString().toLowerCase(); return d === 'easy' ? 1 : d === 'hard' ? 3 : 2; })(),
           }, {
             onConflict: 'skill_code',
           });
