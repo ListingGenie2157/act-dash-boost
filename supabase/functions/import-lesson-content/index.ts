@@ -12,10 +12,30 @@ const corsHeaders = {
 function normalizeSkillCode(code: string): string {
   return code
     .replace(/[\u200B-\u200D\u2060\uFEFF]/g, '') // Remove zero-width characters
+    .replace(/\u00A0/g, '') // Remove non-breaking spaces
     .replace(/[·•‧⋅・｡。．]/g, '.') // Replace dot-like chars with period
     .replace(/\s*\.\s*/g, '.') // Collapse spaces around separators
     .trim()
     .toUpperCase();
+}
+
+// Resolve skill by code or id
+async function resolveSkill(supabaseAdmin: any, ref: string): Promise<{ id: string; name: string } | null> {
+  const normalized = normalizeSkillCode(ref);
+  
+  // Try to find skill by id or code
+  const { data: skill, error } = await supabaseAdmin
+    .from('skills')
+    .select('id, name, code')
+    .or(`id.eq.${normalized},code.eq.${normalized}`)
+    .maybeSingle();
+    
+  if (error) {
+    console.error('Error resolving skill:', error);
+    return null;
+  }
+  
+  return skill ? { id: skill.id, name: skill.name } : null;
 }
 
 interface LessonContentInput {
@@ -118,33 +138,29 @@ Deno.serve(async (req) => {
     console.log(`📚 Processing ${lessons.length} lesson(s) for import`);
 
     const results = {
-      success: [] as string[],
+      success: [] as { skill_code: string }[],
       errors: [] as { skill_code: string; error: string }[],
     };
 
     for (const lesson of lessons) {
       try {
-        // Normalize skill_code
-        const originalCode = lesson.skill_code;
-        const normalizedCode = normalizeSkillCode(originalCode);
+        const originalSkillCode = lesson.skill_code;
+        const normalizedSkillCode = normalizeSkillCode(originalSkillCode);
         
-        if (originalCode !== normalizedCode) {
-          console.log(`Normalized skill code: "${originalCode}" → "${normalizedCode}"`);
+        // Log if normalization changed the code
+        if (originalSkillCode !== normalizedSkillCode) {
+          console.log(`Skill code normalized: "${originalSkillCode}" → "${normalizedSkillCode}"`);
         }
-        
-        // Validate skill_code exists
-        const { data: skill, error: skillError } = await supabase
-          .from('skills')
-          .select('id, name')
-          .eq('id', normalizedCode)
-          .maybeSingle();
 
-        if (skillError || !skill) {
+        // Resolve skill by id or code
+        const skill = await resolveSkill(supabase, normalizedSkillCode);
+
+        if (!skill) {
           results.errors.push({
-            skill_code: originalCode,
-            error: `Skill not found in database (normalized to: ${normalizedCode})`,
+            skill_code: originalSkillCode,
+            error: `Skill not found in database (original: "${originalSkillCode}", normalized: "${normalizedSkillCode}")`,
           });
-          console.warn(`Skill not found: original="${originalCode}", normalized="${normalizedCode}"`);
+          console.error(`Skill resolution failed for: ${normalizedSkillCode}`);
           continue;
         }
 
@@ -173,11 +189,12 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Upsert lesson content
+        // Upsert lesson content using resolved skill_id and normalized skill_code
         const { error: upsertError } = await supabase
           .from('lesson_content')
           .upsert({
-            skill_code: normalizedCode,
+            skill_code: normalizedSkillCode, // Human-readable code
+            skill_id: skill.id, // FK to skills.id (may be UUID or code)
             overview_html: lesson.overview_html,
             objectives: objectives,
             concept_explanation: lesson.concept_explanation,
@@ -211,7 +228,7 @@ Deno.serve(async (req) => {
           });
         } else {
           const quizCount = Object.values(quizData).filter(q => q !== null).length;
-          results.success.push(skill.name);
+          results.success.push({ skill_code: normalizedSkillCode });
           console.log(`✅ Imported: ${skill.name} (${quizCount} checkpoint questions)`);
         }
       } catch (err) {
@@ -229,6 +246,9 @@ Deno.serve(async (req) => {
         success: true,
         imported: results.success.length,
         failed: results.errors.length,
+        success_count: results.success.length,
+        error_count: results.errors.length,
+        total_processed: lessons.length,
         details: results,
       }),
       {

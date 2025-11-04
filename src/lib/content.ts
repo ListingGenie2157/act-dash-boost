@@ -1,5 +1,25 @@
 import { supabase } from '@/integrations/supabase/client';
 
+/**
+ * Resolve a skill reference (code or id) to a skill id
+ */
+export async function resolveSkillId(ref: string): Promise<string | null> {
+  const normalized = ref.trim().toUpperCase();
+  
+  const { data: skill, error } = await supabase
+    .from('skills')
+    .select('id')
+    .or(`id.eq.${normalized},code.eq.${normalized}`)
+    .maybeSingle();
+    
+  if (error || !skill) {
+    console.error('Skill resolution failed for:', ref, error);
+    return null;
+  }
+  
+  return skill.id;
+}
+
 export async function getLessonBySkill(skill_code: string) {
   // Since there's no lessons table, we fetch from skills table
   const { data, error } = await supabase
@@ -21,10 +41,17 @@ export async function getLessonBySkill(skill_code: string) {
 }
 
 export async function getQuestionsBySkill(skill_code: string, n: number) {
+  // Resolve skill_code to skill_id first
+  const skillId = await resolveSkillId(skill_code);
+  
+  if (!skillId) {
+    return { data: null, error: new Error(`Skill not found: ${skill_code}`) };
+  }
+  
   const { data, error } = await supabase
     .from('questions')
     .select('id, stem, choice_a, choice_b, choice_c, choice_d, answer, explanation, skill_id, difficulty, time_limit_secs')
-    .eq('skill_id', skill_code)
+    .eq('skill_id', skillId)
     .limit(n);
   return { data, error };
 }

@@ -804,6 +804,7 @@ export type Database = {
       skills: {
         Row: {
           cluster: string
+          code: string | null
           created_at: string | null
           description: string | null
           id: string
@@ -814,6 +815,7 @@ export type Database = {
         }
         Insert: {
           cluster: string
+          code?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -824,6 +826,7 @@ export type Database = {
         }
         Update: {
           cluster?: string
+          code?: string | null
           created_at?: string | null
           description?: string | null
           id?: string

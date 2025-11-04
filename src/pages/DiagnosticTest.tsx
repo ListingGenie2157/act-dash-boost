@@ -118,10 +118,11 @@ export default function DiagnosticTest() {
           // Resolve skill_code to skill_id from skills table
           let skill_id: string | null = null;
           if (stagingData?.skill_code) {
+            const normalized = stagingData.skill_code.trim().toUpperCase();
             const { data: skillData } = await supabase
               .from('skills')
               .select('id')
-              .eq('skill_code', stagingData.skill_code)
+              .or(`id.eq.${normalized},code.eq.${normalized}`)
               .maybeSingle();
             
             skill_id = skillData?.id || null;

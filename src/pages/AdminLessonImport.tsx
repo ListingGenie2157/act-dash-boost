@@ -43,6 +43,7 @@ interface LessonPreview extends ExtractedContent {
 function normalizeSkillCode(code: string): string {
   return code
     .replace(/[\u200B-\u200D\u2060\uFEFF]/g, '') // Remove zero-width characters
+    .replace(/\u00A0/g, '') // Remove non-breaking spaces
     .replace(/[·•‧⋅・｡。．]/g, '.') // Replace dot-like chars with period
     .replace(/\s*\.\s*/g, '.') // Collapse spaces around separators
     .trim()
@@ -62,6 +63,7 @@ export default function AdminLessonImport() {
     errors: string[];
   } | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [forceImport, setForceImport] = useState(false);
   const { toast } = useToast();
 
   const extractSections = () => {
@@ -121,21 +123,49 @@ export default function AdminLessonImport() {
         throw new Error('No valid lessons found. Each row must include a skill_code column.');
       }
 
-      // Batch validate all skill codes with a single query
-      const uniqueSkillCodes = Array.from(new Set(lessons.map(l => l.skill_code)));
-      const { data: skills, error: skillsError } = await supabase
+      // Fetch all skills to build a robust index for validation
+      const { data: allSkills, error: skillError } = await supabase
         .from('skills')
-        .select('id, name')
-        .in('id', uniqueSkillCodes);
+        .select('id, code, name');
 
-      if (skillsError) {
-        throw new Error(`Failed to validate skill codes: ${skillsError.message}`);
+      if (skillError) {
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch skills for validation: ' + skillError.message,
+          variant: 'destructive',
+        });
+        return;
       }
 
-      // Create a map of skill_code -> skill_name for quick lookup
-      const skillMap = new Map<string, string>();
-      skills?.forEach(skill => {
-        skillMap.set(skill.id, skill.name);
+      if (!allSkills || allSkills.length === 0) {
+        toast({
+          title: 'Warning',
+          description: 'No skills found in database. Cannot validate skill codes.',
+          variant: 'destructive',
+        });
+        console.error('No skills found for validation');
+        return;
+      }
+
+      // Build an index of valid skill references (both id and code)
+      const validSkillRefs = new Set<string>();
+      const skillNameMap = new Map<string, string>();
+      
+      allSkills.forEach(skill => {
+        validSkillRefs.add(skill.id);
+        skillNameMap.set(skill.id, skill.name);
+        
+        if (skill.code) {
+          validSkillRefs.add(skill.code);
+          skillNameMap.set(skill.code, skill.name);
+        }
+      });
+
+      console.info('Skill validation index built:', {
+        totalSkills: allSkills.length,
+        uniqueRefs: validSkillRefs.size,
+        extractedLessons: lessons.length,
+        uniqueCodes: new Set(lessons.map(l => l.skill_code)).size
       });
 
       // Validate each lesson
@@ -150,11 +180,13 @@ export default function AdminLessonImport() {
           errors.push('Missing overview_html');
         }
 
-        // Check if skill exists
-        const skill_name = skillMap.get(lesson.skill_code);
-        if (!skill_name) {
-          errors.push(`Invalid skill_code (not found after normalization)`);
-          console.warn(`Skill not found: "${lesson.skill_code}"`);
+        // Check if skill exists using our robust index
+        const isValid = validSkillRefs.has(lesson.skill_code);
+        const skill_name = skillNameMap.get(lesson.skill_code);
+        
+        if (!isValid) {
+          errors.push(`Skill not found: ${lesson.skill_code}`);
+          console.warn(`Skill not found after normalization: "${lesson.skill_code}"`);
         }
 
         return {
@@ -254,12 +286,22 @@ export default function AdminLessonImport() {
   };
 
   const handleImport = async () => {
-    const validLessons = extractedLessons.filter(l => l.validation_status === 'valid');
+    if (extractedLessons.length === 0) {
+      toast({ title: 'No lessons to import', variant: 'destructive' });
+      return;
+    }
 
-    if (validLessons.length === 0) {
+    // If force import is enabled, import all; otherwise only valid ones
+    const lessonsToImport = forceImport 
+      ? extractedLessons 
+      : extractedLessons.filter(l => l.validation_status === 'valid');
+      
+    if (lessonsToImport.length === 0) {
       toast({
-        title: 'No valid lessons',
-        description: 'There are no valid lessons to import.',
+        title: 'No lessons to import',
+        description: forceImport 
+          ? 'No lessons found in the content.'
+          : 'All lessons have validation errors. Enable "Force import" to proceed with server-side validation.',
         variant: 'destructive',
       });
       return;
@@ -269,31 +311,41 @@ export default function AdminLessonImport() {
     setImportStatus(null);
 
     try {
-      const lessonsToImport = validLessons.map(({ skill_name, validation_status, validation_errors, ...lesson }) => lesson);
+      const lessonsData = lessonsToImport.map(({ skill_name, validation_status, validation_errors, ...lesson }) => lesson);
 
       const { data, error } = await supabase.functions.invoke('import-lesson-content', {
-        body: lessonsToImport,
+        body: lessonsData,
       });
 
       if (error) throw error;
 
       setImportStatus({
-        totalProcessed: data?.total_processed || validLessons.length,
+        totalProcessed: data?.total_processed || lessonsToImport.length,
         successCount: data?.success_count || data?.imported || 0,
         errorCount: data?.error_count || data?.failed || 0,
         errors: data?.errors || (data?.details?.errors || []).map((e: any) => `${e.skill_code}: ${e.error}`) || [],
       });
 
-      toast({
-        title: 'Import complete',
-        description: `${data?.success_count || data?.imported || 0} lesson(s) imported successfully.`,
-      });
-
-      if ((data?.error_count || data?.failed) === 0) {
+      if ((data?.success_count || data?.imported || 0) > 0) {
+        toast({
+          title: 'Import complete',
+          description: `${data?.success_count || data?.imported || 0} lesson(s) imported successfully.`,
+        });
+        
+        // Clear form after success
         setHtmlContent('');
         setTsvContent('');
         setExtractedLessons([]);
         setShowPreview(false);
+        setForceImport(false);
+      }
+
+      if ((data?.error_count || data?.failed || 0) > 0) {
+        toast({
+          title: (data?.error_count || data?.failed) === lessonsToImport.length ? 'Import failed' : 'Partial import',
+          description: `${data?.error_count || data?.failed || 0} lesson(s) failed. Check status below.`,
+          variant: 'destructive',
+        });
       }
     } catch (error) {
       toast({
@@ -452,15 +504,29 @@ export default function AdminLessonImport() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Force Import Toggle */}
+              <div className="flex items-center space-x-2 p-4 bg-muted/50 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="force-import"
+                  checked={forceImport}
+                  onChange={(e) => setForceImport(e.target.checked)}
+                  className="h-4 w-4"
+                />
+                <label htmlFor="force-import" className="text-sm cursor-pointer">
+                  Force import (server will validate and skip invalid rows)
+                </label>
+              </div>
+
               <Button
                 onClick={handleImport}
-                disabled={importing || extractedLessons.filter(l => l.validation_status === 'valid').length === 0}
+                disabled={importing || (!forceImport && extractedLessons.filter(l => l.validation_status === 'valid').length === 0)}
                 size="lg"
                 className="w-full"
               >
                 {importing
                   ? 'Importing...'
-                  : `Import ${extractedLessons.filter(l => l.validation_status === 'valid').length} Lesson(s)`}
+                  : `Import ${forceImport ? extractedLessons.length : extractedLessons.filter(l => l.validation_status === 'valid').length} Lesson(s)`}
               </Button>
 
               {importStatus && (
