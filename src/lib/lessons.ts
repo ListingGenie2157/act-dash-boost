@@ -311,6 +311,21 @@ export function parseIndependentPractice(
   
   // Try multiple question parsing strategies
   const questionStrategies = [
+    // Strategy 0: "IPX " custom format (e.g., "IP1 question text. IP2 question text.")
+    () => {
+      const pattern = /IP(\d+)\s+(.+?)(?=IP\d+|$)/gs;
+      const tempQuestions: ParsedIndependentQuestion[] = [];
+      let match;
+      while ((match = pattern.exec(practiceHtml)) !== null) {
+        const number = parseInt(match[1]);
+        const text = match[2].trim();
+        if (text.length > 5) {
+          tempQuestions.push({ number, question: text });
+        }
+      }
+      return tempQuestions;
+    },
+    
     // Strategy 1: "X. " numbered format
     () => {
       const parts = practiceHtml.split(/(\d+)\.\s+/);
@@ -372,6 +387,24 @@ export function parseIndependentPractice(
     const cleanAnswers = answersHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     
     const answerStrategies = [
+      // Strategy 0: "IPX " custom format (e.g., "IP1 answer text. IP2 answer text.")
+      () => {
+        const pattern = /IP(\d+)\s+(.+?)(?=IP\d+|$)/gs;
+        const answerMap = new Map<number, string>();
+        let match;
+        while ((match = pattern.exec(cleanAnswers)) !== null) {
+          answerMap.set(parseInt(match[1]), match[2].trim());
+        }
+        if (answerMap.size > 0) {
+          questions.forEach(q => {
+            const answer = answerMap.get(q.number);
+            if (answer) q.answer = answer;
+          });
+          return true;
+        }
+        return false;
+      },
+      
       // Strategy 1: Semicolon-separated "1 answer; 2 answer; 3 answer" (only if semicolons exist)
       () => {
         if (!cleanAnswers.includes(';')) return false;

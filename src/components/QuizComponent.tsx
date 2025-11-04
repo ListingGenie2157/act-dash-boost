@@ -256,7 +256,7 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
               <Button
                 key={index}
                 variant="quiz"
-                className={`w-full justify-start ${
+                className={`w-full justify-start text-left whitespace-normal min-h-12 h-auto py-3 ${
                   answers[currentQuestion] === index 
                     ? 'border-primary bg-primary/10' 
                     : ''
@@ -267,7 +267,7 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
                 <span className="mr-3 flex-shrink-0 w-6 h-6 rounded-full border border-current flex items-center justify-center text-xs font-bold">
                   {String.fromCharCode(65 + index)}
                 </span>
-                {option}
+                <span className="flex-1 break-words">{option}</span>
               </Button>
             ))}
           </div>
