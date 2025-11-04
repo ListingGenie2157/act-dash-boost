@@ -171,6 +171,13 @@ Deno.serve(async (req) => {
               : lesson.objectives)
           : [];
         const objectivesText = Array.isArray(objectives) ? objectives.join('\n') : String((objectives as any) ?? '');
+        // Safely coerce estimated_minutes to a number
+        const estRaw = (lesson.estimated_minutes as any);
+        const estNum = Number(estRaw);
+        const estimatedMinutes = Number.isFinite(estNum) && estNum > 0 ? estNum : 15;
+        
+        console.log(`📝 ${normalizedSkillCode}: skill_id=${skill.id}, estimated_minutes=${estimatedMinutes} (raw: ${estRaw})`);
+
         // Parse checkpoint quiz questions into individual columns
         const quizData: Record<string, string[] | null> = {};
         for (let i = 1; i <= 10; i++) {
@@ -214,7 +221,7 @@ Deno.serve(async (req) => {
             checkpoint_quiz_q9: quizData.checkpoint_quiz_q9,
             checkpoint_quiz_q10: quizData.checkpoint_quiz_q10,
             recap: lesson.recap || null,
-            estimated_minutes: lesson.estimated_minutes || 15,
+            estimated_minutes: estimatedMinutes,
             difficulty: (() => { const d = (lesson.difficulty || 'medium').toString().toLowerCase(); return d === 'easy' ? 1 : d === 'hard' ? 3 : 2; })(),
           }, {
             onConflict: 'skill_code',

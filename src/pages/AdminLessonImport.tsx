@@ -100,8 +100,14 @@ export default function AdminLessonImport() {
         const lesson: any = {};
 
         headers.forEach((header, idx) => {
-          if (values[idx] && values[idx] !== '') {
-            lesson[header] = values[idx];
+          const value = values[idx]?.trim() || '';
+          if (value !== '') {
+            if (header === 'estimated_minutes') {
+              const n = Number(value);
+              lesson[header] = Number.isFinite(n) && n > 0 ? n : undefined;
+            } else {
+              lesson[header] = value;
+            }
           }
         });
 
