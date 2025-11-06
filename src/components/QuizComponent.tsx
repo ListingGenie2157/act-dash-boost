@@ -128,7 +128,81 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
       }))
       .filter((_item, index) => answers[index] !== shuffledQuestions[index].correctAnswer);
 
-                const masteryResults = shuffledQuestions.map((question, index) => {
+    const handleSubmit = async () => {
+  setSubmitted(true);
+  setShowResults(true);
+
+  // First-try correctness
+  const firstTryCorrectCount = shuffledQuestions.reduce((acc, question, index) => {
+    const userAnswer = answers[index];
+    const isCorrectNow = userAnswer === question.correctAnswer;
+    const wasEverWrong = everWrong[index];
+    const isCorrectOnFirstTry = isCorrectNow && !wasEverWrong;
+    return acc + (isCorrectOnFirstTry ? 1 : 0);
+  }, 0);
+
+  const score = Math.round((firstTryCorrectCount / shuffledQuestions.length) * 100);
+
+  const wrongAnswers = shuffledQuestions
+    .map((question, index) => ({
+      questionId: question.id,
+      question,
+      userAnswer: answers[index],
+    }))
+    .filter((_item, index) => answers[index] !== shuffledQuestions[index].correctAnswer);
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const masteryResults = shuffledQuestions.map((question, index) => {
+        const userAnswer = answers[index];
+        const isCorrectNow = userAnswer === question.correctAnswer;
+        const wasEverWrong = everWrong[index];
+        const isCorrectOnFirstTry = isCorrectNow && !wasEverWrong;
+
+        return {
+          skillId: skillCode,
+          correct: isCorrectOnFirstTry,
+          timeMs: 30000, // placeholder for now
+        };
+      });
+
+      console.log('DEBUG masteryResults length:', masteryResults.length, masteryResults);
+
+      // One mastery update per question
+      for (const result of masteryResults) {
+        await updateMastery(
+          user.id,
+          result.skillId,
+          result.correct,
+          result.timeMs,
+        );
+      }
+
+      toast({
+        title: 'Progress saved!',
+        description: 'Your mastery for this skill has been updated.',
+      });
+    }
+  } catch (error) {
+    console.error('Error updating mastery:', error);
+    toast({
+      title: 'Error',
+      description: 'Failed to save progress. Please try again.',
+      variant: 'destructive',
+    });
+  }
+
+  const masteryThreshold = 80;
+  const needsMorePractice = score < masteryThreshold;
+
+  if (needsMorePractice && onNeedsPractice && skillCode) {
+    onNeedsPractice(skillCode, score, wrongAnswers.length);
+  }
+
+  onComplete(score, wrongAnswers);
+};
+            const masteryResults = shuffledQuestions.map((question, index) => {
           const userAnswer = answers[index];
           const isCorrectNow = userAnswer === question.correctAnswer;
           const wasEverWrong = everWrong[index];
