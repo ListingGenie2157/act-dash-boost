@@ -204,7 +204,7 @@ export async function batchUpdateMastery(
   userId: string,
   results: Array<{ skillId: string; correct: boolean; timeMs: number }>
 ): Promise<void> {
-  // Simple, correct: treat each question as one attempt
+  // Treat each question as one attempt
   for (const { skillId, correct, timeMs } of results) {
     await updateMastery(userId, skillId, correct, timeMs);
   }
