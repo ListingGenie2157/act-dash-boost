@@ -10,7 +10,7 @@ export const MASTERY_THRESHOLDS = {
   MASTERED: 90,     // 90-100% accuracy
 } as const;
 
-export const MASTERY_MIN_ATTEMPTS = 3; // Minimum attempts before calculating mastery
+export const MASTERY_MIN_ATTEMPTS = 1; // Minimum attempts before calculating mastery
 
 export type MasteryLevel = 'beginner' | 'learning' | 'proficient' | 'mastered' | 'not-started';
 
