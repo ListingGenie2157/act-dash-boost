@@ -110,10 +110,16 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
     }
   };
 
-  const handleSubmit = async () => {
-    setSubmitted(true);
-    setShowResults(true);
-    
+      const firstTryCorrectCount = shuffledQuestions.reduce((acc, question, index) => {
+      const userAnswer = answers[index];
+      const isCorrectNow = userAnswer === question.correctAnswer;
+      const wasEverWrong = everWrong[index];
+      const isCorrectOnFirstTry = isCorrectNow && !wasEverWrong;
+      return acc + (isCorrectOnFirstTry ? 1 : 0);
+    }, 0);
+
+    const score = Math.round((firstTryCorrectCount / shuffledQuestions.length) * 100);
+
     const wrongAnswers = shuffledQuestions
       .map((question, index) => ({
         questionId: question.id,
@@ -121,17 +127,20 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
         userAnswer: answers[index]
       }))
       .filter((_item, index) => answers[index] !== shuffledQuestions[index].correctAnswer);
-    
-    const score = Math.round(((shuffledQuestions.length - wrongAnswers.length) / shuffledQuestions.length) * 100);
-    
-        try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const masteryResults = shuffledQuestions.map((question, index) => ({
-          skillId: skillCode,
-          correct: answers[index] === question.correctAnswer,
-          timeMs: 30000, // placeholder until you track real time
-        }));
+
+                const masteryResults = shuffledQuestions.map((question, index) => {
+          const userAnswer = answers[index];
+          const isCorrectNow = userAnswer === question.correctAnswer;
+          const wasEverWrong = everWrong[index];
+          const isCorrectOnFirstTry = isCorrectNow && !wasEverWrong;
+
+          return {
+            skillId: skillCode,
+            correct: isCorrectOnFirstTry,
+            timeMs: 30000, // placeholder
+          };
+        });
+
 
         console.log('DEBUG masteryResults length:', masteryResults.length, masteryResults);
 
@@ -175,9 +184,15 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
   const progress = ((currentQuestion + 1) / shuffledQuestions.length) * 100;
   const allAnswered = answers.every(answer => answer !== -1);
 
-  if (showResults) {
-    const correctCount = answers.filter((answer, index) => answer === shuffledQuestions[index].correctAnswer).length;
-    const score = Math.round((correctCount / shuffledQuestions.length) * 100);
+    const firstTryCorrectCount = shuffledQuestions.reduce((acc, question, index) => {
+      const userAnswer = answers[index];
+      const isCorrectNow = userAnswer === question.correctAnswer;
+      const wasEverWrong = everWrong[index];
+      const isCorrectOnFirstTry = isCorrectNow && !wasEverWrong;
+      return acc + (isCorrectOnFirstTry ? 1 : 0);
+    }, 0);
+
+    const score = Math.round((firstTryCorrectCount / shuffledQuestions.length) * 100);
     
     return (
       <div className="space-y-6">
