@@ -12,19 +12,28 @@ import { seededRandom } from '@/lib/shuffle';
 interface QuizComponentProps {
   questions: LegacyQuestion[];
   title: string;
-  skillCode: string; // Added skillCode for mastery tracking
+  skillCode: string;
   onComplete: (score: number, wrongAnswers: QuizAnswers) => void;
   onBack?: () => void;
   onNeedsPractice?: (skillCode: string, score: number, wrongCount: number) => void;
 }
 
-export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack, onNeedsPractice }: QuizComponentProps) => {
+export const QuizComponent = ({
+  questions,
+  title,
+  skillCode,
+  onComplete,
+  onBack,
+  onNeedsPractice,
+}: QuizComponentProps) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<number[]>(new Array(questions.length).fill(-1));
   const [everWrong, setEverWrong] = useState<boolean[]>(new Array(questions.length).fill(false));
   const [showResults, setShowResults] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -39,50 +48,45 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
     return questions.map((q, idx) => {
       const correctAnswer = q.correctAnswer as string | number;
       let normalizedAnswer: number;
-      
+
       if (typeof correctAnswer === 'string') {
         normalizedAnswer = correctAnswer.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
       } else {
         normalizedAnswer = correctAnswer as number;
       }
-      
-      // Create shuffle order for choices
+
       const seed = userId ? `${userId}-${q.id}-${idx}` : `${q.id}-${idx}`;
       const random = seededRandom(seed);
       const choiceOrder = [0, 1, 2, 3];
-      
+
       for (let i = choiceOrder.length - 1; i > 0; i--) {
         const j = Math.floor(random() * (i + 1));
         [choiceOrder[i], choiceOrder[j]] = [choiceOrder[j], choiceOrder[i]];
       }
-      
-      // Apply shuffle to options
+
       const shuffledOptions = choiceOrder.map(index => q.options[index]);
       const newCorrectIndex = choiceOrder.indexOf(normalizedAnswer);
-      
+
       return {
         ...q,
         options: shuffledOptions,
         correctAnswer: newCorrectIndex,
         originalCorrectAnswer: normalizedAnswer,
-        choiceOrder
+        choiceOrder,
       };
     });
   }, [questions, userId]);
 
-  // Toast API for immediate feedback on answer selection.
-  const { toast } = useToast();
-
-    const handleAnswerSelect = (answerIndex: number) => {
+  const handleAnswerSelect = (answerIndex: number) => {
     if (submitted) return;
-    
+
     const newAnswers = [...answers];
     newAnswers[currentQuestion] = answerIndex;
     setAnswers(newAnswers);
 
     const isCorrect = answerIndex === shuffledQuestions[currentQuestion].correctAnswer;
 
-    // If they chose an incorrect answer at any point, mark this question as "everWrong"
+    // mark “ever wrong” if they ever choose an incorrect option
     if (!isCorrect) {
       setEverWrong(prev => {
         const next = [...prev];
@@ -97,7 +101,6 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
     });
   };
 
-
   const handleNext = () => {
     if (currentQuestion < shuffledQuestions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
@@ -110,7 +113,12 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
     }
   };
 
-      const firstTryCorrectCount = shuffledQuestions.reduce((acc, question, index) => {
+  const handleSubmit = async () => {
+    setSubmitted(true);
+    setShowResults(true);
+
+    // first-try correctness for scoring
+    const firstTryCorrectCount = shuffledQuestions.reduce((acc, question, index) => {
       const userAnswer = answers[index];
       const isCorrectNow = userAnswer === question.correctAnswer;
       const wasEverWrong = everWrong[index];
@@ -124,85 +132,14 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
       .map((question, index) => ({
         questionId: question.id,
         question,
-        userAnswer: answers[index]
+        userAnswer: answers[index],
       }))
       .filter((_item, index) => answers[index] !== shuffledQuestions[index].correctAnswer);
 
-    const handleSubmit = async () => {
-  setSubmitted(true);
-  setShowResults(true);
-
-  // First-try correctness
-  const firstTryCorrectCount = shuffledQuestions.reduce((acc, question, index) => {
-    const userAnswer = answers[index];
-    const isCorrectNow = userAnswer === question.correctAnswer;
-    const wasEverWrong = everWrong[index];
-    const isCorrectOnFirstTry = isCorrectNow && !wasEverWrong;
-    return acc + (isCorrectOnFirstTry ? 1 : 0);
-  }, 0);
-
-  const score = Math.round((firstTryCorrectCount / shuffledQuestions.length) * 100);
-
-  const wrongAnswers = shuffledQuestions
-    .map((question, index) => ({
-      questionId: question.id,
-      question,
-      userAnswer: answers[index],
-    }))
-    .filter((_item, index) => answers[index] !== shuffledQuestions[index].correctAnswer);
-
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const masteryResults = shuffledQuestions.map((question, index) => {
-        const userAnswer = answers[index];
-        const isCorrectNow = userAnswer === question.correctAnswer;
-        const wasEverWrong = everWrong[index];
-        const isCorrectOnFirstTry = isCorrectNow && !wasEverWrong;
-
-        return {
-          skillId: skillCode,
-          correct: isCorrectOnFirstTry,
-          timeMs: 30000, // placeholder for now
-        };
-      });
-
-      console.log('DEBUG masteryResults length:', masteryResults.length, masteryResults);
-
-      // One mastery update per question
-      for (const result of masteryResults) {
-        await updateMastery(
-          user.id,
-          result.skillId,
-          result.correct,
-          result.timeMs,
-        );
-      }
-
-      toast({
-        title: 'Progress saved!',
-        description: 'Your mastery for this skill has been updated.',
-      });
-    }
-  } catch (error) {
-    console.error('Error updating mastery:', error);
-    toast({
-      title: 'Error',
-      description: 'Failed to save progress. Please try again.',
-      variant: 'destructive',
-    });
-  }
-
-  const masteryThreshold = 80;
-  const needsMorePractice = score < masteryThreshold;
-
-  if (needsMorePractice && onNeedsPractice && skillCode) {
-    onNeedsPractice(skillCode, score, wrongAnswers.length);
-  }
-
-  onComplete(score, wrongAnswers);
-};
-            const masteryResults = shuffledQuestions.map((question, index) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const masteryResults = shuffledQuestions.map((question, index) => {
           const userAnswer = answers[index];
           const isCorrectNow = userAnswer === question.correctAnswer;
           const wasEverWrong = everWrong[index];
@@ -215,10 +152,8 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
           };
         });
 
-
         console.log('DEBUG masteryResults length:', masteryResults.length, masteryResults);
 
-        // One mastery update per question
         for (const result of masteryResults) {
           await updateMastery(
             user.id,
@@ -242,15 +177,13 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
       });
     }
 
-    
-    // Check if mastery threshold met
     const masteryThreshold = 80;
     const needsMorePractice = score < masteryThreshold;
-    
+
     if (needsMorePractice && onNeedsPractice && skillCode) {
       onNeedsPractice(skillCode, score, wrongAnswers.length);
     }
-    
+
     onComplete(score, wrongAnswers);
   };
 
@@ -258,6 +191,7 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
   const progress = ((currentQuestion + 1) / shuffledQuestions.length) * 100;
   const allAnswered = answers.every(answer => answer !== -1);
 
+  if (showResults) {
     const firstTryCorrectCount = shuffledQuestions.reduce((acc, question, index) => {
       const userAnswer = answers[index];
       const isCorrectNow = userAnswer === question.correctAnswer;
@@ -267,7 +201,7 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
     }, 0);
 
     const score = Math.round((firstTryCorrectCount / shuffledQuestions.length) * 100);
-    
+
     return (
       <div className="space-y-6">
         <Card className="p-8 text-center shadow-medium">
@@ -278,7 +212,7 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
             <h2 className="text-2xl font-bold">Quiz Complete!</h2>
             <div className="text-3xl font-bold text-primary">{score}%</div>
             <p className="text-muted-foreground">
-              You got {correctCount} out of {shuffledQuestions.length} questions correct
+              You got {firstTryCorrectCount} out of {shuffledQuestions.length} questions correct on your first try
             </p>
           </div>
         </Card>
@@ -288,9 +222,14 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
           {shuffledQuestions.map((question, index) => {
             const userAnswer = answers[index];
             const isCorrect = userAnswer === question.correctAnswer;
-            
+
             return (
-              <Card key={question.id} className={`p-4 shadow-soft ${isCorrect ? 'border-success/50' : 'border-destructive/50'}`}>
+              <Card
+                key={question.id}
+                className={`p-4 shadow-soft ${
+                  isCorrect ? 'border-success/50' : 'border-destructive/50'
+                }`}
+              >
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
                     {isCorrect ? (
@@ -302,11 +241,13 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
                       <p className="font-medium">{question.question}</p>
                       <div className="mt-2 space-y-1">
                         <p className="text-sm">
-                          <span className="font-medium">Your answer:</span> {question.options[userAnswer]}
+                          <span className="font-medium">Your answer:</span>{' '}
+                          {userAnswer >= 0 ? question.options[userAnswer] : 'No answer'}
                         </p>
                         {!isCorrect && (
                           <p className="text-sm">
-                            <span className="font-medium">Correct answer:</span> {question.options[question.correctAnswer]}
+                            <span className="font-medium">Correct answer:</span>{' '}
+                            {question.options[question.correctAnswer]}
                           </p>
                         )}
                         <p className="text-sm text-muted-foreground mt-2">
@@ -351,11 +292,15 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
               <span className="px-2 py-1 bg-primary/10 text-primary text-xs font-medium rounded">
                 Question {currentQuestion + 1}
               </span>
-              <span className={`px-2 py-1 text-xs font-medium rounded ${
-                currentQ.difficulty === 'easy' ? 'bg-success/10 text-success' :
-                currentQ.difficulty === 'medium' ? 'bg-warning/10 text-warning' :
-                'bg-destructive/10 text-destructive'
-              }`}>
+              <span
+                className={`px-2 py-1 text-xs font-medium rounded ${
+                  currentQ.difficulty === 'easy'
+                    ? 'bg-success/10 text-success'
+                    : currentQ.difficulty === 'medium'
+                    ? 'bg-warning/10 text-warning'
+                    : 'bg-destructive/10 text-destructive'
+                }`}
+              >
                 {currentQ.difficulty}
               </span>
             </div>
@@ -369,9 +314,7 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
                 key={index}
                 variant="quiz"
                 className={`w-full justify-start text-left whitespace-normal min-h-12 h-auto py-3 ${
-                  answers[currentQuestion] === index 
-                    ? 'border-primary bg-primary/10' 
-                    : ''
+                  answers[currentQuestion] === index ? 'border-primary bg-primary/10' : ''
                 }`}
                 onClick={() => handleAnswerSelect(index)}
                 disabled={submitted}
@@ -420,3 +363,4 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
     </div>
   );
 };
+
