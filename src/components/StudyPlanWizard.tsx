@@ -140,31 +140,38 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
 
       toast.success('Study plan preferences saved!');
 
-      // 6. Route based on diagnostic choice
+               // 6. Route based on diagnostic choice
       onOpenChange(false);
 
       if (form.diagnosticChoice === 'skip') {
-        // Create placeholder diagnostics so generate-study-plan has data to work with
-        const placeholderSections = [
-          { section: 'EN', score: 18, notes: 'Estimated baseline' },
-          { section: 'MA', score: 18, notes: 'Estimated baseline' },
-          { section: 'RD', score: 18, notes: 'Estimated baseline' },
-          { section: 'SCI', score: 18, notes: 'Estimated baseline' }
-        ];
+        // If user did NOT enter any previous scores, create a generic baseline
+        if (Object.keys(scores).length === 0) {
+          const defaultScores: Record<string, number> = {
+            English: 18,
+            Math: 18,
+            Reading: 18,
+            Science: 18,
+          };
 
-        const { error: diagnosticError } = await supabase.functions.invoke('finish-diagnostic', {
-          body: { sections: placeholderSections }
-        });
+          const { error: defaultBaselineError } = await supabase.functions.invoke('set-baseline', {
+            body: {
+              scores: defaultScores,
+              notes: form.targetScore
+                ? `Estimated baseline; target composite: ${form.targetScore}`
+                : 'Estimated baseline from wizard (diagnostic skipped)',
+            },
+          });
 
-        if (diagnosticError) {
-          console.error('Error creating baseline:', diagnosticError);
-          toast.error('Failed to create baseline');
-          return;
+          if (defaultBaselineError) {
+            console.error('Error saving default baseline:', defaultBaselineError);
+            toast.error('Failed to create baseline');
+            return;
+          }
         }
 
-        // Generate plan immediately after creating baseline
+        // Now generate the study plan using baselines (real or estimated)
         const { error: planError } = await supabase.functions.invoke('generate-study-plan', {
-          method: 'POST'
+          method: 'POST',
         });
 
         if (planError) {
@@ -175,8 +182,10 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
           onPlanGenerated?.();
         }
       } else {
-        // Take diagnostic first
-        toast.info(`Taking ${form.diagnosticChoice === 'quick' ? '20-minute' : '60-minute'} diagnostic...`);
+        // Take diagnostic first; finish-diagnostic will be called after the test
+        toast.info(
+          `Taking ${form.diagnosticChoice === 'quick' ? '20-minute' : '60-minute'} diagnostic...`
+        );
         navigate('/diagnostic');
       }
     } catch (error) {
