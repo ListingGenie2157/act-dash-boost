@@ -22,6 +22,7 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
   const [userId, setUserId] = useState<string | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<number[]>(new Array(questions.length).fill(-1));
+  const [everWrong, setEverWrong] = useState<boolean[]>(new Array(questions.length).fill(false));
   const [showResults, setShowResults] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
