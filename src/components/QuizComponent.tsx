@@ -73,7 +73,7 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
   // Toast API for immediate feedback on answer selection.
   const { toast } = useToast();
 
-  const handleAnswerSelect = (answerIndex: number) => {
+    const handleAnswerSelect = (answerIndex: number) => {
     if (submitted) return;
     
     const newAnswers = [...answers];
@@ -81,11 +81,22 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
     setAnswers(newAnswers);
 
     const isCorrect = answerIndex === shuffledQuestions[currentQuestion].correctAnswer;
+
+    // If they chose an incorrect answer at any point, mark this question as "everWrong"
+    if (!isCorrect) {
+      setEverWrong(prev => {
+        const next = [...prev];
+        next[currentQuestion] = true;
+        return next;
+      });
+    }
+
     toast({
       title: isCorrect ? 'Correct!' : 'Incorrect',
       description: isCorrect ? undefined : 'Keep going!',
     });
   };
+
 
   const handleNext = () => {
     if (currentQuestion < shuffledQuestions.length - 1) {
