@@ -1,10 +1,11 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.56.0";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-app",
 };
 
 // Helper function to select lessons for a specific day with subject balancing
@@ -12,8 +13,10 @@ function selectLessonsForDay(
   lessonsNeeded: number,
   dayOffset: number, // 0-6 for the 7 days
   diagnosticResults: Array<{ section: string; score: number }>,
-  availableSkills: Array<{ id: string; subject: string; name: string; order_index: number }>,
-  completedSkillIds: Set<string>
+  availableSkills: Array<
+    { id: string; subject: string; name: string; order_index: number }
+  >,
+  completedSkillIds: Set<string>,
 ): string[] {
   if (lessonsNeeded <= 0 || !availableSkills || availableSkills.length === 0) {
     return [];
@@ -24,30 +27,30 @@ function selectLessonsForDay(
     Math: [],
     English: [],
     Reading: [],
-    Science: []
+    Science: [],
   };
 
-  availableSkills.forEach(skill => {
+  availableSkills.forEach((skill) => {
     if (skillsBySubject[skill.subject]) {
       skillsBySubject[skill.subject].push(skill);
     }
   });
 
   // Sort each subject's skills by order_index
-  Object.values(skillsBySubject).forEach(skills => {
+  Object.values(skillsBySubject).forEach((skills) => {
     skills.sort((a, b) => a.order_index - b.order_index);
   });
 
   // Identify weak subjects from diagnostics
   const weakSubjects = new Set<string>();
   const sectionToSubject: Record<string, string> = {
-    'Math': 'Math',
-    'English': 'English',
-    'Reading': 'Reading',
-    'Science': 'Science'
+    "Math": "Math",
+    "English": "English",
+    "Reading": "Reading",
+    "Science": "Science",
   };
 
-  diagnosticResults.forEach(diag => {
+  diagnosticResults.forEach((diag) => {
     if (diag.score < 24) { // < 75% accuracy
       const subject = sectionToSubject[diag.section];
       if (subject) weakSubjects.add(subject);
@@ -56,20 +59,24 @@ function selectLessonsForDay(
 
   // If no weak subjects identified, treat all as equal
   if (weakSubjects.size === 0) {
-    ['Math', 'English', 'Reading', 'Science'].forEach(s => weakSubjects.add(s));
+    ["Math", "English", "Reading", "Science"].forEach((s) =>
+      weakSubjects.add(s)
+    );
   }
 
   // Rotate primary subject based on day (ensures balance across 7 days)
-  const subjects = ['Math', 'English', 'Reading', 'Science'];
+  const subjects = ["Math", "English", "Reading", "Science"];
   const primarySubject = subjects[dayOffset % 4];
 
   // Select lessons: 60% from weak subjects, 40% from others, prioritize primary subject
   const result: string[] = [];
   const weakSubjectsList = Array.from(weakSubjects);
-  
+
   // Start with primary subject if it's weak
   if (weakSubjects.has(primarySubject)) {
-    const primarySkills = skillsBySubject[primarySubject].filter(s => !completedSkillIds.has(s.id));
+    const primarySkills = skillsBySubject[primarySubject].filter((s) =>
+      !completedSkillIds.has(s.id)
+    );
     if (primarySkills.length > 0) {
       result.push(primarySkills[0].id);
       completedSkillIds.add(primarySkills[0].id);
@@ -80,11 +87,14 @@ function selectLessonsForDay(
   let attempts = 0;
   while (result.length < lessonsNeeded && attempts < 100) {
     attempts++;
-    
+
     // Alternate between weak subjects
-    const subjectToUse = weakSubjectsList[result.length % weakSubjectsList.length];
-    const availableSkills = skillsBySubject[subjectToUse]?.filter(s => !completedSkillIds.has(s.id)) || [];
-    
+    const subjectToUse =
+      weakSubjectsList[result.length % weakSubjectsList.length];
+    const availableSkills = skillsBySubject[subjectToUse]?.filter((s) =>
+      !completedSkillIds.has(s.id)
+    ) || [];
+
     if (availableSkills.length > 0) {
       result.push(availableSkills[0].id);
       completedSkillIds.add(availableSkills[0].id);
@@ -92,7 +102,9 @@ function selectLessonsForDay(
       // If no skills available in this subject, try others
       let found = false;
       for (const subject of subjects) {
-        const skills = skillsBySubject[subject]?.filter(s => !completedSkillIds.has(s.id)) || [];
+        const skills = skillsBySubject[subject]?.filter((s) =>
+          !completedSkillIds.has(s.id)
+        ) || [];
         if (skills.length > 0) {
           result.push(skills[0].id);
           completedSkillIds.add(skills[0].id);
@@ -100,7 +112,9 @@ function selectLessonsForDay(
           break;
         }
       }
-      if (!found) break;
+      if (!found) {
+        break;
+      }
     }
   }
 
@@ -124,9 +138,12 @@ export function selectPlaylist(priorities: Task[], capMins: number): Task[] {
 }
 
 // Pure function for calculating days left
-export function calculateDaysLeft(today: Date, testDate: Date | null): number | null {
+export function calculateDaysLeft(
+  today: Date,
+  testDate: Date | null,
+): number | null {
   if (!testDate) return null;
-  
+
   const timeDiff = testDate.getTime() - today.getTime();
   const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
   return daysDiff;
@@ -135,22 +152,28 @@ export function calculateDaysLeft(today: Date, testDate: Date | null): number | 
 // Pure function for getting today in Chicago timezone
 export function getTodayInChicago(): Date {
   const now = new Date();
-  const chicagoTime = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Chicago',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
+  const chicagoTime = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   }).formatToParts(now);
-  
-  const year = parseInt(chicagoTime.find(part => part.type === 'year')?.value || '0');
-  const month = parseInt(chicagoTime.find(part => part.type === 'month')?.value || '0') - 1; // Month is 0-indexed
-  const day = parseInt(chicagoTime.find(part => part.type === 'day')?.value || '0');
-  
+
+  const year = parseInt(
+    chicagoTime.find((part) => part.type === "year")?.value || "0",
+  );
+  const month =
+    parseInt(chicagoTime.find((part) => part.type === "month")?.value || "0") -
+    1; // Month is 0-indexed
+  const day = parseInt(
+    chicagoTime.find((part) => part.type === "day")?.value || "0",
+  );
+
   return new Date(year, month, day);
 }
 
 interface Task {
-  type: 'REVIEW' | 'DRILL' | 'LEARN';
+  type: "REVIEW" | "DRILL" | "LEARN";
   skillId?: string;
   questionId?: string;
   size: number;
@@ -159,7 +182,7 @@ interface Task {
 }
 
 interface StudyMode {
-  name: 'CRASH' | 'ACCEL' | 'MASTERY';
+  name: "CRASH" | "ACCEL" | "MASTERY";
   allowLearn: boolean;
   reviewWeight: number;
   drillWeight: number;
@@ -169,33 +192,37 @@ interface StudyMode {
 function getStudyMode(daysLeft: number | null): StudyMode {
   if (daysLeft === null || daysLeft > 30) {
     return {
-      name: 'MASTERY',
+      name: "MASTERY",
       allowLearn: true,
       reviewWeight: 1,
       drillWeight: 2,
-      learnWeight: 3
+      learnWeight: 3,
     };
   } else if (daysLeft <= 7) {
     return {
-      name: 'CRASH',
+      name: "CRASH",
       allowLearn: false,
       reviewWeight: 1,
       drillWeight: 2,
-      learnWeight: 4
+      learnWeight: 4,
     };
   } else {
     return {
-      name: 'ACCEL',
+      name: "ACCEL",
       allowLearn: true,
       reviewWeight: 1,
       drillWeight: 2,
-      learnWeight: 3
+      learnWeight: 3,
     };
   }
 }
 
 // Test week special scheduling - focused on final review
-function getTestWeekTasks(daysLeft: number, userId: string, dateStr: string): Array<{
+function getTestWeekTasks(
+  daysLeft: number,
+  userId: string,
+  dateStr: string,
+): Array<{
   type: string;
   section?: string;
   size: number;
@@ -207,79 +234,100 @@ function getTestWeekTasks(daysLeft: number, userId: string, dateStr: string): Ar
     size: number;
     estimated_mins: number;
   }> = [];
-  
+
   // Final week focuses on review and light practice, not full simulations
   if (daysLeft >= 3 && daysLeft <= 7) {
     tasks.push({
-      type: 'REVIEW',
+      type: "REVIEW",
       size: 15,
-      estimated_mins: 30
+      estimated_mins: 30,
     });
   } else if (daysLeft === 2) {
     tasks.push({
-      type: 'REVIEW',
+      type: "REVIEW",
       size: 10,
-      estimated_mins: 20
+      estimated_mins: 20,
     });
   } else if (daysLeft === 1) {
     tasks.push({
-      type: 'WARMUP',
+      type: "WARMUP",
       size: 5,
-      estimated_mins: 15
+      estimated_mins: 15,
     });
   }
-  
+
   return tasks;
 }
 
 // Helper function for choosing weak skills from baseline
-function chooseWeakSkills(baseline: Array<{ section: string; score: number }>, progress: Array<{ section: string; accuracy: number }>, allSkills: Array<{ id?: string; subject: string; skill_name?: string; name?: string; cluster: string }>): string[] {
+function chooseWeakSkills(
+  baseline: Array<{ section: string; score: number }>,
+  progress: Array<{ section: string; accuracy: number }>,
+  allSkills: Array<
+    {
+      id?: string;
+      subject: string;
+      skill_name?: string;
+      name?: string;
+      cluster: string;
+    }
+  >,
+): string[] {
   const weakSkillIds: string[] = [];
-  
-  baseline.forEach(diagnostic => {
+
+  baseline.forEach((diagnostic) => {
     if (diagnostic.score < 0.6) {
-      const sectionSkills = allSkills.filter(s => s.subject === diagnostic.section);
+      const sectionSkills = allSkills.filter((s) =>
+        s.subject === diagnostic.section
+      );
       const clusterGroups: { [cluster: string]: string[] } = {};
-      
-      sectionSkills.forEach(skill => {
+
+      sectionSkills.forEach((skill) => {
         if (!clusterGroups[skill.cluster]) clusterGroups[skill.cluster] = [];
-        clusterGroups[skill.cluster].push(skill.skill_name || skill.name || skill.id || '');
+        clusterGroups[skill.cluster].push(
+          skill.skill_name || skill.name || skill.id || "",
+        );
       });
-      
+
       const clusters = Object.keys(clusterGroups).slice(0, 2);
-      clusters.forEach(cluster => {
+      clusters.forEach((cluster) => {
         const clusterSkillIds = clusterGroups[cluster].slice(0, 2);
         weakSkillIds.push(...clusterSkillIds);
       });
     }
   });
-  
+
   return weakSkillIds.slice(0, 5);
 }
 
-function getTaskTitle(type: string, skillId: string | null, skillNameMap: Map<string, string>, size: number): string {
+function getTaskTitle(
+  type: string,
+  skillId: string | null,
+  skillNameMap: Map<string, string>,
+  size: number,
+): string {
   if (skillId && skillNameMap.has(skillId)) {
     const skillName = skillNameMap.get(skillId);
-    switch(type) {
-      case 'LEARN':
+    switch (type) {
+      case "LEARN":
         return `Learn: ${skillName}`;
-      case 'DRILL':
+      case "DRILL":
         return `Practice: ${skillName}`;
-      case 'REVIEW':
+      case "REVIEW":
         return `Review: ${skillName}`;
       default:
         return skillName || `${type} Task`;
     }
   }
-  
+
   // Fallback for tasks without skill_id
-  switch(type) {
-    case 'LEARN':
-      return 'New Lesson';
-    case 'DRILL':
+  switch (type) {
+    case "LEARN":
+      return "New Lesson";
+    case "DRILL":
       return `Practice Drill (${size} questions)`;
-    case 'REVIEW':
-      return `Review ${size} question${size > 1 ? 's' : ''}`;
+    case "REVIEW":
+      return `Review ${size} question${size > 1 ? "s" : ""}`;
     default:
       return `${type} Task`;
   }
@@ -287,238 +335,270 @@ function getTaskTitle(type: string, skillId: string | null, skillNameMap: Map<st
 
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
   try {
     // Get the authorization header first
-    const authHeader = req.headers.get('authorization');
+    const authHeader = req.headers.get("authorization");
     if (!authHeader) {
-      console.warn('No authorization header provided');
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      console.warn("No authorization header provided");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     // Initialize Supabase client with proper env validation and auth header
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY") ||
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing required environment variables: SUPABASE_URL or SUPABASE_ANON_KEY');
+      throw new Error(
+        "Missing required environment variables: SUPABASE_URL or SUPABASE_ANON_KEY",
+      );
     }
 
     // Create client with Authorization header so RLS works properly
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: {
         headers: {
-          Authorization: authHeader
-        }
-      }
+          Authorization: authHeader,
+        },
+      },
     });
 
     // Verify the JWT token
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      token,
+    );
 
     if (authError || !user) {
-      console.warn('Authentication failed:', authError?.message);
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      console.warn("Authentication failed:", authError?.message);
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    
+
     // Parse request body for force flag
     const body = await req.json();
     const force = body?.force === true;
-    
-    console.log(`Generate study plan called. Force: ${force}, User: ${user.id}`);
+
+    console.log(
+      `Generate study plan called. Force: ${force}, User: ${user.id}`,
+    );
 
     const today = getTodayInChicago();
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = today.toISOString().split("T")[0];
 
     // Check if plan already generated for this week
     const weekEnd = new Date(today);
     weekEnd.setDate(today.getDate() + 6);
-    const weekEndStr = weekEnd.toISOString().split('T')[0];
-    
+    const weekEndStr = weekEnd.toISOString().split("T")[0];
+
     // If force=true, delete existing pending tasks
     if (force) {
-      console.log('Force regeneration: Deleting existing plans...');
-      
+      console.log("Force regeneration: Deleting existing plans...");
+
       const { error: deleteDaysError } = await supabase
-        .from('study_plan_days')
+        .from("study_plan_days")
         .delete()
-        .eq('user_id', user.id)
-        .gte('the_date', todayStr);
-      
+        .eq("user_id", user.id)
+        .gte("the_date", todayStr);
+
       if (deleteDaysError) {
-        console.error('Error deleting study_plan_days:', deleteDaysError);
+        console.error("Error deleting study_plan_days:", deleteDaysError);
       }
-      
+
       const { error: deleteTasksError } = await supabase
-        .from('study_tasks')
+        .from("study_tasks")
         .delete()
-        .eq('user_id', user.id)
-        .eq('status', 'PENDING')
-        .gte('the_date', todayStr);
-      
+        .eq("user_id", user.id)
+        .eq("status", "PENDING")
+        .gte("the_date", todayStr);
+
       if (deleteTasksError) {
-        console.error('Error deleting study_tasks:', deleteTasksError);
+        console.error("Error deleting study_tasks:", deleteTasksError);
       }
-      
-      console.log('Existing plans deleted. Proceeding with fresh generation...');
+
+      console.log(
+        "Existing plans deleted. Proceeding with fresh generation...",
+      );
     }
 
     // Check if plan already exists (skip if force=true)
     if (!force) {
       const { data: existingPlans } = await supabase
-        .from('study_plan_days')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('the_date', todayStr)
-        .lte('the_date', weekEndStr);
+        .from("study_plan_days")
+        .select("*")
+        .eq("user_id", user.id)
+        .gte("the_date", todayStr)
+        .lte("the_date", weekEndStr);
 
       if (existingPlans && existingPlans.length === 7) {
-        console.warn('7-day plan already exists for this week');
-        
+        console.warn("7-day plan already exists for this week");
+
         // Set has_study_plan flag even for existing plans
         const { error: profileUpdateError } = await supabase
-          .from('profiles')
+          .from("profiles")
           .update({ has_study_plan: true })
-          .eq('id', user.id);
-        
+          .eq("id", user.id);
+
         if (profileUpdateError) {
-          console.error('Error updating has_study_plan flag:', profileUpdateError);
+          console.error(
+            "Error updating has_study_plan flag:",
+            profileUpdateError,
+          );
         }
-        
-        return new Response(JSON.stringify({
-          days: existingPlans.map(p => ({
-            the_date: p.the_date,
-            tasks: p.tasks_json || []
-          }))
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+
+        return new Response(
+          JSON.stringify({
+            days: existingPlans.map((p) => ({
+              the_date: p.the_date,
+              tasks: p.tasks_json || [],
+            })),
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
     }
 
     // Get user profile
     const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('test_date, daily_time_cap_mins')
-      .eq('id', user.id)
+      .from("profiles")
+      .select("test_date, daily_time_cap_mins")
+      .eq("id", user.id)
       .single();
 
     if (profileError) {
-      console.error('Error fetching profile:', profileError);
-      return new Response(JSON.stringify({ error: 'Failed to fetch profile' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      console.error("Error fetching profile:", profileError);
+      return new Response(
+        JSON.stringify({ error: "Failed to fetch profile" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Get user preferences
     const { data: userPreferences } = await supabase
-      .from('user_preferences')
-      .select('daily_minutes, preferred_start_hour, preferred_end_hour')
-      .eq('user_id', user.id)
+      .from("user_preferences")
+      .select("daily_minutes, preferred_start_hour, preferred_end_hour")
+      .eq("user_id", user.id)
       .single();
 
     // Get accommodations
     const { data: accommodations } = await supabase
-      .from('accommodations')
-      .select('time_multiplier')
-      .eq('user_id', user.id)
+      .from("accommodations")
+      .select("time_multiplier")
+      .eq("user_id", user.id)
       .single();
 
     // Get all skills for lesson tracking
     const { data: allSkills } = await supabase
-      .from('skills')
-      .select('id, name, subject, cluster, order_index')
-      .order('order_index', { ascending: true });
+      .from("skills")
+      .select("id, name, subject, cluster, order_index")
+      .order("order_index", { ascending: true });
 
     // Create skill name lookup map
     const skillNameMap = new Map<string, string>();
-    allSkills?.forEach(skill => {
+    allSkills?.forEach((skill) => {
       skillNameMap.set(skill.id, skill.name);
     });
 
     const timeMultiplier = accommodations?.time_multiplier || 1.0;
-    const testDate = profile?.test_date ? new Date(profile.test_date + 'T00:00:00') : null;
+    const testDate = profile?.test_date
+      ? new Date(profile.test_date + "T00:00:00")
+      : null;
     const daysLeft = calculateDaysLeft(today, testDate);
-    const dailyTimeCap = userPreferences?.daily_minutes || profile?.daily_time_cap_mins || 30;
+    const dailyTimeCap = userPreferences?.daily_minutes ||
+      profile?.daily_time_cap_mins || 30;
     const mode = getStudyMode(daysLeft);
 
-    console.warn(`Study mode: ${mode.name}, Days left: ${daysLeft}, Time cap: ${dailyTimeCap}mins, Time multiplier: ${timeMultiplier}`);
+    console.warn(
+      `Study mode: ${mode.name}, Days left: ${daysLeft}, Time cap: ${dailyTimeCap}mins, Time multiplier: ${timeMultiplier}`,
+    );
 
     // Calculate lesson metrics for time-adaptive planning
     const { data: lessonsWithContent } = await supabase
-      .from('lesson_content')
-      .select('skill_code');
-    
+      .from("lesson_content")
+      .select("skill_code");
+
     const totalLessonsAvailable = lessonsWithContent?.length || 30;
-    
+
     // Get completed lessons (mastery level >= 3)
     const { data: masteryData } = await supabase
-      .from('mastery')
-      .select('skill_id, correct, total')
-      .eq('user_id', user.id);
+      .from("mastery")
+      .select("skill_id, correct, total")
+      .eq("user_id", user.id);
 
     const completedSkillIds = new Set<string>();
-    masteryData?.forEach(m => {
+    masteryData?.forEach((m) => {
       if (m.total >= 5 && (m.correct / m.total) >= 0.8) {
         completedSkillIds.add(m.skill_id);
       }
     });
 
     const lessonsRemaining = totalLessonsAvailable - completedSkillIds.size;
-    const lessonsPerDay = daysLeft && daysLeft > 0 
-      ? Math.min(Math.ceil(lessonsRemaining / daysLeft), 3) 
+    const lessonsPerDay = daysLeft && daysLeft > 0
+      ? Math.min(Math.ceil(lessonsRemaining / daysLeft), 3)
       : Math.min(lessonsRemaining, 3);
 
-    console.log(`📚 Lessons: ${lessonsRemaining} remaining, ${lessonsPerDay} per day needed (${daysLeft} days left)`);
+    console.log(
+      `📚 Lessons: ${lessonsRemaining} remaining, ${lessonsPerDay} per day needed (${daysLeft} days left)`,
+    );
 
     // Fetch review and weakness data once for all days
     const { data: dueReviews } = await supabase
-      .from('review_queue')
-      .select('question_id, due_at')
-      .eq('user_id', user.id)
-      .lte('due_at', new Date().toISOString())
-      .order('due_at', { ascending: true })
+      .from("review_queue")
+      .select("question_id, due_at")
+      .eq("user_id", user.id)
+      .lte("due_at", new Date().toISOString())
+      .order("due_at", { ascending: true })
       .limit(50); // Fetch more for 7 days
 
     const { data: latestDiagnostics } = await supabase
-      .from('diagnostics')
-      .select('section, score, source')
-      .eq('user_id', user.id)
-      .not('completed_at', 'is', null)
-      .order('completed_at', { ascending: false });
+      .from("diagnostics")
+      .select("section, score, source")
+      .eq("user_id", user.id)
+      .not("completed_at", "is", null)
+      .order("completed_at", { ascending: false });
 
-    const diagnosticsBySection: { [key: string]: { score: number; source: string } } = {};
-    latestDiagnostics?.forEach(d => {
+    const diagnosticsBySection: {
+      [key: string]: { score: number; source: string };
+    } = {};
+    latestDiagnostics?.forEach((d) => {
       const current = diagnosticsBySection[d.section];
-      if (!current || (d.source === 'diagnostic' && current.source === 'self')) {
-        diagnosticsBySection[d.section] = { score: d.score || 0, source: d.source || 'diagnostic' };
+      if (
+        !current || (d.source === "diagnostic" && current.source === "self")
+      ) {
+        diagnosticsBySection[d.section] = {
+          score: d.score || 0,
+          source: d.source || "diagnostic",
+        };
       }
     });
 
     const { data: weakestSkills } = await supabase
-      .from('progress')
-      .select('skill_id, mastery_level, correct, seen')
-      .eq('user_id', user.id)
-      .gt('seen', 0)
-      .order('mastery_level', { ascending: true })
+      .from("progress")
+      .select("skill_id, mastery_level, correct, seen")
+      .eq("user_id", user.id)
+      .gt("seen", 0)
+      .order("mastery_level", { ascending: true })
       .limit(10); // More skills for 7 days
 
     // Generate plans for 7 days
@@ -530,7 +610,7 @@ serve(async (req) => {
     for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
       const targetDate = new Date(today);
       targetDate.setDate(today.getDate() + dayOffset);
-      const dateStr = targetDate.toISOString().split('T')[0];
+      const dateStr = targetDate.toISOString().split("T")[0];
       const dayDaysLeft = daysLeft !== null ? daysLeft - dayOffset : null;
       const dayMode = getStudyMode(dayDaysLeft);
 
@@ -549,8 +629,12 @@ serve(async (req) => {
               type: task.type,
               skill_id: task.skill_id || null,
               size: task.size,
-              status: 'PENDING',
-              reward_cents: task.type === 'SIM' ? 50 : task.type === 'REVIEW' ? 10 : 25
+              status: "PENDING",
+              reward_cents: task.type === "SIM"
+                ? 50
+                : task.type === "REVIEW"
+                ? 10
+                : 25,
             });
           });
           continue; // Skip normal task generation for test week
@@ -565,11 +649,11 @@ serve(async (req) => {
       dueReviews?.forEach((review, index) => {
         if (!assignedReviewIds.has(review.question_id) && reviewsUsed < 3) {
           priorities.push({
-            type: 'REVIEW',
+            type: "REVIEW",
             questionId: review.question_id,
             size: 1,
             estimatedMins: Math.round(2 * timeMultiplier),
-            priority: dayMode.reviewWeight * 1000 + (100 - index)
+            priority: dayMode.reviewWeight * 1000 + (100 - index),
           });
           assignedReviewIds.add(review.question_id);
           reviewsUsed++;
@@ -577,40 +661,49 @@ serve(async (req) => {
       });
 
       // 2. DRILL tasks - cycle through weak skills
-      let availableWeakSkills = weakestSkills?.filter(s => !assignedSkillIds.has(s.skill_id)) || [];
-      
+      let availableWeakSkills = weakestSkills?.filter((s) =>
+        !assignedSkillIds.has(s.skill_id)
+      ) || [];
+
       // If no weak skills (new user), pick 2 skills from each subject
       if (availableWeakSkills.length === 0) {
-        const subjects = ['Math', 'English', 'Reading', 'Science'];
+        const subjects = ["Math", "English", "Reading", "Science"];
         const drillSkills: string[] = [];
-        
-        subjects.forEach(subject => {
+
+        subjects.forEach((subject) => {
           const subjectSkills = (allSkills || [])
-            .filter(s => s.subject === subject && !assignedSkillIds.has(s.id))
+            .filter((s) => s.subject === subject && !assignedSkillIds.has(s.id))
             .sort((a, b) => a.order_index - b.order_index)
             .slice(0, 2)
-            .map(s => s.id);
+            .map((s) => s.id);
           drillSkills.push(...subjectSkills);
         });
-        
-        availableWeakSkills = drillSkills.slice(0, 8).map(skillId => ({ skill_id: skillId, mastery_level: 0, correct: 0, seen: 0 }));
+
+        availableWeakSkills = drillSkills.slice(0, 8).map((skillId) => ({
+          skill_id: skillId,
+          mastery_level: 0,
+          correct: 0,
+          seen: 0,
+        }));
       }
-      
+
       availableWeakSkills.slice(0, 2).forEach((skill, index) => {
         priorities.push({
-          type: 'DRILL',
+          type: "DRILL",
           skillId: skill.skill_id,
           size: 5,
           estimatedMins: Math.round(8 * timeMultiplier),
-          priority: dayMode.drillWeight * 1000 + (50 - index)
+          priority: dayMode.drillWeight * 1000 + (50 - index),
         });
       });
 
       // 3. LEARN tasks
       if (dayMode.allowLearn && lessonsPerDay > 0) {
-        const baselineDiagnostics = Object.entries(diagnosticsBySection).map(([section, data]) => ({
+        const baselineDiagnostics = Object.entries(diagnosticsBySection).map((
+          [section, data],
+        ) => ({
           section,
-          score: data.score
+          score: data.score,
         }));
 
         const dailyLessons = selectLessonsForDay(
@@ -618,16 +711,16 @@ serve(async (req) => {
           dayOffset, // Pass day offset for subject rotation
           baselineDiagnostics,
           allSkills || [],
-          assignedSkillIds
+          assignedSkillIds,
         );
 
         dailyLessons.forEach((skillId, index) => {
           priorities.push({
-            type: 'LEARN',
+            type: "LEARN",
             skillId: skillId,
             size: 3,
             estimatedMins: Math.round(12 * timeMultiplier),
-            priority: dayMode.learnWeight * 1000 + (25 - index)
+            priority: dayMode.learnWeight * 1000 + (25 - index),
           });
           assignedSkillIds.add(skillId);
         });
@@ -641,80 +734,89 @@ serve(async (req) => {
       console.log(`Selected ${selectedTasks.length} tasks for ${dateStr}`);
 
       // Convert to JSON format
-      const tasksJson = selectedTasks.map(task => ({
+      const tasksJson = selectedTasks.map((task) => ({
         type: task.type,
         skill_id: task.skillId || null,
         question_id: task.questionId || null,
         size: task.size,
         estimated_mins: task.estimatedMins,
-        title: getTaskTitle(task.type, task.skillId, skillNameMap, task.size)
+        title: getTaskTitle(task.type, task.skillId, skillNameMap, task.size),
       }));
 
       allPlans.push({ the_date: dateStr, tasks: tasksJson });
 
       // Add to study tasks
-      selectedTasks.forEach(task => {
+      selectedTasks.forEach((task) => {
         allStudyTasks.push({
           user_id: user.id,
           the_date: dateStr,
           type: task.type,
           skill_id: task.skillId || null,
           size: task.size,
-          status: 'PENDING',
-          reward_cents: task.type === 'REVIEW' ? 10 : task.type === 'DRILL' ? 15 : 20
+          status: "PENDING",
+          reward_cents: task.type === "REVIEW"
+            ? 10
+            : task.type === "DRILL"
+            ? 15
+            : 20,
         });
       });
     }
 
     // Save all plans to database
-    const planRecords = allPlans.map(plan => ({
+    const planRecords = allPlans.map((plan) => ({
       user_id: user.id,
       the_date: plan.the_date,
       tasks_json: plan.tasks,
-      generated_at: new Date().toISOString()
+      generated_at: new Date().toISOString(),
     }));
 
     const { error: planError } = await supabase
-      .from('study_plan_days')
-      .upsert(planRecords, { onConflict: 'user_id,the_date' });
+      .from("study_plan_days")
+      .upsert(planRecords, { onConflict: "user_id,the_date" });
 
     if (planError) {
-      console.error('Error saving 7-day study plan:', planError);
-      return new Response(JSON.stringify({ error: 'Failed to save study plan' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      console.error("Error saving 7-day study plan:", planError);
+      return new Response(
+        JSON.stringify({ error: "Failed to save study plan" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Set has_study_plan flag
     const { error: profileUpdateError } = await supabase
-      .from('profiles')
+      .from("profiles")
       .update({ has_study_plan: true })
-      .eq('id', user.id);
+      .eq("id", user.id);
 
     if (profileUpdateError) {
-      console.error('Error updating has_study_plan flag:', profileUpdateError);
+      console.error("Error updating has_study_plan flag:", profileUpdateError);
     }
 
     // Save all study tasks
     if (allStudyTasks.length > 0) {
       // Delete existing tasks for the 7-day range first
       await supabase
-        .from('study_tasks')
+        .from("study_tasks")
         .delete()
-        .eq('user_id', user.id)
-        .gte('the_date', todayStr)
-        .lte('the_date', weekEndStr);
+        .eq("user_id", user.id)
+        .gte("the_date", todayStr)
+        .lte("the_date", weekEndStr);
 
       // Insert new tasks
       const { error: tasksError } = await supabase
-        .from('study_tasks')
+        .from("study_tasks")
         .insert(allStudyTasks);
 
       if (tasksError) {
-        console.error('Error saving study tasks:', tasksError);
+        console.error("Error saving study tasks:", tasksError);
       } else {
-        console.log(`✅ Saved ${allStudyTasks.length} study tasks across 7 days`);
+        console.log(
+          `✅ Saved ${allStudyTasks.length} study tasks across 7 days`,
+        );
       }
     }
 
@@ -729,21 +831,21 @@ serve(async (req) => {
         for (let day = 30; day <= daysLeft; day += 30) {
           const simDate = new Date(today);
           simDate.setDate(today.getDate() + day);
-          simDates.push(simDate.toISOString().split('T')[0]);
+          simDates.push(simDate.toISOString().split("T")[0]);
         }
       } else if (daysLeft >= 21) {
         // 3+ weeks: schedule once per week
         for (let day = 7; day <= daysLeft - 7; day += 7) {
           const simDate = new Date(today);
           simDate.setDate(today.getDate() + day);
-          simDates.push(simDate.toISOString().split('T')[0]);
+          simDates.push(simDate.toISOString().split("T")[0]);
         }
       } else {
         // 1-3 weeks: schedule 1 sim mid-way
         const midPoint = Math.floor(daysLeft / 2);
         const simDate = new Date(today);
         simDate.setDate(today.getDate() + midPoint);
-        simDates.push(simDate.toISOString().split('T')[0]);
+        simDates.push(simDate.toISOString().split("T")[0]);
       }
 
       // Create SIM tasks for scheduled dates
@@ -751,15 +853,15 @@ serve(async (req) => {
         const simTask = {
           user_id: user.id,
           the_date: dateStr,
-          type: 'SIM',
+          type: "SIM",
           skill_id: null,
           size: 60, // Full section simulation
-          status: 'PENDING',
-          reward_cents: 50
+          status: "PENDING",
+          reward_cents: 50,
         };
 
         await supabase
-          .from('study_tasks')
+          .from("study_tasks")
           .insert(simTask);
       }
 
@@ -774,22 +876,20 @@ serve(async (req) => {
       days_left: daysLeft,
       lessons_remaining: lessonsRemaining,
       lessons_per_day: lessonsPerDay,
-      total_tasks: allStudyTasks.length
+      total_tasks: allStudyTasks.length,
     };
 
-    console.warn('7-day study plan generated successfully:', response);
+    console.warn("7-day study plan generated successfully:", response);
 
     return new Response(JSON.stringify(response), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error('Error in generate-study-plan function:', msg);
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+    console.error("Error in generate-study-plan function:", msg);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
-
