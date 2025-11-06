@@ -5,7 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { CheckCircle, XCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import type { LegacyQuestion, QuizAnswers } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { batchUpdateMastery } from '@/lib/mastery';
+import { updateMastery } from '@/lib/mastery';
 import { supabase } from '@/integrations/supabase/client';
 import { seededRandom } from '@/lib/shuffle';
 
@@ -112,17 +112,27 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
     
     const score = Math.round(((shuffledQuestions.length - wrongAnswers.length) / shuffledQuestions.length) * 100);
     
-    try {
+        try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const masteryResults = shuffledQuestions.map((question, index) => ({
           skillId: skillCode,
           correct: answers[index] === question.correctAnswer,
-          timeMs: 30000,
+          timeMs: 30000, // placeholder until you track real time
         }));
-        
-        await batchUpdateMastery(user.id, masteryResults);
-        
+
+        console.log('DEBUG masteryResults length:', masteryResults.length, masteryResults);
+
+        // One mastery update per question
+        for (const result of masteryResults) {
+          await updateMastery(
+            user.id,
+            result.skillId,
+            result.correct,
+            result.timeMs,
+          );
+        }
+
         toast({
           title: 'Progress saved!',
           description: 'Your mastery for this skill has been updated.',
@@ -136,6 +146,7 @@ export const QuizComponent = ({ questions, title, skillCode, onComplete, onBack,
         variant: 'destructive',
       });
     }
+
     
     // Check if mastery threshold met
     const masteryThreshold = 80;
