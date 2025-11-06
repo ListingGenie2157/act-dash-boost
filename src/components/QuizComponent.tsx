@@ -77,8 +77,10 @@ export const QuizComponent = ({
     });
   }, [questions, userId]);
 
-  const handleAnswerSelect = (answerIndex: number) => {
+    const handleAnswerSelect = (answerIndex: number) => {
     if (submitted) return;
+    // already answered this question → do nothing
+    if (answers[currentQuestion] !== -1) return;
 
     const newAnswers = [...answers];
     newAnswers[currentQuestion] = answerIndex;
@@ -86,7 +88,7 @@ export const QuizComponent = ({
 
     const isCorrect = answerIndex === shuffledQuestions[currentQuestion].correctAnswer;
 
-    // mark “ever wrong” if they ever choose an incorrect option
+    // mark “ever wrong” if this first (and only) attempt is wrong
     if (!isCorrect) {
       setEverWrong(prev => {
         const next = [...prev];
@@ -96,9 +98,14 @@ export const QuizComponent = ({
     }
 
     toast({
-      title: isCorrect ? 'Correct!' : 'Incorrect',
-      description: isCorrect ? undefined : 'Keep going!',
+      title: isCorrect ? 'Correct' : 'Incorrect',
+      description: isCorrect ? undefined : 'We’ll review this later.',
     });
+
+    // auto-advance to next question (except on last question)
+    if (currentQuestion < shuffledQuestions.length - 1) {
+      setCurrentQuestion(currentQuestion + 1);
+    }
   };
 
   const handleNext = () => {
