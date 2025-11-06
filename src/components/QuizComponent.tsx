@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle, XCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import type { LegacyQuestion, QuizAnswers } from '@/types';
-import { useToast } from '@/hooks/use-toast';
 import { updateMastery } from '@/lib/mastery';
 import { supabase } from '@/integrations/supabase/client';
 import { seededRandom } from '@/lib/shuffle';
@@ -32,8 +31,8 @@ export const QuizComponent = ({
   const [everWrong, setEverWrong] = useState<boolean[]>(new Array(questions.length).fill(false));
   const [showResults, setShowResults] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-
-  const { toast } = useToast();
+  const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
+  const [isFeedbackLock, setIsFeedbackLock] = useState(false); // lock while showing "Correct/Incorrect" on button
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -77,9 +76,9 @@ export const QuizComponent = ({
     });
   }, [questions, userId]);
 
-    const handleAnswerSelect = (answerIndex: number) => {
+  const handleAnswerSelect = (answerIndex: number) => {
     if (submitted) return;
-    // already answered this question → do nothing
+    // one attempt per question
     if (answers[currentQuestion] !== -1) return;
 
     const newAnswers = [...answers];
@@ -88,7 +87,6 @@ export const QuizComponent = ({
 
     const isCorrect = answerIndex === shuffledQuestions[currentQuestion].correctAnswer;
 
-    // mark “ever wrong” if this first (and only) attempt is wrong
     if (!isCorrect) {
       setEverWrong(prev => {
         const next = [...prev];
@@ -97,26 +95,39 @@ export const QuizComponent = ({
       });
     }
 
-    toast({
-      title: isCorrect ? 'Correct' : 'Incorrect',
-      description: isCorrect ? undefined : 'We’ll review this later.',
-    });
+    setFeedback(isCorrect ? 'correct' : 'incorrect');
+    setIsFeedbackLock(true);
 
-    // auto-advance to next question (except on last question)
-    if (currentQuestion < shuffledQuestions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
+    const isLastQuestion = currentQuestion === shuffledQuestions.length - 1;
+
+    if (!isLastQuestion) {
+      // mid-quiz: show feedback text on Next button for 2s, then clear and re-enable Next
+      setTimeout(() => {
+        setIsFeedbackLock(false);
+        setFeedback(null);
+      }, 2000);
+    } else {
+      // last question: keep feedback visible, but unlock Submit after 2s
+      setTimeout(() => {
+        setIsFeedbackLock(false);
+        // keep feedback so user still sees Correct/Incorrect
+      }, 2000);
     }
   };
 
   const handleNext = () => {
     if (currentQuestion < shuffledQuestions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
+      // clear any leftover feedback for new question
+      setFeedback(null);
     }
   };
 
   const handlePrevious = () => {
     if (currentQuestion > 0) {
       setCurrentQuestion(currentQuestion - 1);
+      // feedback for that previous question doesn't matter for UX; clear it
+      setFeedback(null);
     }
   };
 
@@ -169,19 +180,9 @@ export const QuizComponent = ({
             result.timeMs,
           );
         }
-
-        toast({
-          title: 'Progress saved!',
-          description: 'Your mastery for this skill has been updated.',
-        });
       }
     } catch (error) {
       console.error('Error updating mastery:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save progress. Please try again.',
-        variant: 'destructive',
-      });
     }
 
     const masteryThreshold = 80;
@@ -197,6 +198,7 @@ export const QuizComponent = ({
   const currentQ = shuffledQuestions[currentQuestion];
   const progress = ((currentQuestion + 1) / shuffledQuestions.length) * 100;
   const allAnswered = answers.every(answer => answer !== -1);
+  const isLastQuestion = currentQuestion === shuffledQuestions.length - 1;
 
   if (showResults) {
     const firstTryCorrectCount = shuffledQuestions.reduce((acc, question, index) => {
@@ -314,6 +316,13 @@ export const QuizComponent = ({
             <h3 className="text-lg font-semibold">{currentQ.question}</h3>
           </div>
 
+          {/* Inline feedback */}
+          {feedback && (
+            <div className="text-sm font-semibold">
+              {feedback === 'correct' ? 'Correct' : 'Incorrect'}
+            </div>
+          )}
+
           {/* Answer Options */}
           <div className="space-y-3">
             {currentQ.options.map((option, index) => (
@@ -324,7 +333,11 @@ export const QuizComponent = ({
                   answers[currentQuestion] === index ? 'border-primary bg-primary/10' : ''
                 }`}
                 onClick={() => handleAnswerSelect(index)}
-                disabled={submitted}
+                disabled={
+                  submitted ||
+                  answers[currentQuestion] !== -1 || // already answered
+                  isFeedbackLock // while showing "Correct/Incorrect" on button
+                }
               >
                 <span className="mr-3 flex-shrink-0 w-6 h-6 rounded-full border border-current flex items-center justify-center text-xs font-bold">
                   {String.fromCharCode(65 + index)}
@@ -341,25 +354,32 @@ export const QuizComponent = ({
         <Button
           variant="outline"
           onClick={handlePrevious}
-          disabled={currentQuestion === 0}
+          disabled={currentQuestion === 0 || isFeedbackLock}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Previous
         </Button>
 
         <div className="flex gap-2">
-          {currentQuestion < shuffledQuestions.length - 1 ? (
+          {!isLastQuestion ? (
             <Button
               onClick={handleNext}
-              disabled={answers[currentQuestion] === -1}
+              disabled={
+                answers[currentQuestion] === -1 || // must answer first
+                isFeedbackLock // while showing Correct/Incorrect
+              }
             >
-              Next
+              {isFeedbackLock && feedback
+                ? feedback === 'correct'
+                  ? 'Correct'
+                  : 'Incorrect'
+                : 'Next'}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           ) : (
             <Button
               onClick={handleSubmit}
-              disabled={!allAnswered}
+              disabled={!allAnswered || isFeedbackLock}
               variant="success"
             >
               Submit Quiz
@@ -370,4 +390,3 @@ export const QuizComponent = ({
     </div>
   );
 };
-
