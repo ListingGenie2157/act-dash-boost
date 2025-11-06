@@ -204,25 +204,9 @@ export async function batchUpdateMastery(
   userId: string,
   results: Array<{ skillId: string; correct: boolean; timeMs: number }>
 ): Promise<void> {
-  // Group by skill_id to aggregate
-  const skillMap = new Map<string, { correct: number; total: number; totalTime: number }>();
-
-  results.forEach(({ skillId, correct, timeMs }) => {
-    const current = skillMap.get(skillId) || { correct: 0, total: 0, totalTime: 0 };
-    skillMap.set(skillId, {
-      correct: current.correct + (correct ? 1 : 0),
-      total: current.total + 1,
-      totalTime: current.totalTime + timeMs,
-    });
-  });
-
-  // Update each skill
-  for (const [skillId, stats] of skillMap.entries()) {
-    await updateMastery(
-      userId,
-      skillId,
-      stats.correct === stats.total, // All correct in this batch
-      Math.round(stats.totalTime / stats.total)
-    );
+  // Simple, correct: treat each question as one attempt
+  for (const { skillId, correct, timeMs } of results) {
+    await updateMastery(userId, skillId, correct, timeMs);
   }
 }
+
