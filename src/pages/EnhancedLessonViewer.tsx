@@ -433,7 +433,7 @@ export default function EnhancedLessonViewer() {
                     </div>
                     <Button onClick={handlePracticeMore} className="w-full" variant="outline">
                       <Target className="h-4 w-4 mr-2" />
-                      Practice 10 More Questions
+                      Practice More Questions
                     </Button>
                   </CardContent>
                 </Card>
