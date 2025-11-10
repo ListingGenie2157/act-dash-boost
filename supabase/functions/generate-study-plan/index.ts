@@ -425,8 +425,9 @@ serve(async (req) => {
         .from("study_tasks")
         .delete()
         .eq("user_id", user.id)
-        .eq("status", "PENDING")
-        .gte("the_date", todayStr);
+        .in("status", ["PENDING", "STARTED"])
+        .gte("the_date", todayStr)
+        .lte("the_date", weekEndStr);
 
       if (deleteTasksError) {
         console.error("Error deleting study_tasks:", deleteTasksError);
@@ -548,7 +549,7 @@ serve(async (req) => {
 
     const completedSkillIds = new Set<string>();
     masteryData?.forEach((m) => {
-      if (m.total >= 5 && (m.correct / m.total) >= 0.8) {
+      if (m.total >= 5 && (m.correct / m.total) >= 0.9) {
         completedSkillIds.add(m.skill_id);
       }
     });
@@ -822,51 +823,62 @@ serve(async (req) => {
 
     // lesson_schedule table removed - all task tracking now unified in study_tasks
 
-    // Schedule practice simulations based on time until test
-    if (daysLeft && daysLeft >= 7) {
+    // Schedule practice simulations based on time until test (only OUTSIDE the 7-day window)
+    if (daysLeft && daysLeft > 7) {
       const simDates = [];
 
       if (daysLeft >= 90) {
         // 3+ months: schedule once per month
         for (let day = 30; day <= daysLeft; day += 30) {
-          const simDate = new Date(today);
-          simDate.setDate(today.getDate() + day);
-          simDates.push(simDate.toISOString().split("T")[0]);
+          // Skip dates within the 7-day window
+          if (day > 7) {
+            const simDate = new Date(today);
+            simDate.setDate(today.getDate() + day);
+            simDates.push(simDate.toISOString().split("T")[0]);
+          }
         }
       } else if (daysLeft >= 21) {
         // 3+ weeks: schedule once per week
-        for (let day = 7; day <= daysLeft - 7; day += 7) {
+        for (let day = 14; day <= daysLeft - 7; day += 7) {
+          // Start from day 14 to avoid 7-day window
           const simDate = new Date(today);
           simDate.setDate(today.getDate() + day);
           simDates.push(simDate.toISOString().split("T")[0]);
         }
       } else {
-        // 1-3 weeks: schedule 1 sim mid-way
+        // 8-20 days: schedule 1 sim mid-way (if outside 7-day window)
         const midPoint = Math.floor(daysLeft / 2);
-        const simDate = new Date(today);
-        simDate.setDate(today.getDate() + midPoint);
-        simDates.push(simDate.toISOString().split("T")[0]);
+        if (midPoint > 7) {
+          const simDate = new Date(today);
+          simDate.setDate(today.getDate() + midPoint);
+          simDates.push(simDate.toISOString().split("T")[0]);
+        }
       }
 
-      // Create SIM tasks for scheduled dates
-      for (const dateStr of simDates) {
-        const simTask = {
+      // Create SIM tasks for scheduled dates using UPSERT to prevent duplicates
+      if (simDates.length > 0) {
+        const simTasks = simDates.map((dateStr) => ({
           user_id: user.id,
           the_date: dateStr,
-          type: "SIM",
+          type: "SIM" as const,
           skill_id: null,
           size: 60, // Full section simulation
-          status: "PENDING",
+          status: "PENDING" as const,
           reward_cents: 50,
-        };
+        }));
 
-        await supabase
+        const { error: simError } = await supabase
           .from("study_tasks")
-          .insert(simTask);
-      }
+          .upsert(simTasks, {
+            onConflict: "user_id,the_date,type",
+            ignoreDuplicates: false,
+          });
 
-      if (simDates.length > 0) {
-        console.log(`🎯 Scheduled ${simDates.length} practice simulations`);
+        if (simError) {
+          console.error("Error scheduling SIM tasks:", simError);
+        } else {
+          console.log(`🎯 Scheduled ${simDates.length} practice simulations (outside 7-day window)`);
+        }
       }
     }
 
