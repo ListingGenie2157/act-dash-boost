@@ -1,8 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const url = 'https://hhbkmxrzxcswwokmbtbz.supabase.co';
-const anon = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhoYmtteHJ6eGNzd3dva21idGJ6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjI1MjkzNywiZXhwIjoyMDcxODI4OTM3fQ.PfATFIiDwgr5XmAs19iYNmFJH5MFYZDj1QSKYzbP_YY';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (import.meta.env.DEV) {
+  console.log('SUPABASE_URL from env:', supabaseUrl);
+  console.log(
+    'SUPABASE_ANON_KEY from env:',
+    supabaseAnonKey ? '[set]' : '[missing]',
+  );
+}
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Supabase environment variables are not configured.');
+}
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
