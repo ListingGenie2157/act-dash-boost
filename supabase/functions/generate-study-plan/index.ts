@@ -255,8 +255,14 @@ interface PlanningContext extends UserContext {
   assignedSkillIds: Set<string>;
 }
 
-function makeTaskKey(dateStr: string, type: string | null, skillId: string | null): string {
-  return `${dateStr}__${type ?? ""}__${skillId ?? ""}`;
+function makeTaskKey(
+  dateStr: string,
+  type: string | null,
+  _skillId: string | null,
+): string {
+  // study_tasks has a unique constraint on (user_id, the_date, type),
+  // so we key by date + type only.
+  return `${dateStr}__${type ?? ""}`;
 }
 
 function getStudyMode(daysLeft: number | null): StudyMode {
@@ -688,9 +694,19 @@ function allocateTasksForDay(
     });
   }
 
-  priorities.sort((a, b) => b.priority - a.priority);
+    priorities.sort((a, b) => b.priority - a.priority);
 
-  const selectedTasks = selectPlaylist(priorities, dailyTimeCap);
+  const selectedTasksRaw = selectPlaylist(priorities, dailyTimeCap);
+
+  // Enforce at most one task per type per day to match the
+  // unique constraint on (user_id, the_date, type).
+  const seenTypes = new Set<string>();
+  const selectedTasks = selectedTasksRaw.filter((task) => {
+    if (seenTypes.has(task.type)) return false;
+    seenTypes.add(task.type);
+    return true;
+  });
+
   console.log(`Selected ${selectedTasks.length} tasks for ${dateStr}`);
 
   const tasksJson: PlanTaskEntry[] = selectedTasks.map((task) => ({
