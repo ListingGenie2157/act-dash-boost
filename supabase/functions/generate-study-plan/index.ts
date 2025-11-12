@@ -927,8 +927,14 @@ serve(async (req) => {
       });
     }
 
-    // Parse request body for force flag
-    const body = await req.json();
+        // Parse request body for force flag; tolerate empty or invalid JSON
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
+
     const force = body?.force === true;
 
     console.log(
