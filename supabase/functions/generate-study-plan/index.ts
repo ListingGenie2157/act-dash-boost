@@ -617,39 +617,35 @@ function allocateTasksForDay(
       !context.assignedSkillIds.has(s.skill_id)
     ) || [];
 
-  if (availableWeakSkills.length === 0) {
+    if (availableWeakSkills.length === 0) {
     const subjects = ["Math", "English", "Reading", "Science"];
-    const drillSkills: string[] = [];
-    (context.allSkills || []).forEach((skill) => {
-      if (subjects.includes(skill.subject) && !context.assignedSkillIds.has(skill.id)) {
-        drillSkills.push(skill.id);
-      }
+
+    // allSkills is already ordered by order_index from the DB query,
+    // so this preserves curriculum order instead of alphabetical.
+    const fallbackSkillObjects: Array<{
+      id: string;
+      subject: string;
+      name: string;
+      cluster: string;
+      order_index: number;
+    }> = [];
+
+    subjects.forEach((subject) => {
+      const subjectSkills =
+        (context.allSkills || [])
+          .filter(
+            (skill) =>
+              skill.subject === subject &&
+              !context.assignedSkillIds.has(skill.id),
+          )
+          .slice(0, 2); // first 2 per subject, in order_index order
+
+      fallbackSkillObjects.push(...subjectSkills);
     });
 
-    const groupedBySubject: Record<string, string[]> = {
-      Math: [],
-      English: [],
-      Reading: [],
-      Science: [],
-    };
-
-    (context.allSkills || []).forEach((skill) => {
-      if (!groupedBySubject[skill.subject]) return;
-      if (!context.assignedSkillIds.has(skill.id)) {
-        groupedBySubject[skill.subject].push(skill.id);
-      }
-    });
-
-    const fallbackSkills: string[] = [];
-    Object.keys(groupedBySubject).forEach((subject) => {
-      const subjectSkills = groupedBySubject[subject]
-        .sort((a, b) => a.localeCompare(b))
-        .slice(0, 2);
-      fallbackSkills.push(...subjectSkills);
-    });
-
-    availableWeakSkills = fallbackSkills.slice(0, 8).map((skillId) => ({
-      skill_id: skillId,
+    // Shape matches weakestSkills so the rest of the function keeps working
+    availableWeakSkills = fallbackSkillObjects.map((skill) => ({
+      skill_id: skill.id,
       mastery_level: 0,
       correct: 0,
       seen: 0,
