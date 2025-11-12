@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { supabase } from '@/integrations/supabase/client';
+import { isValidEmail, normalizeEmail } from '@/utils/validation';
 
 /**
  * A simple authentication page for the ACT prep app.
@@ -29,7 +30,7 @@ const Login = () => {
         console.log('Clearing cached auth state...');
         console.log('Supabase client config:', {
           url: import.meta.env.VITE_SUPABASE_URL ? 'Set' : 'Missing',
-          key: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ? 'Set' : 'Missing'
+          key: import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Set' : 'Missing'
         });
       }
       localStorage.removeItem('supabase.auth.token');
@@ -59,14 +60,22 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    
-    if (import.meta.env.DEV) console.log('Attempting authentication...', { isSignUp, email });
+
+    const normalizedEmail = normalizeEmail(email);
+
+    if (!isValidEmail(normalizedEmail)) {
+      setError('Please enter a valid email address.');
+      setLoading(false);
+      return;
+    }
+
+    if (import.meta.env.DEV) console.log('Attempting authentication...', { isSignUp, email: normalizedEmail });
     
     try {
       if (isSignUp) {
         // Attempt to create a new account
         const { data, error: signUpError } = await supabase.auth.signUp({
-          email,
+          email: normalizedEmail,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/`
@@ -82,22 +91,29 @@ const Login = () => {
         }
         // Show success message instead of trying to sign in immediately
         setSignUpSuccess(true);
+        setEmail(normalizedEmail);
         setLoading(false);
         return;
       }
 
       // Sign in with the provided credentials
-      if (import.meta.env.DEV) console.log('Attempting sign in with:', { email, passwordLength: password.length });
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (import.meta.env.DEV) console.log('Attempting sign in with:', { email: normalizedEmail, passwordLength: password.length });
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
       if (import.meta.env.DEV) console.log('Sign in response:', { data: signInData, error: signInError });
-      
+
       if (signInError) {
         console.error('Sign in error:', signInError);
         setError(`Login failed: ${signInError.message}`);
         setLoading(false);
         return;
       }
-      
+
+      if (!signInData?.user) {
+        setError('Login failed: No user returned from authentication.');
+        setLoading(false);
+        return;
+      }
+
       // Check if user has completed onboarding
       const { data: profile } = await supabase
         .from('profiles')

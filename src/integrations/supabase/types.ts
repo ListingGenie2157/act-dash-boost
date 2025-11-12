@@ -913,18 +913,21 @@ export type Database = {
       }
       study_plan_days: {
         Row: {
+          is_light_day: boolean | null
           generated_at: string | null
           tasks_json: Json | null
           the_date: string
           user_id: string
         }
         Insert: {
+          is_light_day?: boolean | null
           generated_at?: string | null
           tasks_json?: Json | null
           the_date: string
           user_id: string
         }
         Update: {
+          is_light_day?: boolean | null
           generated_at?: string | null
           tasks_json?: Json | null
           the_date?: string
@@ -938,12 +941,15 @@ export type Database = {
           created_at: string | null
           id: string
           median_time_ms: number | null
+          phase: number | null
           reward_cents: number | null
           size: number
           skill_id: string | null
           status: string | null
+          time_limit_seconds: number | null
           the_date: string
           type: string
+          is_critical: boolean | null
           user_id: string
         }
         Insert: {
@@ -951,12 +957,15 @@ export type Database = {
           created_at?: string | null
           id?: string
           median_time_ms?: number | null
+          phase?: number | null
           reward_cents?: number | null
           size: number
           skill_id?: string | null
           status?: string | null
+          time_limit_seconds?: number | null
           the_date: string
           type: string
+          is_critical?: boolean | null
           user_id: string
         }
         Update: {
@@ -964,12 +973,15 @@ export type Database = {
           created_at?: string | null
           id?: string
           median_time_ms?: number | null
+          phase?: number | null
           reward_cents?: number | null
           size?: number
           skill_id?: string | null
           status?: string | null
+          time_limit_seconds?: number | null
           the_date?: string
           type?: string
+          is_critical?: boolean | null
           user_id?: string
         }
         Relationships: [
