@@ -71,14 +71,3 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
-
-## Environment configuration for hosted deployments
-
-Any hosted environment (Lovable, Vercel, etc.) must provide the following variables:
-
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-
-The legacy `VITE_SUPABASE_PUBLISHABLE_KEY` variable is deprecated and should not be used anywhere.

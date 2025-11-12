@@ -1,9 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import {
-  createClient,
-  type SupabaseClient,
-} from "https://esm.sh/@supabase/supabase-js@2.56.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.56.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -192,79 +189,6 @@ interface StudyMode {
   learnWeight: number;
 }
 
-type PlannerSupabaseClient = SupabaseClient<unknown, unknown, unknown>;
-
-interface PlanTaskEntry {
-  type: string;
-  skill_id: string | null;
-  question_id: string | null;
-  size: number;
-  estimated_mins: number;
-  title: string;
-}
-
-interface StudyTaskInsert {
-  user_id: string;
-  the_date: string;
-  type: string;
-  skill_id: string | null;
-  size: number;
-  status: string;
-  reward_cents: number | null;
-  phase: number | null;
-  time_limit_seconds: number | null;
-  is_critical: boolean;
-}
-
-interface DayPlan {
-  the_date: string;
-  tasksJson: PlanTaskEntry[];
-  studyTasks: StudyTaskInsert[];
-}
-
-interface UserContext {
-  profile: { test_date: string | null; daily_time_cap_mins: number | null } | null;
-  userPreferences:
-    | {
-      daily_minutes: number | null;
-      preferred_start_hour: number | null;
-      preferred_end_hour: number | null;
-    }
-    | null;
-  accommodations: { time_multiplier: number | null } | null;
-  allSkills:
-    | Array<{ id: string; name: string; subject: string; cluster: string; order_index: number }>
-    | null;
-  skillNameMap: Map<string, string>;
-  lessonsWithContent: Array<{ skill_code: string }> | null;
-  masteryData: Array<{ skill_id: string; correct: number; total: number }> | null;
-  completedSkillIds: Set<string>;
-  dueReviews: Array<{ question_id: string; due_at: string }> | null;
-  diagnosticsBySection: Record<string, { score: number; source: string }>;
-  weakestSkills:
-    | Array<{ skill_id: string; mastery_level: number; correct: number; seen: number }>
-    | null;
-}
-
-interface PlanningContext extends UserContext {
-  userId: string;
-  today: Date;
-  timeMultiplier: number;
-  lessonsPerDay: number;
-  assignedReviewIds: Set<string>;
-  assignedSkillIds: Set<string>;
-}
-
-function makeTaskKey(
-  dateStr: string,
-  type: string | null,
-  _skillId: string | null,
-): string {
-  // study_tasks has a unique constraint on (user_id, the_date, type),
-  // so we key by date + type only.
-  return `${dateStr}__${type ?? ""}`;
-}
-
 function getStudyMode(daysLeft: number | null): StudyMode {
   if (daysLeft === null || daysLeft > 30) {
     return {
@@ -409,482 +333,6 @@ function getTaskTitle(
   }
 }
 
-async function loadUserContext(
-  supabase: PlannerSupabaseClient,
-  userId: string,
-): Promise<UserContext> {
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("test_date, daily_time_cap_mins")
-    .eq("id", userId)
-    .single();
-
-  if (profileError) {
-    console.error("Error fetching profile:", profileError);
-    throw new Error("Failed to fetch profile");
-  }
-
-  const { data: userPreferences, error: userPreferencesError } = await supabase
-    .from("user_preferences")
-    .select("daily_minutes, preferred_start_hour, preferred_end_hour")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (userPreferencesError) {
-    console.error("Error fetching user preferences:", userPreferencesError);
-  }
-
-  const { data: accommodations, error: accommodationsError } = await supabase
-    .from("accommodations")
-    .select("time_multiplier")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (accommodationsError) {
-    console.error("Error fetching accommodations:", accommodationsError);
-  }
-
-  const { data: allSkills, error: allSkillsError } = await supabase
-    .from("skills")
-    .select("id, name, subject, cluster, order_index")
-    .order("order_index", { ascending: true });
-
-  if (allSkillsError) {
-    console.error("Error fetching skills:", allSkillsError);
-  }
-
-  const skillNameMap = new Map<string, string>();
-  allSkills?.forEach((skill) => {
-    skillNameMap.set(skill.id, skill.name);
-  });
-
-  const { data: lessonsWithContent, error: lessonsError } = await supabase
-    .from("lesson_content")
-    .select("skill_code");
-
-  if (lessonsError) {
-    console.error("Error fetching lesson content:", lessonsError);
-  }
-
-  const { data: masteryData, error: masteryError } = await supabase
-    .from("mastery")
-    .select("skill_id, correct, total")
-    .eq("user_id", userId);
-
-  if (masteryError) {
-    console.error("Error fetching mastery data:", masteryError);
-  }
-
-  const completedSkillIds = new Set<string>();
-  masteryData?.forEach((m) => {
-    if (m.total >= 5 && (m.correct / m.total) >= 0.9) {
-      completedSkillIds.add(m.skill_id);
-    }
-  });
-
-  const { data: dueReviews, error: dueReviewsError } = await supabase
-    .from("review_queue")
-    .select("question_id, due_at")
-    .eq("user_id", userId)
-    .lte("due_at", new Date().toISOString())
-    .order("due_at", { ascending: true })
-    .limit(50);
-
-  if (dueReviewsError) {
-    console.error("Error fetching review queue:", dueReviewsError);
-  }
-
-  const { data: latestDiagnostics, error: diagnosticsError } = await supabase
-    .from("diagnostics")
-    .select("section, score, source")
-    .eq("user_id", userId)
-    .not("completed_at", "is", null)
-    .order("completed_at", { ascending: false });
-
-  if (diagnosticsError) {
-    console.error("Error fetching diagnostics:", diagnosticsError);
-  }
-
-  const diagnosticsBySection: Record<string, { score: number; source: string }> = {};
-  latestDiagnostics?.forEach((d) => {
-    const current = diagnosticsBySection[d.section];
-    if (!current || (d.source === "diagnostic" && current.source === "self")) {
-      diagnosticsBySection[d.section] = {
-        score: d.score || 0,
-        source: d.source || "diagnostic",
-      };
-    }
-  });
-
-  const { data: weakestSkills, error: weakestError } = await supabase
-    .from("progress")
-    .select("skill_id, mastery_level, correct, seen")
-    .eq("user_id", userId)
-    .gt("seen", 0)
-    .order("mastery_level", { ascending: true })
-    .limit(10);
-
-  if (weakestError) {
-    console.error("Error fetching progress data:", weakestError);
-  }
-
-  return {
-    profile,
-    userPreferences: userPreferences ?? null,
-    accommodations: accommodations ?? null,
-    allSkills: allSkills ?? null,
-    skillNameMap,
-    lessonsWithContent: lessonsWithContent ?? null,
-    masteryData: masteryData ?? null,
-    completedSkillIds,
-    dueReviews: dueReviews ?? null,
-    diagnosticsBySection,
-    weakestSkills: weakestSkills ?? null,
-  };
-}
-
-function buildCalendar(today: Date): Date[] {
-  const dates: Date[] = [];
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
-    dates.push(date);
-  }
-  return dates;
-}
-
-function allocateTasksForDay(
-  targetDate: Date,
-  context: PlanningContext,
-  daysLeft: number | null,
-  dailyTimeCap: number,
-): DayPlan {
-  const dateStr = targetDate.toISOString().split("T")[0];
-  const dayOffset = Math.round(
-    (targetDate.getTime() - context.today.getTime()) / (1000 * 3600 * 24),
-  );
-  const dayMode = getStudyMode(daysLeft);
-
-  if (daysLeft !== null && daysLeft > 0 && daysLeft <= 7) {
-    console.warn(`Test week mode: ${daysLeft} days until test for ${dateStr}`);
-    const specialTasks = getTestWeekTasks(daysLeft, context.userId, dateStr);
-    if (specialTasks.length > 0) {
-      const tasksJson: PlanTaskEntry[] = specialTasks.map((task) => ({
-        type: task.type,
-        skill_id: null,
-        question_id: null,
-        size: task.size,
-        estimated_mins: task.estimated_mins,
-        title: getTaskTitle(task.type, null, context.skillNameMap, task.size),
-      }));
-
-      const studyTasks: StudyTaskInsert[] = specialTasks.map((task) => ({
-        user_id: context.userId,
-        the_date: dateStr,
-        type: task.type,
-        skill_id: null,
-        size: task.size,
-        status: "PENDING",
-        reward_cents: task.type === "SIM"
-          ? 50
-          : task.type === "REVIEW"
-          ? 10
-          : task.type === "DRILL"
-          ? 15
-          : 20,
-        phase: null,
-        time_limit_seconds: null,
-        is_critical: true,
-      }));
-
-      return { the_date: dateStr, tasksJson, studyTasks };
-    }
-  }
-
-  const priorities: Task[] = [];
-  let reviewsUsed = 0;
-
-  (context.dueReviews || []).forEach((review, index) => {
-    if (!context.assignedReviewIds.has(review.question_id) && reviewsUsed < 3) {
-      priorities.push({
-        type: "REVIEW",
-        questionId: review.question_id,
-        size: 1,
-        estimatedMins: Math.round(2 * context.timeMultiplier),
-        priority: dayMode.reviewWeight * 1000 + (100 - index),
-      });
-      context.assignedReviewIds.add(review.question_id);
-      reviewsUsed++;
-    }
-  });
-
-  let availableWeakSkills =
-    (context.weakestSkills || []).filter((s) =>
-      !context.assignedSkillIds.has(s.skill_id)
-    ) || [];
-
-    if (availableWeakSkills.length === 0) {
-    const subjects = ["Math", "English", "Reading", "Science"];
-
-    // allSkills is already ordered by order_index from the DB query,
-    // so this preserves curriculum order instead of alphabetical.
-    const fallbackSkillObjects: Array<{
-      id: string;
-      subject: string;
-      name: string;
-      cluster: string;
-      order_index: number;
-    }> = [];
-
-    subjects.forEach((subject) => {
-      const subjectSkills =
-        (context.allSkills || [])
-          .filter(
-            (skill) =>
-              skill.subject === subject &&
-              !context.assignedSkillIds.has(skill.id),
-          )
-          .slice(0, 2); // first 2 per subject, in order_index order
-
-      fallbackSkillObjects.push(...subjectSkills);
-    });
-
-    // Shape matches weakestSkills so the rest of the function keeps working
-    availableWeakSkills = fallbackSkillObjects.map((skill) => ({
-      skill_id: skill.id,
-      mastery_level: 0,
-      correct: 0,
-      seen: 0,
-    }));
-  }
-
-  availableWeakSkills.slice(0, 2).forEach((skill, index) => {
-    priorities.push({
-      type: "DRILL",
-      skillId: skill.skill_id,
-      size: 5,
-      estimatedMins: Math.round(8 * context.timeMultiplier),
-      priority: dayMode.drillWeight * 1000 + (50 - index),
-    });
-  });
-
-  if (dayMode.allowLearn && context.lessonsPerDay > 0) {
-    const baselineDiagnostics = Object.entries(context.diagnosticsBySection).map(([
-      section,
-      data,
-    ]) => ({ section, score: data.score }));
-
-    const dailyLessons = selectLessonsForDay(
-      context.lessonsPerDay,
-      dayOffset,
-      baselineDiagnostics,
-      context.allSkills || [],
-      context.assignedSkillIds,
-    );
-
-    dailyLessons.forEach((skillId, index) => {
-      priorities.push({
-        type: "LEARN",
-        skillId,
-        size: 3,
-        estimatedMins: Math.round(12 * context.timeMultiplier),
-        priority: dayMode.learnWeight * 1000 + (25 - index),
-      });
-      context.assignedSkillIds.add(skillId);
-    });
-  }
-
-    priorities.sort((a, b) => b.priority - a.priority);
-
-  const selectedTasksRaw = selectPlaylist(priorities, dailyTimeCap);
-
-  // Enforce at most one task per type per day to match the
-  // unique constraint on (user_id, the_date, type).
-  const seenTypes = new Set<string>();
-  const selectedTasks = selectedTasksRaw.filter((task) => {
-    if (seenTypes.has(task.type)) return false;
-    seenTypes.add(task.type);
-    return true;
-  });
-
-  console.log(`Selected ${selectedTasks.length} tasks for ${dateStr}`);
-
-  const tasksJson: PlanTaskEntry[] = selectedTasks.map((task) => ({
-    type: task.type,
-    skill_id: task.skillId || null,
-    question_id: task.questionId || null,
-    size: task.size,
-    estimated_mins: task.estimatedMins,
-    title: getTaskTitle(task.type, task.skillId || null, context.skillNameMap, task.size),
-  }));
-
-  const studyTasks: StudyTaskInsert[] = selectedTasks.map((task) => ({
-    user_id: context.userId,
-    the_date: dateStr,
-    type: task.type,
-    skill_id: task.skillId || null,
-    size: task.size,
-    status: "PENDING",
-    reward_cents: task.type === "REVIEW"
-      ? 10
-      : task.type === "DRILL"
-      ? 15
-      : 20,
-    phase: null,
-    time_limit_seconds: null,
-    is_critical: true,
-  }));
-
-  return { the_date: dateStr, tasksJson, studyTasks };
-}
-
-async function writePlanToDatabase(
-  supabase: PlannerSupabaseClient,
-  userId: string,
-  todayDate: Date,
-  calendarDates: Date[],
-  dayPlans: DayPlan[],
-  _force: boolean,
-): Promise<Map<string, PlanTaskEntry[]>> {
-  const todayStr = todayDate.toISOString().split("T")[0];
-  const calendarDateStrs = calendarDates.map((date) =>
-    date.toISOString().split("T")[0]
-  );
-  const futureDates = calendarDateStrs.filter((date) => date >= todayStr);
-
-  if (futureDates.length > 0) {
-    const { error: deleteTasksError } = await supabase
-      .from("study_tasks")
-      .delete()
-      .eq("user_id", userId)
-      .in("the_date", futureDates)
-      .in("status", ["PENDING", "STARTED"]);
-
-    if (deleteTasksError) {
-      console.error("Error deleting pending study tasks:", deleteTasksError);
-      throw new Error("Failed to clean up pending study tasks");
-    }
-  }
-
-  const lockedTasksByDate = new Map<string, Set<string>>();
-
-  if (futureDates.length > 0) {
-    const { data: existingTasks, error: existingTasksError } = await supabase
-      .from("study_tasks")
-      .select("the_date, type, status, skill_id")
-      .eq("user_id", userId)
-      .in("the_date", futureDates);
-
-    if (existingTasksError) {
-      console.error("Error loading existing study tasks:", existingTasksError);
-      throw new Error("Failed to load existing study tasks");
-    }
-
-    existingTasks?.forEach((task) => {
-      const shouldPreserve = task.status === null ||
-        (task.status !== "PENDING" && task.status !== "STARTED");
-      if (shouldPreserve) {
-        const key = makeTaskKey(task.the_date, task.type, task.skill_id);
-        if (!lockedTasksByDate.has(task.the_date)) {
-          lockedTasksByDate.set(task.the_date, new Set());
-        }
-        lockedTasksByDate.get(task.the_date)?.add(key);
-      }
-    });
-  }
-
-  const existingPlanDaysMap = new Map<string, PlanTaskEntry[]>();
-
-  if (futureDates.length > 0) {
-    const { data: existingPlanDays, error: existingPlanDaysError } = await supabase
-      .from("study_plan_days")
-      .select("the_date, tasks_json")
-      .eq("user_id", userId)
-      .in("the_date", futureDates);
-
-    if (existingPlanDaysError) {
-      console.error("Error loading existing plan days:", existingPlanDaysError);
-    } else {
-      existingPlanDays?.forEach((day) => {
-        if (day?.the_date) {
-          const tasks = Array.isArray(day.tasks_json)
-            ? (day.tasks_json as PlanTaskEntry[])
-            : [];
-          existingPlanDaysMap.set(day.the_date, tasks);
-        }
-      });
-    }
-  }
-
-  const studyTasksToInsert: StudyTaskInsert[] = [];
-  const finalTasksByDate = new Map<string, PlanTaskEntry[]>();
-
-  dayPlans
-    .filter((plan) => plan.the_date >= todayStr)
-    .forEach((plan) => {
-      const lockedSet = lockedTasksByDate.get(plan.the_date) || new Set<string>();
-
-      const filteredStudyTasks = plan.studyTasks.filter((task) => {
-        const key = makeTaskKey(plan.the_date, task.type, task.skill_id);
-        return !lockedSet.has(key);
-      });
-
-      const filteredTasksJson = plan.tasksJson.filter((task) => {
-        const key = makeTaskKey(plan.the_date, task.type, task.skill_id);
-        return !lockedSet.has(key);
-      });
-
-      studyTasksToInsert.push(...filteredStudyTasks);
-
-      const previousTasksJson = existingPlanDaysMap.get(plan.the_date) || [];
-      const preservedTasksJson = previousTasksJson.filter((task) => {
-        const key = makeTaskKey(
-          plan.the_date,
-          task.type || null,
-          task.skill_id || null,
-        );
-        return lockedSet.has(key);
-      });
-
-      const combinedTasks = [...preservedTasksJson, ...filteredTasksJson];
-      finalTasksByDate.set(plan.the_date, combinedTasks);
-    });
-
-  const planRecords = Array.from(finalTasksByDate.entries()).map(([
-    dateStr,
-    tasks,
-  ]) => ({
-    user_id: userId,
-    the_date: dateStr,
-    tasks_json: tasks,
-    generated_at: new Date().toISOString(),
-  }));
-
-  if (planRecords.length > 0) {
-    const { error: planError } = await supabase
-      .from("study_plan_days")
-      .upsert(planRecords, { onConflict: "user_id,the_date" });
-
-    if (planError) {
-      console.error("Error saving 7-day study plan:", planError);
-      throw new Error("Failed to save study plan");
-    }
-  }
-
-  if (studyTasksToInsert.length > 0) {
-    const { error: tasksError } = await supabase
-      .from("study_tasks")
-      .insert(studyTasksToInsert);
-
-    if (tasksError) {
-      console.error("Error saving study tasks:", tasksError);
-      throw new Error("Failed to save study tasks");
-    }
-  }
-
-  return finalTasksByDate;
-}
-
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -943,14 +391,8 @@ serve(async (req) => {
       });
     }
 
-        // Parse request body for force flag; tolerate empty or invalid JSON
-    let body: any = {};
-    try {
-      body = await req.json();
-    } catch {
-      body = {};
-    }
-
+    // Parse request body for force flag
+    const body = await req.json();
     const force = body?.force === true;
 
     console.log(
@@ -958,27 +400,57 @@ serve(async (req) => {
     );
 
     const today = getTodayInChicago();
-    const calendarDates = buildCalendar(today);
-    const todayStr = calendarDates[0].toISOString().split("T")[0];
-    const weekEndStr = calendarDates[calendarDates.length - 1]
-      .toISOString()
-      .split("T")[0];
+    const todayStr = today.toISOString().split("T")[0];
 
+    // Check if plan already generated for this week
+    const weekEnd = new Date(today);
+    weekEnd.setDate(today.getDate() + 6);
+    const weekEndStr = weekEnd.toISOString().split("T")[0];
+
+    // If force=true, delete existing pending tasks
     if (force) {
-      console.log("Force regeneration requested for current 7-day window");
+      console.log("Force regeneration: Deleting existing plans...");
+
+      const { error: deleteDaysError } = await supabase
+        .from("study_plan_days")
+        .delete()
+        .eq("user_id", user.id)
+        .gte("the_date", todayStr);
+
+      if (deleteDaysError) {
+        console.error("Error deleting study_plan_days:", deleteDaysError);
+      }
+
+      const { error: deleteTasksError } = await supabase
+        .from("study_tasks")
+        .delete()
+        .eq("user_id", user.id)
+        .in("status", ["PENDING", "STARTED"])
+        .gte("the_date", todayStr)
+        .lte("the_date", weekEndStr);
+
+      if (deleteTasksError) {
+        console.error("Error deleting study_tasks:", deleteTasksError);
+      }
+
+      console.log(
+        "Existing plans deleted. Proceeding with fresh generation...",
+      );
     }
 
+    // Check if plan already exists (skip if force=true)
     if (!force) {
       const { data: existingPlans } = await supabase
         .from("study_plan_days")
-        .select("the_date, tasks_json")
+        .select("*")
         .eq("user_id", user.id)
         .gte("the_date", todayStr)
         .lte("the_date", weekEndStr);
 
-      if (existingPlans && existingPlans.length === calendarDates.length) {
+      if (existingPlans && existingPlans.length === 7) {
         console.warn("7-day plan already exists for this week");
 
+        // Set has_study_plan flag even for existing plans
         const { error: profileUpdateError } = await supabase
           .from("profiles")
           .update({ has_study_plan: true })
@@ -991,15 +463,11 @@ serve(async (req) => {
           );
         }
 
-        const orderedPlans = [...existingPlans].sort((a, b) =>
-          a.the_date.localeCompare(b.the_date)
-        );
-
         return new Response(
           JSON.stringify({
-            days: orderedPlans.map((plan) => ({
-              the_date: plan.the_date,
-              tasks: Array.isArray(plan.tasks_json) ? plan.tasks_json : [],
+            days: existingPlans.map((p) => ({
+              the_date: p.the_date,
+              tasks: p.tasks_json || [],
             })),
           }),
           {
@@ -1009,86 +477,360 @@ serve(async (req) => {
       }
     }
 
-    const userContext = await loadUserContext(supabase, user.id);
-    const timeMultiplier = userContext.accommodations?.time_multiplier || 1.0;
-    const testDate = userContext.profile?.test_date
-      ? new Date(`${userContext.profile.test_date}T00:00:00`)
+    // Get user profile
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("test_date, daily_time_cap_mins")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError) {
+      console.error("Error fetching profile:", profileError);
+      return new Response(
+        JSON.stringify({ error: "Failed to fetch profile" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    // Get user preferences
+    const { data: userPreferences } = await supabase
+      .from("user_preferences")
+      .select("daily_minutes, preferred_start_hour, preferred_end_hour")
+      .eq("user_id", user.id)
+      .single();
+
+    // Get accommodations
+    const { data: accommodations } = await supabase
+      .from("accommodations")
+      .select("time_multiplier")
+      .eq("user_id", user.id)
+      .single();
+
+    // Get all skills for lesson tracking
+    const { data: allSkills } = await supabase
+      .from("skills")
+      .select("id, name, subject, cluster, order_index")
+      .order("order_index", { ascending: true });
+
+    // Create skill name lookup map
+    const skillNameMap = new Map<string, string>();
+    allSkills?.forEach((skill) => {
+      skillNameMap.set(skill.id, skill.name);
+    });
+
+    const timeMultiplier = accommodations?.time_multiplier || 1.0;
+    const testDate = profile?.test_date
+      ? new Date(profile.test_date + "T00:00:00")
       : null;
     const daysLeft = calculateDaysLeft(today, testDate);
-    const dailyTimeCap = userContext.userPreferences?.daily_minutes ||
-      userContext.profile?.daily_time_cap_mins || 30;
+    const dailyTimeCap = userPreferences?.daily_minutes ||
+      profile?.daily_time_cap_mins || 30;
     const mode = getStudyMode(daysLeft);
-
-    const totalLessonsAvailable = userContext.lessonsWithContent?.length || 30;
-    const lessonsRemainingRaw =
-      totalLessonsAvailable - userContext.completedSkillIds.size;
-    const lessonsRemaining = Math.max(lessonsRemainingRaw, 0);
-    const lessonsPerDay = daysLeft && daysLeft > 0
-      ? Math.min(Math.ceil(lessonsRemaining / daysLeft), 3)
-      : Math.min(lessonsRemaining, 3);
 
     console.warn(
       `Study mode: ${mode.name}, Days left: ${daysLeft}, Time cap: ${dailyTimeCap}mins, Time multiplier: ${timeMultiplier}`,
     );
+
+    // Calculate lesson metrics for time-adaptive planning
+    const { data: lessonsWithContent } = await supabase
+      .from("lesson_content")
+      .select("skill_code");
+
+    const totalLessonsAvailable = lessonsWithContent?.length || 30;
+
+    // Get completed lessons (mastery level >= 3)
+    const { data: masteryData } = await supabase
+      .from("mastery")
+      .select("skill_id, correct, total")
+      .eq("user_id", user.id);
+
+    const completedSkillIds = new Set<string>();
+    masteryData?.forEach((m) => {
+      if (m.total >= 5 && (m.correct / m.total) >= 0.9) {
+        completedSkillIds.add(m.skill_id);
+      }
+    });
+
+    const lessonsRemaining = totalLessonsAvailable - completedSkillIds.size;
+    const lessonsPerDay = daysLeft && daysLeft > 0
+      ? Math.min(Math.ceil(lessonsRemaining / daysLeft), 3)
+      : Math.min(lessonsRemaining, 3);
+
     console.log(
       `📚 Lessons: ${lessonsRemaining} remaining, ${lessonsPerDay} per day needed (${daysLeft} days left)`,
     );
 
-    const planningContext: PlanningContext = {
-      ...userContext,
-      userId: user.id,
-      today,
-      timeMultiplier,
-      lessonsPerDay,
-      assignedReviewIds: new Set<string>(),
-      assignedSkillIds: new Set<string>(userContext.completedSkillIds),
-    };
+    // Fetch review and weakness data once for all days
+    const { data: dueReviews } = await supabase
+      .from("review_queue")
+      .select("question_id, due_at")
+      .eq("user_id", user.id)
+      .lte("due_at", new Date().toISOString())
+      .order("due_at", { ascending: true })
+      .limit(50); // Fetch more for 7 days
 
-    const dayPlans: DayPlan[] = [];
-    calendarDates.forEach((date, index) => {
-      const dateStr = date.toISOString().split("T")[0];
-      console.log(`\n📅 Generating plan for ${dateStr} (${index + 1}/7)`);
-      const dayDaysLeft = daysLeft !== null ? daysLeft - index : null;
-      const plan = allocateTasksForDay(
-        date,
-        planningContext,
-        dayDaysLeft,
-        dailyTimeCap,
-      );
-      dayPlans.push(plan);
+    const { data: latestDiagnostics } = await supabase
+      .from("diagnostics")
+      .select("section, score, source")
+      .eq("user_id", user.id)
+      .not("completed_at", "is", null)
+      .order("completed_at", { ascending: false });
+
+    const diagnosticsBySection: {
+      [key: string]: { score: number; source: string };
+    } = {};
+    latestDiagnostics?.forEach((d) => {
+      const current = diagnosticsBySection[d.section];
+      if (
+        !current || (d.source === "diagnostic" && current.source === "self")
+      ) {
+        diagnosticsBySection[d.section] = {
+          score: d.score || 0,
+          source: d.source || "diagnostic",
+        };
+      }
     });
 
-    const finalTasksByDate = await writePlanToDatabase(
-      supabase,
-      user.id,
-      today,
-      calendarDates,
-      dayPlans,
-      force,
-    );
+    const { data: weakestSkills } = await supabase
+      .from("progress")
+      .select("skill_id, mastery_level, correct, seen")
+      .eq("user_id", user.id)
+      .gt("seen", 0)
+      .order("mastery_level", { ascending: true })
+      .limit(10); // More skills for 7 days
 
-    const totalTasks = dayPlans.reduce(
-      (sum, plan) => sum + plan.studyTasks.length,
-      0,
-    );
+    // Generate plans for 7 days
+    const allPlans: Array<{ the_date: string; tasks: any[] }> = [];
+    const allStudyTasks: any[] = [];
+    const assignedReviewIds = new Set<string>();
+    const assignedSkillIds = new Set<string>(completedSkillIds);
 
+    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+      const targetDate = new Date(today);
+      targetDate.setDate(today.getDate() + dayOffset);
+      const dateStr = targetDate.toISOString().split("T")[0];
+      const dayDaysLeft = daysLeft !== null ? daysLeft - dayOffset : null;
+      const dayMode = getStudyMode(dayDaysLeft);
+
+      console.log(`\n📅 Generating plan for ${dateStr} (${dayOffset + 1}/7)`);
+
+      // Check for test week special scheduling
+      if (dayDaysLeft !== null && dayDaysLeft > 0 && dayDaysLeft <= 7) {
+        console.warn(`Test week mode: ${dayDaysLeft} days until test`);
+        const specialTasks = getTestWeekTasks(dayDaysLeft, user.id, dateStr);
+        if (specialTasks.length > 0) {
+          allPlans.push({ the_date: dateStr, tasks: specialTasks });
+          specialTasks.forEach((task: any) => {
+            allStudyTasks.push({
+              user_id: user.id,
+              the_date: dateStr,
+              type: task.type,
+              skill_id: task.skill_id || null,
+              size: task.size,
+              status: "PENDING",
+              reward_cents: task.type === "SIM"
+                ? 50
+                : task.type === "REVIEW"
+                ? 10
+                : 25,
+            });
+          });
+          continue; // Skip normal task generation for test week
+        }
+      }
+
+      // Build priority task list for this day
+      const priorities: Task[] = [];
+      let reviewsUsed = 0;
+
+      // 1. REVIEW tasks - distribute across 7 days
+      dueReviews?.forEach((review, index) => {
+        if (!assignedReviewIds.has(review.question_id) && reviewsUsed < 3) {
+          priorities.push({
+            type: "REVIEW",
+            questionId: review.question_id,
+            size: 1,
+            estimatedMins: Math.round(2 * timeMultiplier),
+            priority: dayMode.reviewWeight * 1000 + (100 - index),
+          });
+          assignedReviewIds.add(review.question_id);
+          reviewsUsed++;
+        }
+      });
+
+      // 2. DRILL tasks - cycle through weak skills
+      let availableWeakSkills = weakestSkills?.filter((s) =>
+        !assignedSkillIds.has(s.skill_id)
+      ) || [];
+
+      // If no weak skills (new user), pick 2 skills from each subject
+      if (availableWeakSkills.length === 0) {
+        const subjects = ["Math", "English", "Reading", "Science"];
+        const drillSkills: string[] = [];
+
+        subjects.forEach((subject) => {
+          const subjectSkills = (allSkills || [])
+            .filter((s) => s.subject === subject && !assignedSkillIds.has(s.id))
+            .sort((a, b) => a.order_index - b.order_index)
+            .slice(0, 2)
+            .map((s) => s.id);
+          drillSkills.push(...subjectSkills);
+        });
+
+        availableWeakSkills = drillSkills.slice(0, 8).map((skillId) => ({
+          skill_id: skillId,
+          mastery_level: 0,
+          correct: 0,
+          seen: 0,
+        }));
+      }
+
+      availableWeakSkills.slice(0, 2).forEach((skill, index) => {
+        priorities.push({
+          type: "DRILL",
+          skillId: skill.skill_id,
+          size: 5,
+          estimatedMins: Math.round(8 * timeMultiplier),
+          priority: dayMode.drillWeight * 1000 + (50 - index),
+        });
+      });
+
+      // 3. LEARN tasks
+      if (dayMode.allowLearn && lessonsPerDay > 0) {
+        const baselineDiagnostics = Object.entries(diagnosticsBySection).map((
+          [section, data],
+        ) => ({
+          section,
+          score: data.score,
+        }));
+
+        const dailyLessons = selectLessonsForDay(
+          lessonsPerDay,
+          dayOffset, // Pass day offset for subject rotation
+          baselineDiagnostics,
+          allSkills || [],
+          assignedSkillIds,
+        );
+
+        dailyLessons.forEach((skillId, index) => {
+          priorities.push({
+            type: "LEARN",
+            skillId: skillId,
+            size: 3,
+            estimatedMins: Math.round(12 * timeMultiplier),
+            priority: dayMode.learnWeight * 1000 + (25 - index),
+          });
+          assignedSkillIds.add(skillId);
+        });
+      }
+
+      // Sort by priority
+      priorities.sort((a, b) => b.priority - a.priority);
+
+      // Select tasks within time cap
+      const selectedTasks = selectPlaylist(priorities, dailyTimeCap);
+      console.log(`Selected ${selectedTasks.length} tasks for ${dateStr}`);
+
+      // Convert to JSON format
+      const tasksJson = selectedTasks.map((task) => ({
+        type: task.type,
+        skill_id: task.skillId || null,
+        question_id: task.questionId || null,
+        size: task.size,
+        estimated_mins: task.estimatedMins,
+        title: getTaskTitle(task.type, task.skillId, skillNameMap, task.size),
+      }));
+
+      allPlans.push({ the_date: dateStr, tasks: tasksJson });
+
+      // Add to study tasks
+      selectedTasks.forEach((task) => {
+        allStudyTasks.push({
+          user_id: user.id,
+          the_date: dateStr,
+          type: task.type,
+          skill_id: task.skillId || null,
+          size: task.size,
+          status: "PENDING",
+          reward_cents: task.type === "REVIEW"
+            ? 10
+            : task.type === "DRILL"
+            ? 15
+            : 20,
+        });
+      });
+    }
+
+    // Save all plans to database
+    const planRecords = allPlans.map((plan) => ({
+      user_id: user.id,
+      the_date: plan.the_date,
+      tasks_json: plan.tasks,
+      generated_at: new Date().toISOString(),
+    }));
+
+    const { error: planError } = await supabase
+      .from("study_plan_days")
+      .upsert(planRecords, { onConflict: "user_id,the_date" });
+
+    if (planError) {
+      console.error("Error saving 7-day study plan:", planError);
+      return new Response(
+        JSON.stringify({ error: "Failed to save study plan" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    // Set has_study_plan flag
     const { error: profileUpdateError } = await supabase
       .from("profiles")
       .update({ has_study_plan: true })
       .eq("id", user.id);
 
     if (profileUpdateError) {
-      console.error(
-        "Error updating has_study_plan flag:",
-        profileUpdateError,
-      );
+      console.error("Error updating has_study_plan flag:", profileUpdateError);
     }
 
+    // Save all study tasks
+    if (allStudyTasks.length > 0) {
+      // Delete existing tasks for the 7-day range first
+      await supabase
+        .from("study_tasks")
+        .delete()
+        .eq("user_id", user.id)
+        .gte("the_date", todayStr)
+        .lte("the_date", weekEndStr);
+
+      // Insert new tasks
+      const { error: tasksError } = await supabase
+        .from("study_tasks")
+        .insert(allStudyTasks);
+
+      if (tasksError) {
+        console.error("Error saving study tasks:", tasksError);
+      } else {
+        console.log(
+          `✅ Saved ${allStudyTasks.length} study tasks across 7 days`,
+        );
+      }
+    }
+
+    // lesson_schedule table removed - all task tracking now unified in study_tasks
+
+    // Schedule practice simulations based on time until test (only OUTSIDE the 7-day window)
     if (daysLeft && daysLeft > 7) {
-      const simDates: string[] = [];
+      const simDates = [];
 
       if (daysLeft >= 90) {
+        // 3+ months: schedule once per month
         for (let day = 30; day <= daysLeft; day += 30) {
+          // Skip dates within the 7-day window
           if (day > 7) {
             const simDate = new Date(today);
             simDate.setDate(today.getDate() + day);
@@ -1096,12 +838,15 @@ serve(async (req) => {
           }
         }
       } else if (daysLeft >= 21) {
+        // 3+ weeks: schedule once per week
         for (let day = 14; day <= daysLeft - 7; day += 7) {
+          // Start from day 14 to avoid 7-day window
           const simDate = new Date(today);
           simDate.setDate(today.getDate() + day);
           simDates.push(simDate.toISOString().split("T")[0]);
         }
       } else {
+        // 8-20 days: schedule 1 sim mid-way (if outside 7-day window)
         const midPoint = Math.floor(daysLeft / 2);
         if (midPoint > 7) {
           const simDate = new Date(today);
@@ -1110,18 +855,16 @@ serve(async (req) => {
         }
       }
 
+      // Create SIM tasks for scheduled dates using UPSERT to prevent duplicates
       if (simDates.length > 0) {
         const simTasks = simDates.map((dateStr) => ({
           user_id: user.id,
           the_date: dateStr,
           type: "SIM" as const,
           skill_id: null,
-          size: 60,
+          size: 60, // Full section simulation
           status: "PENDING" as const,
           reward_cents: 50,
-          phase: null,
-          time_limit_seconds: null,
-          is_critical: true,
         }));
 
         const { error: simError } = await supabase
@@ -1134,28 +877,18 @@ serve(async (req) => {
         if (simError) {
           console.error("Error scheduling SIM tasks:", simError);
         } else {
-          console.log(
-            `🎯 Scheduled ${simDates.length} practice simulations (outside 7-day window)`,
-          );
+          console.log(`🎯 Scheduled ${simDates.length} practice simulations (outside 7-day window)`);
         }
       }
     }
 
-    const responseDays = calendarDates.map((date) => {
-      const dateStr = date.toISOString().split("T")[0];
-      const tasks = finalTasksByDate.get(dateStr) ||
-        dayPlans.find((plan) => plan.the_date === dateStr)?.tasksJson ||
-        [];
-      return { the_date: dateStr, tasks };
-    });
-
     const response = {
-      days: responseDays,
+      days: allPlans,
       mode: mode.name,
       days_left: daysLeft,
       lessons_remaining: lessonsRemaining,
       lessons_per_day: lessonsPerDay,
-      total_tasks: totalTasks,
+      total_tasks: allStudyTasks.length,
     };
 
     console.warn("7-day study plan generated successfully:", response);
