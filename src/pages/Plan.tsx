@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Target, GraduationCap, RotateCcw, Zap, Clock, Calendar, TrendingUp } from 'lucide-react';
 import { CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { toast } from 'sonner';
 
 const TASK_CONFIG: Record<string, { icon: any; gradient: string; label: string }> = {
   LEARN: { icon: GraduationCap, gradient: 'from-primary to-primary/80', label: 'Lesson' },
@@ -21,6 +22,7 @@ export default function Plan() {
   const [plans, setPlans] = useState<StudyPlanDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -80,6 +82,66 @@ export default function Plan() {
     };
     fetchPlans();
   }, []);
+
+  const handleGeneratePlan = async () => {
+    setGenerating(true);
+    try {
+      const { error: planError } = await supabase.functions.invoke('generate-study-plan', {
+        body: { force: true }
+      });
+
+      if (planError) {
+        console.error('Error generating plan:', planError);
+        toast.error(planError.message || 'Failed to generate study plan');
+      } else {
+        toast.success('Your study plan is ready!');
+        // Refetch plans
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        
+        const today = new Date().toISOString().split('T')[0];
+        const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0];
+        const { data: rawTasks } = await supabase
+          .from('study_tasks')
+          .select('id, user_id, type, skill_id, the_date, size, status, skills(name, subject)')
+          .eq('user_id', user.id)
+          .gte('the_date', today)
+          .lte('the_date', sevenDaysFromNow)
+          .order('the_date, created_at');
+
+        const groupedByDate = (rawTasks || []).reduce((acc, task) => {
+          const dateKey = task.the_date;
+          if (!acc[dateKey]) {
+            acc[dateKey] = {
+              the_date: dateKey,
+              user_id: task.user_id,
+              tasks_json: [],
+              generated_at: new Date().toISOString()
+            };
+          }
+          const dayPlan = acc[dateKey];
+          if (dayPlan?.tasks_json) {
+            dayPlan.tasks_json.push({
+              type: task.type,
+              skill_id: task.skill_id || undefined,
+              size: task.size,
+              title: task.skills ? `${task.type}: ${task.skills.name}` : `${task.type} Task`
+            });
+          }
+          return acc;
+        }, {} as Record<string, StudyPlanDay>);
+
+        setPlans(Object.values(groupedByDate));
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      toast.error('Failed to generate study plan');
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -209,9 +271,14 @@ export default function Plan() {
             <p className="text-muted-foreground mb-6">
               Generate your personalized 7-day plan to get started
             </p>
-            <Button onClick={() => navigate('/')}>
-              Return to Dashboard
-            </Button>
+            <div className="flex gap-3 justify-center">
+              <Button onClick={handleGeneratePlan} disabled={generating}>
+                {generating ? 'Generating...' : 'Generate Study Plan'}
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/')}>
+                Return to Dashboard
+              </Button>
+            </div>
           </Card>
         ) : (
           <div className="space-y-6">

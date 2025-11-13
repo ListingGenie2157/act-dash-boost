@@ -171,12 +171,12 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
 
         // Now generate the study plan using baselines (real or estimated)
         const { error: planError } = await supabase.functions.invoke('generate-study-plan', {
-          method: 'POST',
+          body: { force: true }
         });
 
         if (planError) {
           console.error('Error generating plan:', planError);
-          toast.error('Failed to generate study plan');
+          toast.error(planError.message || 'Failed to generate study plan');
         } else {
           toast.success('Your personalized study plan is ready!');
           onPlanGenerated?.();
