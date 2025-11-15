@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logSupabaseConfigStatus } from '@/lib/env';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,10 +28,7 @@ const Login = () => {
     const clearCachedAuth = async () => {
       if (import.meta.env.DEV) {
         console.log('Clearing cached auth state...');
-        console.log('Supabase client config:', {
-          url: import.meta.env.VITE_SUPABASE_URL ? 'Set' : 'Missing',
-          key: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ? 'Set' : 'Missing'
-        });
+        logSupabaseConfigStatus();
       }
       localStorage.removeItem('supabase.auth.token');
       sessionStorage.clear();

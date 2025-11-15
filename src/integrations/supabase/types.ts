@@ -914,18 +914,21 @@ export type Database = {
       study_plan_days: {
         Row: {
           generated_at: string | null
+          is_light_day: boolean
           tasks_json: Json | null
           the_date: string
           user_id: string
         }
         Insert: {
           generated_at?: string | null
+          is_light_day?: boolean
           tasks_json?: Json | null
           the_date: string
           user_id: string
         }
         Update: {
           generated_at?: string | null
+          is_light_day?: boolean
           tasks_json?: Json | null
           the_date?: string
           user_id?: string
@@ -937,12 +940,15 @@ export type Database = {
           accuracy: number | null
           created_at: string | null
           id: string
+          is_critical: boolean
           median_time_ms: number | null
+          phase: string
           reward_cents: number | null
           size: number
           skill_id: string | null
           status: string | null
           the_date: string
+          time_limit_seconds: number | null
           type: string
           user_id: string
         }
@@ -950,12 +956,15 @@ export type Database = {
           accuracy?: number | null
           created_at?: string | null
           id?: string
+          is_critical?: boolean
           median_time_ms?: number | null
+          phase?: string
           reward_cents?: number | null
           size: number
           skill_id?: string | null
           status?: string | null
           the_date: string
+          time_limit_seconds?: number | null
           type: string
           user_id: string
         }
@@ -963,12 +972,15 @@ export type Database = {
           accuracy?: number | null
           created_at?: string | null
           id?: string
+          is_critical?: boolean
           median_time_ms?: number | null
+          phase?: string
           reward_cents?: number | null
           size?: number
           skill_id?: string | null
           status?: string | null
           the_date?: string
+          time_limit_seconds?: number | null
           type?: string
           user_id?: string
         }
