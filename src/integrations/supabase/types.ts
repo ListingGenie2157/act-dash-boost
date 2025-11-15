@@ -456,7 +456,9 @@ export type Database = {
           id: string
           onboarding_complete: boolean | null
           onboarding_step: string | null
+          plan_mode: string | null
           privacy_accepted: boolean | null
+          sim_preferred_dow: number | null
           test_date: string | null
           tos_accepted: boolean | null
           updated_at: string | null
@@ -470,7 +472,9 @@ export type Database = {
           id: string
           onboarding_complete?: boolean | null
           onboarding_step?: string | null
+          plan_mode?: string | null
           privacy_accepted?: boolean | null
+          sim_preferred_dow?: number | null
           test_date?: string | null
           tos_accepted?: boolean | null
           updated_at?: string | null
@@ -484,7 +488,9 @@ export type Database = {
           id?: string
           onboarding_complete?: boolean | null
           onboarding_step?: string | null
+          plan_mode?: string | null
           privacy_accepted?: boolean | null
+          sim_preferred_dow?: number | null
           test_date?: string | null
           tos_accepted?: boolean | null
           updated_at?: string | null

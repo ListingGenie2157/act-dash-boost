@@ -172,6 +172,47 @@ export function getTodayInChicago(): Date {
   return new Date(year, month, day);
 }
 
+// Helper: Get start of week (Sunday)
+function startOfWeekSunday(date: Date): Date {
+  const dow = date.getDay(); // 0=Sun..6=Sat
+  const d = new Date(date);
+  d.setDate(d.getDate() - dow);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+// Helper: Convert Date to ISO date string (YYYY-MM-DD)
+function toISODate(date: Date): string {
+  return date.toISOString().split("T")[0];
+}
+
+// Compute SIM dates: 3 weeks, 2 weeks, 1 week before test on preferred day
+function computeSimDates(
+  testDate: Date,
+  today: Date,
+  preferredDow: number, // 0=Sunday..6=Saturday
+): string[] {
+  const offsets = [21, 14, 7]; // 3 weeks, 2 weeks, 1 week out
+  const todayStripped = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const testStripped = new Date(testDate.getFullYear(), testDate.getMonth(), testDate.getDate());
+  const dates = new Set<string>();
+
+  for (const offset of offsets) {
+    const base = new Date(testStripped);
+    base.setDate(base.getDate() - offset);
+
+    // "week of base date" snapped to preferred weekday
+    const weekStart = startOfWeekSunday(base);
+    const simDate = new Date(weekStart);
+    simDate.setDate(weekStart.getDate() + preferredDow);
+
+    if (simDate >= todayStripped && simDate < testStripped) {
+      dates.add(toISODate(simDate));
+    }
+  }
+
+  return Array.from(dates).sort();
+}
+
 interface Task {
   type: "REVIEW" | "DRILL" | "LEARN";
   skillId?: string;
@@ -493,7 +534,7 @@ serve(async (req) => {
     // Get user profile
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("test_date, daily_time_cap_mins")
+      .select("test_date, daily_time_cap_mins, plan_mode, sim_preferred_dow")
       .eq("id", user.id)
       .single();
 
@@ -543,8 +584,33 @@ serve(async (req) => {
       profile?.daily_time_cap_mins || 30;
     const mode = getStudyMode(daysLeft);
 
+    // Compute SIM dates for personalized plan with preferred day
+    const planMode = profile?.plan_mode || null;
+    const simPreferredDow = typeof profile?.sim_preferred_dow === "number"
+      ? profile.sim_preferred_dow
+      : null;
+
+    const simDates =
+      testDate && planMode === "PERSONALIZED" && simPreferredDow !== null
+        ? computeSimDates(testDate, today, simPreferredDow)
+        : [];
+    const simDateSet = new Set(simDates);
+
+    const simTasks: StudyTaskInsert[] = simDates.map((dateStr) => ({
+      user_id: user.id,
+      the_date: dateStr,
+      type: "SIM",
+      skill_id: null,
+      size: 60,
+      status: "PENDING",
+      reward_cents: 50,
+      phase: 0,
+      time_limit_seconds: 60 * 60,
+      is_critical: true,
+    }));
+
     console.warn(
-      `Study mode: ${mode.name}, Days left: ${daysLeft}, Time cap: ${dailyTimeCap}mins, Time multiplier: ${timeMultiplier}`,
+      `Study mode: ${mode.name}, Days left: ${daysLeft}, Time cap: ${dailyTimeCap}mins, Time multiplier: ${timeMultiplier}, SIM dates: ${simDates.length}`,
     );
 
     // Calculate lesson metrics for time-adaptive planning
@@ -629,6 +695,26 @@ serve(async (req) => {
       const dayMode = getStudyMode(dayDaysLeft);
 
       console.log(`\n📅 Generating plan for ${dateStr} (${dayOffset + 1}/7)`);
+
+      // Skip normal tasks on SIM days
+      const isSimDay = simDateSet.has(dateStr);
+      if (isSimDay) {
+        console.log(`🎯 SIM day ${dateStr} – skipping normal tasks`);
+
+        // Reflect SIM in study_plan_days
+        allPlans.push({
+          the_date: dateStr,
+          tasks: [{
+            type: "SIM",
+            size: 60,
+            estimated_mins: 60,
+            title: "Full practice test",
+          }],
+        });
+
+        // DO NOT push to allStudyTasks – SIM tasks handled via simTasks
+        continue; // Skip to next day
+      }
 
       // Check for test week special scheduling
       if (dayDaysLeft !== null && dayDaysLeft > 0 && dayDaysLeft <= 7) {
@@ -828,15 +914,16 @@ serve(async (req) => {
 
     // Save all study tasks
     if (allStudyTasks.length > 0) {
-      // Delete existing tasks for the 7-day range first
+      // Delete existing NON-SIM tasks for the 7-day range
       await supabase
         .from("study_tasks")
         .delete()
         .eq("user_id", user.id)
+        .neq("type", "SIM")
         .gte("the_date", todayStr)
         .lte("the_date", weekEndStr);
 
-      // Insert new tasks
+      // Insert new non-SIM tasks
       const { error: tasksError } = await supabase
         .from("study_tasks")
         .insert(allStudyTasks);
@@ -845,72 +932,26 @@ serve(async (req) => {
         console.error("Error saving study tasks:", tasksError);
       } else {
         console.log(
-          `✅ Saved ${allStudyTasks.length} study tasks across 7 days`,
+          `✅ Saved ${allStudyTasks.length} non-SIM study tasks across 7 days`,
         );
       }
     }
 
     // lesson_schedule table removed - all task tracking now unified in study_tasks
 
-    // Schedule practice simulations based on time until test (only OUTSIDE the 7-day window)
-    if (daysLeft && daysLeft > 7) {
-      const simDates = [];
+    // Upsert SIM tasks for personalized plan (3–2–1 weeks out on preferred day)
+    if (simTasks.length > 0) {
+      const { error: simError } = await supabase
+        .from("study_tasks")
+        .upsert(simTasks, {
+          onConflict: "user_id,the_date,type",
+          ignoreDuplicates: false,
+        });
 
-      if (daysLeft >= 90) {
-        // 3+ months: schedule once per month
-        for (let day = 30; day <= daysLeft; day += 30) {
-          // Skip dates within the 7-day window
-          if (day > 7) {
-            const simDate = new Date(today);
-            simDate.setDate(today.getDate() + day);
-            simDates.push(simDate.toISOString().split("T")[0]);
-          }
-        }
-      } else if (daysLeft >= 21) {
-        // 3+ weeks: schedule once per week
-        for (let day = 14; day <= daysLeft - 7; day += 7) {
-          // Start from day 14 to avoid 7-day window
-          const simDate = new Date(today);
-          simDate.setDate(today.getDate() + day);
-          simDates.push(simDate.toISOString().split("T")[0]);
-        }
+      if (simError) {
+        console.error("Error upserting SIM study tasks:", simError);
       } else {
-        // 8-20 days: schedule 1 sim mid-way (if outside 7-day window)
-        const midPoint = Math.floor(daysLeft / 2);
-        if (midPoint > 7) {
-          const simDate = new Date(today);
-          simDate.setDate(today.getDate() + midPoint);
-          simDates.push(simDate.toISOString().split("T")[0]);
-        }
-      }
-
-      // Create SIM tasks for scheduled dates using UPSERT to prevent duplicates
-      if (simDates.length > 0) {
-        const simTasks: StudyTaskInsert[] = simDates.map((dateStr) => ({
-          user_id: user.id,
-          the_date: dateStr,
-          type: "SIM",
-          skill_id: null,
-          size: 60, // Full section simulation
-          status: "PENDING",
-          reward_cents: 50,
-          phase: 0,
-          time_limit_seconds: 60 * 60,
-          is_critical: true,
-        }));
-
-        const { error: simError } = await supabase
-          .from("study_tasks")
-          .upsert(simTasks, {
-            onConflict: "user_id,the_date,type",
-            ignoreDuplicates: false,
-          });
-
-        if (simError) {
-          console.error("Error scheduling SIM tasks:", simError);
-        } else {
-          console.log(`🎯 Scheduled ${simDates.length} practice simulations (outside 7-day window)`);
-        }
+        console.log(`🎯 Upserted ${simTasks.length} SIM tasks (3–2–1 weeks before test)`);
       }
     }
 
