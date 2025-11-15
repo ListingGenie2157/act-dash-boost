@@ -181,6 +181,19 @@ interface Task {
   priority: number;
 }
 
+interface StudyTaskInsert {
+  user_id: string;
+  the_date: string;
+  type: string;
+  skill_id: string | null;
+  size: number;
+  status: string;
+  reward_cents: number | null;
+  phase: string;
+  time_limit_seconds: number | null;
+  is_critical: boolean;
+}
+
 interface StudyMode {
   name: "CRASH" | "ACCEL" | "MASTERY";
   allowLearn: boolean;
@@ -604,7 +617,7 @@ serve(async (req) => {
 
     // Generate plans for 7 days
     const allPlans: Array<{ the_date: string; tasks: any[] }> = [];
-    const allStudyTasks: any[] = [];
+    const allStudyTasks: StudyTaskInsert[] = [];
     const assignedReviewIds = new Set<string>();
     const assignedSkillIds = new Set<string>(completedSkillIds);
 
@@ -624,11 +637,16 @@ serve(async (req) => {
         if (specialTasks.length > 0) {
           allPlans.push({ the_date: dateStr, tasks: specialTasks });
           specialTasks.forEach((task: any) => {
+            const estimatedSeconds =
+              typeof task.estimated_mins === "number" && task.estimated_mins > 0
+                ? Math.round(task.estimated_mins * 60)
+                : null;
+
             allStudyTasks.push({
               user_id: user.id,
               the_date: dateStr,
               type: task.type,
-              skill_id: task.skill_id || null,
+              skill_id: task.skill_id ?? null,
               size: task.size,
               status: "PENDING",
               reward_cents: task.type === "SIM"
@@ -636,6 +654,9 @@ serve(async (req) => {
                 : task.type === "REVIEW"
                 ? 10
                 : 25,
+              phase: "CORE",
+              time_limit_seconds: estimatedSeconds,
+              is_critical: true,
             });
           });
           continue; // Skip normal task generation for test week
@@ -748,6 +769,11 @@ serve(async (req) => {
 
       // Add to study tasks
       selectedTasks.forEach((task) => {
+        const estimatedSeconds =
+          typeof task.estimatedMins === "number" && task.estimatedMins > 0
+            ? Math.round(task.estimatedMins * 60)
+            : null;
+
         allStudyTasks.push({
           user_id: user.id,
           the_date: dateStr,
@@ -760,6 +786,9 @@ serve(async (req) => {
             : task.type === "DRILL"
             ? 15
             : 20,
+          phase: "CORE",
+          time_limit_seconds: estimatedSeconds,
+          is_critical: task.type === "SIM" || task.type === "DRILL",
         });
       });
     }
@@ -857,14 +886,17 @@ serve(async (req) => {
 
       // Create SIM tasks for scheduled dates using UPSERT to prevent duplicates
       if (simDates.length > 0) {
-        const simTasks = simDates.map((dateStr) => ({
+        const simTasks: StudyTaskInsert[] = simDates.map((dateStr) => ({
           user_id: user.id,
           the_date: dateStr,
-          type: "SIM" as const,
+          type: "SIM",
           skill_id: null,
           size: 60, // Full section simulation
-          status: "PENDING" as const,
+          status: "PENDING",
           reward_cents: 50,
+          phase: "CORE",
+          time_limit_seconds: 60 * 60,
+          is_critical: true,
         }));
 
         const { error: simError } = await supabase
