@@ -189,7 +189,7 @@ interface StudyTaskInsert {
   size: number;
   status: string;
   reward_cents: number | null;
-  phase: string;
+  phase: number | null;
   time_limit_seconds: number | null;
   is_critical: boolean;
 }
@@ -654,7 +654,7 @@ serve(async (req) => {
                 : task.type === "REVIEW"
                 ? 10
                 : 25,
-              phase: "CORE",
+              phase: 0,
               time_limit_seconds: estimatedSeconds,
               is_critical: true,
             });
@@ -786,7 +786,7 @@ serve(async (req) => {
             : task.type === "DRILL"
             ? 15
             : 20,
-          phase: "CORE",
+          phase: 0,
           time_limit_seconds: estimatedSeconds,
           is_critical: task.type === "DRILL",
         });
@@ -894,7 +894,7 @@ serve(async (req) => {
           size: 60, // Full section simulation
           status: "PENDING",
           reward_cents: 50,
-          phase: "CORE",
+          phase: 0,
           time_limit_seconds: 60 * 60,
           is_critical: true,
         }));
