@@ -41,7 +41,7 @@ async function resolveSkill(supabaseAdmin: any, ref: string): Promise<{ id: stri
 interface LessonContentInput {
   skill_code: string;
   overview_html: string;
-  objectives?: string[];
+  objectives?: string | string[];
   concept_explanation: string;
   guided_practice?: string;
   error_analysis?: string;
@@ -167,7 +167,7 @@ Deno.serve(async (req) => {
         // Parse objectives (array) and also prepare text version for DB
         const objectives = lesson.objectives 
           ? (typeof lesson.objectives === 'string' 
-              ? lesson.objectives.split('|').map(s => s.trim()).filter(Boolean)
+              ? lesson.objectives.split('|').map((s: string) => s.trim()).filter(Boolean)
               : lesson.objectives)
           : [];
         const objectivesText = Array.isArray(objectives) ? objectives.join('\n') : String((objectives as any) ?? '');

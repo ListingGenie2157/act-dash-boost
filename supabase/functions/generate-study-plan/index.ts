@@ -762,7 +762,7 @@ serve(async (req) => {
         question_id: task.questionId || null,
         size: task.size,
         estimated_mins: task.estimatedMins,
-        title: getTaskTitle(task.type, task.skillId, skillNameMap, task.size),
+        title: getTaskTitle(task.type, task.skillId ?? null, skillNameMap, task.size),
       }));
 
       allPlans.push({ the_date: dateStr, tasks: tasksJson });
@@ -788,7 +788,7 @@ serve(async (req) => {
             : 20,
           phase: "CORE",
           time_limit_seconds: estimatedSeconds,
-          is_critical: task.type === "SIM" || task.type === "DRILL",
+          is_critical: task.type === "DRILL",
         });
       });
     }

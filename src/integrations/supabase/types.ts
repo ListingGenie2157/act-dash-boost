@@ -914,21 +914,21 @@ export type Database = {
       study_plan_days: {
         Row: {
           generated_at: string | null
-          is_light_day: boolean
+          is_light_day: boolean | null
           tasks_json: Json | null
           the_date: string
           user_id: string
         }
         Insert: {
           generated_at?: string | null
-          is_light_day?: boolean
+          is_light_day?: boolean | null
           tasks_json?: Json | null
           the_date: string
           user_id: string
         }
         Update: {
           generated_at?: string | null
-          is_light_day?: boolean
+          is_light_day?: boolean | null
           tasks_json?: Json | null
           the_date?: string
           user_id?: string
@@ -940,9 +940,9 @@ export type Database = {
           accuracy: number | null
           created_at: string | null
           id: string
-          is_critical: boolean
+          is_critical: boolean | null
           median_time_ms: number | null
-          phase: string
+          phase: number | null
           reward_cents: number | null
           size: number
           skill_id: string | null
@@ -956,9 +956,9 @@ export type Database = {
           accuracy?: number | null
           created_at?: string | null
           id?: string
-          is_critical?: boolean
+          is_critical?: boolean | null
           median_time_ms?: number | null
-          phase?: string
+          phase?: number | null
           reward_cents?: number | null
           size: number
           skill_id?: string | null
@@ -972,9 +972,9 @@ export type Database = {
           accuracy?: number | null
           created_at?: string | null
           id?: string
-          is_critical?: boolean
+          is_critical?: boolean | null
           median_time_ms?: number | null
-          phase?: string
+          phase?: number | null
           reward_cents?: number | null
           size?: number
           skill_id?: string | null
