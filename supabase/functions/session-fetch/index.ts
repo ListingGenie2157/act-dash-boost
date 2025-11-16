@@ -80,13 +80,30 @@ serve(async (req) => {
       });
     }
 
-    // Fetch questions for the form and section
-    const { data: questionsData, error: questionsError } = await supabase
-      .from('v_form_section')
-      .select('*')
-      .eq('form_id', session.form_id)
-      .eq('section', session.section)
-      .order('ord');
+    // Fetch questions: use staging_items for F* forms, v_form_section for others
+    const useStaging = session.form_id.startsWith('F');
+    let questionsData: any[];
+    let questionsError: any;
+
+    if (useStaging) {
+      const { data, error } = await supabase
+        .from('staging_items')
+        .select('*')
+        .eq('form_id', session.form_id)
+        .eq('section', session.section)
+        .order('ord');
+      questionsData = data || [];
+      questionsError = error;
+    } else {
+      const { data, error } = await supabase
+        .from('v_form_section')
+        .select('*')
+        .eq('form_id', session.form_id)
+        .eq('section', session.section)
+        .order('ord');
+      questionsData = data || [];
+      questionsError = error;
+    }
 
     if (questionsError) {
       console.error('Questions fetch error:', questionsError);
@@ -96,11 +113,11 @@ serve(async (req) => {
       });
     }
 
-    // Format questions and extract passages for RD/SCI
+    // Format questions: map staging_items columns if needed
     const questions = questionsData.map(q => ({
-      id: q.question_id,
+      id: useStaging ? `staging-${q.staging_id}` : q.question_id,
       ord: q.ord,
-      question: q.question,
+      question: useStaging ? q.question : q.question,
       choice_a: q.choice_a,
       choice_b: q.choice_b,
       choice_c: q.choice_c,
