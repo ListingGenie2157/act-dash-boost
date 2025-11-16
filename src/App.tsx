@@ -18,10 +18,6 @@ import {
   LazyAdminLessonImport,
   LazyParentPortal,
   LazyDiagnostic,
-  LazySimEnglish,
-  LazySimMath,
-  LazySimReading,
-  LazySimScience,
   LazyEnglishCheatsheet,
   LazyMathCheatsheet,
   LazyReadingCheatsheet,
@@ -71,27 +67,6 @@ const App = () => (
           <Route path="/diagnostic-results-complete" element={<DiagnosticResultsComplete />} />
           {/* New simulation system */}
           <Route path="/simulation" element={<Simulation />} />
-          {/* Legacy simulation routes */}
-          <Route path="/sim-english" element={
-            <LazyLoader>
-              <LazySimEnglish />
-            </LazyLoader>
-          } />
-          <Route path="/sim-math" element={
-            <LazyLoader>
-              <LazySimMath />
-            </LazyLoader>
-          } />
-          <Route path="/sim-reading" element={
-            <LazyLoader>
-              <LazySimReading />
-            </LazyLoader>
-          } />
-          <Route path="/sim-science" element={
-            <LazyLoader>
-              <LazySimScience />
-            </LazyLoader>
-          } />
           {/* Cheatsheet routes */}
           <Route path="/cheatsheets/english" element={
             <LazyLoader>
