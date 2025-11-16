@@ -13,12 +13,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  if (req.method !== 'GET') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
+  // Accept both GET and POST methods
 
   try {
     // Initialize Supabase client with anon key and auth header
@@ -82,6 +77,8 @@ serve(async (req) => {
 
     // Fetch questions: use staging_items for F* forms, v_form_section for others
     const useStaging = session.form_id.startsWith('F');
+    console.log(`Fetching questions from ${useStaging ? 'staging_items' : 'v_form_section'} for form ${session.form_id}, section ${session.section}`);
+    
     let questionsData: any[];
     let questionsError: any;
 
@@ -106,23 +103,39 @@ serve(async (req) => {
     }
 
     if (questionsError) {
-      console.error('Questions fetch error:', questionsError);
+      console.error('Questions fetch error:', {
+        error: questionsError,
+        form_id: session.form_id,
+        section: session.section,
+        useStaging
+      });
       return new Response(JSON.stringify({ error: 'Failed to fetch questions' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    if (!questionsData || questionsData.length === 0) {
+      console.warn('No questions found for session:', {
+        session_id,
+        form_id: session.form_id,
+        section: session.section,
+        useStaging
+      });
+    } else {
+      console.log(`Successfully fetched ${questionsData.length} questions`);
+    }
+
     // Format questions: map staging_items columns if needed
     const questions = questionsData.map(q => ({
-      id: useStaging ? `staging-${q.staging_id}` : q.question_id,
+      id: q.question_id ?? q.id ?? `${session.form_id}_${session.section}_${q.ord}`,
       ord: q.ord,
-      question: useStaging ? q.question : q.question,
+      question: q.question,
       choice_a: q.choice_a,
       choice_b: q.choice_b,
       choice_c: q.choice_c,
       choice_d: q.choice_d,
-      passage_id: q.passage_id,
+      passage_id: q.passage_id ?? null,
     }));
 
     // Collect unique passages for RD/SCI sections
@@ -130,13 +143,16 @@ serve(async (req) => {
     
     if (['RD', 'SCI'].includes(session.section)) {
       questionsData.forEach(q => {
-        if (q.passage_id && q.passage_text) {
-          passages[q.passage_id] = {
+        const pid = q.passage_id;
+        const text = q.passage_text ?? q.passage;
+        if (pid && text) {
+          passages[pid] = {
             title: q.passage_title || '',
-            passage_text: q.passage_text,
+            passage_text: text,
           };
         }
       });
+      console.log(`Extracted ${Object.keys(passages).length} passages for ${session.section} section`);
     }
 
     return new Response(JSON.stringify({
