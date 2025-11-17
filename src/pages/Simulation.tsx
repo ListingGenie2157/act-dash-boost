@@ -40,6 +40,7 @@ type SimulationState = 'form-picker' | 'section-picker' | 'loading' | 'active' |
 export default function Simulation() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [authChecking, setAuthChecking] = useState(true);
   const [state, setState] = useState<SimulationState>('form-picker');
   const [selectedForm, setSelectedForm] = useState<string>('');
   const [selectedSection, setSelectedSection] = useState<string>('');
@@ -48,6 +49,40 @@ export default function Simulation() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  // Authentication check
+  useEffect(() => {
+    let mounted = true;
+
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!mounted) return;
+      
+      if (!session) {
+        navigate('/simple-login', { replace: true });
+        return;
+      }
+      setAuthChecking(false);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (!mounted) return;
+        
+        if (!session) {
+          navigate('/simple-login', { replace: true });
+        }
+      }
+    );
+
+    checkAuth();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
 
   // Load existing session or responses if user refreshes
   useEffect(() => {
@@ -215,6 +250,15 @@ export default function Simulation() {
     setState('form-picker');
     setSelectedForm('');
   };
+
+  // Show loading while checking authentication
+  if (authChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (loading) {
     return (
