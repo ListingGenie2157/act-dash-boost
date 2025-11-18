@@ -5,6 +5,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
 
 interface SessionFinishRequest {
@@ -12,6 +13,7 @@ interface SessionFinishRequest {
 }
 
 serve(async (req) => {
+  console.log('[session-finish] hit', { method: req.method, hasAuth: !!req.headers.get('authorization') });
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -38,7 +40,7 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { authorization: authHeader } }
+      global: { headers: { Authorization: authHeader } }
     });
 
     // Get the user from the JWT token

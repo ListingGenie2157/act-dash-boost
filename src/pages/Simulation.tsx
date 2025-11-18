@@ -50,6 +50,14 @@ export default function Simulation() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(false);
 
+  // Explicit auth header helper (temporary until we confirm automatic header attach works reliably on all browsers)
+  const getAuthHeaders = async (): Promise<Record<string, string>> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token
+      ? { Authorization: `Bearer ${session.access_token}` }
+      : {};
+  };
+
   // Authentication check
   useEffect(() => {
     let mounted = true;
@@ -122,6 +130,7 @@ export default function Simulation() {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('session-start', {
+        headers: await getAuthHeaders(),
         body: {
           form_id: formId,
           section: section,
@@ -135,6 +144,7 @@ export default function Simulation() {
 
       // Fetch questions and passages
       const { data: fetchData, error: fetchError } = await supabase.functions.invoke('session-fetch', {
+        headers: await getAuthHeaders(),
         body: { session_id }
       });
 
@@ -201,6 +211,7 @@ export default function Simulation() {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('session-finish', {
+        headers: await getAuthHeaders(),
         body: { session_id: sessionData.session_id }
       });
 

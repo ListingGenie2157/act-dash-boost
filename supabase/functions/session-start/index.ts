@@ -42,13 +42,14 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { authorization: authHeader } }
+      global: { headers: { Authorization: authHeader } }
     });
 
     // Get the user from the JWT token
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
+      console.warn('[session-start] unauthorized', { authError: authError?.message, hasUser: !!user });
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
