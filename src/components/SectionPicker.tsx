@@ -49,12 +49,16 @@ export function SectionPicker({ formId, onSectionSelect, onBack }: SectionPicker
     },
   ];
 
-  const formLetter = formId.split('_')[1];
+  const formLetter = formId.split('_')[0].substring(1); // FA_EN -> A, FB_MA -> B
   const formName = `Form ${formLetter}`;
 
   const isAvailable = (sectionId: string) => {
-    // Only RD_C and SCI_C are available
-    return (sectionId === 'RD' || sectionId === 'SCI') && formId.endsWith('_C');
+    // FB_SCI is incomplete (only 29 questions)
+    if (formId === 'FB_SCI' || (formId.startsWith('FB_') && sectionId === 'SCI')) {
+      return false;
+    }
+    // All other FA, FB (except SCI), FC sections are available
+    return formId.startsWith('FA_') || formId.startsWith('FB_') || formId.startsWith('FC_');
   };
 
   return (

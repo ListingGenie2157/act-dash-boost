@@ -58,6 +58,16 @@ serve(async (req) => {
 
     const { form_id, section, mode }: SessionStartRequest = await req.json();
 
+    // Validate form_id format for simulations
+    if (mode === 'simulation' && !['FA_', 'FB_', 'FC_'].some(prefix => form_id.startsWith(prefix))) {
+      return new Response(JSON.stringify({ 
+        error: 'Invalid form_id for simulation. Must be FA_*, FB_*, or FC_*' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Validate section
     if (!['EN', 'MATH', 'RD', 'SCI'].includes(section)) {
       return new Response(JSON.stringify({ error: 'Invalid section' }), {

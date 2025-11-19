@@ -16,39 +16,39 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
   const [selectedForm, setSelectedForm] = useState<string>('');
 
   const forms: Form[] = [
-    { id: 'EN_A', label: 'ACT English – Form A' },
-    { id: 'MATH_A', label: 'ACT Math – Form A' },
-    { id: 'RD_A', label: 'ACT Reading – Form A' },
-    { id: 'SCI_A', label: 'ACT Science – Form A' },
-    { id: 'EN_B', label: 'ACT English – Form B' },
-    { id: 'MATH_B', label: 'ACT Math – Form B' },
-    { id: 'RD_B', label: 'ACT Reading – Form B' },
-    { id: 'SCI_B', label: 'ACT Science – Form B' },
-    { id: 'EN_C', label: 'ACT English – Form C' },
-    { id: 'MATH_C', label: 'ACT Math – Form C' },
-    { id: 'RD_C', label: 'ACT Reading – Form C' },
-    { id: 'SCI_C', label: 'ACT Science – Form C' },
+    { id: 'FA_EN', label: 'ACT English – Form A' },
+    { id: 'FA_MA', label: 'ACT Math – Form A' },
+    { id: 'FA_RD', label: 'ACT Reading – Form A' },
+    { id: 'FA_SCI', label: 'ACT Science – Form A' },
+    { id: 'FB_EN', label: 'ACT English – Form B' },
+    { id: 'FB_MA', label: 'ACT Math – Form B' },
+    { id: 'FB_RD', label: 'ACT Reading – Form B' },
+    { id: 'FB_SCI', label: 'ACT Science – Form B' },
+    { id: 'FC_EN', label: 'ACT English – Form C' },
+    { id: 'FC_MA', label: 'ACT Math – Form C' },
+    { id: 'FC_RD', label: 'ACT Reading – Form C' },
+    { id: 'FC_SCI', label: 'ACT Science – Form C' },
   ];
 
   // Group forms by test package
   const testPackages = [
     {
-      id: 'D4A',
+      id: 'FA',
       label: 'Full ACT – Form A',
-      forms: forms.filter(f => f.id.endsWith('_A')),
+      forms: forms.filter(f => f.id.startsWith('FA_')),
       badge: 'Complete',
     },
     {
-      id: 'D4B', 
+      id: 'FB', 
       label: 'Full ACT – Form B',
-      forms: forms.filter(f => f.id.endsWith('_B')),
-      badge: 'Complete',
+      forms: forms.filter(f => f.id.startsWith('FB_')),
+      badge: 'Partial', // FB_SCI incomplete (29/40 questions)
     },
     {
-      id: 'D4C',
+      id: 'FC',
       label: 'Full ACT – Form C', 
-      forms: forms.filter(f => f.id.endsWith('_C')),
-      badge: 'Partial',
+      forms: forms.filter(f => f.id.startsWith('FC_')),
+      badge: 'Complete',
     },
   ];
 
@@ -85,30 +85,30 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 {pkg.forms.map((form) => {
-                  const section = form.id.split('_')[0];
+                  const section = form.id.split('_')[1]; // FA_EN -> EN, FB_MA -> MA
                   const sectionNames = {
                     'EN': 'English',
-                    'MATH': 'Math', 
+                    'MA': 'Math', 
                     'RD': 'Reading',
                     'SCI': 'Science'
                   };
                   
                   const timeLimits = {
                     'EN': '45 min',
-                    'MATH': '60 min',
+                    'MA': '60 min',
                     'RD': '35 min', 
                     'SCI': '35 min'
                   };
 
                   const questionCounts = {
                     'EN': '75 questions',
-                    'MATH': '60 questions',
+                    'MA': '60 questions',
                     'RD': '40 questions',
                     'SCI': '40 questions'
                   };
 
-                  const isAvailable = !(section === 'EN' && !form.id.endsWith('_C')) && 
-                                   !(section === 'MATH' && !form.id.endsWith('_C'));
+                  // FB_SCI is incomplete (only 29 questions), mark as unavailable
+                  const isAvailable = form.id !== 'FB_SCI';
 
                   return (
                     <Button
@@ -140,8 +140,8 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
 
       <div className="mt-8 text-center">
         <div className="text-sm text-muted-foreground">
-          <p>• Form C sections (Reading, Science) are fully available</p>
-          <p>• English and Math sections coming soon for all forms</p>
+          <p>• Form A and Form C are fully complete</p>
+          <p>• Form B Science section coming soon (currently incomplete)</p>
         </div>
       </div>
     </div>
