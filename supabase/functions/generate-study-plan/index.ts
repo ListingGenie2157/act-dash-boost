@@ -909,10 +909,23 @@ serve(async (req) => {
       .eq("id", user.id);
 
     if (profileUpdateError) {
-      console.error("Error updating has_study_plan flag:", profileUpdateError);
+      console.error("❌ Error updating has_study_plan:", profileUpdateError);
+    } else {
+      console.log("✅ Profile updated: has_study_plan = true");
     }
 
     // Save all study tasks
+    console.log(`📊 Attempting to save ${allStudyTasks.length} tasks to study_tasks table`);
+    
+    if (allStudyTasks.length === 0) {
+      console.warn("⚠️ WARNING: No study tasks generated!");
+      console.warn("Weak skills count:", weakestSkills?.length || 0);
+      console.warn("Available skills count:", allSkills?.length || 0);
+      console.warn("Lessons per day:", lessonsPerDay);
+    } else {
+      console.log("Sample task:", JSON.stringify(allStudyTasks[0], null, 2));
+    }
+    
     if (allStudyTasks.length > 0) {
       // Delete existing NON-SIM tasks for the 7-day range
       await supabase
@@ -929,7 +942,8 @@ serve(async (req) => {
         .insert(allStudyTasks);
 
       if (tasksError) {
-        console.error("Error saving study tasks:", tasksError);
+        console.error("❌ Error saving study tasks:", tasksError);
+        console.error("Failed tasks sample:", JSON.stringify(allStudyTasks.slice(0, 2), null, 2));
       } else {
         console.log(
           `✅ Saved ${allStudyTasks.length} non-SIM study tasks across 7 days`,

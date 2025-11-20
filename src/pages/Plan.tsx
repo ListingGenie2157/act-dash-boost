@@ -37,42 +37,25 @@ export default function Plan() {
         const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
           .toISOString()
           .split('T')[0];
-        const { data: rawTasks, error: fetchError } = await supabase
-          .from('study_tasks')
-          .select('id, user_id, type, skill_id, the_date, size, status, skills(name, subject)')
+        const { data: planDays, error: fetchError } = await supabase
+          .from('study_plan_days')
+          .select('the_date, tasks_json, generated_at, user_id')
           .eq('user_id', user.id)
           .gte('the_date', today)
           .lte('the_date', sevenDaysFromNow)
-          .order('the_date, created_at');
+          .order('the_date');
         
         if (fetchError) {
           throw fetchError;
         }
 
-        // Group tasks by date to match StudyPlanDay structure
-        const groupedByDate = (rawTasks || []).reduce((acc, task) => {
-          const dateKey = task.the_date;
-          if (!acc[dateKey]) {
-            acc[dateKey] = {
-              the_date: dateKey,
-              user_id: task.user_id,
-              tasks_json: [],
-              generated_at: new Date().toISOString()
-            };
-          }
-          const dayPlan = acc[dateKey];
-          if (dayPlan?.tasks_json) {
-            dayPlan.tasks_json.push({
-              type: task.type,
-              skill_id: task.skill_id || undefined,
-              size: task.size,
-              title: task.skills ? `${task.type}: ${task.skills.name}` : `${task.type} Task`
-            });
-          }
-          return acc;
-        }, {} as Record<string, StudyPlanDay>);
+        // Type cast and validate tasks_json
+        const typedPlans: StudyPlanDay[] = (planDays || []).map(day => ({
+          ...day,
+          tasks_json: Array.isArray(day.tasks_json) ? day.tasks_json as unknown as StudyPlanTask[] : []
+        }));
 
-        setPlans(Object.values(groupedByDate));
+        setPlans(typedPlans);
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load plan';
         setError(errorMessage);
@@ -103,37 +86,21 @@ export default function Plan() {
         const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
           .toISOString()
           .split('T')[0];
-        const { data: rawTasks } = await supabase
-          .from('study_tasks')
-          .select('id, user_id, type, skill_id, the_date, size, status, skills(name, subject)')
+        const { data: planDays } = await supabase
+          .from('study_plan_days')
+          .select('the_date, tasks_json, generated_at, user_id')
           .eq('user_id', user.id)
           .gte('the_date', today)
           .lte('the_date', sevenDaysFromNow)
-          .order('the_date, created_at');
+          .order('the_date');
 
-        const groupedByDate = (rawTasks || []).reduce((acc, task) => {
-          const dateKey = task.the_date;
-          if (!acc[dateKey]) {
-            acc[dateKey] = {
-              the_date: dateKey,
-              user_id: task.user_id,
-              tasks_json: [],
-              generated_at: new Date().toISOString()
-            };
-          }
-          const dayPlan = acc[dateKey];
-          if (dayPlan?.tasks_json) {
-            dayPlan.tasks_json.push({
-              type: task.type,
-              skill_id: task.skill_id || undefined,
-              size: task.size,
-              title: task.skills ? `${task.type}: ${task.skills.name}` : `${task.type} Task`
-            });
-          }
-          return acc;
-        }, {} as Record<string, StudyPlanDay>);
+        // Type cast and validate tasks_json
+        const typedPlans: StudyPlanDay[] = (planDays || []).map(day => ({
+          ...day,
+          tasks_json: Array.isArray(day.tasks_json) ? day.tasks_json as unknown as StudyPlanTask[] : []
+        }));
 
-        setPlans(Object.values(groupedByDate));
+        setPlans(typedPlans);
       }
     } catch (err) {
       console.error('Error:', err);
