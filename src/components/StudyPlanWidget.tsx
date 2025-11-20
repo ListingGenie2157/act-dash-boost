@@ -70,34 +70,35 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
 
       const today = new Date().toISOString().split('T')[0];
 
-      // Load directly from study_tasks table (fixes desync issue)
-      const { data: tasksData, error: tasksError } = await supabase
-        .from('study_tasks')
-        .select('*, skills(id, name, subject)')
+      // Load directly from study_plan_days table (source of truth)
+      const { data: planDay, error: planError } = await supabase
+        .from('study_plan_days')
+        .select('tasks_json')
         .eq('user_id', user.id)
         .eq('the_date', today)
-        .order('created_at');
+        .maybeSingle();
 
-      if (tasksError) {
-        if (tasksError.code !== 'PGRST116') { // Not a "no rows" error
-          throw tasksError;
+      if (planError) {
+        if (planError.code !== 'PGRST116') { // Not a "no rows" error
+          throw planError;
         }
         setTasks([]);
         return;
       }
 
-      if (!tasksData || tasksData.length === 0) {
+      if (!planDay?.tasks_json) {
         setTasks([]);
         return;
       }
 
-      // Map to StudyTask format
-      const mappedTasks = tasksData.map((task: any) => ({
+      // Map tasks_json to StudyTask format
+      const rawTasks = planDay.tasks_json as any[];
+      const mappedTasks = rawTasks.map((task: any) => ({
         type: task.type,
-        skill_id: task.skill_id,
-        size: task.size,
-        skill_name: task.skills?.name,
-        subject: task.skills?.subject,
+        skill_id: task.skill_id ?? null,
+        size: task.size ?? 0,
+        skill_name: task.title ?? undefined,
+        subject: undefined,
       }));
 
       setTasks(mappedTasks);

@@ -44,63 +44,37 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
           dates.push(date.toISOString().split('T')[0]);
         }
 
-        // Fetch study tasks
-        const { data: tasks, error: tasksError } = await supabase
-          .from('study_tasks')
-          .select('the_date, type, skill_id, size, status, skills(name, subject)')
+        // Fetch study plan days (source of truth)
+        const { data: planDays, error: planError } = await supabase
+          .from('study_plan_days')
+          .select('the_date, tasks_json')
           .eq('user_id', userId)
           .in('the_date', dates)
-          .order('the_date, created_at');
+          .order('the_date');
 
-        if (tasksError) throw tasksError;
+        if (planError) throw planError;
 
-        // Build skill name map
-        const skillNameMap = new Map<string, string>();
-        tasks?.forEach(task => {
-          if (task.skill_id && task.skills) {
-            skillNameMap.set(task.skill_id, (task.skills as any).name);
-          }
-        });
-
-        // Group tasks by date
-        const tasksByDate: Record<string, Array<{type: string; skill_id: string | null; status: string | null; skills: any}>> = {};
-        tasks?.forEach(task => {
-          if (!tasksByDate[task.the_date]) {
-            tasksByDate[task.the_date] = [];
-          }
-          tasksByDate[task.the_date].push(task);
+        // Build tasks by date from tasks_json
+        const tasksByDate: Record<string, StudyTask[]> = {};
+        planDays?.forEach(day => {
+          const dayTasks = Array.isArray(day.tasks_json) ? day.tasks_json as any[] : [];
+          tasksByDate[day.the_date] = dayTasks.map((t: any) => ({
+            type: t.type,
+            title: t.title,
+            skill_id: t.skill_id ?? undefined,
+            status: 'PENDING' as const,
+          }));
         });
 
         // Build week data
         const week: WeekDay[] = dates.map(dateStr => {
           const dateTasks = tasksByDate[dateStr] || [];
           const dateObj = new Date(dateStr);
-          
-          const enhancedTasks: StudyTask[] = dateTasks.map(task => {
-            const skillName = task.skill_id ? skillNameMap.get(task.skill_id) : null;
-            let title = `${task.type} Task`;
-            
-            if (skillName) {
-              switch(task.type) {
-                case 'LEARN': title = `Learn: ${skillName}`; break;
-                case 'DRILL': title = `Practice: ${skillName}`; break;
-                case 'REVIEW': title = `Review: ${skillName}`; break;
-                default: title = skillName;
-              }
-            }
-
-            return {
-              type: task.type,
-              title,
-              skill_id: task.skill_id || undefined,
-              status: (task.status || 'PENDING') as 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'
-            };
-          });
 
           return {
             date: dateStr,
             dateObj,
-            tasks: enhancedTasks,
+            tasks: dateTasks,
             isToday: isToday(dateObj),
           };
         });
