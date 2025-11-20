@@ -32,18 +32,20 @@ export default function TaskLauncher() {
         return;
       }
 
-      // Fetch tasks for the date from study_tasks table
-      const { data: tasks, error } = await supabase
-        .from('study_tasks')
-        .select('id, type, skill_id, size, skills(name, subject)')
+      // Fetch tasks for the date from study_plan_days table
+      const { data: planDay, error } = await supabase
+        .from('study_plan_days')
+        .select('tasks_json')
         .eq('the_date', date)
         .eq('user_id', user.id)
-        .order('created_at');
+        .maybeSingle();
 
-      if (error || !tasks || tasks.length === 0) {
+      if (error || !planDay?.tasks_json) {
         navigate('/plan', { replace: true });
         return;
       }
+
+      const tasks = planDay.tasks_json as any[];
       
       // Validate idx is in range
       if (i < 0 || i >= tasks.length) {
