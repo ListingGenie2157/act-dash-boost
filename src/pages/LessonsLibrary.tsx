@@ -176,7 +176,7 @@ export default function LessonsLibrary() {
 
               <div className="space-y-4">
                 {Object.entries(clusters).map(([cluster, clusterLessons]) => (
-                  <Collapsible key={cluster} defaultOpen>
+                  <Collapsible key={cluster}>
                     <div className="border rounded-lg p-4">
                       <CollapsibleTrigger className="flex items-center justify-between w-full group hover:opacity-80 transition-opacity">
                         <div className="flex items-center gap-2">
