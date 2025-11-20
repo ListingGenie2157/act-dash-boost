@@ -803,6 +803,7 @@ serve(async (req) => {
           estimatedMins: Math.round(8 * timeMultiplier),
           priority: dayMode.drillWeight * 1000 + (50 - index),
         });
+        assignedSkillIds.add(skill.skill_id); // Mark as assigned to prevent repetition
       });
 
       // 3. LEARN tasks

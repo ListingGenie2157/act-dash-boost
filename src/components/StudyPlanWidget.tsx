@@ -93,13 +93,36 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
 
       // Map tasks_json to StudyTask format
       const rawTasks = planDay.tasks_json as any[];
-      const mappedTasks = rawTasks.map((task: any) => ({
-        type: task.type,
-        skill_id: task.skill_id ?? null,
-        size: task.size ?? 0,
-        skill_name: task.title ?? undefined,
-        subject: undefined,
-      }));
+      
+      // Fetch skill details to get subject information
+      const skillIds = rawTasks
+        .map((task: any) => task.skill_id)
+        .filter(Boolean);
+      
+      let skillsMap = new Map<string, { name: string; subject: string }>();
+      if (skillIds.length > 0) {
+        const { data: skillsData } = await supabase
+          .from('skills')
+          .select('id, name, subject')
+          .in('id', skillIds);
+        
+        if (skillsData) {
+          skillsData.forEach(skill => {
+            skillsMap.set(skill.id, { name: skill.name, subject: skill.subject });
+          });
+        }
+      }
+      
+      const mappedTasks = rawTasks.map((task: any) => {
+        const skillInfo = task.skill_id ? skillsMap.get(task.skill_id) : null;
+        return {
+          type: task.type,
+          skill_id: task.skill_id ?? null,
+          size: task.size ?? 0,
+          skill_name: skillInfo?.name || task.title || undefined,
+          subject: skillInfo?.subject || undefined,
+        };
+      });
 
       setTasks(mappedTasks);
     } catch (error) {
@@ -221,7 +244,7 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
                   </div>
                   
                   <h3 className="text-base font-bold mb-2 line-clamp-1">
-                    {config.description}
+                    {task.skill_name || config.description}
                   </h3>
                   <div className="space-y-0.5 mb-3">
                     {task.skill_name && task.subject && (
