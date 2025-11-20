@@ -189,8 +189,18 @@ ${body.problem.user_work ? `- Student's Work: ${body.problem.user_work}` : ''}`;
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error('AI API Error:', errorText);
-      throw new Error(`AI API error: ${aiResponse.status}`);
+      console.error('AI API Error:', aiResponse.status, errorText);
+      
+      // Try to parse error details
+      let errorDetail = errorText;
+      try {
+        const parsed = JSON.parse(errorText);
+        errorDetail = parsed.message || parsed.error || errorText;
+      } catch {
+        // Keep raw text if not JSON
+      }
+      
+      throw new Error(`AI API error ${aiResponse.status}: ${errorDetail}`);
     }
 
     const aiData = await aiResponse.json();
@@ -260,12 +270,18 @@ ${body.problem.user_work ? `- Student's Work: ${body.problem.user_work}` : ''}`;
     let statusCode = 500;
     let errorMessage = 'Internal server error';
 
-    if (error.message?.includes('429')) {
+    if (error.message?.includes('LOVABLE_API_KEY not configured')) {
+      statusCode = 500;
+      errorMessage = 'Tutor is not configured on the server (missing AI key). Please contact support.';
+    } else if (error.message?.includes('429')) {
       statusCode = 429;
       errorMessage = 'Rate limit exceeded. Please try again later.';
     } else if (error.message?.includes('402')) {
       statusCode = 402;
       errorMessage = 'AI credits exhausted. Please contact support.';
+    } else if (error.message && error.message.length < 200) {
+      // If error message is reasonably short, include it for better debugging
+      errorMessage = error.message;
     }
 
     return new Response(

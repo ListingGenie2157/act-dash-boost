@@ -83,6 +83,11 @@ export function TutorProvider({ children }: { children: React.ReactNode }) {
         body: requestBody,
       });
 
+      // Check if function returned an error response (200 with error field)
+      if (data && (data as any).error && !(data as any).assistant_message) {
+        throw new Error((data as any).error);
+      }
+
       if (error) throw error;
 
       if (data?.assistant_message) {
@@ -104,10 +109,16 @@ export function TutorProvider({ children }: { children: React.ReactNode }) {
       
       let errorMessage = 'Failed to get response from tutor. Please try again.';
       
-      if (error.message?.includes('429')) {
+      if (error.message?.includes('LOVABLE_API_KEY not configured') || 
+          error.message?.includes('Tutor is not configured on the server')) {
+        errorMessage = 'The tutor is not fully configured on the server yet. Please contact support.';
+      } else if (error.message?.includes('429') || error.message?.includes('Rate limit')) {
         errorMessage = 'Too many requests. Please wait a moment and try again.';
-      } else if (error.message?.includes('402')) {
+      } else if (error.message?.includes('402') || error.message?.includes('credits exhausted')) {
         errorMessage = 'AI credits exhausted. Please contact support.';
+      } else if (error.message && error.message.length < 200 && !error.message.includes('fetch')) {
+        // Show the actual error message if it's user-safe
+        errorMessage = error.message;
       }
 
       toast({
