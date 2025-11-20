@@ -96,16 +96,23 @@ export default function EnhancedLessonViewer() {
       setError(null);
       try {
         const code = topic ?? '';
+        console.log('Fetching lesson for skill code:', code);
         const { data, error: fetchError } = await getEnhancedLesson(code);
-        if (fetchError || !data) {
-          // If no enhanced lesson content, still show a basic view
-          setError(null);
+        console.log('Lesson fetch result:', { data, fetchError });
+        
+        if (fetchError) {
+          setError(fetchError.message || 'Failed to load lesson');
+          setLesson(null);
+        } else if (!data) {
+          setError('Lesson content not found');
           setLesson(null);
         } else {
           setLesson(data);
         }
       } catch (err: unknown) {
-        setError(null);
+        console.error('Error fetching lesson:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+        setError(errorMessage);
         setLesson(null);
       } finally {
         setLoading(false);
