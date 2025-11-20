@@ -21,8 +21,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Home } from 'lucide-react';
-import { TutorTrigger } from '@/components/tutor/TutorTrigger';
-import { mapToTutorSubject } from '@/lib/tutorSubjectMapper';
 
 interface Question {
   id: string;
@@ -360,24 +358,6 @@ export default function Simulation() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <TutorTrigger
-                  subject={mapToTutorSubject(selectedSection)}
-                  topic={selectedSection}
-                  mode="test"
-                  problem={
-                    currentQuestion ? {
-                      id: currentQuestion.id,
-                      text: currentQuestion.question,
-                      choices: [
-                        currentQuestion.choice_a,
-                        currentQuestion.choice_b,
-                        currentQuestion.choice_c,
-                        currentQuestion.choice_d,
-                      ],
-                      user_answer: answers[currentQuestion.id],
-                    } : null
-                  }
-                />
                 <div className="text-sm text-muted-foreground">
                   Question {currentQuestionIndex + 1} of {sessionData.questions.length}
                 </div>

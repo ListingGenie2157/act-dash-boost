@@ -272,12 +272,6 @@ export default function EnhancedLessonViewer() {
               />
             </div>
           )}
-          
-          <TutorTrigger
-            subject={mapToTutorSubject(lesson.subject)}
-            topic={lesson.skill_code}
-            mode="practice"
-          />
         </div>
 
         <div className="flex items-center gap-4 mt-4 text-sm text-muted-foreground">
@@ -319,6 +313,12 @@ export default function EnhancedLessonViewer() {
         </TabsList>
 
         <TabsContent value="learn" className="space-y-6 mt-6">
+          <TutorTrigger
+            subject={mapToTutorSubject(lesson.subject)}
+            topic={lesson.skill_code}
+            mode="practice"
+            variant="floating"
+          />
           <Card>
             <CardHeader>
               <CardTitle>Overview</CardTitle>
@@ -360,6 +360,12 @@ export default function EnhancedLessonViewer() {
         </TabsContent>
 
         <TabsContent value="practice" className="space-y-6 mt-6">
+          <TutorTrigger
+            subject={mapToTutorSubject(lesson.subject)}
+            topic={lesson.skill_code}
+            mode="practice"
+            variant="floating"
+          />
           {lesson.common_traps && <CommonTrapsAlert traps={parsedTraps} />}
 
           {parsedIndependentPractice.length > 0 ? (
