@@ -45,7 +45,7 @@ const Index = () => {
 
           const profilePromise = supabase
             .from('profiles')
-            .select('test_date, onboarding_complete, has_study_plan')
+            .select('test_date, onboarding_complete, has_study_plan, first_name')
             .eq('id', session.user.id)
             .maybeSingle();
 
@@ -241,7 +241,9 @@ const Index = () => {
           {/* Welcome Section */}
           <div className="mb-2 flex items-start justify-between">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Welcome back! 👋</h1>
+            <h1 className="text-3xl font-bold mb-2">
+              Welcome back{profile?.first_name ? `, ${profile.first_name}` : ''}! 👋
+            </h1>
               <p className="text-muted-foreground">
                 {hasStudyPlan ? 'Your personalized study plan for today' : 'Continue your ACT preparation'}
               </p>

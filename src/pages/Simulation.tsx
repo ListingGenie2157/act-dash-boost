@@ -9,6 +9,16 @@ import { PassageLayout } from '@/components/PassageLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Home } from 'lucide-react';
 
@@ -49,6 +59,7 @@ export default function Simulation() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [showExitDialog, setShowExitDialog] = useState(false);
 
   // Explicit auth header helper (temporary until we confirm automatic header attach works reliably on all browsers)
   const getAuthHeaders = async (): Promise<Record<string, string>> => {
@@ -307,9 +318,13 @@ export default function Simulation() {
           <div className="container mx-auto px-4 py-3">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-4">
-                <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowExitDialog(true)}
+                >
                   <Home className="h-4 w-4 mr-2" />
-                  Dashboard
+                  Exit Test
                 </Button>
                 <div className="flex items-center space-x-2">
                   <Badge variant="outline">{selectedSection}</Badge>
@@ -384,6 +399,26 @@ export default function Simulation() {
             </Card>
           </div>
         )}
+
+        <AlertDialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Exit Test?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to exit? Your progress will be saved and the test will end.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Continue Test</AlertDialogCancel>
+              <AlertDialogAction onClick={async () => {
+                await finishSession();
+                navigate('/');
+              }}>
+                Exit & Save
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   }

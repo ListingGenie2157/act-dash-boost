@@ -452,6 +452,7 @@ export type Database = {
           created_at: string | null
           daily_time_cap_mins: number | null
           diagnostic_completed: boolean | null
+          first_name: string | null
           has_study_plan: boolean | null
           id: string
           onboarding_complete: boolean | null
@@ -468,6 +469,7 @@ export type Database = {
           created_at?: string | null
           daily_time_cap_mins?: number | null
           diagnostic_completed?: boolean | null
+          first_name?: string | null
           has_study_plan?: boolean | null
           id: string
           onboarding_complete?: boolean | null
@@ -484,6 +486,7 @@ export type Database = {
           created_at?: string | null
           daily_time_cap_mins?: number | null
           diagnostic_completed?: boolean | null
+          first_name?: string | null
           has_study_plan?: boolean | null
           id?: string
           onboarding_complete?: boolean | null
