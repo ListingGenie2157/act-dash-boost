@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, BookOpen, Clock, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,6 +34,7 @@ import { mapToTutorSubject } from '@/lib/tutorSubjectMapper';
 
 export default function EnhancedLessonViewer() {
   const { topic } = useParams<{ topic?: string }>();
+  const [searchParams] = useSearchParams();
   const [lesson, setLesson] = useState<EnhancedLesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +46,11 @@ export default function EnhancedLessonViewer() {
 
   const { data: mastery } = useSkillMastery(topic);
   const { toast } = useToast();
+
+  // Determine back link based on where user came from
+  const date = searchParams.get('date');
+  const backLink = date ? '/plan' : '/lessons';
+  const backText = date ? 'Back to Plan' : 'Back to Lessons';
 
   const parsedRules = useMemo(() => {
     try {
@@ -173,7 +179,10 @@ export default function EnhancedLessonViewer() {
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link to="/lessons">← Back to Lessons</Link>
+              <Link to={backLink}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                {backText}
+              </Link>
             </Button>
           </CardContent>
         </Card>
@@ -185,9 +194,9 @@ export default function EnhancedLessonViewer() {
     return (
       <div className="container mx-auto p-6 max-w-3xl">
         <Button variant="outline" size="default" asChild className="mb-6">
-          <Link to="/lessons">
+          <Link to={backLink}>
             <ArrowLeft className="h-5 w-5 mr-2" />
-            Back to Lessons
+            {backText}
           </Link>
         </Button>
         
@@ -247,9 +256,9 @@ export default function EnhancedLessonViewer() {
     <div className="container mx-auto p-6 max-w-5xl">
       <div className="mb-6">
         <Button variant="outline" size="default" asChild className="mb-6">
-          <Link to="/lessons">
+          <Link to={backLink}>
             <ArrowLeft className="h-5 w-5 mr-2" />
-            Back to Lessons
+            {backText}
           </Link>
         </Button>
 
