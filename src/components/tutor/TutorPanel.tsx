@@ -13,14 +13,14 @@ import { Separator } from '@/components/ui/separator';
 export function TutorPanel() {
   const { isOpen, closeTutor, messages, context, loading, sendUserMessage, clearMessages } = useTutor();
   const [input, setInput] = useState('');
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages]);
+  }, [messages, loading]);
 
   useEffect(() => {
     if (isOpen && textareaRef.current) {
@@ -86,37 +86,40 @@ export function TutorPanel() {
             <TutorContextDisplay context={context} />
           </div>
 
-          <ScrollArea className="flex-1 px-4" ref={scrollRef}>
-            {messages.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-center text-muted-foreground text-sm px-4 py-8">
-                <div>
-                  <p className="mb-2">👋 Hi! I'm your homework tutor.</p>
-                  <p>Ask me anything about this problem, or tell me what you're stuck on.</p>
-                  {context.mode === 'quiz' || context.mode === 'test' ? (
-                    <p className="mt-4 text-xs">
-                      ⚠️ Since you're in {context.mode} mode, I won't give direct answers, but I can help you think through it!
-                    </p>
-                  ) : null}
+          <ScrollArea className="flex-1 px-4 max-h-[calc(100vh-300px)]">
+            <div className="min-h-full">
+              {messages.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-center text-muted-foreground text-sm px-4 py-8">
+                  <div>
+                    <p className="mb-2">👋 Hi! I'm your homework tutor.</p>
+                    <p>Ask me anything about this problem, or tell me what you're stuck on.</p>
+                    {context.mode === 'quiz' || context.mode === 'test' ? (
+                      <p className="mt-4 text-xs">
+                        ⚠️ Since you're in {context.mode} mode, I won't give direct answers, but I can help you think through it!
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="space-y-2 pb-4">
-                {messages.map((message) => (
-                  <TutorMessage key={message.id} message={message} />
-                ))}
-                {loading && (
-                  <div className="flex justify-start">
-                    <div className="bg-muted rounded-lg p-3">
-                      <div className="flex space-x-2">
-                        <div className="w-2 h-2 bg-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <div className="w-2 h-2 bg-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <div className="w-2 h-2 bg-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              ) : (
+                <div className="space-y-2 pb-4">
+                  {messages.map((message) => (
+                    <TutorMessage key={message.id} message={message} />
+                  ))}
+                  {loading && (
+                    <div className="flex justify-start">
+                      <div className="bg-muted rounded-lg p-3">
+                        <div className="flex space-x-2">
+                          <div className="w-2 h-2 bg-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="w-2 h-2 bg-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="w-2 h-2 bg-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
+            </div>
           </ScrollArea>
 
           <div className="p-4 border-t border-border">
