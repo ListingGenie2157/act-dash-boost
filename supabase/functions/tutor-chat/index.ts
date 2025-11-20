@@ -177,7 +177,6 @@ ${body.problem.user_work ? `- Student's Work: ${body.problem.user_work}` : ''}`;
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: aiMessages,
-        temperature: 0.7,
         max_tokens: 1000,
       }),
     });
