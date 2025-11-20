@@ -29,6 +29,8 @@ import { AlertCircle, Target, FlaskConical } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PeriodicTable } from '@/components/lesson/PeriodicTable';
 import { YouTubeEmbed, extractYouTubeId } from '@/components/lesson/YouTubeEmbed';
+import { TutorTrigger } from '@/components/tutor/TutorTrigger';
+import type { TutorSubject } from '@/types/tutor';
 
 export default function EnhancedLessonViewer() {
   const { topic } = useParams<{ topic?: string }>();
@@ -270,6 +272,12 @@ export default function EnhancedLessonViewer() {
               />
             </div>
           )}
+          
+          <TutorTrigger
+            subject={(lesson.subject === 'Science' ? 'SCIENCE' : lesson.subject === 'Math' ? 'MATH' : lesson.subject === 'English' ? 'ENGLISH' : 'READING') as TutorSubject}
+            topic={lesson.skill_code}
+            mode="practice"
+          />
         </div>
 
         <div className="flex items-center gap-4 mt-4 text-sm text-muted-foreground">

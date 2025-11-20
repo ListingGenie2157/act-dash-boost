@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageLoadingSpinner } from './components/LoadingSpinner';
+import { TutorProvider } from './hooks/useTutor';
+import { TutorPanel } from './components/tutor/TutorPanel';
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import SimpleLogin from "./pages/SimpleLogin";
@@ -42,10 +44,12 @@ const queryClient = new QueryClient();
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+      <TutorProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <TutorPanel />
+          <BrowserRouter>
           <Suspense fallback={<PageLoadingSpinner />}>
             <Routes>
           <Route path="/" element={<Index />} />
@@ -125,8 +129,9 @@ const App = () => (
           </Suspense>
         </BrowserRouter>
       </TooltipProvider>
-    </QueryClientProvider>
-  </ErrorBoundary>
+    </TutorProvider>
+  </QueryClientProvider>
+</ErrorBoundary>
 );
 
 export default App;
