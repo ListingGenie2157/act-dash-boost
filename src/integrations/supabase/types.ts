@@ -1063,6 +1063,68 @@ export type Database = {
         }
         Relationships: []
       }
+      tutor_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          role: string
+          session_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          role: string
+          session_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutor_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "tutor_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tutor_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          last_used_at: string
+          mode: string
+          subject: string
+          topic: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_used_at?: string
+          mode: string
+          subject: string
+          topic: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_used_at?: string
+          mode?: string
+          subject?: string
+          topic?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_goals: {
         Row: {
           created_at: string

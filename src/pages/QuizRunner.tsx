@@ -4,6 +4,8 @@ import { getQuestionsBySkill } from '@/lib/content';
 import { supabase } from '@/integrations/supabase/client';
 import type { Question } from '@/types';
 import { shuffleQuestionChoices } from '@/lib/shuffle';
+import { TutorTrigger } from '@/components/tutor/TutorTrigger';
+import type { TutorSubject } from '@/types/tutor';
 
 export default function QuizRunner() {
   const { section } = useParams<{ section?: string }>();
@@ -113,6 +115,17 @@ export default function QuizRunner() {
 
   return (
     <div className="container mx-auto p-4">
+      <TutorTrigger
+        subject={(section?.includes('Math') ? 'MATH' : section?.includes('English') ? 'ENGLISH' : section?.includes('Science') ? 'SCIENCE' : 'READING') as TutorSubject}
+        topic={questions[current]?.skill_code || 'general'}
+        mode="quiz"
+        problem={shuffled ? {
+          id: shuffled.original.id,
+          text: shuffled.original.stem,
+          choices: [shuffled.original.choice_a, shuffled.original.choice_b, shuffled.original.choice_c, shuffled.original.choice_d],
+        } : null}
+        variant="floating"
+      />
       <h2 className="font-bold mb-4">Quiz Question {current + 1} of {questions.length}</h2>
       <p className="mb-4">{shuffled.original.stem}</p>
       <div className="space-y-2">
