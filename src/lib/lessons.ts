@@ -499,6 +499,7 @@ export async function getAllLessons(): Promise<{
     skill_name: string;
     subject: string;
     section: string;
+    cluster: string;
     questionCount: number;
   }>;
   error: Error | null;
@@ -548,6 +549,7 @@ export async function getAllLessons(): Promise<{
       skill_name: skill.name,
       subject: skill.subject,
       section: skill.subject,
+      cluster: skill.cluster,
       questionCount: durationMap.get(skill.id) || 15, // Store duration in questionCount for now
     }));
 
