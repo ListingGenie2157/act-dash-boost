@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Button, Label, Card, CardContent, CardDescription, CardHeader, CardTitle, Checkbox
+  Button, Label, Card, CardContent, CardDescription, CardHeader, CardTitle, Checkbox, Input
 } from '@/components/ui';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -10,12 +10,13 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
+    firstName: '',
     ageVerified: false,
     tosAccepted: false,
     privacyAccepted: false,
   });
 
-  const canProceed = form.ageVerified && form.tosAccepted && form.privacyAccepted;
+  const canProceed = form.firstName.trim() && form.ageVerified && form.tosAccepted && form.privacyAccepted;
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -30,6 +31,7 @@ export default function Onboarding() {
       const { error: profileUpdateError } = await supabase
         .from('profiles')
         .update({
+          first_name: form.firstName.trim(),
           age_verified: form.ageVerified,
           tos_accepted: form.tosAccepted,
           privacy_accepted: form.privacyAccepted,
@@ -63,7 +65,17 @@ export default function Onboarding() {
             <CardDescription>Let's get you started. Please accept the following to continue.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-3">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  type="text"
+                  placeholder="Enter your first name"
+                  value={form.firstName}
+                  onChange={(e) => setForm(f => ({ ...f, firstName: e.target.value }))}
+                />
+              </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="age"
