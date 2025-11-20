@@ -180,7 +180,7 @@ ${body.problem.user_work ? `- Student's Work: ${body.problem.user_work}` : ''}`;
         'Authorization': `Bearer ${lovableApiKey}`,
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.0-flash-exp',
+        model: 'google/gemini-2.5-flash',
         messages: aiMessages,
         temperature: 0.7,
         max_tokens: 1000,
