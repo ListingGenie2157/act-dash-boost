@@ -936,10 +936,13 @@ serve(async (req) => {
         .gte("the_date", todayStr)
         .lte("the_date", weekEndStr);
 
-      // Insert new non-SIM tasks
+      // Upsert new non-SIM tasks (handles regeneration gracefully)
       const { error: tasksError } = await supabase
         .from("study_tasks")
-        .insert(allStudyTasks);
+        .upsert(allStudyTasks, { 
+          onConflict: 'user_id,the_date,type,skill_id',
+          ignoreDuplicates: false 
+        });
 
       if (tasksError) {
         console.error("❌ Error saving study tasks:", tasksError);
@@ -958,7 +961,7 @@ serve(async (req) => {
       const { error: simError } = await supabase
         .from("study_tasks")
         .upsert(simTasks, {
-          onConflict: "user_id,the_date,type",
+          onConflict: "user_id,the_date,type,skill_id",
           ignoreDuplicates: false,
         });
 
