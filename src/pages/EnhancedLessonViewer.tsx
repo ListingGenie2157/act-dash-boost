@@ -30,7 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import { PeriodicTable } from '@/components/lesson/PeriodicTable';
 import { YouTubeEmbed, extractYouTubeId } from '@/components/lesson/YouTubeEmbed';
 import { TutorTrigger } from '@/components/tutor/TutorTrigger';
-import type { TutorSubject } from '@/types/tutor';
+import { mapToTutorSubject } from '@/lib/tutorSubjectMapper';
 
 export default function EnhancedLessonViewer() {
   const { topic } = useParams<{ topic?: string }>();
@@ -274,7 +274,7 @@ export default function EnhancedLessonViewer() {
           )}
           
           <TutorTrigger
-            subject={(lesson.subject === 'Science' ? 'SCIENCE' : lesson.subject === 'Math' ? 'MATH' : lesson.subject === 'English' ? 'ENGLISH' : 'READING') as TutorSubject}
+            subject={mapToTutorSubject(lesson.subject)}
             topic={lesson.skill_code}
             mode="practice"
           />

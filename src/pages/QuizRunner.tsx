@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Question } from '@/types';
 import { shuffleQuestionChoices } from '@/lib/shuffle';
 import { TutorTrigger } from '@/components/tutor/TutorTrigger';
-import type { TutorSubject } from '@/types/tutor';
+import { mapToTutorSubject } from '@/lib/tutorSubjectMapper';
 
 export default function QuizRunner() {
   const { section } = useParams<{ section?: string }>();
@@ -116,7 +116,7 @@ export default function QuizRunner() {
   return (
     <div className="container mx-auto p-4">
       <TutorTrigger
-        subject={(section?.includes('Math') ? 'MATH' : section?.includes('English') ? 'ENGLISH' : section?.includes('Science') ? 'SCIENCE' : 'READING') as TutorSubject}
+        subject={mapToTutorSubject(section || 'english')}
         topic={questions[current]?.skill_code || 'general'}
         mode="quiz"
         problem={shuffled ? {
