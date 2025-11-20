@@ -60,6 +60,7 @@ export default function Simulation() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
+  const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
 
   // Explicit auth header helper (temporary until we confirm automatic header attach works reliably on all browsers)
   const getAuthHeaders = async (): Promise<Record<string, string>> => {
@@ -192,9 +193,33 @@ export default function Simulation() {
   const submitAnswer = useCallback(async (questionId: string, selectedAnswer: string) => {
     if (!sessionData) return;
 
-    // Track answer locally - session-finish will process all responses
+    // Track answer locally for UI responsiveness
     setAnswers(prev => ({ ...prev, [questionId]: selectedAnswer }));
-  }, [sessionData]);
+
+    // Calculate time taken for this question
+    const timeMs = Date.now() - questionStartTime;
+
+    // Save to database via edge function
+    try {
+      const { error } = await supabase.functions.invoke('submit-response', {
+        headers: await getAuthHeaders(),
+        body: {
+          session_id: sessionData.session_id,
+          question_id: questionId,
+          selected: selectedAnswer,
+          time_ms: timeMs
+        }
+      });
+
+      if (error) {
+        console.error('Error saving response:', error);
+        // Continue anyway - don't block user from proceeding
+      }
+    } catch (error) {
+      console.error('Failed to submit response:', error);
+      // Continue anyway - user can still complete test
+    }
+  }, [sessionData, questionStartTime]);
 
   const handleAnswerSelect = (questionId: string, answer: string) => {
     submitAnswer(questionId, answer);
@@ -202,6 +227,7 @@ export default function Simulation() {
 
   const navigateToQuestion = (index: number) => {
     setCurrentQuestionIndex(index);
+    setQuestionStartTime(Date.now()); // Reset timer for new question
   };
 
   const handleNext = () => {
