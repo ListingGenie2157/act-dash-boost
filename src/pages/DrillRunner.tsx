@@ -6,7 +6,7 @@ import { shuffleQuestionChoices } from '@/lib/shuffle';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { TutorTrigger } from '@/components/tutor/TutorTrigger';
-import type { TutorSubject } from '@/types/tutor';
+import { mapToTutorSubject } from '@/lib/tutorSubjectMapper';
 
 export default function DrillRunner() {
   const navigate = useNavigate();
@@ -179,7 +179,7 @@ export default function DrillRunner() {
   return (
     <div className="container mx-auto p-4">
       <TutorTrigger
-        subject={(subject === 'Math' ? 'MATH' : subject === 'English' ? 'ENGLISH' : subject === 'Science' ? 'SCIENCE' : 'READING') as TutorSubject}
+        subject={mapToTutorSubject(subject || 'english')}
         topic={questions[current]?.skill_code || 'general'}
         mode="practice"
         problem={shuffled ? {

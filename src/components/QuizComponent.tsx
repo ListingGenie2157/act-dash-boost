@@ -3,6 +3,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle, XCircle, ArrowRight, ArrowLeft } from 'lucide-react';
+import { TutorTrigger } from '@/components/tutor/TutorTrigger';
+import { mapToTutorSubject } from '@/lib/tutorSubjectMapper';
 import type { LegacyQuestion, QuizAnswers } from '@/types';
 import { updateMastery } from '@/lib/mastery';
 import { supabase } from '@/integrations/supabase/client';
@@ -286,9 +288,22 @@ export const QuizComponent = ({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold">{title}</h2>
-          <span className="text-sm text-muted-foreground">
-            {currentQuestion + 1} of {shuffledQuestions.length}
-          </span>
+          <div className="flex items-center gap-3">
+            <TutorTrigger
+              subject={mapToTutorSubject(skillCode)}
+              topic={skillCode}
+              mode="quiz"
+              problem={{
+                id: currentQ.id,
+                text: currentQ.question,
+                choices: currentQ.options,
+                user_answer: answers[currentQuestion] !== -1 ? currentQ.options[answers[currentQuestion]] : undefined,
+              }}
+            />
+            <span className="text-sm text-muted-foreground">
+              {currentQuestion + 1} of {shuffledQuestions.length}
+            </span>
+          </div>
         </div>
         <Progress value={progress} className="h-2" />
       </div>
