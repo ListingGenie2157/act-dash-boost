@@ -286,6 +286,28 @@ const Index = () => {
                 <AchievementBadges />
               </div>
               
+              {/* Quick Access Resources */}
+              <Card className="bg-gradient-to-br from-muted/30 to-muted/10">
+                <CardContent className="pt-6">
+                  <h3 className="text-lg font-semibold mb-4">📚 Quick Access</h3>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <Link to="/lessons">
+                      <Button variant="outline" className="w-full justify-start gap-2">
+                        📚 Browse All Lessons
+                      </Button>
+                    </Link>
+                    <Link to="/calculator-lab">
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-start gap-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/20 hover:from-purple-500/20 hover:to-pink-500/20"
+                      >
+                        🧮 Calculator Lab
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+              
               <MasteryDashboard />
               
               {/* Diagnostic CTA - Only show if not completed */}
@@ -344,13 +366,23 @@ const Index = () => {
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Link to="/lessons">
                   <div className="p-6 border rounded-xl hover:shadow-lg transition-shadow bg-card h-full">
                     <div className="text-4xl mb-3">📚</div>
                     <h3 className="text-xl font-bold mb-2">Lessons Library</h3>
                     <p className="text-sm text-muted-foreground">
                       Browse and learn concepts at your own pace
+                    </p>
+                  </div>
+                </Link>
+                
+                <Link to="/calculator-lab">
+                  <div className="p-6 border rounded-xl hover:shadow-lg transition-shadow bg-card h-full bg-gradient-to-br from-purple-500/5 to-pink-500/5 border-purple-500/20">
+                    <div className="text-4xl mb-3">🧮</div>
+                    <h3 className="text-xl font-bold mb-2">Calculator Lab</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Master calculator shortcuts to save 10-15 minutes
                     </p>
                   </div>
                 </Link>
