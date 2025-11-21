@@ -1,5 +1,19 @@
 export type CalculatorModel = 'TI-84' | 'TI-Nspire' | 'Casio';
 
+export interface InteractiveStep {
+  instruction: string;
+  buttonId: string;
+  screenDisplay: string;
+  hint?: string;
+}
+
+export interface ChallengeMode {
+  manualProblem: string;
+  calculatorProblem: string;
+  expectedManualTime: number;
+  expectedCalcTime: number;
+}
+
 export interface CalculatorLesson {
   id: string;
   title: string;
@@ -14,6 +28,8 @@ export interface CalculatorLesson {
     problem: string;
     hint: string;
   }[];
+  interactiveSteps?: InteractiveStep[];
+  challengeMode?: ChallengeMode;
 }
 
 export const calculatorLessons: CalculatorLesson[] = [
@@ -65,7 +81,39 @@ export const calculatorLessons: CalculatorLesson[] = [
         problem: 'Find the roots of x² - 7x + 12 = 0',
         hint: 'Enter as X²-7X+12, try X=0 as first guess, then X=10 for second root'
       }
-    ]
+    ],
+    interactiveSteps: [
+      {
+        instruction: 'Press MATH to open the math menu',
+        buttonId: 'MATH',
+        screenDisplay: 'MATH NUM CPX',
+        hint: 'MATH button is in the top row, left side'
+      },
+      {
+        instruction: 'Press 0 to select Solver',
+        buttonId: '0',
+        screenDisplay: 'EQUATION SOLVER',
+        hint: 'Type 0 on the number pad'
+      },
+      {
+        instruction: 'Enter the equation: X² - 7X + 12',
+        buttonId: 'X',
+        screenDisplay: 'eqn:0=X²-7X+12',
+        hint: 'Use X^2 for X², then -7X+12'
+      },
+      {
+        instruction: 'Press ENTER, then enter initial guess (try 0)',
+        buttonId: 'ENTER',
+        screenDisplay: 'X=3',
+        hint: 'After ENTER, type 0 for X guess, then press ALPHA+ENTER to solve'
+      }
+    ],
+    challengeMode: {
+      manualProblem: 'Factor and solve x² - 7x + 12 = 0 by hand',
+      calculatorProblem: 'Solve x² - 7x + 12 = 0 using the Solver',
+      expectedManualTime: 90,
+      expectedCalcTime: 20
+    }
   },
   {
     id: 'graph-intersect',
@@ -101,7 +149,39 @@ export const calculatorLessons: CalculatorLesson[] = [
       'Select 1: ►Frac',
       'Press [ENTER]',
       'For reverse: enter fraction with division, press [ENTER]'
-    ]
+    ],
+    practiceProblems: [
+      {
+        problem: 'Convert 0.625 to a fraction',
+        hint: 'Enter 0.625, then press MATH → 1:►Frac → ENTER'
+      }
+    ],
+    interactiveSteps: [
+      {
+        instruction: 'Enter the decimal 0.625 using the number pad',
+        buttonId: '0',
+        screenDisplay: '0.625',
+        hint: 'Press 0, then ., then 6, 2, 5'
+      },
+      {
+        instruction: 'Press MATH to access mathematical functions',
+        buttonId: 'MATH',
+        screenDisplay: 'MATH menu',
+        hint: 'The MATH button is in the top row'
+      },
+      {
+        instruction: 'The cursor should be on "1:►Frac". Press ENTER',
+        buttonId: 'ENTER',
+        screenDisplay: '5/8',
+        hint: 'Just press ENTER - ►Frac is already highlighted'
+      }
+    ],
+    challengeMode: {
+      manualProblem: 'Convert 0.625 to a fraction by hand (find GCD and simplify)',
+      calculatorProblem: 'Convert 0.625 to a fraction using ►Frac',
+      expectedManualTime: 45,
+      expectedCalcTime: 10
+    }
   },
   {
     id: 'stats-lists',

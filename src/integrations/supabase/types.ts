@@ -80,6 +80,39 @@ export type Database = {
         }
         Relationships: []
       }
+      calculator_practice: {
+        Row: {
+          calculator_model: string
+          completed_at: string | null
+          completion_time_ms: number
+          id: string
+          lesson_id: string
+          mode: string
+          time_saved_ms: number | null
+          user_id: string
+        }
+        Insert: {
+          calculator_model?: string
+          completed_at?: string | null
+          completion_time_ms: number
+          id?: string
+          lesson_id: string
+          mode: string
+          time_saved_ms?: number | null
+          user_id: string
+        }
+        Update: {
+          calculator_model?: string
+          completed_at?: string | null
+          completion_time_ms?: number
+          id?: string
+          lesson_id?: string
+          mode?: string
+          time_saved_ms?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       diagnostics: {
         Row: {
           block: number
