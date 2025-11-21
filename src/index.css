@@ -52,6 +52,11 @@ All colors MUST be HSL.
     --gradient-success: linear-gradient(135deg, hsl(var(--success)), hsl(142 71% 60%));
     --gradient-hero: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
     
+    /* Landing page specific */
+    --gradient-animated: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)), hsl(var(--primary)));
+    --glow-primary: 0 0 40px hsl(var(--primary) / 0.4);
+    --glow-secondary: 0 0 40px hsl(var(--secondary) / 0.4);
+    
     /* Shadows */
     --shadow-soft: 0 2px 8px hsl(var(--primary) / 0.1);
     --shadow-medium: 0 4px 16px hsl(var(--primary) / 0.15);
@@ -145,5 +150,31 @@ All colors MUST be HSL.
   /* Ensure headings also use the new typeface for consistency */
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Trebuchet MS', 'Helvetica Neue', sans-serif;
+  }
+}
+
+@layer utilities {
+  .animate-gradient {
+    animation: gradient 8s ease infinite;
+  }
+  
+  @keyframes gradient {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.8s ease-out forwards;
+    opacity: 0;
+  }
+  
+  @keyframes fadeIn {
+    to {
+      opacity: 1;
+    }
   }
 }
