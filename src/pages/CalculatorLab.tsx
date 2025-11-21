@@ -15,10 +15,13 @@ import {
 import { calculatorLessons, calculatorModels, type CalculatorModel } from '@/data/calculatorLessons';
 import { YouTubeEmbed } from '@/components/lesson/YouTubeEmbed';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { VirtualCalculator } from '@/components/calculator/VirtualCalculator';
 
 export default function CalculatorLab() {
   const [selectedModel, setSelectedModel] = useState<CalculatorModel | 'all'>('all');
   const [expandedLesson, setExpandedLesson] = useState<string | null>(null);
+  const [calcDisplay, setCalcDisplay] = useState<string>('');
+  const [showDemo, setShowDemo] = useState(false);
 
   const filteredLessons = selectedModel === 'all' 
     ? calculatorLessons 
@@ -74,6 +77,42 @@ export default function CalculatorLab() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Interactive Demo Section */}
+      <Card className="mb-8 overflow-hidden bg-gradient-to-br from-primary/5 to-secondary/5">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-2xl">🎮 Try the Virtual Calculator</CardTitle>
+              <CardDescription>
+                Click buttons to see how it works before diving into lessons
+              </CardDescription>
+            </div>
+            <Button
+              variant={showDemo ? 'secondary' : 'default'}
+              onClick={() => setShowDemo(!showDemo)}
+            >
+              {showDemo ? 'Hide Demo' : 'Show Demo'}
+            </Button>
+          </div>
+        </CardHeader>
+        {showDemo && (
+          <CardContent>
+            <VirtualCalculator
+              mode="free"
+              display={calcDisplay}
+              onButtonPress={(buttonId) => {
+                setCalcDisplay(prev => {
+                  if (buttonId === 'clear') return '';
+                  if (buttonId === 'del') return prev.slice(0, -1);
+                  if (buttonId === 'enter') return prev + '\n';
+                  return prev + (buttonId.length === 1 ? buttonId : ` [${buttonId}] `);
+                });
+              }}
+            />
+          </CardContent>
+        )}
+      </Card>
 
       {/* Calculator Model Selector */}
       <div className="mb-8">
