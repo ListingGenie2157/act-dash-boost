@@ -24,10 +24,8 @@ interface StagingRow {
   section: string;
   ord: number;
   passage_id?: string;
-  passage_type?: string;
   passage_title?: string;
   passage_text?: string;
-  topic?: string;
   skill_code: string;
   difficulty: string;
   question: string;
@@ -178,10 +176,8 @@ serve(async (req) => {
         section: item.section,
         ord: item.ord,
         passage_id: item.passage_id,
-        passage_type: item.passage_type,
         passage_title: item.passage_title,
         passage_text: item.passage_text,
-        topic: item.topic,
         skill_code: item.skill_code,
         difficulty: item.difficulty,
         question: item.question,
@@ -237,7 +233,7 @@ serve(async (req) => {
             id: row.passage_id,
             form_id: row.form_id,
             section: row.section,
-            passage_type: row.passage_type || 'General',
+            passage_type: 'General',
             title: row.passage_title,
             passage_text: row.passage_text
           });

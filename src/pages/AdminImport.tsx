@@ -14,10 +14,8 @@ interface ImportRecord {
   section: string;
   ord: number;
   passage_id?: string | null;
-  passage_type?: string | null;
   passage_title?: string | null;
   passage_text?: string | null;
-  topic: string;
   skill_code: string;
   difficulty: string;
   question: string;
@@ -69,10 +67,8 @@ export default function AdminImport() {
         section: record.section,
         ord: parseInt(record.ord) || index + 1,
         passage_id: record.passage_id || null,
-        passage_type: record.passage_type || null,
         passage_title: record.passage_title || record.title || null,
         passage_text: passageText || null,
-        topic: record.topic,
         skill_code: record.skill_code,
         difficulty: record.difficulty,
         question: record.question,
@@ -221,7 +217,6 @@ export default function AdminImport() {
         id: string;
         form_id: string;
         section: string;
-        passage_type: string;
         title: string;
         passage_text: string;
       }>();
@@ -232,7 +227,6 @@ export default function AdminImport() {
             id: record.passage_id,
             form_id: record.form_id,
             section: record.section,
-            passage_type: record.passage_type || 'Unknown',
             title: record.passage_title || '',
             passage_text: record.passage_text,
           });
@@ -323,13 +317,13 @@ export default function AdminImport() {
 
   const downloadTemplate = () => {
     const headers = [
-      'id', 'form_id', 'section', 'ord', 'passage_id', 'passage_type', 'passage_title', 
-      'passage_text', 'topic', 'skill_code', 'difficulty', 'question', 
+      'id', 'form_id', 'section', 'ord', 'passage_id', 'passage_title', 
+      'passage_text', 'skill_code', 'difficulty', 'question', 
       'choice_a', 'choice_b', 'choice_c', 'choice_d', 'answer', 'explanation'
     ].join('\t');
     
     const example = [
-      'FA_EN_001', 'A', 'EN', '1', '', '', '', '', 'Grammar', 'E1.A', 'Easy',
+      'FA_EN_001', 'A', 'EN', '1', '', '', '', 'E1.A', 'Easy',
       'The books ___ on the shelf.', 'is', 'are', 'was', 'were', 'B',
       'Plural subject "books" requires plural verb "are".'
     ].join('\t');
