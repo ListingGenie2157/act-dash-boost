@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, BookOpen, ArrowLeft, Filter, Clock, RefreshCw } from 'lucide-react';
+import { Search, BookOpen, ArrowLeft, Filter, Clock, RefreshCw, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,34 @@ import { getAllLessons } from '@/lib/lessons';
 import { useUserMastery } from '@/hooks/useMastery';
 import { MasteryBadge } from '@/components/MasteryBadge';
 import { Skeleton } from '@/components/ui/skeleton';
+
+// Subject-specific design system
+const subjectConfig = {
+  'English': {
+    gradient: 'from-blue-500 via-blue-400 to-cyan-400',
+    icon: '✍️',
+    accentBorder: 'border-l-blue-500',
+    bgGradient: 'bg-gradient-to-br from-blue-500/10 to-cyan-500/5'
+  },
+  'Math': {
+    gradient: 'from-purple-500 via-purple-400 to-pink-400',
+    icon: '🔢',
+    accentBorder: 'border-l-purple-500',
+    bgGradient: 'bg-gradient-to-br from-purple-500/10 to-pink-500/5'
+  },
+  'Reading': {
+    gradient: 'from-green-500 via-green-400 to-emerald-400',
+    icon: '📚',
+    accentBorder: 'border-l-green-500',
+    bgGradient: 'bg-gradient-to-br from-green-500/10 to-emerald-500/5'
+  },
+  'Science': {
+    gradient: 'from-orange-500 via-orange-400 to-red-400',
+    icon: '🔬',
+    accentBorder: 'border-l-orange-500',
+    bgGradient: 'bg-gradient-to-br from-orange-500/10 to-red-500/5'
+  }
+} as const;
 
 export default function LessonsLibrary() {
   const navigate = useNavigate();
@@ -109,13 +137,19 @@ export default function LessonsLibrary() {
           </Button>
         </div>
 
-        <div className="flex items-center gap-3 mb-2">
-          <BookOpen className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold">Lessons Library</h1>
+        <div className="flex items-center gap-4 mb-3">
+          <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary/60 shadow-soft">
+            <BookOpen className="h-7 w-7 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              Lessons Library
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Browse {lessons.length} lessons and track your mastery progress
+            </p>
+          </div>
         </div>
-        <p className="text-muted-foreground">
-          Browse all available lessons and track your mastery progress
-        </p>
       </div>
 
       {/* Search & Filter */}
@@ -147,112 +181,171 @@ export default function LessonsLibrary() {
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(6)].map((_, i) => (
-            <Card key={i}>
+            <Card key={i} className="shadow-soft">
               <CardHeader>
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-1/2 mt-2" />
+                <Skeleton className="h-6 w-3/4 animate-pulse" />
+                <Skeleton className="h-4 w-1/2 mt-2 animate-pulse" />
               </CardHeader>
               <CardContent>
-                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full animate-pulse" />
               </CardContent>
             </Card>
           ))}
         </div>
       ) : filteredLessons.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-12 text-muted-foreground">
-            <Filter className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p className="font-medium">No lessons found</p>
-            <p className="text-sm mt-1">Try adjusting your search or filters</p>
+        <Card className="shadow-soft">
+          <CardContent className="text-center py-16 text-muted-foreground">
+            <div className="flex items-center justify-center w-20 h-20 rounded-full bg-muted mx-auto mb-4">
+              <Filter className="h-10 w-10 opacity-50" />
+            </div>
+            <p className="font-semibold text-lg mb-1">No lessons found</p>
+            <p className="text-sm">Try adjusting your search or filters</p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-8">
-          {Object.entries(bySubjectAndCluster).map(([subject, clusters]) => (
-            <div key={subject}>
-              <h2 className="text-2xl font-semibold mb-4">
-                {subject}
-              </h2>
-
-              <div className="space-y-4">
-                {Object.entries(clusters).map(([cluster, clusterLessons]) => (
-                  <Collapsible key={cluster}>
-                    <div className="border rounded-lg p-4">
-                      <CollapsibleTrigger className="flex items-center justify-between w-full group hover:opacity-80 transition-opacity">
-                        <div className="flex items-center gap-2">
-                          <ChevronDown className="h-5 w-5 transition-transform group-data-[state=closed]:-rotate-90" />
-                          <h3 className="text-lg font-semibold">{cluster}</h3>
-                          <Badge variant="secondary">{clusterLessons.length} lessons</Badge>
-                        </div>
-                      </CollapsibleTrigger>
-
-                      <CollapsibleContent className="mt-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {clusterLessons.map(lesson => {
-                            const mastery = masteryMap?.get(lesson.skill_code);
-                            const isHighlighted = highlightSkill === lesson.skill_code;
-
-                            return (
-                              <Link key={lesson.skill_code} to={`/lesson/${lesson.skill_code}`}>
-                                <Card 
-                                  ref={isHighlighted ? highlightedCardRef : null}
-                                  className={`h-full hover:shadow-lg hover:border-primary transition-all cursor-pointer group ${
-                                    isHighlighted ? 'ring-2 ring-primary shadow-lg' : ''
-                                  }`}
-                                >
-                                  <CardHeader>
-                                    <div className="flex items-start justify-between gap-2 mb-2">
-                                      <Badge variant="outline" className="text-xs">
-                                        {lesson.section}
-                                      </Badge>
-                                      {mastery && (
-                                        <MasteryBadge 
-                                          level={mastery.level}
-                                          accuracy={mastery.accuracy}
-                                          total={mastery.total}
-                                          size="sm"
-                                        />
-                                      )}
-                                    </div>
-                                    <CardTitle className="text-lg group-hover:text-primary transition-colors">
-                                      {lesson.skill_name}
-                                      {isHighlighted && (
-                                        <Badge variant="default" className="ml-2 text-xs">NEW</Badge>
-                                      )}
-                                    </CardTitle>
-                                    <CardDescription className="flex items-center gap-2 text-xs">
-                                      <Clock className="h-3 w-3" />
-                                      ~{lesson.questionCount} min lesson
-                                    </CardDescription>
-                                  </CardHeader>
-                                  <CardContent>
-                                    {mastery && mastery.total > 0 ? (
-                                      <div className="space-y-2">
-                                        <div className="flex items-center justify-between text-sm">
-                                          <span className="text-muted-foreground">Progress</span>
-                                          <span className="font-medium">{Math.round(mastery.accuracy)}%</span>
-                                        </div>
-                                        <Progress value={mastery.accuracy} className="h-2" />
-                                        <p className="text-xs text-muted-foreground">
-                                          {mastery.correct} of {mastery.total} correct
-                                        </p>
-                                      </div>
-                                    ) : (
-                                      <p className="text-sm text-muted-foreground">Start learning this topic</p>
-                                    )}
-                                  </CardContent>
-                                </Card>
-                              </Link>
-                            );
-                          })}
-                        </div>
-                      </CollapsibleContent>
+          {Object.entries(bySubjectAndCluster).map(([subject, clusters]) => {
+            const config = subjectConfig[subject as keyof typeof subjectConfig];
+            
+            return (
+              <div key={subject} className="space-y-4">
+                {/* Subject Header with Gradient */}
+                <div className={`relative overflow-hidden rounded-xl bg-gradient-to-r ${config.gradient} p-6 shadow-medium text-white`}>
+                  <div className="absolute inset-0 bg-black/5" />
+                  <div className="relative flex items-center gap-4">
+                    <span className="text-5xl">{config.icon}</span>
+                    <div className="flex-1">
+                      <h2 className="text-3xl font-bold">{subject}</h2>
+                      <p className="text-white/90 mt-1">
+                        {Object.values(clusters).reduce((sum, c) => sum + c.length, 0)} lessons across {Object.keys(clusters).length} topics
+                      </p>
                     </div>
-                  </Collapsible>
-                ))}
+                    <Sparkles className="h-8 w-8 opacity-80" />
+                  </div>
+                </div>
+
+                {/* Clusters */}
+                <div className="space-y-4">
+                  {Object.entries(clusters).map(([cluster, clusterLessons]) => {
+                    // Calculate cluster mastery
+                    const clusterMastery = clusterLessons.reduce((acc, lesson) => {
+                      const m = masteryMap?.get(lesson.skill_code);
+                      if (m && m.total > 0) {
+                        acc.total += m.total;
+                        acc.correct += m.correct;
+                      }
+                      return acc;
+                    }, { total: 0, correct: 0 });
+                    const clusterAccuracy = clusterMastery.total > 0 
+                      ? Math.round((clusterMastery.correct / clusterMastery.total) * 100)
+                      : 0;
+
+                    return (
+                      <Collapsible key={cluster} defaultOpen>
+                        <div className={`border-2 rounded-xl shadow-soft hover:shadow-medium transition-all ${config.bgGradient}`}>
+                          <CollapsibleTrigger className="flex items-center justify-between w-full p-5 group hover:bg-background/50 rounded-t-xl transition-all">
+                            <div className="flex items-center gap-3 text-left">
+                              <ChevronDown className="h-5 w-5 transition-transform group-data-[state=closed]:-rotate-90 flex-shrink-0" />
+                              <div>
+                                <h3 className="text-lg font-semibold">{cluster}</h3>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant="secondary" className="text-xs">
+                                    {clusterLessons.length} lessons
+                                  </Badge>
+                                  {clusterMastery.total > 0 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {clusterAccuracy}% mastery
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            {clusterMastery.total > 0 && (
+                              <div className="w-24">
+                                <Progress value={clusterAccuracy} className="h-2" />
+                              </div>
+                            )}
+                          </CollapsibleTrigger>
+
+                          <CollapsibleContent className="p-5 pt-2">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {clusterLessons.map((lesson, index) => {
+                                const mastery = masteryMap?.get(lesson.skill_code);
+                                const isHighlighted = highlightSkill === lesson.skill_code;
+
+                                return (
+                                  <Link 
+                                    key={lesson.skill_code} 
+                                    to={`/lesson/${lesson.skill_code}`}
+                                    className="animate-fade-in"
+                                    style={{ animationDelay: `${index * 50}ms` }}
+                                  >
+                                    <Card 
+                                      ref={isHighlighted ? highlightedCardRef : null}
+                                      className={`h-full shadow-soft hover:shadow-strong hover:scale-105 transition-all duration-300 cursor-pointer group border-l-4 ${config.accentBorder} ${
+                                        isHighlighted ? 'ring-2 ring-primary shadow-strong bg-primary/5' : ''
+                                      }`}
+                                    >
+                                      <CardHeader className="pb-3">
+                                        <div className="flex items-start justify-between gap-2 mb-2">
+                                          <Badge variant="outline" className="text-xs font-medium">
+                                            {lesson.section}
+                                          </Badge>
+                                          {mastery && (
+                                            <MasteryBadge 
+                                              level={mastery.level}
+                                              accuracy={mastery.accuracy}
+                                              total={mastery.total}
+                                              size="sm"
+                                            />
+                                          )}
+                                        </div>
+                                        <CardTitle className="text-base leading-snug group-hover:text-primary transition-colors">
+                                          {lesson.skill_name}
+                                          {isHighlighted && (
+                                            <Badge variant="default" className="ml-2 text-xs animate-pulse">
+                                              NEW
+                                            </Badge>
+                                          )}
+                                        </CardTitle>
+                                        <CardDescription className="flex items-center gap-2 text-xs">
+                                          <Clock className="h-3 w-3" />
+                                          ~{lesson.questionCount} min lesson
+                                        </CardDescription>
+                                      </CardHeader>
+                                      <CardContent className="pt-0">
+                                        {mastery && mastery.total > 0 ? (
+                                          <div className="space-y-2">
+                                            <div className="flex items-center justify-between text-sm">
+                                              <span className="text-muted-foreground font-medium">Progress</span>
+                                              <span className="font-semibold">{Math.round(mastery.accuracy)}%</span>
+                                            </div>
+                                            <Progress value={mastery.accuracy} className="h-2 animate-fade-in" />
+                                            <p className="text-xs text-muted-foreground">
+                                              {mastery.correct} of {mastery.total} correct
+                                            </p>
+                                          </div>
+                                        ) : (
+                                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                            <Sparkles className="h-4 w-4" />
+                                            <span>Start learning this topic</span>
+                                          </div>
+                                        )}
+                                      </CardContent>
+                                    </Card>
+                                  </Link>
+                                );
+                              })}
+                            </div>
+                          </CollapsibleContent>
+                        </div>
+                      </Collapsible>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
