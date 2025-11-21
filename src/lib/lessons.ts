@@ -384,11 +384,34 @@ export function parseIndependentPractice(
   
   // Parse answers if available
   if (answersHtml && questions.length > 0) {
-    const cleanAnswers = answersHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    
     const answerStrategies = [
-      // Strategy 0: "IPX " custom format (e.g., "IP1 answer text. IP2 answer text.")
+      // Strategy 0: <li> list items (handle HTML list format first, before stripping HTML)
       () => {
+        const liPattern = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+        const answerTexts: string[] = [];
+        let match;
+        while ((match = liPattern.exec(answersHtml)) !== null) {
+          // Strip HTML from individual li content
+          const text = match[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+          if (text.length > 5) {
+            answerTexts.push(text);
+          }
+        }
+        // Match by position
+        if (answerTexts.length > 0) {
+          questions.forEach((q, idx) => {
+            if (idx < answerTexts.length) {
+              q.answer = answerTexts[idx];
+            }
+          });
+          return true;
+        }
+        return false;
+      },
+      
+      // Strategy 1: "IPX " custom format (e.g., "IP1 answer text. IP2 answer text.")
+      () => {
+        const cleanAnswers = answersHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
         const pattern = /IP(\d+)\s+(.+?)(?=IP\d+|$)/gs;
         const answerMap = new Map<number, string>();
         let match;
@@ -405,8 +428,9 @@ export function parseIndependentPractice(
         return false;
       },
       
-      // Strategy 1: Semicolon-separated "1 answer; 2 answer; 3 answer" (only if semicolons exist)
+      // Strategy 2: Semicolon-separated "1 answer; 2 answer; 3 answer" (only if semicolons exist)
       () => {
+        const cleanAnswers = answersHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
         if (!cleanAnswers.includes(';')) return false;
         const parts = cleanAnswers.split(';');
         let foundAny = false;
@@ -428,8 +452,9 @@ export function parseIndependentPractice(
         return foundAny;
       },
       
-      // Strategy 2: Numbered "1. answer\n2. answer"
+      // Strategy 3: Numbered "1. answer\n2. answer"
       () => {
+        const cleanAnswers = answersHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
         const pattern = /(\d+)\.\s*(.+?)(?=\s*\d+\.\s+|$)/gs;
         const answerMap = new Map<number, string>();
         let match;
@@ -446,8 +471,9 @@ export function parseIndependentPractice(
         return false;
       },
       
-      // Strategy 3: Split by sentences/lines and match by position
+      // Strategy 4: Split by sentences/lines and match by position
       () => {
+        const cleanAnswers = answersHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
         const sentences = cleanAnswers.split(/[;\n]/).map(s => s.trim()).filter(s => s.length > 5);
         if (sentences.length >= questions.length) {
           questions.forEach((q, idx) => {
