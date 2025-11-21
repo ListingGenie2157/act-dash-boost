@@ -447,7 +447,7 @@ export type Database = {
           form_id: string
           id: string
           passage_text: string
-          passage_type: string
+          passage_type: string | null
           section: string
           title: string | null
         }
@@ -456,7 +456,7 @@ export type Database = {
           form_id: string
           id: string
           passage_text: string
-          passage_type: string
+          passage_type?: string | null
           section: string
           title?: string | null
         }
@@ -465,7 +465,7 @@ export type Database = {
           form_id?: string
           id?: string
           passage_text?: string
-          passage_type?: string
+          passage_type?: string | null
           section?: string
           title?: string | null
         }
@@ -897,12 +897,10 @@ export type Database = {
           passage_id: string | null
           passage_text: string | null
           passage_title: string | null
-          passage_type: string | null
           question: string
           section: string
           skill_code: string
           staging_id: number
-          topic: string | null
         }
         Insert: {
           answer: string
@@ -918,12 +916,10 @@ export type Database = {
           passage_id?: string | null
           passage_text?: string | null
           passage_title?: string | null
-          passage_type?: string | null
           question: string
           section: string
           skill_code: string
           staging_id?: number
-          topic?: string | null
         }
         Update: {
           answer?: string
@@ -939,12 +935,10 @@ export type Database = {
           passage_id?: string | null
           passage_text?: string | null
           passage_title?: string | null
-          passage_type?: string | null
           question?: string
           section?: string
           skill_code?: string
           staging_id?: number
-          topic?: string | null
         }
         Relationships: [
           {
