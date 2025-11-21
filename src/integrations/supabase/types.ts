@@ -488,6 +488,7 @@ export type Database = {
           first_name: string | null
           has_study_plan: boolean | null
           id: string
+          last_name: string | null
           onboarding_complete: boolean | null
           onboarding_step: string | null
           plan_mode: string | null
@@ -505,6 +506,7 @@ export type Database = {
           first_name?: string | null
           has_study_plan?: boolean | null
           id: string
+          last_name?: string | null
           onboarding_complete?: boolean | null
           onboarding_step?: string | null
           plan_mode?: string | null
@@ -522,6 +524,7 @@ export type Database = {
           first_name?: string | null
           has_study_plan?: boolean | null
           id?: string
+          last_name?: string | null
           onboarding_complete?: boolean | null
           onboarding_step?: string | null
           plan_mode?: string | null

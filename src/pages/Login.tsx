@@ -1,222 +1,390 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { logSupabaseConfigStatus } from '@/lib/env';
 import { useNavigate } from 'react-router-dom';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Calculator, Target, Brain, Check, AlertCircle, Loader2 } from 'lucide-react';
+import { isValidEmail, normalizeEmail } from '@/utils/validation';
 
-/**
- * A simple authentication page for the ACT prep app.
- *
- * This component allows users to either sign in with existing
- * credentials or create a new account. It uses Supabase for
- * authentication and will redirect to the home page on success.
- */
-const Login = () => {
+export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
-  const [signUpSuccess, setSignUpSuccess] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong'>('weak');
   const navigate = useNavigate();
 
-  // Clear any cached auth state on component mount
+  // Check password strength
   useEffect(() => {
-    const clearCachedAuth = async () => {
-      if (import.meta.env.DEV) {
-        console.log('Clearing cached auth state...');
-        logSupabaseConfigStatus();
-      }
-      localStorage.removeItem('supabase.auth.token');
-      sessionStorage.clear();
-    };
-    clearCachedAuth();
-  }, []);
+    if (!password) {
+      setPasswordStrength('weak');
+      return;
+    }
+    
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^A-Za-z0-9]/.test(password)) strength++;
+    
+    if (strength <= 1) setPasswordStrength('weak');
+    else if (strength <= 2) setPasswordStrength('medium');
+    else setPasswordStrength('strong');
+  }, [password]);
 
-  // Check for existing session and redirect if authenticated
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          if (import.meta.env.DEV) console.log('User already authenticated, redirecting...');
-          navigate('/');
-        }
-      } catch (error) {
-        console.error('Auth check failed:', error);
-      }
-    };
-    checkAuth();
-  }, [navigate]);
+  const validateForm = (): boolean => {
+    if (!email || !password) {
+      setError('Please fill in all fields');
+      return false;
+    }
 
-  // Handles form submission for both sign‑in and sign‑up flows.
-  const handleSubmit = async (e: React.FormEvent) => {
+    if (!isValidEmail(email)) {
+      setError('Please enter a valid email address');
+      return false;
+    }
+
+    if (isSignUp) {
+      if (!firstName.trim() || !lastName.trim()) {
+        setError('Please enter your first and last name');
+        return false;
+      }
+
+      if (firstName.trim().length < 2 || lastName.trim().length < 2) {
+        setError('Names must be at least 2 characters');
+        return false;
+      }
+
+      if (password.length < 8) {
+        setError('Password must be at least 8 characters');
+        return false;
+      }
+
+      if (password !== confirmPassword) {
+        setError('Passwords do not match');
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
-    
-    if (import.meta.env.DEV) console.log('Attempting authentication...', { isSignUp, email });
-    
+    setError('');
+
+    if (!validateForm()) {
+      setLoading(false);
+      return;
+    }
+
     try {
       if (isSignUp) {
-        // Attempt to create a new account
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email,
+        const normalizedEmail = normalizeEmail(email);
+        const { data, error } = await supabase.auth.signUp({
+          email: normalizedEmail,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/`
+            emailRedirectTo: `${window.location.origin}/`,
+            data: {
+              first_name: firstName.trim(),
+              last_name: lastName.trim(),
+            }
           }
         });
 
-        if (import.meta.env.DEV) console.log('Signup response:', { data, error: signUpError });
-        if (signUpError) {
-          console.error('Signup error:', signUpError);
-          setError(`Signup failed: ${signUpError.message}`);
-          setLoading(false);
-          return;
+        if (error) {
+          setError(error.message);
+        } else if (data.user) {
+          setSuccess(true);
         }
-        // Show success message instead of trying to sign in immediately
-        setSignUpSuccess(true);
-        setLoading(false);
-        return;
-      }
-
-      // Sign in with the provided credentials
-      if (import.meta.env.DEV) console.log('Attempting sign in with:', { email, passwordLength: password.length });
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (import.meta.env.DEV) console.log('Sign in response:', { data: signInData, error: signInError });
-      
-      if (signInError) {
-        console.error('Sign in error:', signInError);
-        setError(`Login failed: ${signInError.message}`);
-        setLoading(false);
-        return;
-      }
-      
-      // Check if user has completed onboarding
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('test_date')
-        .eq('id', signInData.user.id)
-        .maybeSingle();
-      
-      if (!profile?.test_date) {
-        navigate('/onboarding');
       } else {
-        navigate('/');
+        const normalizedEmail = normalizeEmail(email);
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password,
+        });
+
+        if (error) {
+          setError(error.message);
+        } else if (data.session) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('onboarding_complete')
+            .eq('id', data.user.id)
+            .single();
+
+          if (profile?.onboarding_complete) {
+            navigate('/');
+          } else {
+            navigate('/onboarding');
+          }
+        }
       }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      setError(message);
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Show success message after signup
-  if (signUpSuccess) {
+  if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="p-8 w-full max-w-md space-y-6 shadow-medium">
-          <div className="space-y-4 text-center">
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-purple-500 via-pink-500 to-indigo-600 animate-gradient relative overflow-hidden">
+        {/* Floating shapes */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 left-20 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-float" />
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-pink-300/20 rounded-full blur-3xl animate-float-delayed" />
+        </div>
+
+        <Card className="w-full max-w-md backdrop-blur-xl bg-white/95 dark:bg-gray-900/95 border-white/20 shadow-2xl relative z-10 animate-scale-in">
+          <CardContent className="pt-8 pb-8 text-center space-y-6">
+            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-lg">
+              <Check className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-2xl font-bold">Check Your Email</h1>
-            <p className="text-sm text-muted-foreground">
-              We've sent a confirmation link to <strong>{email}</strong>.
-              Click the link in your email to activate your account, then come back to sign in.
-            </p>
+            
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                Check Your Email!
+              </h2>
+              <p className="text-muted-foreground">
+                We've sent a confirmation link to
+              </p>
+              <p className="font-semibold text-foreground">{email}</p>
+            </div>
+
+            <div className="bg-muted/50 rounded-lg p-4 text-sm text-left space-y-2">
+              <p className="font-medium">Next steps:</p>
+              <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                <li>Check your inbox (and spam folder)</li>
+                <li>Click the confirmation link</li>
+                <li>Start crushing your ACT goals! 🎯</li>
+              </ol>
+            </div>
+
             <Button
+              onClick={() => setSuccess(false)}
               variant="outline"
-              onClick={() => {
-                setSignUpSuccess(false);
-                setIsSignUp(false);
-                setEmail('');
-                setPassword('');
-              }}
               className="w-full"
             >
               Back to Sign In
             </Button>
-          </div>
+          </CardContent>
         </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <Card className="p-8 w-full max-w-md space-y-6 shadow-medium">
-        <div className="space-y-2 text-center">
-          <h1 className="text-2xl font-bold">
-            {isSignUp ? 'Create an Account' : 'Sign In'}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {isSignUp
-              ? 'Enter your details to create your account'
-              : 'Enter your email and password to continue'}
-          </p>
-        </div>
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Please wait…' : isSignUp ? 'Create Account' : 'Sign In'}
-          </Button>
-        </form>
-        <div className="text-center text-sm">
-          {isSignUp ? (
-            <>
-              Already have an account?{' '}
-              <button
-                type="button"
-                onClick={() => setIsSignUp(false)}
-                className="underline text-primary"
-              >
-                Sign in
-              </button>
-            </>
-          ) : (
-            <>
-              Don’t have an account?{' '}
-              <button
-                type="button"
-                onClick={() => setIsSignUp(true)}
-                className="underline text-primary"
-              >
-                Create one
-              </button>
-            </>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-purple-500 via-pink-500 to-indigo-600 animate-gradient relative overflow-hidden">
+      {/* Animated background shapes */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-20 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-float" />
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-pink-300/20 rounded-full blur-3xl animate-float-delayed" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-400/10 rounded-full blur-3xl" />
+      </div>
+
+      <Card className="w-full max-w-md backdrop-blur-xl bg-white/95 dark:bg-gray-900/95 border-white/20 shadow-2xl relative z-10 animate-scale-in">
+        <CardHeader className="space-y-1 text-center pb-8">
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            {isSignUp ? 'Create Your Account' : 'Welcome Back'}
+          </CardTitle>
+          <CardDescription className="text-base">
+            {isSignUp ? 'Join students crushing their ACT goals' : 'Sign in to continue your progress'}
+          </CardDescription>
+          
+          {isSignUp && (
+            <div className="flex items-center justify-center gap-4 pt-4 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <Target className="w-3 h-3" />
+                <span>129 Skills</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Brain className="w-3 h-3" />
+                <span>AI Tutor</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Calculator className="w-3 h-3" />
+                <span>Calculator Lab</span>
+              </div>
+            </div>
           )}
-        </div>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          <form onSubmit={handleAuth} className="space-y-4">
+            {isSignUp && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="John"
+                    required={isSignUp}
+                    className="transition-all focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Doe"
+                    required={isSignUp}
+                    className="transition-all focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                required
+                className="transition-all focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                minLength={8}
+                className="transition-all focus:ring-2 focus:ring-purple-500"
+              />
+              {isSignUp && password && (
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-300 ${
+                        passwordStrength === 'weak'
+                          ? 'w-1/3 bg-red-500'
+                          : passwordStrength === 'medium'
+                          ? 'w-2/3 bg-yellow-500'
+                          : 'w-full bg-green-500'
+                      }`}
+                    />
+                  </div>
+                  <span
+                    className={
+                      passwordStrength === 'weak'
+                        ? 'text-red-600'
+                        : passwordStrength === 'medium'
+                        ? 'text-yellow-600'
+                        : 'text-green-600'
+                    }
+                  >
+                    {passwordStrength}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {isSignUp && (
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required={isSignUp}
+                  className="transition-all focus:ring-2 focus:ring-purple-500"
+                />
+                {confirmPassword && password !== confirmPassword && (
+                  <p className="text-xs text-red-600 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    Passwords do not match
+                  </p>
+                )}
+              </div>
+            )}
+
+            {error && (
+              <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 text-sm flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  {isSignUp ? 'Creating Account...' : 'Signing In...'}
+                </>
+              ) : (
+                isSignUp ? 'Create Account' : 'Sign In'
+              )}
+            </Button>
+          </form>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-muted" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+              </span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              setIsSignUp(!isSignUp);
+              setError('');
+              setFirstName('');
+              setLastName('');
+              setConfirmPassword('');
+            }}
+          >
+            {isSignUp ? 'Sign In Instead' : 'Create Account'}
+          </Button>
+
+          {!isSignUp && (
+            <p className="text-center text-xs text-muted-foreground">
+              <button
+                type="button"
+                className="hover:underline"
+                onClick={() => setError('Password reset feature coming soon!')}
+              >
+                Forgot your password?
+              </button>
+            </p>
+          )}
+        </CardContent>
       </Card>
     </div>
   );
-};
-
-export default Login;
+}
