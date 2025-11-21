@@ -7,6 +7,8 @@ import { TestWeekBanner } from '@/components/TestWeekBanner';
 import { ParentBanner } from '@/components/ParentBanner';
 import { MasteryDashboard } from '@/components/MasteryDashboard';
 import { WeakAreasCard } from '@/components/WeakAreasCard';
+import { StreakCounter } from '@/components/StreakCounter';
+import { AchievementBadges } from '@/components/AchievementBadges';
 import { WeeklyCalendar } from '@/components/WeeklyCalendar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -277,6 +279,13 @@ const Index = () => {
             <>
               <StudyPlanWidget hasStudyPlan={hasStudyPlan ?? false} />
               <WeeklyCalendar userId={session?.user?.id || ''} testDate={profile?.test_date} />
+              
+              {/* Gamification */}
+              <div className="grid gap-6 md:grid-cols-2">
+                <StreakCounter />
+                <AchievementBadges />
+              </div>
+              
               <MasteryDashboard />
               
               {/* Diagnostic CTA - Only show if not completed */}
@@ -365,6 +374,12 @@ const Index = () => {
                     </p>
                   </div>
                 </Link>
+              </div>
+              
+              {/* Gamification */}
+              <div className="grid gap-6 md:grid-cols-2">
+                <StreakCounter />
+                <AchievementBadges />
               </div>
               
               <MasteryDashboard />
