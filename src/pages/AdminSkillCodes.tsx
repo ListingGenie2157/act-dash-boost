@@ -121,6 +121,16 @@ export default function AdminSkillCodes() {
         <CardContent>
           {isLoading ? (
             <div className="text-center py-8 text-muted-foreground">Loading skills...</div>
+          ) : !skills || skills.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-lg font-medium mb-2">No skills found in database</p>
+              <p className="text-muted-foreground mb-4">
+                Skills need to be imported first. Check the SKILL_CODES_REFERENCE.md file at:
+              </p>
+              <code className="bg-muted px-3 py-1 rounded text-sm">
+                /import-data/SKILL_CODES_REFERENCE.md
+              </code>
+            </div>
           ) : (
             <div className="rounded-md border">
               <Table>
