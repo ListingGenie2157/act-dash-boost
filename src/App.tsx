@@ -38,6 +38,7 @@ import TimedDrills from "./pages/TimedDrills";
 import QuizRunner from "./pages/QuizRunner";
 import WeakAreas from "./pages/WeakAreas";
 import CalculatorLab from "./pages/CalculatorLab";
+import AdminSkillCodes from "./pages/AdminSkillCodes";
 
 
 const queryClient = new QueryClient();
@@ -110,6 +111,7 @@ const App = () => (
               <LazyAdminLessonImport />
             </LazyLoader>
           } />
+          <Route path="/admin/skill-codes" element={<AdminSkillCodes />} />
           {/* Parent portal route */}
           <Route path="/parent-portal" element={
             <LazyLoader>
