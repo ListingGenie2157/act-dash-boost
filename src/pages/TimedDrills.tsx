@@ -20,13 +20,12 @@ export default function TimedDrills() {
   useEffect(() => {
     async function fetchSubjects() {
       try {
-        // Query staging_items for practice bank questions only (E1-E9, M1-M10, R1-R5, S1-S5, ONB)
-        // Exclude simulation forms (FA, FB, FC) and diagnostic forms (D2*)
+        // Query staging_items for drill forms only (DR_RD, DR_MA, DR_EN, DR_SC)
+        const drillForms = ['DR_RD', 'DR_MA', 'DR_EN', 'DR_SC'];
         const { data, error } = await supabase
           .from('staging_items')
           .select('section, form_id')
-          .not('form_id', 'like', 'F%')
-          .not('form_id', 'like', 'D2%');
+          .in('form_id', drillForms);
 
         if (error) {
           console.error('Error fetching questions:', error);
