@@ -37,14 +37,26 @@ export default function DrillRunner() {
         const nParam = searchParams.get('n');
         const n = nParam ? parseInt(nParam, 10) : 10;
 
-        // Fetch questions from staging_items (practice banks only)
-        // Exclude simulation forms (FA, FB, FC) and diagnostic forms (D2*)
+        // Map subject to drill form ID
+        const formIdMap: Record<string, string> = {
+          'RD': 'DR_RD',
+          'MA': 'DR_MA',
+          'EN': 'DR_EN',
+          'SC': 'DR_SC',
+        };
+        const drillFormId = formIdMap[decodeURIComponent(subject)];
+
+        if (!drillFormId) {
+          setError('Invalid drill subject');
+          setLoading(false);
+          return;
+        }
+
+        // Fetch questions from staging_items using drill form ID
         const { data, error: qError } = await supabase
           .from('staging_items')
           .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, answer, explanation, skill_code, form_id')
-          .eq('section', decodeURIComponent(subject))
-          .not('form_id', 'like', 'F%')
-          .not('form_id', 'like', 'D2%')
+          .eq('form_id', drillFormId)
           .limit(n);
 
         if (qError) {

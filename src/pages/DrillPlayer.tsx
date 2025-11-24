@@ -29,12 +29,25 @@ export default function DrillPlayer() {
           return;
         }
 
+        // Map subject to drill form ID
+        const formIdMap: Record<string, string> = {
+          'RD': 'DR_RD',
+          'MA': 'DR_MA',
+          'EN': 'DR_EN',
+          'SC': 'DR_SC',
+        };
+        const drillFormId = formIdMap[subject];
+
+        if (!drillFormId) {
+          toast.error('Invalid drill subject');
+          navigate('/drill-runner');
+          return;
+        }
+
         let query = supabase
           .from('staging_items')
           .select('*')
-          .eq('section', subject)
-          .not('form_id', 'like', 'F%')
-          .not('form_id', 'like', 'D2%')
+          .eq('form_id', drillFormId)
           .in('answer', ['A', 'B', 'C', 'D']); // Only valid answers
 
         // Apply mode-specific filters
