@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { QuestionCard } from './QuestionCard';
 import { ReadingPreferences } from './ReadingPreferences';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
+import { FlaskConical, BarChart3, Users } from 'lucide-react';
 
 interface Question {
   id: string;
@@ -26,6 +28,10 @@ interface Passage {
   title: string;
   passage_text: string;
   marked_text?: Record<string, any> | null;
+  passage_format?: string | null;
+  passage_type?: string | null;
+  has_charts?: boolean | null;
+  chart_images?: string[] | null;
 }
 
 interface PassageLayoutProps {
@@ -122,6 +128,53 @@ export function PassageLayout({
     return result;
   };
 
+  const getPassageFormatIcon = (format: string | null | undefined) => {
+    if (!format) return null;
+    
+    switch (format) {
+      case 'DATA_REPRESENTATION':
+        return <BarChart3 className="h-4 w-4" />;
+      case 'RESEARCH_SUMMARY':
+        return <FlaskConical className="h-4 w-4" />;
+      case 'CONFLICTING_VIEWPOINTS':
+        return <Users className="h-4 w-4" />;
+      default:
+        return null;
+    }
+  };
+
+  const getPassageFormatLabel = (format: string | null | undefined) => {
+    if (!format) return null;
+    
+    switch (format) {
+      case 'DATA_REPRESENTATION':
+        return 'Data Representation';
+      case 'RESEARCH_SUMMARY':
+        return 'Research Summary';
+      case 'CONFLICTING_VIEWPOINTS':
+        return 'Conflicting Viewpoints';
+      default:
+        return format;
+    }
+  };
+
+  const getPassageTypeLabel = (type: string | null | undefined) => {
+    if (!type) return null;
+    
+    switch (type) {
+      case 'PROSE_FICTION':
+        return 'Prose Fiction';
+      case 'SOCIAL_SCIENCE':
+        return 'Social Science';
+      case 'HUMANITIES':
+        return 'Humanities';
+      case 'NATURAL_SCIENCE':
+        return 'Natural Science';
+      default:
+        return type;
+    }
+  };
+
   const allPassageIds = Object.keys(passages);
 
   return (
@@ -165,6 +218,22 @@ export function PassageLayout({
                             {passage.title || `Passage ${passageId}`}
                           </CardTitle>
                           <div className="flex items-center space-x-2">
+                            {passage.passage_format && (
+                              <Badge variant="default" className="text-xs flex items-center gap-1">
+                                {getPassageFormatIcon(passage.passage_format)}
+                                {getPassageFormatLabel(passage.passage_format)}
+                              </Badge>
+                            )}
+                            {passage.passage_type && (
+                              <Badge variant="outline" className="text-xs">
+                                {getPassageTypeLabel(passage.passage_type)}
+                              </Badge>
+                            )}
+                            {passage.has_charts && (
+                              <Badge variant="secondary" className="text-xs">
+                                Has Charts
+                              </Badge>
+                            )}
                             <Badge variant="outline" className="text-xs">
                               {questionsForPassage.length} questions
                             </Badge>
@@ -175,6 +244,28 @@ export function PassageLayout({
                         </div>
                       </CardHeader>
                       <CardContent className="pt-0">
+                        {/* Chart Images - Display before passage text for science */}
+                        {passage.chart_images && passage.chart_images.length > 0 && (
+                          <div className="mb-6 space-y-4">
+                            {passage.chart_images.map((imageUrl, idx) => (
+                              <div key={idx} className="border rounded-lg overflow-hidden bg-muted/20">
+                                <AspectRatio ratio={16 / 10}>
+                                  <img
+                                    src={imageUrl}
+                                    alt={`Chart ${idx + 1} for ${passage.title || `Passage ${passageId}`}`}
+                                    className="object-contain w-full h-full p-4"
+                                  />
+                                </AspectRatio>
+                                <div className="px-4 py-2 bg-muted/50 border-t">
+                                  <p className="text-xs text-muted-foreground font-medium">
+                                    Figure {idx + 1}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
                         <div className="prose prose-sm max-w-none">
                           <div className="space-y-4 text-base leading-loose font-serif">
                             {paragraphs.map((para, idx) => {
