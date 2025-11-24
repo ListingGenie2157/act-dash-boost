@@ -89,7 +89,7 @@ serve(async (req) => {
       .from('responses')
       .select(`
         *,
-        questions:v_form_section!inner(skill_id)
+        questions!inner(skill_id)
       `)
       .eq('session_id', session_id);
 
