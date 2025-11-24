@@ -15,7 +15,9 @@ import {
   Upload,
   Code,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  XCircle,
+  RotateCcw
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/queries/useIsAdmin';
@@ -50,6 +52,11 @@ const progressItems = [
   { title: 'Analytics', url: '/analytics', icon: BarChart3 },
   { title: 'Drill History', url: '/drill-history', icon: History },
   { title: 'Mastery Tracker', url: '/', icon: Target, end: true }, // Links to dashboard mastery section
+];
+
+const reviewItems = [
+  { title: 'Missed Questions', url: '/review/missed', icon: XCircle },
+  { title: 'Spaced Repetition', url: '/review/spaced', icon: RotateCcw },
 ];
 
 const resourceItems = [
@@ -133,6 +140,29 @@ export function AppSidebar() {
                     <NavLink 
                       to={item.url}
                       end={item.end}
+                      className="flex items-center gap-2 hover:bg-muted/50 transition-colors"
+                      activeClassName="bg-muted text-primary font-medium"
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Review & Practice */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Review & Practice</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {reviewItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink 
+                      to={item.url}
                       className="flex items-center gap-2 hover:bg-muted/50 transition-colors"
                       activeClassName="bg-muted text-primary font-medium"
                     >

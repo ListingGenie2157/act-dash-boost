@@ -269,7 +269,7 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
 
         <div className="flex gap-3">
           <Link to="/plan" className="flex-1">
-            <Button variant="outline" className="w-full">
+            <Button variant="default" className="w-full">
               View 7-Day Plan
             </Button>
           </Link>
