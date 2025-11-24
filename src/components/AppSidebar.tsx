@@ -103,7 +103,7 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar className={collapsed ? 'w-14' : 'w-60'} collapsible="icon">
+    <Sidebar collapsible="icon">
       <SidebarContent>
         {/* Study & Practice */}
         <SidebarGroup>
