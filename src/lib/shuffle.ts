@@ -22,6 +22,19 @@ export function shuffleQuestionChoices<T extends {
   choice_d: string;
   answer: string;
 }>(question: T, seed?: string): ShuffledQuestion<T> {
+  // Validate answer field
+  const answer = question.answer?.toUpperCase() || '';
+  if (!['A', 'B', 'C', 'D'].includes(answer)) {
+    console.error(`Invalid answer "${question.answer}" in shuffleQuestionChoices. Defaulting to 'A'.`);
+    // Return unshuffled with answer defaulted to 'A' as fallback
+    return {
+      original: question,
+      choices: [question.choice_a, question.choice_b, question.choice_c, question.choice_d],
+      correctIndex: 0,
+      choiceOrder: [0, 1, 2, 3],
+    };
+  }
+
   // Original choices in order
   const originalChoices = [
     question.choice_a,
@@ -31,7 +44,7 @@ export function shuffleQuestionChoices<T extends {
   ];
 
   // Find which index (0-3) corresponds to the correct answer (A-D)
-  const originalCorrectIndex = ['A', 'B', 'C', 'D'].indexOf(question.answer.toUpperCase());
+  const originalCorrectIndex = ['A', 'B', 'C', 'D'].indexOf(answer);
 
   // Create shuffled order using Fisher-Yates
   const choiceOrder = [0, 1, 2, 3];
