@@ -6,7 +6,8 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, FileText, CheckCircle, AlertTriangle, Download, Play } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertTriangle, Download, Play, Edit } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface ImportRecord {
   id: string;
@@ -367,11 +368,19 @@ export default function AdminImport() {
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Admin Import Utility</h1>
-        <p className="text-muted-foreground">
-          Import TSV files containing ACT questions and passages into the staging area.
-        </p>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Admin Import Utility</h1>
+          <p className="text-muted-foreground">
+            Import TSV files containing ACT questions and passages into the staging area.
+          </p>
+        </div>
+        <Link to="/admin/question-editor">
+          <Button variant="outline">
+            <Edit className="h-4 w-4 mr-2" />
+            Question Editor
+          </Button>
+        </Link>
       </div>
 
       <div className="space-y-6">
