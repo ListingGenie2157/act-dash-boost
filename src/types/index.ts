@@ -15,6 +15,9 @@ export interface Question {
   passage_id?: string | null;
   passage_title?: string | null;
   passage_text?: string | null;
+  image_url?: string | null;
+  image_caption?: string | null;
+  image_position?: 'above_question' | 'inline' | 'between' | null;
 }
 
 // Legacy Question type for curriculum/lesson data

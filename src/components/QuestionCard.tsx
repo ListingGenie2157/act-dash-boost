@@ -4,6 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
+import { ZoomIn } from 'lucide-react';
 
 interface Question {
   id: string;
@@ -14,6 +17,9 @@ interface Question {
   choice_c: string;
   choice_d: string;
   passage_id?: string;
+  image_url?: string | null;
+  image_caption?: string | null;
+  image_position?: 'above_question' | 'inline' | 'between' | null;
 }
 
 interface QuestionCardProps {
@@ -40,6 +46,7 @@ export function QuestionCard({
   lockAnswers = false,
 }: QuestionCardProps) {
   const [localAnswer, setLocalAnswer] = useState(selectedAnswer || '');
+  const [imageZoomed, setImageZoomed] = useState(false);
 
   useEffect(() => {
     setLocalAnswer(selectedAnswer || '');
@@ -61,82 +68,140 @@ export function QuestionCard({
   const isFirstQuestion = currentIndex === 0;
   const isLastQuestion = currentIndex === totalQuestions - 1;
 
-  return (
-    <Card className="w-full">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">
-            Question {currentIndex + 1} of {totalQuestions}
-          </CardTitle>
-          <div className="flex items-center space-x-2">
-            {question.passage_id && (
-              <Badge variant="outline" className="text-xs">
-                Passage {question.passage_id}
-              </Badge>
-            )}
-            <Badge variant="secondary" className="text-xs">
-              {Math.round(((currentIndex + 1) / totalQuestions) * 100)}%
-            </Badge>
-          </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="space-y-6">
-        {/* Question Text */}
-        <div className="prose prose-sm max-w-none">
-          <p className="text-base leading-relaxed whitespace-pre-wrap">
-            {question.question}
-          </p>
-        </div>
+  // Image component with zoom capability
+  const ImageDisplay = ({ position }: { position: string }) => {
+    if (!question.image_url) return null;
 
-        {/* Answer Choices */}
-        <RadioGroup 
-          value={localAnswer} 
-          onValueChange={handleAnswerChange}
-          disabled={lockAnswers}
-          className="space-y-3"
-        >
-          {choices.map((choice) => (
-            <div key={choice.value} className="flex items-start space-x-3">
-              <RadioGroupItem 
-                value={choice.value} 
-                id={`${question.id}-${choice.value}`}
-                className="mt-1"
-              />
-              <Label 
-                htmlFor={`${question.id}-${choice.value}`}
-                className="flex-1 text-base leading-relaxed cursor-pointer"
-              >
-                <span className="font-medium mr-2">{choice.value}.</span>
-                {choice.label}
-              </Label>
+    return (
+      <div className={`relative ${position === 'above_question' ? 'mb-4' : position === 'inline' ? 'my-4' : 'my-6'}`}>
+        <div className="relative group cursor-pointer" onClick={() => setImageZoomed(true)}>
+          <AspectRatio ratio={16 / 9} className="bg-muted rounded-lg overflow-hidden">
+            <img
+              src={question.image_url}
+              alt={question.image_caption || 'Question image'}
+              className="object-contain w-full h-full"
+            />
+          </AspectRatio>
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg flex items-center justify-center">
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-background/90 rounded-full p-2">
+              <ZoomIn className="h-5 w-5" />
             </div>
-          ))}
-        </RadioGroup>
-
-        {/* Navigation Buttons */}
-        <div className="flex items-center justify-between pt-4 border-t">
-          <Button
-            variant="outline"
-            onClick={onPrevious}
-            disabled={isFirstQuestion}
-          >
-            Previous
-          </Button>
-
-          <div className="flex space-x-2">
-            {!isLastQuestion ? (
-              <Button onClick={onNext}>
-                Next
-              </Button>
-            ) : (
-              <Button onClick={onSubmit} variant="default">
-                Submit Test
-              </Button>
-            )}
           </div>
         </div>
-      </CardContent>
-    </Card>
+        {question.image_caption && (
+          <p className="text-sm text-muted-foreground mt-2 italic text-center">
+            {question.image_caption}
+          </p>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <>
+      <Card className="w-full">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">
+              Question {currentIndex + 1} of {totalQuestions}
+            </CardTitle>
+            <div className="flex items-center space-x-2">
+              {question.passage_id && (
+                <Badge variant="outline" className="text-xs">
+                  Passage {question.passage_id}
+                </Badge>
+              )}
+              <Badge variant="secondary" className="text-xs">
+                {Math.round(((currentIndex + 1) / totalQuestions) * 100)}%
+              </Badge>
+            </div>
+          </div>
+        </CardHeader>
+        
+        <CardContent className="space-y-6">
+          {/* Image above question */}
+          {question.image_position === 'above_question' && <ImageDisplay position="above_question" />}
+
+          {/* Question Text */}
+          <div className="prose prose-sm max-w-none">
+            <p className="text-base leading-relaxed whitespace-pre-wrap">
+              {question.question}
+            </p>
+          </div>
+
+          {/* Image inline (after question) */}
+          {question.image_position === 'inline' && <ImageDisplay position="inline" />}
+
+          {/* Image between question and choices */}
+          {question.image_position === 'between' && <ImageDisplay position="between" />}
+
+          {/* Answer Choices */}
+          <RadioGroup 
+            value={localAnswer} 
+            onValueChange={handleAnswerChange}
+            disabled={lockAnswers}
+            className="space-y-3"
+          >
+            {choices.map((choice) => (
+              <div key={choice.value} className="flex items-start space-x-3">
+                <RadioGroupItem 
+                  value={choice.value} 
+                  id={`${question.id}-${choice.value}`}
+                  className="mt-1"
+                />
+                <Label 
+                  htmlFor={`${question.id}-${choice.value}`}
+                  className="flex-1 text-base leading-relaxed cursor-pointer"
+                >
+                  <span className="font-medium mr-2">{choice.value}.</span>
+                  {choice.label}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
+
+          {/* Navigation Buttons */}
+          <div className="flex items-center justify-between pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={onPrevious}
+              disabled={isFirstQuestion}
+            >
+              Previous
+            </Button>
+
+            <div className="flex space-x-2">
+              {!isLastQuestion ? (
+                <Button onClick={onNext}>
+                  Next
+                </Button>
+              ) : (
+                <Button onClick={onSubmit} variant="default">
+                  Submit Test
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Image Zoom Dialog */}
+      <Dialog open={imageZoomed} onOpenChange={setImageZoomed}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {question.image_caption || 'Question Image'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <img
+              src={question.image_url || ''}
+              alt={question.image_caption || 'Question image'}
+              className="w-full h-auto"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
