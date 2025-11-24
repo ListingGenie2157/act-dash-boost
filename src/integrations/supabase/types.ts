@@ -585,6 +585,9 @@ export type Database = {
           difficulty: number
           explanation: string | null
           id: string
+          image_caption: string | null
+          image_position: string | null
+          image_url: string | null
           skill_id: string
           stem: string
           time_limit_secs: number | null
@@ -599,6 +602,9 @@ export type Database = {
           difficulty: number
           explanation?: string | null
           id?: string
+          image_caption?: string | null
+          image_position?: string | null
+          image_url?: string | null
           skill_id: string
           stem: string
           time_limit_secs?: number | null
@@ -613,6 +619,9 @@ export type Database = {
           difficulty?: number
           explanation?: string | null
           id?: string
+          image_caption?: string | null
+          image_position?: string | null
+          image_url?: string | null
           skill_id?: string
           stem?: string
           time_limit_secs?: number | null
@@ -892,6 +901,9 @@ export type Database = {
           difficulty: string
           explanation: string | null
           form_id: string
+          image_caption: string | null
+          image_position: string | null
+          image_url: string | null
           lesson_code: string | null
           ord: number
           passage_id: string | null
@@ -911,6 +923,9 @@ export type Database = {
           difficulty: string
           explanation?: string | null
           form_id: string
+          image_caption?: string | null
+          image_position?: string | null
+          image_url?: string | null
           lesson_code?: string | null
           ord: number
           passage_id?: string | null
@@ -930,6 +945,9 @@ export type Database = {
           difficulty?: string
           explanation?: string | null
           form_id?: string
+          image_caption?: string | null
+          image_position?: string | null
+          image_url?: string | null
           lesson_code?: string | null
           ord?: number
           passage_id?: string | null
