@@ -25,6 +25,9 @@ interface ImportRecord {
   choice_d: string;
   answer: string;
   explanation?: string | null;
+  image_url?: string | null;
+  image_caption?: string | null;
+  image_position?: string | null;
 }
 
 interface ValidationError {
@@ -78,6 +81,9 @@ export default function AdminImport() {
         choice_d: record.choice_d,
         answer: record.answer,
         explanation: record.explanation || null,
+        image_url: record.image_url || null,
+        image_caption: record.image_caption || null,
+        image_position: record.image_position || 'above_question',
       };
     });
   };
@@ -107,6 +113,23 @@ export default function AdminImport() {
     // Validate difficulty
     if (!['Easy', 'Medium', 'Hard'].includes(record.difficulty)) {
       errors.push({ row: rowIndex, field: 'difficulty', message: 'Difficulty must be Easy, Medium, or Hard' });
+    }
+
+    // Validate image_position if provided
+    if (record.image_position && !['above_question', 'inline', 'between'].includes(record.image_position)) {
+      errors.push({ row: rowIndex, field: 'image_position', message: 'Image position must be above_question, inline, or between' });
+    }
+
+    // Validate image_url format if provided
+    if (record.image_url) {
+      try {
+        new URL(record.image_url);
+      } catch {
+        // Check if it's a storage path
+        if (!record.image_url.startsWith('/') && !record.image_url.includes('supabase')) {
+          errors.push({ row: rowIndex, field: 'image_url', message: 'Image URL must be a valid URL or storage path' });
+        }
+      }
     }
 
     return errors;
@@ -319,16 +342,20 @@ export default function AdminImport() {
     const headers = [
       'id', 'form_id', 'section', 'ord', 'passage_id', 'passage_title', 
       'passage_text', 'skill_code', 'difficulty', 'question', 
-      'choice_a', 'choice_b', 'choice_c', 'choice_d', 'answer', 'explanation'
+      'choice_a', 'choice_b', 'choice_c', 'choice_d', 'answer', 'explanation',
+      'image_url', 'image_caption', 'image_position'
     ].join('\t');
     
     const example = [
       'FA_EN_001', 'A', 'EN', '1', '', '', '', 'E1.A', 'Easy',
       'The books ___ on the shelf.', 'is', 'are', 'was', 'were', 'B',
-      'Plural subject "books" requires plural verb "are".'
+      'Plural subject "books" requires plural verb "are".',
+      '', '', 'above_question'
     ].join('\t');
 
-    const content = `${headers}\n${example}`;
+    const comment = '# image_url: Full URL or storage path (optional)\n# image_caption: Descriptive text for accessibility (recommended if image_url provided)\n# image_position: above_question (default), inline, or between (optional)';
+
+    const content = `${comment}\n${headers}\n${example}`;
     const blob = new Blob([content], { type: 'text/tab-separated-values' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

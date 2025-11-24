@@ -35,6 +35,9 @@ interface StagingRow {
   choice_d: string;
   answer: string;
   explanation?: string;
+  image_url?: string;
+  image_caption?: string;
+  image_position?: string;
 }
 
 function parseTSV(tsvContent: string): StagingRow[] {
@@ -186,7 +189,10 @@ serve(async (req) => {
         choice_c: item.choice_c,
         choice_d: item.choice_d,
         answer: item.answer,
-        explanation: item.explanation
+        explanation: item.explanation,
+        image_url: item.image_url,
+        image_caption: item.image_caption,
+        image_position: item.image_position || 'above_question'
       })) || [];
     } else {
       return new Response(JSON.stringify({ error: 'TSV file upload not implemented in this function. Use staging table.' }), {
@@ -307,7 +313,10 @@ serve(async (req) => {
             answer: row.answer.toUpperCase(),
             explanation: row.explanation || null,
             difficulty: mapDifficulty(row.difficulty),
-            time_limit_secs: 45
+            time_limit_secs: 45,
+            image_url: row.image_url || null,
+            image_caption: row.image_caption || null,
+            image_position: row.image_position || 'above_question'
           })
           .select('id')
           .single();
