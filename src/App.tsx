@@ -26,6 +26,9 @@ import {
   LazyScienceCheatsheet,
   LazyLoader
 } from "./components/LazyComponents";
+import DrillSetup from "./pages/DrillSetup";
+import DrillPlayer from "./pages/DrillPlayer";
+import DrillHistory from "./pages/DrillHistory";
 import DiagnosticTest from "./pages/DiagnosticTest";
 import DiagnosticResults from "./pages/DiagnosticResults";
 import DiagnosticResultsComplete from "./pages/DiagnosticResultsComplete";
@@ -123,6 +126,9 @@ const App = () => (
   <Route path="/lesson/:topic" element={<EnhancedLessonViewer />} />
   <Route path="/lessons" element={<LessonsLibrary />} />
   <Route path="/drill-runner" element={<TimedDrills />} />
+  <Route path="/drill/:subject/setup" element={<DrillSetup />} />
+  <Route path="/drill/:subject/play" element={<DrillPlayer />} />
+  <Route path="/drill-history" element={<DrillHistory />} />
   <Route path="/drill/:subject" element={<DrillRunner />} />
   <Route path="/quiz/:section" element={<QuizRunner />} />
   <Route path="/weak-areas" element={<WeakAreas />} />

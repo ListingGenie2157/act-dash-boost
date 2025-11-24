@@ -103,29 +103,39 @@ export default function TimedDrills() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {subjects.map(stat => (
-            <Link key={stat.subject} to={`/drill/${encodeURIComponent(stat.subject)}`}>
-              <Card className="h-full hover:shadow-lg hover:border-primary transition-all cursor-pointer group">
-                <CardHeader>
-                  <CardTitle className="text-xl group-hover:text-primary transition-colors flex items-center gap-2">
-                    <Clock className="h-5 w-5" />
-                    {stat.subject}
-                  </CardTitle>
-                  <CardDescription className="flex items-center gap-2">
-                    <Badge variant="secondary">
-                      {stat.questionCount} questions
-                    </Badge>
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Take a timed drill to practice your skills in this section
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+        <div className="space-y-4">
+          {/* History Button */}
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => navigate('/drill-history')}>
+              <Clock className="h-4 w-4 mr-2" />
+              View History
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {subjects.map(stat => (
+              <Link key={stat.subject} to={`/drill/${encodeURIComponent(stat.subject)}/setup`}>
+                <Card className="h-full hover:shadow-lg hover:border-primary transition-all cursor-pointer group">
+                  <CardHeader>
+                    <CardTitle className="text-xl group-hover:text-primary transition-colors flex items-center gap-2">
+                      <Clock className="h-5 w-5" />
+                      {stat.subject}
+                    </CardTitle>
+                    <CardDescription className="flex items-center gap-2">
+                      <Badge variant="secondary">
+                        {stat.questionCount} questions
+                      </Badge>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Configure and start a targeted drill for this section
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
     </div>
