@@ -20,6 +20,9 @@ interface Question {
   image_url?: string | null;
   image_caption?: string | null;
   image_position?: 'above_question' | 'inline' | 'between' | null;
+  underlined_text?: string | null;
+  reference_number?: number | null;
+  position_in_passage?: number | null;
 }
 
 interface QuestionCardProps {
@@ -121,9 +124,26 @@ export function QuestionCard({
           {question.image_position === 'above_question' && renderImage('above_question')}
 
           <div className="prose prose-sm max-w-none">
-            <p className="text-base leading-relaxed whitespace-pre-wrap">
-              {question.question}
-            </p>
+            {question.reference_number && (
+              <div className="mb-2 text-sm font-semibold text-muted-foreground">
+                Question {question.reference_number}
+              </div>
+            )}
+            
+            {question.underlined_text ? (
+              <div className="text-base leading-relaxed">
+                <p className="mb-2">{question.question}</p>
+                <p className="border-l-4 border-primary pl-4 py-2 bg-muted/30 rounded">
+                  <span className="underline decoration-2 decoration-primary/60">
+                    {question.underlined_text}
+                  </span>
+                </p>
+              </div>
+            ) : (
+              <p className="text-base leading-relaxed whitespace-pre-wrap">
+                {question.question}
+              </p>
+            )}
           </div>
 
           {question.image_position === 'inline' && renderImage('inline')}

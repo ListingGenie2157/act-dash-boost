@@ -15,11 +15,15 @@ interface Question {
   choice_c: string;
   choice_d: string;
   passage_id?: string;
+  underlined_text?: string | null;
+  reference_number?: number | null;
+  position_in_passage?: number | null;
 }
 
 interface Passage {
   title: string;
   passage_text: string;
+  marked_text?: Record<string, any> | null;
 }
 
 interface PassageLayoutProps {
@@ -81,6 +85,41 @@ export function PassageLayout({
     return text.split('\n\n').filter(p => p.trim().length > 0);
   };
 
+  // Render paragraph with inline references
+  const renderParagraphWithReferences = (text: string, paragraphIndex: number, markedText: Record<string, any> | null) => {
+    if (!markedText) {
+      return text;
+    }
+
+    // Check if this paragraph has any marked references
+    const references = Object.entries(markedText).filter(([key]) => {
+      const match = key.match(/^p(\d+)_ref(\d+)$/);
+      return match && parseInt(match[1]) === paragraphIndex + 1;
+    });
+
+    if (references.length === 0) {
+      return text;
+    }
+
+    // Highlight inline references with underline and reference number badges
+    let result = text;
+    references.forEach(([key, value]) => {
+      const refNumber = key.match(/ref(\d+)$/)?.[1];
+      const markedPhrase = value.text || '';
+      if (markedPhrase && result.includes(markedPhrase)) {
+        result = result.replace(
+          markedPhrase,
+          `<span class="relative inline">
+            <span class="underline decoration-2 decoration-primary/60">${markedPhrase}</span>
+            <sup class="ml-0.5 text-xs font-bold text-primary">[${refNumber}]</sup>
+          </span>`
+        );
+      }
+    });
+
+    return result;
+  };
+
   const allPassageIds = Object.keys(passages);
 
   return (
@@ -136,14 +175,17 @@ export function PassageLayout({
                       <CardContent className="pt-0">
                         <div className="prose prose-sm max-w-none">
                           <div className="space-y-4 text-base leading-loose font-serif">
-                            {paragraphs.map((para, idx) => (
-                              <p key={idx} className="mb-4">
-                                <span className="text-xs text-muted-foreground mr-2 font-sans select-none">
-                                  [{idx + 1}]
-                                </span>
-                                {para}
-                              </p>
-                            ))}
+                            {paragraphs.map((para, idx) => {
+                              const enhancedText = renderParagraphWithReferences(para, idx, passage.marked_text ?? null);
+                              return (
+                                <p key={idx} className="mb-4">
+                                  <span className="text-xs text-muted-foreground mr-2 font-sans select-none">
+                                    [{idx + 1}]
+                                  </span>
+                                  <span dangerouslySetInnerHTML={{ __html: enhancedText }} />
+                                </p>
+                              );
+                            })}
                           </div>
                         </div>
                         
