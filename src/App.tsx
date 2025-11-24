@@ -27,6 +27,8 @@ import {
   LazyScienceCheatsheet,
   LazyLoader
 } from "./components/LazyComponents";
+import ReviewMissed from "./pages/ReviewMissed";
+import ReviewSpaced from "./pages/ReviewSpaced";
 import DrillSetup from "./pages/DrillSetup";
 import DrillPlayer from "./pages/DrillPlayer";
 import DrillHistory from "./pages/DrillHistory";
@@ -136,6 +138,16 @@ const App = () => (
             <Route path="/quiz/:section" element={<QuizRunner />} />
             <Route path="/weak-areas" element={<WeakAreas />} />
             <Route path="/calculator-lab" element={<CalculatorLab />} />
+            <Route path="/review/missed" element={
+              <LazyLoader>
+                <ReviewMissed />
+              </LazyLoader>
+            } />
+            <Route path="/review/spaced" element={
+              <LazyLoader>
+                <ReviewSpaced />
+              </LazyLoader>
+            } />
           </Route>
           
           {/* Catch-all route */}

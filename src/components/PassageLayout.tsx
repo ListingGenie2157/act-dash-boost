@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { QuestionCard } from './QuestionCard';
+import { ReadingPreferences } from './ReadingPreferences';
 
 interface Question {
   id: string;
@@ -75,123 +76,141 @@ export function PassageLayout({
     return questions.filter(q => q.passage_id === passageId);
   };
 
+  // Parse passage text into paragraphs
+  const parsePassageText = (text: string) => {
+    return text.split('\n\n').filter(p => p.trim().length > 0);
+  };
+
   const allPassageIds = Object.keys(passages);
 
   return (
-    <div className="h-screen flex">
-      {/* Left Panel - Passages */}
-      <div className="w-1/2 border-r bg-background">
-        <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold">Reading Passages</h2>
-          <p className="text-sm text-muted-foreground">
-            Click on passage tags to navigate
-          </p>
-        </div>
-        
-        <ScrollArea className="h-[calc(100vh-80px)]">
-          <div className="p-4 space-y-6">
-            {allPassageIds.map((passageId) => {
-              const passage = passages[passageId];
-              const questionsForPassage = getQuestionsForPassage(passageId);
-              const isActive = selectedPassage === passageId;
-              
-              return (
-                <div
-                  key={passageId}
-                  ref={(el) => (passageRefs.current[passageId] = el)}
-                  className={`transition-all duration-200 ${
-                    isActive ? 'ring-2 ring-primary rounded-lg' : ''
-                  }`}
-                >
-                  <Card className={`cursor-pointer ${isActive ? 'border-primary' : ''}`}>
-                    <CardHeader 
-                      className="pb-3"
-                      onClick={() => handlePassageClick(passageId)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base">
-                          {passage.title || `Passage ${passageId}`}
-                        </CardTitle>
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="outline" className="text-xs">
-                            {questionsForPassage.length} questions
-                          </Badge>
-                          <Badge variant={isActive ? 'default' : 'secondary'} className="text-xs">
-                            {passageId}
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="prose prose-sm max-w-none">
-                        <div className="text-sm leading-relaxed whitespace-pre-wrap">
-                          {passage.passage_text}
-                        </div>
-                      </div>
-                      
-                      {questionsForPassage.length > 0 && (
-                        <div className="mt-4 pt-3 border-t">
-                          <div className="flex flex-wrap gap-1">
-                            {questionsForPassage.map((q) => {
-                              const questionIndex = questions.findIndex(question => question.id === q.id);
-                              const isAnswered = !!answers[q.id];
-                              const isCurrent = questionIndex === currentQuestionIndex;
-                              
-                              return (
-                                <Button
-                                  key={q.id}
-                                  size="sm"
-                                  variant={isCurrent ? 'default' : isAnswered ? 'secondary' : 'outline'}
-                                  className="h-8 w-8 p-0 text-xs"
-                                  onClick={() => onQuestionChange(questionIndex)}
-                                >
-                                  {questionIndex + 1}
-                                </Button>
-                              );
-                            })}
+    <div className="h-screen flex flex-col">
+      {/* Reading Preferences Bar */}
+      <ReadingPreferences />
+      
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Panel - Passages */}
+        <div className="w-1/2 border-r bg-background">
+          <div className="p-4 border-b">
+            <h2 className="text-lg font-semibold">Reading Passages</h2>
+            <p className="text-sm text-muted-foreground">
+              Click on passage tags to navigate
+            </p>
+          </div>
+          
+          <ScrollArea className="h-[calc(100vh-140px)]">
+            <div className="p-4 space-y-6">
+              {allPassageIds.map((passageId) => {
+                const passage = passages[passageId];
+                const questionsForPassage = getQuestionsForPassage(passageId);
+                const isActive = selectedPassage === passageId;
+                const paragraphs = parsePassageText(passage.passage_text);
+                
+                return (
+                  <div
+                    key={passageId}
+                    ref={(el) => (passageRefs.current[passageId] = el)}
+                    className={`transition-all duration-200 ${
+                      isActive ? 'ring-2 ring-primary rounded-lg' : ''
+                    }`}
+                  >
+                    <Card className={`cursor-pointer ${isActive ? 'border-primary' : ''}`}>
+                      <CardHeader 
+                        className="pb-3"
+                        onClick={() => handlePassageClick(passageId)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base">
+                            {passage.title || `Passage ${passageId}`}
+                          </CardTitle>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="outline" className="text-xs">
+                              {questionsForPassage.length} questions
+                            </Badge>
+                            <Badge variant={isActive ? 'default' : 'secondary'} className="text-xs">
+                              {passageId}
+                            </Badge>
                           </div>
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-              );
-            })}
-          </div>
-        </ScrollArea>
-      </div>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="prose prose-sm max-w-none">
+                          <div className="space-y-4 text-base leading-loose font-serif">
+                            {paragraphs.map((para, idx) => (
+                              <p key={idx} className="mb-4">
+                                <span className="text-xs text-muted-foreground mr-2 font-sans select-none">
+                                  [{idx + 1}]
+                                </span>
+                                {para}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        {questionsForPassage.length > 0 && (
+                          <div className="mt-4 pt-3 border-t">
+                            <div className="flex flex-wrap gap-1">
+                              {questionsForPassage.map((q) => {
+                                const questionIndex = questions.findIndex(question => question.id === q.id);
+                                const isAnswered = !!answers[q.id];
+                                const isCurrent = questionIndex === currentQuestionIndex;
+                                
+                                return (
+                                  <Button
+                                    key={q.id}
+                                    size="sm"
+                                    variant={isCurrent ? 'default' : isAnswered ? 'secondary' : 'outline'}
+                                    className="h-8 w-8 p-0 text-xs"
+                                    onClick={() => onQuestionChange(questionIndex)}
+                                  >
+                                    {questionIndex + 1}
+                                  </Button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </div>
 
-      {/* Right Panel - Current Question */}
-      <div className="w-1/2 flex flex-col">
-        <div className="p-4 border-b">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Question</h2>
-            {currentQuestion?.passage_id && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePassageClick(currentQuestion.passage_id!)}
-              >
-                View Passage {currentQuestion.passage_id}
-              </Button>
+        {/* Right Panel - Current Question */}
+        <div className="w-1/2 flex flex-col">
+          <div className="p-4 border-b">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Question</h2>
+              {currentQuestion?.passage_id && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePassageClick(currentQuestion.passage_id!)}
+                >
+                  View Passage {currentQuestion.passage_id}
+                </Button>
+              )}
+            </div>
+          </div>
+          
+          <div className="flex-1 p-4 overflow-y-auto">
+            {currentQuestion && (
+              <QuestionCard
+                question={currentQuestion}
+                currentIndex={currentQuestionIndex}
+                totalQuestions={questions.length}
+                selectedAnswer={answers[currentQuestion.id]}
+                onAnswerSelect={onAnswerSelect}
+                onNext={onNext}
+                onPrevious={onPrevious}
+                onSubmit={onSubmit}
+                lockAnswers={lockAnswers}
+              />
             )}
           </div>
-        </div>
-        
-        <div className="flex-1 p-4 overflow-y-auto">
-          {currentQuestion && (
-            <QuestionCard
-              question={currentQuestion}
-              currentIndex={currentQuestionIndex}
-              totalQuestions={questions.length}
-              selectedAnswer={answers[currentQuestion.id]}
-              onAnswerSelect={onAnswerSelect}
-              onNext={onNext}
-              onPrevious={onPrevious}
-              onSubmit={onSubmit}
-              lockAnswers={lockAnswers}
-            />
-          )}
         </div>
       </div>
     </div>
