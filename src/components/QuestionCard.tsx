@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
-import { ZoomIn } from 'lucide-react';
+import { ZoomIn, Calculator, Ban } from 'lucide-react';
 
 interface Question {
   id: string;
@@ -16,6 +16,7 @@ interface Question {
   choice_b: string;
   choice_c: string;
   choice_d: string;
+  choice_e?: string | null;
   passage_id?: string;
   image_url?: string | null;
   image_caption?: string | null;
@@ -23,6 +24,7 @@ interface Question {
   underlined_text?: string | null;
   reference_number?: number | null;
   position_in_passage?: number | null;
+  calculator_allowed?: boolean | null;
 }
 
 interface QuestionCardProps {
@@ -66,6 +68,7 @@ export function QuestionCard({
     { value: 'B', label: question.choice_b },
     { value: 'C', label: question.choice_c },
     { value: 'D', label: question.choice_d },
+    ...(question.choice_e ? [{ value: 'E', label: question.choice_e }] : []),
   ];
 
   const isFirstQuestion = currentIndex === 0;
@@ -108,6 +111,24 @@ export function QuestionCard({
               Question {currentIndex + 1} of {totalQuestions}
             </CardTitle>
             <div className="flex items-center space-x-2">
+              {question.calculator_allowed !== null && question.calculator_allowed !== undefined && (
+                <Badge 
+                  variant={question.calculator_allowed ? "default" : "secondary"}
+                  className="text-xs flex items-center gap-1"
+                >
+                  {question.calculator_allowed ? (
+                    <>
+                      <Calculator className="h-3 w-3" />
+                      Calculator OK
+                    </>
+                  ) : (
+                    <>
+                      <Ban className="h-3 w-3" />
+                      No Calculator
+                    </>
+                  )}
+                </Badge>
+              )}
               {question.passage_id && (
                 <Badge variant="outline" className="text-xs">
                   Passage {question.passage_id}

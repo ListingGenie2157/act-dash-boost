@@ -14,10 +14,12 @@ interface Question {
   choice_b: string;
   choice_c: string;
   choice_d: string;
+  choice_e?: string | null;
   passage_id?: string;
   underlined_text?: string | null;
   reference_number?: number | null;
   position_in_passage?: number | null;
+  calculator_allowed?: boolean | null;
 }
 
 interface Passage {
