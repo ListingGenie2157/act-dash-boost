@@ -7,7 +7,7 @@ export function useIsMobile() {
   const [mobile, setMobile] = useState(false);
   useEffect(() => {
     if (!isBrowser) return;
-    const mq = window.matchMedia('(max-width: 640px)');
+    const mq = window.matchMedia('(max-width: 767px)');
     const update = () => setMobile(mq.matches);
     update();
     mq.addEventListener('change', update);
