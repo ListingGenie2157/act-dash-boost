@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { CountdownHeader } from '@/components/CountdownHeader';
 import { StudyPlanWidget } from '@/components/StudyPlanWidget';
 import { StudyPlanWizard } from '@/components/StudyPlanWizard';
 import { TestWeekBanner } from '@/components/TestWeekBanner';
@@ -375,8 +374,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
-      <CountdownHeader />
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-4 pt-4">
         <ParentBanner />
         <TestWeekBanner />
       </div>

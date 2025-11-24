@@ -8,6 +8,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageLoadingSpinner } from './components/LoadingSpinner';
 import { TutorProvider } from './hooks/useTutor';
 import { TutorPanel } from './components/tutor/TutorPanel';
+import { AppLayout } from './components/AppLayout';
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import SimpleLogin from "./pages/SimpleLogin";
@@ -57,13 +58,15 @@ const App = () => (
           <BrowserRouter>
           <Suspense fallback={<PageLoadingSpinner />}>
             <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/dashboard" element={<Index />} />
-          {/* Login route to handle user authentication. */}
+          {/* Public routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/simple-login" element={<SimpleLogin />} />
-          {/* Onboarding wizard route */}
-          <Route path="/onboarding" element={<Onboarding />} />
+          
+          {/* Protected routes with sidebar layout */}
+          <Route element={<AppLayout />}>
+            <Route path="/" element={<Index />} />
+            <Route path="/dashboard" element={<Index />} />
+            <Route path="/onboarding" element={<Onboarding />} />
           {/* Diagnostic assessment route */}
           <Route path="/diagnostic" element={
             <LazyLoader>
@@ -130,10 +133,12 @@ const App = () => (
   <Route path="/drill/:subject/play" element={<DrillPlayer />} />
   <Route path="/drill-history" element={<DrillHistory />} />
   <Route path="/drill/:subject" element={<DrillRunner />} />
-  <Route path="/quiz/:section" element={<QuizRunner />} />
-  <Route path="/weak-areas" element={<WeakAreas />} />
-  <Route path="/calculator-lab" element={<CalculatorLab />} />
-    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="/quiz/:section" element={<QuizRunner />} />
+            <Route path="/weak-areas" element={<WeakAreas />} />
+            <Route path="/calculator-lab" element={<CalculatorLab />} />
+          </Route>
+          
+          {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
