@@ -55,6 +55,89 @@ export default function DrillPlayer() {
               query = query.in('skill_code', skillIds);
             }
           }
+        } else if (mode === 'learned') {
+          // Get recently completed lessons (last 48 hours)
+          const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+          const { data: recentLessons } = await supabase
+            .from('study_tasks')
+            .select('skill_id')
+            .eq('user_id', user.id)
+            .eq('type', 'LEARN')
+            .eq('status', 'DONE')
+            .gte('created_at', twoDaysAgo);
+
+          if (recentLessons && recentLessons.length > 0) {
+            const skillIds = recentLessons
+              .map(l => l.skill_id)
+              .filter((id): id is string => id !== null);
+            if (skillIds.length > 0) {
+              query = query.in('skill_code', skillIds);
+            } else {
+              toast.error('No recently completed lessons found');
+              navigate(`/drill/${subject}/setup`);
+              return;
+            }
+          } else {
+            toast.error('No recently completed lessons found');
+            navigate(`/drill/${subject}/setup`);
+            return;
+          }
+        } else if (mode === 'missed') {
+          // Get questions from error_bank for this subject
+          const { data: missedQuestions } = await supabase
+            .from('error_bank')
+            .select(`
+              question_id,
+              questions!inner(skill_id, skills!inner(subject))
+            `)
+            .eq('user_id', user.id)
+            .eq('questions.skills.subject', subject)
+            .order('miss_count', { ascending: false })
+            .limit(50);
+
+          if (missedQuestions && missedQuestions.length > 0) {
+            const questionIds = missedQuestions
+              .map(m => m.question_id)
+              .filter((id): id is string => id !== null);
+            
+            // For missed questions, we need to query questions table directly
+            const { data: questionsData } = await supabase
+              .from('questions')
+              .select('*')
+              .in('id', questionIds);
+
+            if (!questionsData || questionsData.length === 0) {
+              toast.error('No missed questions available');
+              navigate(`/drill/${subject}/setup`);
+              return;
+            }
+
+            // Convert to drill format and skip staging_items query
+            const questions: LegacyQuestion[] = questionsData.slice(0, questionCount).map(q => ({
+              id: q.id,
+              question: q.stem,
+              options: [q.choice_a, q.choice_b, q.choice_c, q.choice_d],
+              correctAnswer: ['A', 'B', 'C', 'D'].indexOf(q.answer),
+              explanation: q.explanation || 'No explanation available',
+              difficulty: 'medium',
+            }));
+
+            const drillSession: DrillSession = {
+              id: `drill-${Date.now()}`,
+              subject: subject as 'Math' | 'English',
+              title: 'Missed Questions Review',
+              timeLimit: timeLimit,
+              questions,
+            };
+
+            setDrill(drillSession);
+            setLoading(false);
+            return;
+          } else {
+            toast.error('No missed questions found for this subject');
+            navigate(`/drill/${subject}/setup`);
+            return;
+          }
         } else if (mode === 'skill' && skillId) {
           query = query.eq('skill_code', skillId);
         }

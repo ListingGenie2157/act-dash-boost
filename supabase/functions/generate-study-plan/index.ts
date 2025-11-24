@@ -842,8 +842,32 @@ serve(async (req) => {
       const selectedTasks = selectPlaylist(priorities, dailyTimeCap);
       console.log(`Selected ${selectedTasks.length} tasks for ${dateStr}`);
 
+      // Add DRILL tasks immediately after LEARN tasks for same skill
+      const tasksWithDrills: Task[] = [];
+      selectedTasks.forEach(task => {
+        tasksWithDrills.push(task);
+        
+        // If it's a LEARN task, add a corresponding DRILL task
+        if (task.type === 'LEARN' && task.skillId) {
+          // Check if there's time left in the daily cap
+          const totalMins = tasksWithDrills.reduce((sum, t) => sum + t.estimatedMins, 0);
+          const drillMins = Math.round(8 * timeMultiplier);
+          
+          if (totalMins + drillMins <= dailyTimeCap) {
+            tasksWithDrills.push({
+              type: 'DRILL',
+              skillId: task.skillId,
+              size: 5,
+              estimatedMins: drillMins,
+              priority: task.priority - 0.1, // Slightly lower priority
+            });
+            console.log(`Added DRILL for LEARN skill: ${task.skillId}`);
+          }
+        }
+      });
+
       // Convert to JSON format
-      const tasksJson = selectedTasks.map((task) => ({
+      const tasksJson = tasksWithDrills.map((task) => ({
         type: task.type,
         skill_id: task.skillId || null,
         question_id: task.questionId || null,
@@ -854,8 +878,8 @@ serve(async (req) => {
 
       allPlans.push({ the_date: dateStr, tasks: tasksJson });
 
-      // Add to study tasks
-      selectedTasks.forEach((task) => {
+      // Add to study tasks (use tasksWithDrills which includes correlated drills)
+      tasksWithDrills.forEach((task) => {
         const estimatedSeconds =
           typeof task.estimatedMins === "number" && task.estimatedMins > 0
             ? Math.round(task.estimatedMins * 60)
