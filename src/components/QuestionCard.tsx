@@ -68,8 +68,7 @@ export function QuestionCard({
   const isFirstQuestion = currentIndex === 0;
   const isLastQuestion = currentIndex === totalQuestions - 1;
 
-  // Image component with zoom capability
-  const ImageDisplay = ({ position }: { position: string }) => {
+  const renderImage = (position: string) => {
     if (!question.image_url) return null;
 
     return (
@@ -119,23 +118,17 @@ export function QuestionCard({
         </CardHeader>
         
         <CardContent className="space-y-6">
-          {/* Image above question */}
-          {question.image_position === 'above_question' && <ImageDisplay position="above_question" />}
+          {question.image_position === 'above_question' && renderImage('above_question')}
 
-          {/* Question Text */}
           <div className="prose prose-sm max-w-none">
             <p className="text-base leading-relaxed whitespace-pre-wrap">
               {question.question}
             </p>
           </div>
 
-          {/* Image inline (after question) */}
-          {question.image_position === 'inline' && <ImageDisplay position="inline" />}
+          {question.image_position === 'inline' && renderImage('inline')}
+          {question.image_position === 'between' && renderImage('between')}
 
-          {/* Image between question and choices */}
-          {question.image_position === 'between' && <ImageDisplay position="between" />}
-
-          {/* Answer Choices */}
           <RadioGroup 
             value={localAnswer} 
             onValueChange={handleAnswerChange}
@@ -160,7 +153,6 @@ export function QuestionCard({
             ))}
           </RadioGroup>
 
-          {/* Navigation Buttons */}
           <div className="flex items-center justify-between pt-4 border-t">
             <Button
               variant="outline"
@@ -185,23 +177,24 @@ export function QuestionCard({
         </CardContent>
       </Card>
 
-      {/* Image Zoom Dialog */}
-      <Dialog open={imageZoomed} onOpenChange={setImageZoomed}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {question.image_caption || 'Question Image'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="mt-4">
-            <img
-              src={question.image_url || ''}
-              alt={question.image_caption || 'Question image'}
-              className="w-full h-auto"
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
+      {question.image_url && (
+        <Dialog open={imageZoomed} onOpenChange={setImageZoomed}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {question.image_caption || 'Question Image'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="mt-4">
+              <img
+                src={question.image_url}
+                alt={question.image_caption || 'Question image'}
+                className="w-full h-auto"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }
