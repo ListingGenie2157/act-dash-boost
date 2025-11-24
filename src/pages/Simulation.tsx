@@ -34,11 +34,15 @@ interface Question {
   image_url?: string | null;
   image_caption?: string | null;
   image_position?: 'above_question' | 'inline' | 'between' | null;
+  underlined_text?: string | null;
+  reference_number?: number | null;
+  position_in_passage?: number | null;
 }
 
 interface Passage {
   title: string;
   passage_text: string;
+  marked_text?: Record<string, any> | null;
 }
 
 interface SessionData {
