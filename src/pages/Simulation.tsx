@@ -45,6 +45,10 @@ interface Passage {
   title: string;
   passage_text: string;
   marked_text?: Record<string, any> | null;
+  passage_format?: string | null;
+  passage_type?: string | null;
+  has_charts?: boolean | null;
+  chart_images?: string[] | null;
 }
 
 interface SessionData {
