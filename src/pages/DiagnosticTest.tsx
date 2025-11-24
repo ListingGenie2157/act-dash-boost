@@ -104,36 +104,50 @@ export default function DiagnosticTest() {
 
       if (error) throw error;
 
-      // Fetch skill mappings for each question
-      const questionsWithSkills = await Promise.all(
-        (data || []).map(async (q) => {
-          // Get skill_code from staging_items
-          const { data: stagingData } = await supabase
-            .from('staging_items')
-            .select('skill_code')
-            .eq('form_id', formId)
-            .eq('ord', q.ord || 0)
-            .maybeSingle();
-          
-          // Resolve skill_code to skill_id from skills table
-          let skill_id: string | null = null;
-          if (stagingData?.skill_code) {
-            const normalized = stagingData.skill_code.trim().toUpperCase();
-            const { data: skillData } = await supabase
-              .from('skills')
-              .select('id')
-              .or(`id.eq.${normalized},code.eq.${normalized}`)
-              .maybeSingle();
-            
-            skill_id = skillData?.id || null;
-          }
-          
-          return {
-            ...q,
-            skill_id
-          };
-        })
-      );
+      // Fetch ALL staging_items at once (single query instead of N queries)
+      const { data: stagingItems } = await supabase
+        .from('staging_items')
+        .select('ord, skill_code')
+        .eq('form_id', formId);
+
+      // Create a map of ord -> skill_code for fast lookup
+      const stagingMap = new Map<number, string>();
+      stagingItems?.forEach(item => {
+        stagingMap.set(item.ord, item.skill_code);
+      });
+
+      // Fetch all skills at once
+      const skillCodes = Array.from(new Set(Array.from(stagingMap.values()).filter(Boolean)));
+      const { data: skillsData } = await supabase
+        .from('skills')
+        .select('id, code')
+        .or(skillCodes.map(code => `id.eq.${code},code.eq.${code}`).join(','));
+
+      // Create skill lookup map
+      const skillMap = new Map<string, string>();
+      skillsData?.forEach(skill => {
+        const normalized = skill.id.trim().toUpperCase();
+        skillMap.set(normalized, skill.id);
+        if (skill.code) {
+          skillMap.set(skill.code.trim().toUpperCase(), skill.id);
+        }
+      });
+
+      // Map questions to include skill_id (no async needed)
+      const questionsWithSkills = (data || []).map(q => {
+        const skill_code = stagingMap.get(q.ord || 0);
+        let skill_id: string | null = null;
+        
+        if (skill_code) {
+          const normalized = skill_code.trim().toUpperCase();
+          skill_id = skillMap.get(normalized) || null;
+        }
+        
+        return {
+          ...q,
+          skill_id
+        };
+      });
 
 
       // Map to Question type with defaults for nullable fields and skill_id
