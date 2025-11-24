@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BackButton } from '@/components/BackButton';
-import { Download, Plus, Trash2, Save } from 'lucide-react';
+import { Download, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const questionSchema = z.object({
@@ -70,7 +70,6 @@ const defaultValues: Partial<QuestionFormData> = {
 
 export default function AdminQuestionEditor() {
   const [questions, setQuestions] = useState<QuestionFormData[]>([]);
-  const [currentSection, setCurrentSection] = useState<'ENG' | 'MATH' | 'READ' | 'SCI'>('MATH');
 
   const form = useForm<QuestionFormData>({
     resolver: zodResolver(questionSchema),
@@ -116,7 +115,7 @@ export default function AdminQuestionEditor() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `questions_${currentSection}_${Date.now()}.tsv`;
+    a.download = `questions_${questions[0]?.section || 'export'}_${Date.now()}.tsv`;
     a.click();
     URL.revokeObjectURL(url);
 
@@ -320,7 +319,7 @@ export default function AdminQuestionEditor() {
                               </FormDescription>
                             </div>
                             <FormControl>
-                              <Switch checked={field.value} onCheckedChange={field.onChange} />
+                              <Switch checked={!!field.value} onCheckedChange={field.onChange} />
                             </FormControl>
                           </FormItem>
                         )}
@@ -611,7 +610,7 @@ export default function AdminQuestionEditor() {
                                 <FormDescription>Show line numbers in passage</FormDescription>
                               </div>
                               <FormControl>
-                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                <Switch checked={!!field.value} onCheckedChange={field.onChange} />
                               </FormControl>
                             </FormItem>
                           )}
@@ -629,7 +628,7 @@ export default function AdminQuestionEditor() {
                                     <FormDescription>Passage includes charts/graphs</FormDescription>
                                   </div>
                                   <FormControl>
-                                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                    <Switch checked={!!field.value} onCheckedChange={field.onChange} />
                                   </FormControl>
                                 </FormItem>
                               )}
