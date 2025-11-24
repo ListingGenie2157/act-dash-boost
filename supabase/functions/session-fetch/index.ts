@@ -128,20 +128,28 @@ serve(async (req) => {
       console.log(`Successfully fetched ${questionsData.length} questions`);
     }
 
-    // Format questions: map staging_items columns if needed
+    // Format questions: map all ACT-style fields including staging_items columns
     const questions = questionsData.map(q => ({
       id: q.question_id ?? q.id ?? `${session.form_id}_${session.section}_${q.ord}`,
       ord: q.ord,
-      question: q.question,
+      question: q.question ?? q.stem,
       choice_a: q.choice_a,
       choice_b: q.choice_b,
       choice_c: q.choice_c,
       choice_d: q.choice_d,
+      choice_e: q.choice_e ?? null,
       passage_id: q.passage_id ?? null,
+      image_url: q.image_url ?? null,
+      image_caption: q.image_caption ?? null,
+      image_position: q.image_position ?? 'above_question',
+      underlined_text: q.underlined_text ?? null,
+      reference_number: q.reference_number ?? null,
+      position_in_passage: q.position_in_passage ?? null,
+      calculator_allowed: q.calculator_allowed ?? true,
     }));
 
-    // Collect unique passages for RD/SCI sections
-    const passages: Record<string, { title: string; passage_text: string }> = {};
+    // Collect unique passages for RD/SCI sections with all fields
+    const passages: Record<string, any> = {};
     
     if (['RD', 'SCI'].includes(session.section)) {
       questionsData.forEach(q => {
@@ -151,6 +159,11 @@ serve(async (req) => {
           passages[pid] = {
             title: q.passage_title || '',
             passage_text: text,
+            marked_text: q.marked_text ?? null,
+            passage_format: q.passage_format ?? null,
+            passage_type: q.passage_type ?? null,
+            has_charts: q.has_charts ?? false,
+            chart_images: q.chart_images ?? null,
           };
         }
       });

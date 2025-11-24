@@ -293,7 +293,7 @@ export default function Plan() {
                   
                   <div className="p-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {tasks.map((task: StudyPlanTask, taskIdx: number) => {
+                      {tasks.sort((a: any, b: any) => (a.sequence || 0) - (b.sequence || 0)).map((task: StudyPlanTask, taskIdx: number) => {
                         const config = TASK_CONFIG[task.type] || TASK_CONFIG.DRILL;
                         const Icon = config.icon;
                         

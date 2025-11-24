@@ -159,6 +159,7 @@ export interface Skill {
 }
 
 export interface StudyPlanTask {
+  sequence?: number;
   type: string;
   size?: number;
   estimated_mins?: number;

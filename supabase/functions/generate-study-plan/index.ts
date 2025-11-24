@@ -705,6 +705,7 @@ serve(async (req) => {
         allPlans.push({
           the_date: dateStr,
           tasks: [{
+            sequence: 1,
             type: "SIM",
             size: 60,
             estimated_mins: 60,
@@ -867,7 +868,8 @@ serve(async (req) => {
       });
 
       // Convert to JSON format
-      const tasksJson = tasksWithDrills.map((task) => ({
+      const tasksJson = tasksWithDrills.map((task, index) => ({
+        sequence: index + 1,
         type: task.type,
         skill_id: task.skillId || null,
         question_id: task.questionId || null,
