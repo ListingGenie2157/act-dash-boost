@@ -45,6 +45,7 @@ import QuizRunner from "./pages/QuizRunner";
 import WeakAreas from "./pages/WeakAreas";
 import CalculatorLab from "./pages/CalculatorLab";
 import AdminSkillCodes from "./pages/AdminSkillCodes";
+import AdminQuestionEditor from "./pages/AdminQuestionEditor";
 
 
 const queryClient = new QueryClient();
@@ -120,6 +121,7 @@ const App = () => (
             </LazyLoader>
           } />
           <Route path="/admin/skill-codes" element={<AdminSkillCodes />} />
+          <Route path="/admin/question-editor" element={<AdminQuestionEditor />} />
           {/* Parent portal route */}
           <Route path="/parent-portal" element={
             <LazyLoader>
