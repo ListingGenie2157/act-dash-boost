@@ -31,6 +31,9 @@ interface Question {
   choice_c: string;
   choice_d: string;
   passage_id?: string;
+  image_url?: string | null;
+  image_caption?: string | null;
+  image_position?: 'above_question' | 'inline' | 'between' | null;
 }
 
 interface Passage {
