@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, BookOpen, Clock, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,6 +35,7 @@ import { mapToTutorSubject } from '@/lib/tutorSubjectMapper';
 export default function EnhancedLessonViewer() {
   const { topic } = useParams<{ topic?: string }>();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [lesson, setLesson] = useState<EnhancedLesson | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -153,6 +154,14 @@ export default function EnhancedLessonViewer() {
       toast({
         title: 'Mastery Achieved! 🎉',
         description: `Great job! You scored ${score}% and mastered this skill.`,
+        action: (
+          <Button 
+            size="sm" 
+            onClick={() => navigate(`/drill/setup?skill=${topic}&mode=learned`)}
+          >
+            Practice More
+          </Button>
+        ),
       });
       setNeedsMorePractice(false);
     } else {

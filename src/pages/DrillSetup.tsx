@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Target, Clock, TrendingDown, Zap, BookOpen } from 'lucide-react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Target, Clock, TrendingDown, Zap, BookOpen, Sparkles, XCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +12,7 @@ import { useWeakAreasDb } from '@/hooks/useWeakAreasDb';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { toast } from 'sonner';
 
-type DrillMode = 'weak' | 'skill' | 'mixed';
+type DrillMode = 'weak' | 'skill' | 'mixed' | 'learned' | 'missed';
 
 interface SkillOption {
   id: string;
@@ -24,6 +24,7 @@ interface SkillOption {
 export default function DrillSetup() {
   const { subject } = useParams<{ subject: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [mode, setMode] = useState<DrillMode>('weak');
   const [selectedSkill, setSelectedSkill] = useState<string>('');
   const [questionCount, setQuestionCount] = useState<number>(10);
@@ -31,6 +32,17 @@ export default function DrillSetup() {
   const [skills, setSkills] = useState<SkillOption[]>([]);
   const [loading, setLoading] = useState(true);
   const { data: weakAreas } = useWeakAreasDb(5);
+
+  // Check for pre-selected skill and mode from URL params
+  useEffect(() => {
+    const urlSkill = searchParams.get('skill');
+    const urlMode = searchParams.get('mode') as DrillMode | null;
+    
+    if (urlSkill) {
+      setSelectedSkill(urlSkill);
+      setMode(urlMode || 'skill');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     async function fetchSkills() {
@@ -167,6 +179,32 @@ export default function DrillSetup() {
                     </div>
                     <p className="text-sm text-muted-foreground">
                       Target a specific skill for focused practice
+                    </p>
+                  </Label>
+                </div>
+
+                <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors">
+                  <RadioGroupItem value="learned" id="learned" className="mt-1" />
+                  <Label htmlFor="learned" className="flex-1 cursor-pointer">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Sparkles className="h-4 w-4 text-success" />
+                      <span className="font-semibold">Just Learned</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Reinforce skills you recently completed in lessons
+                    </p>
+                  </Label>
+                </div>
+
+                <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors">
+                  <RadioGroupItem value="missed" id="missed" className="mt-1" />
+                  <Label htmlFor="missed" className="flex-1 cursor-pointer">
+                    <div className="flex items-center gap-2 mb-1">
+                      <XCircle className="h-4 w-4 text-destructive" />
+                      <span className="font-semibold">Missed Questions</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Review questions you've gotten wrong before
                     </p>
                   </Label>
                 </div>
