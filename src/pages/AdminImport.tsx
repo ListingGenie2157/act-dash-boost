@@ -9,13 +9,19 @@ import { useToast } from '@/hooks/use-toast';
 import { Upload, FileText, CheckCircle, AlertTriangle, Download, Play } from 'lucide-react';
 
 interface ImportRecord {
-  id: string;
+  id?: string;
   form_id: string;
   section: string;
   ord: number;
   passage_id?: string | null;
   passage_title?: string | null;
   passage_text?: string | null;
+  passage_format?: string | null;
+  passage_type?: string | null;
+  has_charts?: boolean | null;
+  chart_images?: string | null;
+  marked_text?: string | null;
+  line_numbers_enabled?: boolean | null;
   skill_code: string;
   difficulty: string;
   question: string;
@@ -23,8 +29,13 @@ interface ImportRecord {
   choice_b: string;
   choice_c: string;
   choice_d: string;
+  choice_e?: string | null;
   answer: string;
   explanation?: string | null;
+  calculator_allowed?: boolean | null;
+  underlined_text?: string | null;
+  reference_number?: number | null;
+  position_in_passage?: number | null;
   image_url?: string | null;
   image_caption?: string | null;
   image_position?: string | null;
@@ -86,15 +97,22 @@ export default function AdminImport() {
 
       // Map to our expected format
       const passageText = record.passage_text || '';
+      const toBool = (val: string) => val?.toUpperCase() === 'TRUE';
       
       return {
-        id: record.id || `${record.form_id}_${record.section}_${String(index + 1).padStart(3, '0')}`,
+        id: record.id || undefined,
         form_id: record.form_id,
         section: record.section,
         ord: parseInt(record.ord) || index + 1,
         passage_id: record.passage_id || null,
         passage_title: record.passage_title || record.title || null,
         passage_text: passageText || null,
+        passage_format: record.passage_format || null,
+        passage_type: record.passage_type || null,
+        has_charts: record.has_charts ? toBool(record.has_charts) : null,
+        chart_images: record.chart_images || null,
+        marked_text: record.marked_text || null,
+        line_numbers_enabled: record.line_numbers_enabled ? toBool(record.line_numbers_enabled) : null,
         skill_code: record.skill_code,
         difficulty: record.difficulty,
         question: record.question,
@@ -102,8 +120,13 @@ export default function AdminImport() {
         choice_b: record.choice_b,
         choice_c: record.choice_c,
         choice_d: record.choice_d,
+        choice_e: record.choice_e || null,
         answer: record.answer,
         explanation: record.explanation || null,
+        calculator_allowed: record.calculator_allowed ? toBool(record.calculator_allowed) : null,
+        underlined_text: record.underlined_text || null,
+        reference_number: record.reference_number ? parseInt(record.reference_number) : null,
+        position_in_passage: record.position_in_passage ? parseInt(record.position_in_passage) : null,
         image_url: record.image_url || null,
         image_caption: record.image_caption || null,
         image_position: record.image_position || 'above_question',
@@ -124,8 +147,14 @@ export default function AdminImport() {
     if (!record.choice_d) errors.push({ row: rowIndex, field: 'choice_d', message: 'Choice D is required' });
 
     // Validate answer
-    if (!['A', 'B', 'C', 'D'].includes(record.answer)) {
-      errors.push({ row: rowIndex, field: 'answer', message: 'Answer must be A, B, C, or D' });
+    if (record.section === 'MATH' && record.choice_e) {
+      if (!['A', 'B', 'C', 'D', 'E'].includes(record.answer)) {
+        errors.push({ row: rowIndex, field: 'answer', message: 'Answer must be A, B, C, D, or E for 5-choice Math questions' });
+      }
+    } else {
+      if (!['A', 'B', 'C', 'D'].includes(record.answer)) {
+        errors.push({ row: rowIndex, field: 'answer', message: 'Answer must be A, B, C, or D' });
+      }
     }
 
     // Validate section
@@ -363,27 +392,106 @@ export default function AdminImport() {
 
   const downloadTemplate = () => {
     const headers = [
-      'id', 'form_id', 'section', 'ord', 'passage_id', 'passage_title', 
-      'passage_text', 'skill_code', 'difficulty', 'question', 
-      'choice_a', 'choice_b', 'choice_c', 'choice_d', 'answer', 'explanation',
+      // Core required fields
+      'ord', 'form_id', 'section', 'skill_code', 'difficulty',
+      'question', 'choice_a', 'choice_b', 'choice_c', 'choice_d', 'choice_e', 'answer',
+      'explanation',
+      // English-specific fields
+      'underlined_text', 'reference_number', 'position_in_passage',
+      // Math-specific fields
+      'calculator_allowed',
+      // Passage fields (include on first question of passage only)
+      'passage_id', 'passage_title', 'passage_text', 'passage_format', 'passage_type',
+      'has_charts', 'chart_images', 'marked_text', 'line_numbers_enabled',
+      // Image fields
       'image_url', 'image_caption', 'image_position'
     ].join(',');
     
-    const example = [
-      'FA_EN_001', 'A', 'EN', '1', '', '', '', 'E1.A', 'Easy',
-      '"The books ___ on the shelf."', 'is', 'are', 'was', 'were', 'B',
-      '"Plural subject ""books"" requires plural verb ""are""."',
-      '', '', 'above_question'
-    ].join(',');
+    // Comment lines explaining the format
+    const comments = [
+      '# ACT Question Import CSV Template',
+      '# Required: ord, form_id, section, skill_code, difficulty, question, choice_a-d, answer',
+      '# Optional: choice_e (Math 5-option), explanation, image fields',
+      '# English: underlined_text, reference_number, position_in_passage',
+      '# Math: calculator_allowed (TRUE/FALSE)',
+      '# Passages: passage_id, passage_title, passage_text (include on FIRST question only)',
+      '# Boolean fields: Use TRUE or FALSE',
+      '# JSON arrays: Use ["item1","item2"] format for chart_images',
+      '# Sections: EN (English), MATH (Math), RD (Reading), SCI (Science)',
+      '# Difficulty: Easy, Medium, or Hard',
+      '# Answer: A, B, C, D, or E (E for Math only)',
+      '',
+    ].join('\n');
 
-    const comment = '# image_url: Full URL or storage path (optional)\n# image_caption: Descriptive text for accessibility (recommended if image_url provided)\n# image_position: above_question (default), inline, or between (optional)';
+    // Example rows for each section
+    const examples = [
+      // English example with underlined text
+      [
+        '1', 'FA_EN', 'EN', 'ENG.001', 'Easy',
+        '"Choose the best alternative for the underlined portion."', 'goes to', 'is going to', 'went to', 'has gone to', '',
+        'B', '"The present progressive ""is going to"" indicates ongoing action."',
+        'goes to', '5', '12',
+        '',
+        'P001', '', '', '', '',
+        '', '', '', '',
+        '', '', 'above_question'
+      ].join(','),
+      
+      // Math example with 5 choices and calculator
+      [
+        '1', 'FA_MA', 'MATH', 'MATH.001', 'Medium',
+        '"What is the value of x if 2x + 5 = 15?"', '3', '5', '7', '10', '12',
+        'B', '"Subtract 5 from both sides: 2x = 10. Divide by 2: x = 5"',
+        '', '', '',
+        'TRUE',
+        '', '', '', '', '',
+        '', '', '', '',
+        '', '', ''
+      ].join(','),
+      
+      // Reading example with passage (first question of passage)
+      [
+        '1', 'FA_RE', 'RD', 'READ.001', 'Hard',
+        '"The main purpose of the passage is to:"', 'describe a historical event', 'analyze a literary technique', 'argue for a policy change', 'explain a scientific concept', '',
+        'D', '',
+        '', '', '',
+        '',
+        'P001', 'The Nature of Light', '"Light behaves as both a wave and a particle..."', 'Single', 'Natural Science',
+        'FALSE', '', '', 'TRUE',
+        '', '', 'above_question'
+      ].join(','),
+      
+      // Reading example (subsequent question - no passage data)
+      [
+        '2', 'FA_RE', 'RD', 'READ.002', 'Medium',
+        '"According to the passage, which is true?"', 'Light is only a wave', 'Light is only a particle', 'Light has dual nature', 'Light has no mass', '',
+        'C', '',
+        '', '', '',
+        '',
+        'P001', '', '', '', '',
+        '', '', '', '',
+        '', '', ''
+      ].join(','),
+      
+      // Science example with charts
+      [
+        '1', 'FA_SC', 'SCI', 'SCI.001', 'Medium',
+        '"Based on Figure 1, what is the relationship between temperature and pressure?"', 'directly proportional', 'inversely proportional', 'no relationship', 'exponential', '',
+        'A', '',
+        '', '', '',
+        '',
+        'P001', 'Experiment 1: Gas Properties', '"Students conducted an experiment..."', 'Data Representation', 'Natural Science',
+        'TRUE', '["https://example.com/chart1.png"]', '', 'FALSE',
+        '', '', 'above_question'
+      ].join(',')
+    ];
 
-    const content = `${comment}\n${headers}\n${example}`;
+    const content = comments + headers + '\n' + examples.join('\n');
     const blob = new Blob([content], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'import_template.csv';
+    a.download = 'act_import_template.csv';
     a.click();
     URL.revokeObjectURL(url);
   };
