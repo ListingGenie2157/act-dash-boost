@@ -48,12 +48,35 @@ export default function AdminImport() {
   const [dryRun, setDryRun] = useState(true);
   const { toast } = useToast();
 
-  const parseTSV = (content: string): ImportRecord[] => {
+  const parseCSV = (content: string): ImportRecord[] => {
     const lines = content.trim().split('\n');
-    const headers = lines[0].split('\t');
+    
+    // Parse CSV with quoted field support
+    const parseCSVLine = (line: string): string[] => {
+      const values: string[] = [];
+      let current = '';
+      let inQuotes = false;
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          values.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      values.push(current.trim());
+      return values;
+    };
+    
+    const headers = parseCSVLine(lines[0]);
     
     return lines.slice(1).map((line, index) => {
-      const values = line.split('\t');
+      const values = parseCSVLine(line);
       const record: Record<string, string> = {};
       
       headers.forEach((header, i) => {
@@ -61,7 +84,7 @@ export default function AdminImport() {
         record[cleanHeader] = values[i]?.trim() || '';
       });
 
-      // Map to our expected format - handle duplicate passage_text columns
+      // Map to our expected format
       const passageText = record.passage_text || '';
       
       return {
@@ -142,10 +165,10 @@ export default function AdminImport() {
 
   const loadFormAFiles = async () => {
     const files = [
-      { name: 'form_a_english.tsv', path: '/import-data/form_a_english.tsv' },
-      { name: 'form_a_math.tsv', path: '/import-data/form_a_math.tsv' },
-      { name: 'form_a_reading.tsv', path: '/import-data/form_a_reading.tsv' },
-      { name: 'form_a_science.tsv', path: '/import-data/form_a_science.tsv' },
+      { name: 'form_a_english.csv', path: '/import-data/form_a_english.csv' },
+      { name: 'form_a_math.csv', path: '/import-data/form_a_math.csv' },
+      { name: 'form_a_reading.csv', path: '/import-data/form_a_reading.csv' },
+      { name: 'form_a_science.csv', path: '/import-data/form_a_science.csv' },
     ];
 
     try {
@@ -155,7 +178,7 @@ export default function AdminImport() {
         const response = await fetch(fileInfo.path);
         if (response.ok) {
           const content = await response.text();
-          const file = new File([content], fileInfo.name, { type: 'text/tab-separated-values' });
+          const file = new File([content], fileInfo.name, { type: 'text/csv' });
           fileList.items.add(file);
         }
       }
@@ -178,7 +201,7 @@ export default function AdminImport() {
     if (!selectedFiles || selectedFiles.length === 0) {
       toast({
         title: "No files selected",
-        description: "Please select at least one TSV file to import.",
+        description: "Please select at least one CSV file to import.",
         variant: "destructive",
       });
       return;
@@ -195,16 +218,16 @@ export default function AdminImport() {
 
       // Process each file
       for (const file of Array.from(selectedFiles)) {
-        if (!file.name.endsWith('.tsv') && !file.name.endsWith('.txt')) {
-          warnings.push(`Skipped non-TSV file: ${file.name}`);
+        if (!file.name.endsWith('.csv') && !file.name.endsWith('.txt')) {
+          warnings.push(`Skipped non-CSV file: ${file.name}`);
           continue;
         }
 
         const content = await file.text();
-        const records = parseTSV(content);
+        const records = parseCSV(content);
         
         // Validate each record
-        records.forEach((record, index) => {
+        records.forEach((record: ImportRecord, index: number) => {
           const errors = validateRecord(record, index + 2); // +2 for header and 1-based indexing
           allErrors.push(...errors.map(e => ({ 
             ...e, 
@@ -344,23 +367,23 @@ export default function AdminImport() {
       'passage_text', 'skill_code', 'difficulty', 'question', 
       'choice_a', 'choice_b', 'choice_c', 'choice_d', 'answer', 'explanation',
       'image_url', 'image_caption', 'image_position'
-    ].join('\t');
+    ].join(',');
     
     const example = [
       'FA_EN_001', 'A', 'EN', '1', '', '', '', 'E1.A', 'Easy',
-      'The books ___ on the shelf.', 'is', 'are', 'was', 'were', 'B',
-      'Plural subject "books" requires plural verb "are".',
+      '"The books ___ on the shelf."', 'is', 'are', 'was', 'were', 'B',
+      '"Plural subject ""books"" requires plural verb ""are""."',
       '', '', 'above_question'
-    ].join('\t');
+    ].join(',');
 
     const comment = '# image_url: Full URL or storage path (optional)\n# image_caption: Descriptive text for accessibility (recommended if image_url provided)\n# image_position: above_question (default), inline, or between (optional)';
 
     const content = `${comment}\n${headers}\n${example}`;
-    const blob = new Blob([content], { type: 'text/tab-separated-values' });
+    const blob = new Blob([content], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'import_template.tsv';
+    a.download = 'import_template.csv';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -370,7 +393,7 @@ export default function AdminImport() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Admin Import Utility</h1>
         <p className="text-muted-foreground">
-          Import TSV files containing ACT questions and passages into the staging area.
+          Import CSV files containing ACT questions and passages into the staging area.
         </p>
       </div>
 
@@ -397,17 +420,17 @@ export default function AdminImport() {
           <CardContent className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">
-                Select TSV Files
+                Select CSV Files
               </label>
               <input
                 type="file"
                 multiple
-                accept=".tsv,.txt"
+                accept=".csv,.txt"
                 onChange={handleFileSelect}
                 className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Select one or more TSV files containing question data, or click "Load Form A" to use the uploaded files
+                Select one or more CSV files containing question data, or click "Load Form A" to use the uploaded files
               </p>
             </div>
 
