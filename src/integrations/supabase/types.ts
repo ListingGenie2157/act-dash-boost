@@ -443,27 +443,42 @@ export type Database = {
       }
       passages: {
         Row: {
+          chart_images: string[] | null
           created_at: string
           form_id: string
+          has_charts: boolean | null
           id: string
+          line_numbers_enabled: boolean | null
+          marked_text: Json | null
+          passage_format: string | null
           passage_text: string
           passage_type: string | null
           section: string
           title: string | null
         }
         Insert: {
+          chart_images?: string[] | null
           created_at?: string
           form_id: string
+          has_charts?: boolean | null
           id: string
+          line_numbers_enabled?: boolean | null
+          marked_text?: Json | null
+          passage_format?: string | null
           passage_text: string
           passage_type?: string | null
           section: string
           title?: string | null
         }
         Update: {
+          chart_images?: string[] | null
           created_at?: string
           form_id?: string
+          has_charts?: boolean | null
           id?: string
+          line_numbers_enabled?: boolean | null
+          marked_text?: Json | null
+          passage_format?: string | null
           passage_text?: string
           passage_type?: string | null
           section?: string
@@ -577,10 +592,12 @@ export type Database = {
       questions: {
         Row: {
           answer: string
+          calculator_allowed: boolean | null
           choice_a: string
           choice_b: string
           choice_c: string
           choice_d: string
+          choice_e: string | null
           created_at: string | null
           difficulty: number
           explanation: string | null
@@ -588,16 +605,21 @@ export type Database = {
           image_caption: string | null
           image_position: string | null
           image_url: string | null
+          position_in_passage: number | null
+          reference_number: number | null
           skill_id: string
           stem: string
           time_limit_secs: number | null
+          underlined_text: string | null
         }
         Insert: {
           answer: string
+          calculator_allowed?: boolean | null
           choice_a: string
           choice_b: string
           choice_c: string
           choice_d: string
+          choice_e?: string | null
           created_at?: string | null
           difficulty: number
           explanation?: string | null
@@ -605,16 +627,21 @@ export type Database = {
           image_caption?: string | null
           image_position?: string | null
           image_url?: string | null
+          position_in_passage?: number | null
+          reference_number?: number | null
           skill_id: string
           stem: string
           time_limit_secs?: number | null
+          underlined_text?: string | null
         }
         Update: {
           answer?: string
+          calculator_allowed?: boolean | null
           choice_a?: string
           choice_b?: string
           choice_c?: string
           choice_d?: string
+          choice_e?: string | null
           created_at?: string | null
           difficulty?: number
           explanation?: string | null
@@ -622,9 +649,12 @@ export type Database = {
           image_caption?: string | null
           image_position?: string | null
           image_url?: string | null
+          position_in_passage?: number | null
+          reference_number?: number | null
           skill_id?: string
           stem?: string
           time_limit_secs?: number | null
+          underlined_text?: string | null
         }
         Relationships: [
           {
