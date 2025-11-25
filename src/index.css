@@ -142,14 +142,17 @@ All colors MUST be HSL.
   }
 
   body {
-  @apply bg-background text-foreground;
-  /* Use a more engaging sans-serif font throughout the app */
-  font-family: 'Trebuchet MS', 'Helvetica Neue', sans-serif;
+    @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Ensure headings also use the new typeface for consistency */
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Trebuchet MS', 'Helvetica Neue', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    letter-spacing: -0.02em;
+    font-weight: 600;
   }
 }
 

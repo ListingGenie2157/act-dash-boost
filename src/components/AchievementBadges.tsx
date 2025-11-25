@@ -3,6 +3,22 @@ import { Progress } from '@/components/ui/progress';
 import { Trophy } from 'lucide-react';
 import { useAchievements } from '@/hooks/useAchievements';
 import { Skeleton } from '@/components/ui/skeleton';
+import dynamicIconImports from 'lucide-react/dynamicIconImports';
+import { lazy, Suspense } from 'react';
+import { LucideProps } from 'lucide-react';
+
+interface IconProps extends Omit<LucideProps, 'ref'> {
+  name: keyof typeof dynamicIconImports;
+}
+
+const Icon = ({ name, ...props }: IconProps) => {
+  const LucideIcon = lazy(dynamicIconImports[name]);
+  return (
+    <Suspense fallback={<div className="h-8 w-8" />}>
+      <LucideIcon {...props} />
+    </Suspense>
+  );
+};
 
 export function AchievementBadges() {
   const { data: achievements, isLoading } = useAchievements();
@@ -33,7 +49,7 @@ export function AchievementBadges() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-yellow-500" />
+          <Trophy className="h-5 w-5 text-amber-500" />
           Achievements
         </CardTitle>
         <CardDescription>
@@ -45,28 +61,41 @@ export function AchievementBadges() {
           {achievements.map(achievement => (
             <div
               key={achievement.id}
-              className={`p-4 rounded-lg border-2 transition-all ${
+              className={`group relative p-4 rounded-lg border transition-all duration-200 ${
                 achievement.unlocked
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border bg-muted/20 opacity-60'
+                  ? 'border-primary/50 bg-gradient-to-br from-primary/5 to-primary/10 hover:shadow-md hover:border-primary'
+                  : 'border-border bg-muted/30 opacity-70 hover:opacity-90'
               }`}
             >
-              <div className="text-center space-y-2">
-                <div className="text-4xl">{achievement.icon}</div>
+              <div className="text-center space-y-3">
+                <div className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center transition-transform duration-200 ${
+                  achievement.unlocked 
+                    ? 'bg-primary/10 group-hover:scale-110' 
+                    : 'bg-muted'
+                }`}>
+                  <Icon 
+                    name={achievement.icon as keyof typeof dynamicIconImports} 
+                    className={`h-7 w-7 ${achievement.unlocked ? 'text-primary' : 'text-muted-foreground'}`}
+                  />
+                </div>
                 <div>
-                  <p className="font-semibold text-sm">{achievement.title}</p>
-                  <p className="text-xs text-muted-foreground">{achievement.description}</p>
+                  <p className="font-semibold text-sm tracking-tight">{achievement.title}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{achievement.description}</p>
                 </div>
                 
                 {!achievement.unlocked && achievement.progress !== undefined && achievement.target && (
-                  <div className="space-y-1">
-                    <Progress value={(achievement.progress / achievement.target) * 100} className="h-1" />
-                    <p className="text-xs text-muted-foreground">
+                  <div className="space-y-1.5">
+                    <Progress value={(achievement.progress / achievement.target) * 100} className="h-1.5" />
+                    <p className="text-xs text-muted-foreground font-medium">
                       {achievement.progress} / {achievement.target}
                     </p>
                   </div>
                 )}
               </div>
+              
+              {achievement.unlocked && (
+                <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+              )}
             </div>
           ))}
         </div>
