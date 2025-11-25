@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap, ArrowRight } from 'lucide-react';
+import { GraduationCap, ArrowRight, PenTool, Calculator, BookOpen, Microscope } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -95,18 +95,23 @@ export function LessonsQuickAccess() {
     }
   };
 
-  const subjectColors = {
-    English: 'from-purple-500 to-pink-500',
-    Math: 'from-blue-500 to-cyan-500',
-    Reading: 'from-green-500 to-emerald-500',
-    Science: 'from-orange-500 to-amber-500'
-  };
-
-  const subjectIcons = {
-    English: '📝',
-    Math: '🔢',
-    Reading: '📚',
-    Science: '🔬'
+  const subjectConfig = {
+    English: { 
+      gradient: 'from-indigo-600/90 to-violet-600/90',
+      Icon: PenTool
+    },
+    Math: { 
+      gradient: 'from-blue-600/90 to-cyan-600/90',
+      Icon: Calculator
+    },
+    Reading: { 
+      gradient: 'from-emerald-600/90 to-teal-600/90',
+      Icon: BookOpen
+    },
+    Science: { 
+      gradient: 'from-amber-600/90 to-orange-600/90',
+      Icon: Microscope
+    }
   };
 
   // Group lessons by subject
@@ -137,7 +142,7 @@ export function LessonsQuickAccess() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Lessons Library</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">Lessons Library</h2>
           <p className="text-muted-foreground text-sm mt-1">
             {totalLessons} lessons • {startedCount} started
           </p>
@@ -148,21 +153,22 @@ export function LessonsQuickAccess() {
         <>
           <div className="grid gap-4">
             {Object.entries(lessonsBySubject).slice(0, 4).map(([subject, lessons]) => {
-              const subjectKey = subject as keyof typeof subjectColors;
+              const subjectKey = subject as keyof typeof subjectConfig;
+              const { gradient, Icon } = subjectConfig[subjectKey];
               return (
                 <Link 
                   key={subject}
                   to={`/lessons?subject=${subject}`}
                 >
-                  <Card className="overflow-hidden hover:shadow-lg transition-all cursor-pointer border-2">
+                  <Card className="overflow-hidden hover:shadow-md transition-all duration-200 cursor-pointer border">
                     <CardContent className="p-0">
-                      <div className={`bg-gradient-to-r ${subjectColors[subjectKey]} p-5 text-white`}>
+                      <div className={`bg-gradient-to-r ${gradient} p-5 text-white`}>
                         <div className="flex items-center gap-3">
-                          <div className="text-3xl">
-                            {subjectIcons[subjectKey]}
+                          <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                            <Icon className="h-5 w-5" />
                           </div>
                           <div className="flex-1">
-                            <h3 className="text-lg font-bold">{subject}</h3>
+                            <h3 className="text-lg font-semibold tracking-tight">{subject}</h3>
                             <p className="text-sm text-white/90">
                               {lessons.length} lessons available
                             </p>

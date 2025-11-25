@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, BookOpen, ArrowLeft, Filter, Clock, RefreshCw, Sparkles } from 'lucide-react';
+import { Search, BookOpen, ArrowLeft, Filter, Clock, RefreshCw, Sparkles, PenTool, Calculator, Microscope } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -17,28 +17,28 @@ import { Skeleton } from '@/components/ui/skeleton';
 // Subject-specific design system
 const subjectConfig = {
   'English': {
-    gradient: 'from-blue-500 via-blue-400 to-cyan-400',
-    icon: '✍️',
-    accentBorder: 'border-l-blue-500',
-    bgGradient: 'bg-gradient-to-br from-blue-500/10 to-cyan-500/5'
+    gradient: 'from-indigo-600/90 to-violet-600/90',
+    Icon: PenTool,
+    accentBorder: 'border-l-indigo-500',
+    bgGradient: 'bg-gradient-to-br from-indigo-500/5 to-violet-500/5'
   },
   'Math': {
-    gradient: 'from-purple-500 via-purple-400 to-pink-400',
-    icon: '🔢',
-    accentBorder: 'border-l-purple-500',
-    bgGradient: 'bg-gradient-to-br from-purple-500/10 to-pink-500/5'
+    gradient: 'from-blue-600/90 to-cyan-600/90',
+    Icon: Calculator,
+    accentBorder: 'border-l-blue-500',
+    bgGradient: 'bg-gradient-to-br from-blue-500/5 to-cyan-500/5'
   },
   'Reading': {
-    gradient: 'from-green-500 via-green-400 to-emerald-400',
-    icon: '📚',
-    accentBorder: 'border-l-green-500',
-    bgGradient: 'bg-gradient-to-br from-green-500/10 to-emerald-500/5'
+    gradient: 'from-emerald-600/90 to-teal-600/90',
+    Icon: BookOpen,
+    accentBorder: 'border-l-emerald-500',
+    bgGradient: 'bg-gradient-to-br from-emerald-500/5 to-teal-500/5'
   },
   'Science': {
-    gradient: 'from-orange-500 via-orange-400 to-red-400',
-    icon: '🔬',
-    accentBorder: 'border-l-orange-500',
-    bgGradient: 'bg-gradient-to-br from-orange-500/10 to-red-500/5'
+    gradient: 'from-amber-600/90 to-orange-600/90',
+    Icon: Microscope,
+    accentBorder: 'border-l-amber-500',
+    bgGradient: 'bg-gradient-to-br from-amber-500/5 to-orange-500/5'
   }
 } as const;
 
@@ -142,7 +142,7 @@ export default function LessonsLibrary() {
             <BookOpen className="h-7 w-7 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-semibold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
               Lessons Library
             </h1>
             <p className="text-muted-foreground mt-1">
@@ -210,17 +210,18 @@ export default function LessonsLibrary() {
             return (
               <div key={subject} className="space-y-4">
                 {/* Subject Header with Gradient */}
-                <div className={`relative overflow-hidden rounded-xl bg-gradient-to-r ${config.gradient} p-6 shadow-medium text-white`}>
-                  <div className="absolute inset-0 bg-black/5" />
+                <div className={`relative overflow-hidden rounded-xl bg-gradient-to-r ${config.gradient} p-6 shadow-sm text-white`}>
                   <div className="relative flex items-center gap-4">
-                    <span className="text-5xl">{config.icon}</span>
+                    <div className="p-3 bg-white/20 rounded-lg backdrop-blur-sm">
+                      <config.Icon className="h-8 w-8" />
+                    </div>
                     <div className="flex-1">
-                      <h2 className="text-3xl font-bold">{subject}</h2>
+                      <h2 className="text-3xl font-semibold tracking-tight">{subject}</h2>
                       <p className="text-white/90 mt-1">
                         {Object.values(clusters).reduce((sum, c) => sum + c.length, 0)} lessons across {Object.keys(clusters).length} topics
                       </p>
                     </div>
-                    <Sparkles className="h-8 w-8 opacity-80" />
+                    <Sparkles className="h-7 w-7 opacity-70" />
                   </div>
                 </div>
 
@@ -242,12 +243,12 @@ export default function LessonsLibrary() {
 
                     return (
                       <Collapsible key={cluster} defaultOpen>
-                        <div className={`border-2 rounded-xl shadow-soft hover:shadow-medium transition-all ${config.bgGradient}`}>
+                        <div className={`border rounded-xl shadow-sm hover:shadow-md transition-all duration-200 ${config.bgGradient}`}>
                           <CollapsibleTrigger className="flex items-center justify-between w-full p-5 group hover:bg-background/50 rounded-t-xl transition-all">
                             <div className="flex items-center gap-3 text-left">
                               <ChevronDown className="h-5 w-5 transition-transform group-data-[state=closed]:-rotate-90 flex-shrink-0" />
                               <div>
-                                <h3 className="text-lg font-semibold">{cluster}</h3>
+                                <h3 className="text-lg font-semibold tracking-tight">{cluster}</h3>
                                 <div className="flex items-center gap-2 mt-1">
                                   <Badge variant="secondary" className="text-xs">
                                     {clusterLessons.length} lessons
@@ -282,8 +283,8 @@ export default function LessonsLibrary() {
                                   >
                                     <Card 
                                       ref={isHighlighted ? highlightedCardRef : null}
-                                      className={`h-full shadow-soft hover:shadow-strong hover:scale-105 transition-all duration-300 cursor-pointer group border-l-4 ${config.accentBorder} ${
-                                        isHighlighted ? 'ring-2 ring-primary shadow-strong bg-primary/5' : ''
+                                      className={`h-full shadow-sm hover:shadow-md hover:border-primary/50 transition-all duration-200 cursor-pointer group border-l-4 ${config.accentBorder} ${
+                                        isHighlighted ? 'ring-2 ring-primary shadow-md bg-primary/5' : ''
                                       }`}
                                     >
                                       <CardHeader className="pb-3">
@@ -300,7 +301,7 @@ export default function LessonsLibrary() {
                                             />
                                           )}
                                         </div>
-                                        <CardTitle className="text-base leading-snug group-hover:text-primary transition-colors">
+                                        <CardTitle className="text-base leading-snug tracking-tight group-hover:text-primary transition-colors">
                                           {lesson.skill_name}
                                           {isHighlighted && (
                                             <Badge variant="default" className="ml-2 text-xs animate-pulse">
