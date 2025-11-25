@@ -1,23 +1,22 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Trophy } from 'lucide-react';
+import { Trophy, Target, BookOpen, Flame, Star, CheckCircle, LucideProps } from 'lucide-react';
 import { useAchievements } from '@/hooks/useAchievements';
 import { Skeleton } from '@/components/ui/skeleton';
-import dynamicIconImports from 'lucide-react/dynamicIconImports';
-import { lazy, Suspense } from 'react';
-import { LucideProps } from 'lucide-react';
 
-interface IconProps extends Omit<LucideProps, 'ref'> {
-  name: keyof typeof dynamicIconImports;
-}
+const iconMap: Record<string, React.ComponentType<Omit<LucideProps, 'ref'>>> = {
+  'target': Target,
+  'book-open': BookOpen,
+  'flame': Flame,
+  'trophy': Trophy,
+  'star': Star,
+  'check-circle': CheckCircle,
+};
 
-const Icon = ({ name, ...props }: IconProps) => {
-  const LucideIcon = lazy(dynamicIconImports[name]);
-  return (
-    <Suspense fallback={<div className="h-8 w-8" />}>
-      <LucideIcon {...props} />
-    </Suspense>
-  );
+const Icon = ({ name, ...props }: { name: string } & Omit<LucideProps, 'ref'>) => {
+  const LucideIcon = iconMap[name];
+  if (!LucideIcon) return <div className="h-8 w-8" />;
+  return <LucideIcon {...props} />;
 };
 
 export function AchievementBadges() {
@@ -74,7 +73,7 @@ export function AchievementBadges() {
                     : 'bg-muted'
                 }`}>
                   <Icon 
-                    name={achievement.icon as keyof typeof dynamicIconImports} 
+                    name={achievement.icon} 
                     className={`h-7 w-7 ${achievement.unlocked ? 'text-primary' : 'text-muted-foreground'}`}
                   />
                 </div>
