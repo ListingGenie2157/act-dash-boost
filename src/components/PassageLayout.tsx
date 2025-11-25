@@ -7,6 +7,7 @@ import { QuestionCard } from './QuestionCard';
 import { ReadingPreferences } from './ReadingPreferences';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { FlaskConical, BarChart3, Users } from 'lucide-react';
+import { sanitizeHTML } from '@/lib/sanitize';
 
 interface Question {
   id: string;
@@ -271,11 +272,11 @@ export function PassageLayout({
                             {paragraphs.map((para, idx) => {
                               const enhancedText = renderParagraphWithReferences(para, idx, passage.marked_text ?? null);
                               return (
-                                <p key={idx} className="mb-4">
+                                 <p key={idx} className="mb-4">
                                   <span className="text-xs text-muted-foreground mr-2 font-sans select-none">
                                     [{idx + 1}]
                                   </span>
-                                  <span dangerouslySetInnerHTML={{ __html: enhancedText }} />
+                                  <span dangerouslySetInnerHTML={{ __html: sanitizeHTML(enhancedText) }} />
                                 </p>
                               );
                             })}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -119,7 +119,7 @@ export default function DiagnosticTest() {
       const { data: skillsData } = await supabase
         .from('skills')
         .select('id, code')
-        .or(skillCodes.map(code => `id.eq.${code},code.eq.${code}`).join(','));
+        .in('code', skillCodes);
 
       // Create skill lookup map
       const skillMap = new Map<string, string>();
@@ -142,7 +142,7 @@ export default function DiagnosticTest() {
         
         return {
           ord: q.ord ?? 0,
-          question_id: String(q.staging_id || ''),
+          question_id: q.staging_id ? String(q.staging_id) : '',
           question: q.question ?? '',
           choice_a: q.choice_a ?? '',
           choice_b: q.choice_b ?? '',
@@ -255,7 +255,7 @@ export default function DiagnosticTest() {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (submitting) return;
     setSubmitting(true);
 
@@ -309,7 +309,7 @@ export default function DiagnosticTest() {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [submitting, formId, questions, attempts, toast, navigate]);
 
 
   const formatTime = (seconds: number) => {
