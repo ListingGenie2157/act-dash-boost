@@ -42,6 +42,17 @@ const TIMERS = {
   SCI_A: 35 * 60, SCI_B: 35 * 60, SCI_C: 35 * 60, // 35 minutes
 };
 
+// Stable hash function for deterministic shuffling
+function hashCode(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash);
+}
+
 // Seeded shuffle function
 function shuffle<T>(array: T[], seed: number): T[] {
   const arr = [...array];
@@ -64,7 +75,7 @@ export default function DiagnosticTest() {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [questions, setQuestions] = useState<(Question & { skill_id?: string | null })[]>([]);
   const [attempts, setAttempts] = useState<Record<string, Attempt>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -172,10 +183,11 @@ export default function DiagnosticTest() {
             question_ord: existing.question_ord,
           };
         } else {
-          // Create new attempt with shuffled choices
+          // Create new attempt with shuffled choices using stable seed
           const answerMap = { A: 0, B: 1, C: 2, D: 3 };
           const baseIdx = answerMap[question.answer as keyof typeof answerMap] ?? 0;
-          const choiceOrder = shuffle([0, 1, 2, 3], Date.now() + question.ord);
+          const stableSeed = hashCode(`${user.user.id}-${formId}-${question.question_id}`);
+          const choiceOrder = shuffle([0, 1, 2, 3], stableSeed);
           const correctIdx = choiceOrder.indexOf(baseIdx);
 
           const attempt: Attempt = {
@@ -259,7 +271,7 @@ export default function DiagnosticTest() {
           blocks: [{
             questions: questions.map(q => ({ 
               id: q.question_id, 
-              skill_tags: (q as any).skill_id ? [(q as any).skill_id] : []
+              skill_tags: q.skill_id ? [q.skill_id] : []
             })),
             answers: Object.entries(attempts).map(([questionId, attempt]) => ({
               questionId,

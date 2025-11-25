@@ -20,7 +20,7 @@ export function useShuffledQuestion<T extends {
     const seed = userId && question.id ? `${userId}-${question.id}` : undefined;
     
     return shuffleQuestionChoices(question, seed);
-  }, [question, userId, question?.id]);
+  }, [question, userId]);
 }
 
 /**

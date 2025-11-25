@@ -235,6 +235,16 @@ interface StudyTaskInsert {
   is_critical: boolean;
 }
 
+interface PlanTaskJson {
+  sequence?: number;
+  type: string;
+  skill_id?: string | null;
+  question_id?: string | null;
+  size: number;
+  estimated_mins: number;
+  title: string;
+}
+
 interface StudyMode {
   name: "CRASH" | "ACCEL" | "MASTERY";
   allowLearn: boolean;
@@ -682,7 +692,7 @@ serve(async (req) => {
       .limit(10); // More skills for 7 days
 
     // Generate plans for 7 days
-    const allPlans: Array<{ the_date: string; tasks: any[] }> = [];
+    const allPlans: Array<{ the_date: string; tasks: PlanTaskJson[] }> = [];
     const allStudyTasks: StudyTaskInsert[] = [];
     const assignedReviewIds = new Set<string>();
     const assignedSkillIds = new Set<string>(completedSkillIds);
