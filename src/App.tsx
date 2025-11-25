@@ -14,9 +14,11 @@ import Login from "./pages/Login";
 import SimpleLogin from "./pages/SimpleLogin";
 import Onboarding from "./pages/Onboarding";
 import Simulation from "./pages/Simulation";
+import SimulationResults from "./pages/SimulationResults";
+import UpdatePassword from "./pages/UpdatePassword";
 import NotFound from "./pages/NotFound";
 import { 
-  LazyAnalytics, 
+  LazyAnalytics,
   LazyAdminImport,
   LazyAdminLessonImport,
   LazyParentPortal,
@@ -63,6 +65,7 @@ const App = () => (
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/simple-login" element={<SimpleLogin />} />
+          <Route path="/update-password" element={<UpdatePassword />} />
           
           {/* Protected routes with sidebar layout */}
           <Route element={<AppLayout />}>
@@ -81,6 +84,7 @@ const App = () => (
           <Route path="/diagnostic-results-complete" element={<DiagnosticResultsComplete />} />
           {/* New simulation system */}
           <Route path="/simulation" element={<Simulation />} />
+          <Route path="/simulation-results" element={<SimulationResults />} />
           {/* Cheatsheet routes */}
           <Route path="/cheatsheets/english" element={
             <LazyLoader>

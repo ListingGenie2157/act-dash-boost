@@ -169,7 +169,20 @@ export default function DrillRunner() {
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back to Drills
       </Button>
-      <div className="mt-4 text-destructive">{error}</div>
+      <div className="mt-8 max-w-md mx-auto">
+        <div className="p-6 border rounded-lg bg-muted/30 text-center space-y-4">
+          <div className="text-5xl">📚</div>
+          <h3 className="text-xl font-semibold">Content Coming Soon</h3>
+          <p className="text-muted-foreground">
+            {error === 'No questions found for this section' || error === 'No valid questions found for this section'
+              ? 'We\'re working on adding questions for this section. Check back soon!'
+              : error}
+          </p>
+          <Button onClick={() => navigate('/drill-runner')} className="mt-4">
+            Browse Other Drills
+          </Button>
+        </div>
+      </div>
     </div>
   );
 
