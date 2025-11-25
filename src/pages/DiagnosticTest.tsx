@@ -19,6 +19,7 @@ interface Question {
   explanation: string;
   passage_text?: string;
   passage_title?: string;
+  skill_id?: string | null;
 }
 
 interface Attempt {
@@ -42,12 +43,24 @@ const TIMERS = {
   SCI_A: 35 * 60, SCI_B: 35 * 60, SCI_C: 35 * 60, // 35 minutes
 };
 
-// Seeded shuffle function
+// Simple string hash function for stable seeding
+function hashCode(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash);
+}
+
+// Seeded shuffle function (Fisher-Yates)
 function shuffle<T>(array: T[], seed: number): T[] {
   const arr = [...array];
   let m = arr.length;
+  let currentSeed = seed;
   const random = () => {
-    const x = Math.sin(seed++) * 10000;
+    const x = Math.sin(currentSeed++) * 10000;
     return x - Math.floor(x);
   };
   
@@ -121,12 +134,12 @@ export default function DiagnosticTest() {
       });
 
       // Map staging_items to Question type with skill_id resolution
-      const mappedQuestions: (Question & { skill_id?: string | null })[] = (data || []).map(q => {
+      const mappedQuestions: Question[] = (data || []).map(q => {
         let skill_id: string | null = null;
         
         if (q.skill_code) {
           const normalized = q.skill_code.trim().toUpperCase();
-          skill_id = skillMap.get(normalized) || null;
+          skill_id = skillMap.get(normalized) ?? null;
         }
         
         return {
@@ -173,9 +186,11 @@ export default function DiagnosticTest() {
           };
         } else {
           // Create new attempt with shuffled choices
+          // Use stable seed based on user_id, formId, and question_id for reproducible shuffling
           const answerMap = { A: 0, B: 1, C: 2, D: 3 };
           const baseIdx = answerMap[question.answer as keyof typeof answerMap] ?? 0;
-          const choiceOrder = shuffle([0, 1, 2, 3], Date.now() + question.ord);
+          const stableSeed = hashCode(`${user.user.id}-${formId}-${question.question_id}`);
+          const choiceOrder = shuffle([0, 1, 2, 3], stableSeed);
           const correctIdx = choiceOrder.indexOf(baseIdx);
 
           const attempt: Attempt = {
@@ -259,7 +274,7 @@ export default function DiagnosticTest() {
           blocks: [{
             questions: questions.map(q => ({ 
               id: q.question_id, 
-              skill_tags: (q as any).skill_id ? [(q as any).skill_id] : []
+              skill_tags: q.skill_id ? [q.skill_id] : []
             })),
             answers: Object.entries(attempts).map(([questionId, attempt]) => ({
               questionId,

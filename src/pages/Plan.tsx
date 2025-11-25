@@ -5,11 +5,11 @@ import type { StudyPlanDay, StudyPlanTask } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Target, GraduationCap, RotateCcw, Zap, Clock, Calendar, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Target, GraduationCap, RotateCcw, Zap, Clock, Calendar, TrendingUp, LucideIcon } from 'lucide-react';
 import { CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 
-const TASK_CONFIG: Record<string, { icon: any; gradient: string; label: string }> = {
+const TASK_CONFIG: Record<string, { icon: LucideIcon; gradient: string; label: string }> = {
   LEARN: { icon: GraduationCap, gradient: 'from-primary to-primary/80', label: 'Lesson' },
   DRILL: { icon: Target, gradient: 'from-secondary to-cyan-500', label: 'Drill' },
   REVIEW: { icon: RotateCcw, gradient: 'from-success to-emerald-500', label: 'Review' },
@@ -293,7 +293,7 @@ export default function Plan() {
                   
                   <div className="p-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {tasks.sort((a: any, b: any) => (a.sequence || 0) - (b.sequence || 0)).map((task: StudyPlanTask, taskIdx: number) => {
+                      {tasks.sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0)).map((task: StudyPlanTask, taskIdx: number) => {
                         const config = TASK_CONFIG[task.type] || TASK_CONFIG.DRILL;
                         const Icon = config.icon;
                         

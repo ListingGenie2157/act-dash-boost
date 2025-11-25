@@ -222,6 +222,24 @@ interface Task {
   priority: number;
 }
 
+interface PlanTaskJson {
+  sequence?: number;
+  type: string;
+  skill_id?: string | null;
+  question_id?: string | null;
+  size: number;
+  estimated_mins: number;
+  title: string;
+}
+
+interface TestWeekTask {
+  type: string;
+  section?: string;
+  size: number;
+  estimated_mins: number;
+  skill_id?: string | null;
+}
+
 interface StudyTaskInsert {
   user_id: string;
   the_date: string;
@@ -274,20 +292,10 @@ function getStudyMode(daysLeft: number | null): StudyMode {
 // Test week special scheduling - focused on final review
 function getTestWeekTasks(
   daysLeft: number,
-  userId: string,
-  dateStr: string,
-): Array<{
-  type: string;
-  section?: string;
-  size: number;
-  estimated_mins: number;
-}> {
-  const tasks: Array<{
-    type: string;
-    section?: string;
-    size: number;
-    estimated_mins: number;
-  }> = [];
+  _userId: string,
+  _dateStr: string,
+): TestWeekTask[] {
+  const tasks: TestWeekTask[] = [];
 
   // Final week focuses on review and light practice, not full simulations
   if (daysLeft >= 3 && daysLeft <= 7) {
@@ -682,7 +690,7 @@ serve(async (req) => {
       .limit(10); // More skills for 7 days
 
     // Generate plans for 7 days
-    const allPlans: Array<{ the_date: string; tasks: any[] }> = [];
+    const allPlans: Array<{ the_date: string; tasks: PlanTaskJson[] }> = [];
     const allStudyTasks: StudyTaskInsert[] = [];
     const assignedReviewIds = new Set<string>();
     const assignedSkillIds = new Set<string>(completedSkillIds);
@@ -702,15 +710,18 @@ serve(async (req) => {
         console.log(`🎯 SIM day ${dateStr} – skipping normal tasks`);
 
         // Reflect SIM in study_plan_days
+        const simTask: PlanTaskJson = {
+          sequence: 1,
+          type: "SIM",
+          skill_id: null,
+          question_id: null,
+          size: 60,
+          estimated_mins: 60,
+          title: "Full practice test",
+        };
         allPlans.push({
           the_date: dateStr,
-          tasks: [{
-            sequence: 1,
-            type: "SIM",
-            size: 60,
-            estimated_mins: 60,
-            title: "Full practice test",
-          }],
+          tasks: [simTask],
         });
 
         // DO NOT push to allStudyTasks – SIM tasks handled via simTasks
@@ -722,8 +733,19 @@ serve(async (req) => {
         console.warn(`Test week mode: ${dayDaysLeft} days until test`);
         const specialTasks = getTestWeekTasks(dayDaysLeft, user.id, dateStr);
         if (specialTasks.length > 0) {
-          allPlans.push({ the_date: dateStr, tasks: specialTasks });
-          specialTasks.forEach((task: any) => {
+          // Map to PlanTaskJson format
+          const planTasks: PlanTaskJson[] = specialTasks.map((task, idx) => ({
+            sequence: idx + 1,
+            type: task.type,
+            skill_id: task.skill_id ?? null,
+            question_id: null,
+            size: task.size,
+            estimated_mins: task.estimated_mins,
+            title: task.type === "REVIEW" ? `Review ${task.size} questions` : `${task.type} Task`,
+          }));
+          allPlans.push({ the_date: dateStr, tasks: planTasks });
+          
+          specialTasks.forEach((task) => {
             const estimatedSeconds =
               typeof task.estimated_mins === "number" && task.estimated_mins > 0
                 ? Math.round(task.estimated_mins * 60)
