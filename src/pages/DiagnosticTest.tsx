@@ -94,30 +94,17 @@ export default function DiagnosticTest() {
         return;
       }
 
-      // Load questions with skill mapping
+      // Load questions from staging_items (like DrillRunner)
       const { data, error } = await supabase
-        .from('v_form_section')
+        .from('staging_items')
         .select('*')
         .eq('form_id', formId)
-        .order('section', { ascending: true })
         .order('ord', { ascending: true });
 
       if (error) throw error;
 
-      // Fetch ALL staging_items at once (single query instead of N queries)
-      const { data: stagingItems } = await supabase
-        .from('staging_items')
-        .select('ord, skill_code')
-        .eq('form_id', formId);
-
-      // Create a map of ord -> skill_code for fast lookup
-      const stagingMap = new Map<number, string>();
-      stagingItems?.forEach(item => {
-        stagingMap.set(item.ord, item.skill_code);
-      });
-
-      // Fetch all skills at once
-      const skillCodes = Array.from(new Set(Array.from(stagingMap.values()).filter(Boolean)));
+      // Fetch all skills for skill_id lookup
+      const skillCodes = Array.from(new Set((data || []).map(q => q.skill_code).filter(Boolean)));
       const { data: skillsData } = await supabase
         .from('skills')
         .select('id, code')
@@ -133,38 +120,30 @@ export default function DiagnosticTest() {
         }
       });
 
-      // Map questions to include skill_id (no async needed)
-      const questionsWithSkills = (data || []).map(q => {
-        const skill_code = stagingMap.get(q.ord || 0);
+      // Map staging_items to Question type with skill_id resolution
+      const mappedQuestions: (Question & { skill_id?: string | null })[] = (data || []).map(q => {
         let skill_id: string | null = null;
         
-        if (skill_code) {
-          const normalized = skill_code.trim().toUpperCase();
+        if (q.skill_code) {
+          const normalized = q.skill_code.trim().toUpperCase();
           skill_id = skillMap.get(normalized) || null;
         }
         
         return {
-          ...q,
+          ord: q.ord ?? 0,
+          question_id: String(q.staging_id || ''),
+          question: q.question ?? '',
+          choice_a: q.choice_a ?? '',
+          choice_b: q.choice_b ?? '',
+          choice_c: q.choice_c ?? '',
+          choice_d: q.choice_d ?? '',
+          answer: q.answer ?? 'A',
+          explanation: q.explanation ?? '',
+          passage_text: q.passage_text ?? undefined,
+          passage_title: q.passage_title ?? undefined,
           skill_id
         };
       });
-
-
-      // Map to Question type with defaults for nullable fields and skill_id
-      const mappedQuestions: (Question & { skill_id?: string | null })[] = questionsWithSkills.map(q => ({
-        ord: q.ord ?? 0,
-        question_id: q.question_id ?? '',
-        question: q.question ?? '',
-        choice_a: q.choice_a ?? '',
-        choice_b: q.choice_b ?? '',
-        choice_c: q.choice_c ?? '',
-        choice_d: q.choice_d ?? '',
-        answer: q.answer ?? 'A',
-        explanation: q.explanation ?? '',
-        passage_text: q.passage_text ?? undefined,
-        passage_title: q.passage_title ?? undefined,
-        skill_id: q.skill_id
-      }));
 
       setQuestions(mappedQuestions);
       const baseTime = TIMERS[formId as keyof typeof TIMERS] || 1200;
