@@ -112,28 +112,53 @@ export default function TimedDrills() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {subjects.map(stat => (
-              <Link key={stat.subject} to={`/drill/${encodeURIComponent(stat.subject)}/setup`}>
-                <Card className="h-full hover:shadow-lg hover:border-primary transition-all cursor-pointer group">
-                  <CardHeader>
-                    <CardTitle className="text-xl group-hover:text-primary transition-colors flex items-center gap-2">
-                      <Clock className="h-5 w-5" />
-                      {stat.subject}
-                    </CardTitle>
-                    <CardDescription className="flex items-center gap-2">
-                      <Badge variant="secondary">
-                        {stat.questionCount} questions
-                      </Badge>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      Configure and start a targeted drill for this section
-                    </p>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+            {subjects.map(stat => {
+              const hasContent = stat.questionCount > 0;
+              
+              return hasContent ? (
+                <Link key={stat.subject} to={`/drill/${encodeURIComponent(stat.subject)}/setup`}>
+                  <Card className="h-full hover:shadow-lg hover:border-primary cursor-pointer transition-all group">
+                    <CardHeader>
+                      <CardTitle className="text-xl group-hover:text-primary transition-colors flex items-center gap-2">
+                        <Clock className="h-5 w-5" />
+                        {stat.subject}
+                      </CardTitle>
+                      <CardDescription className="flex items-center gap-2">
+                        <Badge variant="secondary">
+                          {stat.questionCount} questions
+                        </Badge>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        Configure and start a targeted drill for this section
+                      </p>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ) : (
+                <div key={stat.subject}>
+                  <Card className="h-full opacity-60 cursor-not-allowed transition-all">
+                    <CardHeader>
+                      <CardTitle className="text-xl flex items-center gap-2">
+                        <Clock className="h-5 w-5" />
+                        {stat.subject}
+                      </CardTitle>
+                      <CardDescription className="flex items-center gap-2">
+                        <Badge variant="outline" className="border-yellow-500 text-yellow-600">
+                          Coming Soon
+                        </Badge>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        Content is being prepared for this section
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

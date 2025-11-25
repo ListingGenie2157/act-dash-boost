@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Calculator, Target, Brain, Check, AlertCircle, Loader2 } from 'lucide-react';
+import { Calculator, Target, Brain, Check, AlertCircle, Loader2, Mail } from 'lucide-react';
 import { isValidEmail, normalizeEmail } from '@/utils/validation';
+import { toast } from 'sonner';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -19,6 +20,9 @@ export default function Login() {
   const [success, setSuccess] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong'>('weak');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
   const navigate = useNavigate();
 
   // Check password strength
@@ -134,6 +138,119 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    setError('');
+
+    if (!isValidEmail(resetEmail)) {
+      setError('Please enter a valid email address');
+      setResetLoading(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        normalizeEmail(resetEmail),
+        {
+          redirectTo: `${window.location.origin}/update-password`
+        }
+      );
+
+      if (error) {
+        setError(error.message);
+      } else {
+        toast.success('Password reset email sent! Check your inbox.');
+        setShowForgotPassword(false);
+        setResetEmail('');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  if (showForgotPassword) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-purple-500 via-pink-500 to-indigo-600 animate-gradient relative overflow-hidden">
+        {/* Animated background shapes */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 left-20 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-float" />
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-pink-300/20 rounded-full blur-3xl animate-float-delayed" />
+        </div>
+
+        <Card className="w-full max-w-md backdrop-blur-xl bg-white/95 dark:bg-gray-900/95 border-white/20 shadow-2xl relative z-10 animate-scale-in">
+          <CardHeader className="space-y-1 text-center pb-8">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center">
+                <Mail className="w-8 h-8 text-white" />
+              </div>
+            </div>
+            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              Reset Password
+            </CardTitle>
+            <CardDescription className="text-base">
+              Enter your email and we'll send you a reset link
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="resetEmail">Email</Label>
+                <Input
+                  id="resetEmail"
+                  type="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  required
+                  className="transition-all focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              {error && (
+                <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 text-sm flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                disabled={resetLoading}
+              >
+                {resetLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Sending...
+                  </>
+                ) : (
+                  'Send Reset Link'
+                )}
+              </Button>
+            </form>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setShowForgotPassword(false);
+                setError('');
+                setResetEmail('');
+              }}
+            >
+              Back to Sign In
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (success) {
     return (
@@ -376,8 +493,8 @@ export default function Login() {
             <p className="text-center text-xs text-muted-foreground">
               <button
                 type="button"
-                className="hover:underline"
-                onClick={() => setError('Password reset feature coming soon!')}
+                className="hover:underline text-purple-600 dark:text-purple-400 font-medium"
+                onClick={() => setShowForgotPassword(true)}
               >
                 Forgot your password?
               </button>
