@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -71,6 +71,65 @@ export default function DiagnosticTest() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
+  const handleSubmit = useCallback(async () => {
+    if (submitting) return;
+    setSubmitting(true);
+
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return;
+
+      
+      // Call finish-diagnostic edge function with real skill IDs
+      const { error } = await supabase.functions.invoke('finish-diagnostic', {
+        body: {
+          section: formId.startsWith('D2') ? formId.slice(2) : formId,
+          blocks: [{
+            questions: questions.map(q => {
+              const questionWithSkill = q as Question & { skill_id?: string | null };
+              return { 
+                id: q.question_id, 
+                skill_tags: questionWithSkill.skill_id ? [questionWithSkill.skill_id] : []
+              };
+            }),
+            answers: Object.entries(attempts).map(([questionId, attempt]) => ({
+              questionId,
+              selectedAnswer: attempt.selected_idx?.toString() || '',
+              isCorrect: attempt.selected_idx === attempt.correct_idx
+            }))
+          }]
+        }
+      });
+
+      if (error) throw error;
+
+      // Mark this section as complete in localStorage
+      const completed = JSON.parse(localStorage.getItem('diagnostic_completed_sections') || '[]');
+      if (!completed.includes(formId)) {
+        completed.push(formId);
+        localStorage.setItem('diagnostic_completed_sections', JSON.stringify(completed));
+      }
+
+      // Navigate back to diagnostic orchestrator
+      toast({
+        title: "Section Complete!",
+        description: `${formId} section saved successfully.`,
+      });
+
+      navigate('/diagnostic');
+
+    } catch (error) {
+      console.error('Error submitting diagnostic:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit diagnostic test",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  }, [submitting, formId, questions, attempts, navigate, toast]);
+
   useEffect(() => {
     if (formId) {
       loadDiagnostic();
@@ -84,7 +143,7 @@ export default function DiagnosticTest() {
     } else if (timeLeft === 0 && questions.length > 0) {
       handleSubmit();
     }
-  }, [timeLeft]);
+  }, [timeLeft, questions.length, handleSubmit]);
 
   const loadDiagnostic = async () => {
     try {
@@ -108,7 +167,7 @@ export default function DiagnosticTest() {
       const { data: skillsData } = await supabase
         .from('skills')
         .select('id, code')
-        .or(skillCodes.map(code => `id.eq.${code},code.eq.${code}`).join(','));
+        .in('code', skillCodes);
 
       // Create skill lookup map
       const skillMap = new Map<string, string>();
@@ -129,9 +188,17 @@ export default function DiagnosticTest() {
           skill_id = skillMap.get(normalized) || null;
         }
         
+        // Validate required fields
+        if (!q.staging_id) {
+          console.error('Missing staging_id for question:', q);
+        }
+        if (!q.form_id) {
+          console.error('Missing form_id for question:', q);
+        }
+        
         return {
           ord: q.ord ?? 0,
-          question_id: String(q.staging_id || ''),
+          question_id: String(q.staging_id ?? ''),
           question: q.question ?? '',
           choice_a: q.choice_a ?? '',
           choice_b: q.choice_b ?? '',
@@ -242,63 +309,6 @@ export default function DiagnosticTest() {
       console.error('Error saving answer:', error);
     }
   };
-
-  const handleSubmit = async () => {
-    if (submitting) return;
-    setSubmitting(true);
-
-    try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return;
-
-      
-      // Call finish-diagnostic edge function with real skill IDs
-      const { error } = await supabase.functions.invoke('finish-diagnostic', {
-        body: {
-          section: formId.startsWith('D2') ? formId.slice(2) : formId,
-          blocks: [{
-            questions: questions.map(q => ({ 
-              id: q.question_id, 
-              skill_tags: (q as any).skill_id ? [(q as any).skill_id] : []
-            })),
-            answers: Object.entries(attempts).map(([questionId, attempt]) => ({
-              questionId,
-              selectedAnswer: attempt.selected_idx?.toString() || '',
-              isCorrect: attempt.selected_idx === attempt.correct_idx
-            }))
-          }]
-        }
-      });
-
-      if (error) throw error;
-
-      // Mark this section as complete in localStorage
-      const completed = JSON.parse(localStorage.getItem('diagnostic_completed_sections') || '[]');
-      if (!completed.includes(formId)) {
-        completed.push(formId);
-        localStorage.setItem('diagnostic_completed_sections', JSON.stringify(completed));
-      }
-
-      // Navigate back to diagnostic orchestrator
-      toast({
-        title: "Section Complete!",
-        description: `${formId} section saved successfully.`,
-      });
-
-      navigate('/diagnostic');
-
-    } catch (error) {
-      console.error('Error submitting diagnostic:', error);
-      toast({
-        title: "Error",
-        description: "Failed to submit diagnostic test",
-        variant: "destructive",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
