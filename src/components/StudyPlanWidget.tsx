@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import type { PlanTaskJson } from '@/types/studyPlan';
 
 interface StudyTask {
   type: 'LEARN' | 'DRILL' | 'REVIEW' | 'SIM' | 'FLASH';
@@ -92,12 +93,14 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
       }
 
       // Map tasks_json to StudyTask format
-      const rawTasks = planDay.tasks_json as any[];
+      const rawTasks = Array.isArray(planDay.tasks_json) 
+        ? (planDay.tasks_json as unknown as PlanTaskJson[])
+        : [];
       
       // Fetch skill details to get subject information
       const skillIds = rawTasks
-        .map((task: any) => task.skill_id)
-        .filter(Boolean);
+        .map((task: PlanTaskJson) => task.skill_id)
+        .filter((id): id is string => Boolean(id));
       
       let skillsMap = new Map<string, { name: string; subject: string }>();
       if (skillIds.length > 0) {
@@ -113,10 +116,10 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
         }
       }
       
-      const mappedTasks = rawTasks.map((task: any) => {
+      const mappedTasks: StudyTask[] = rawTasks.map((task: PlanTaskJson) => {
         const skillInfo = task.skill_id ? skillsMap.get(task.skill_id) : null;
         return {
-          type: task.type,
+          type: (task.type || 'LEARN') as 'LEARN' | 'DRILL' | 'REVIEW' | 'SIM' | 'FLASH',
           skill_id: task.skill_id ?? null,
           size: task.size ?? 0,
           skill_name: skillInfo?.name || task.title || undefined,

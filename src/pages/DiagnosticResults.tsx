@@ -55,8 +55,16 @@ export default function DiagnosticResults() {
 
           const diagnostic = diagnostics[0];
           
+          interface DiagnosticBlock {
+            top_5_weak_skills?: Array<{
+              skill: string;
+              accuracy: number;
+              total: number;
+            }>;
+          }
+          
           // Reconstruct results from the most recent diagnostic
-          const responses = (diagnostic.responses || []) as any;
+          const responses = (diagnostic.responses || []) as DiagnosticBlock[];
           const reconstructedResults = {
             predicted_section_score: diagnostic.score || 0,
             top_5_weak_skills: Array.isArray(responses) && responses.length > 0 

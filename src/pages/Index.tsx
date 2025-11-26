@@ -20,7 +20,15 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [session, setSession] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
+  
+  interface Profile {
+    test_date?: string | null;
+    onboarding_complete?: boolean | null;
+    has_study_plan?: boolean | null;
+    first_name?: string | null;
+  }
+  
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [hasStudyPlan, setHasStudyPlan] = useState<boolean | null>(null);
   const [hasDiagnostic, setHasDiagnostic] = useState<boolean>(false);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -53,10 +61,15 @@ const Index = () => {
             .eq('id', session.user.id)
             .maybeSingle();
 
-          const { data: profile, error: profileError } = await Promise.race([
+          const result = await Promise.race([
             profilePromise,
             timeoutPromise
-          ]) as any;
+          ]);
+          
+          const { data: profile, error: profileError } = result as { 
+            data: any; 
+            error: any; 
+          };
 
           if (import.meta.env.DEV) console.log('[Index] Profile result:', { profile, profileError });
 
@@ -85,10 +98,12 @@ const Index = () => {
                 setTimeout(() => resolve({ data: null }), 3000)
               );
 
-              const { data: planCheck } = await Promise.race([
+              const planResult = await Promise.race([
                 planCheckPromise,
                 planCheckTimeout
-              ]) as any;
+              ]);
+              
+              const { data: planCheck } = planResult as { data: any[] | null };
 
               const actuallyHasPlan = profile.has_study_plan || (planCheck && planCheck.length > 0);
               setHasStudyPlan(actuallyHasPlan);
@@ -417,7 +432,7 @@ const Index = () => {
 
                       if (!error) {
                         setHasStudyPlan(false);
-                        setProfile((prev: any) => ({ ...prev, has_study_plan: false }));
+                        setProfile((prev) => prev ? { ...prev, has_study_plan: false } : prev);
                       }
                     }
                   }}
@@ -648,7 +663,7 @@ const Index = () => {
         onOpenChange={setWizardOpen}
         onPlanGenerated={() => {
           setHasStudyPlan(true);
-          setProfile((prev: any) => ({ ...prev, has_study_plan: true }));
+          setProfile((prev) => prev ? { ...prev, has_study_plan: true } : prev);
         }}
       />
     </div>

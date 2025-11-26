@@ -82,8 +82,19 @@ export default function DiagnosticResultsComplete() {
       // Aggregate weak skills across all sections
       const allWeakSkills: WeakSkill[] = [];
       
+      interface DiagnosticBlock {
+        questions?: Array<{
+          id: string;
+          skill_tags?: string[];
+        }>;
+        answers?: Array<{
+          questionId: string;
+          isCorrect: boolean;
+        }>;
+      }
+      
       for (const diag of diagnostics) {
-        const responses = (diag.responses || []) as any[];
+        const responses = (diag.responses || []) as DiagnosticBlock[];
         
         for (const block of responses) {
           if (block.questions && block.answers) {

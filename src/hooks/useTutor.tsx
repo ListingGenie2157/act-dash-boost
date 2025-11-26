@@ -84,8 +84,8 @@ export function TutorProvider({ children }: { children: React.ReactNode }) {
       });
 
       // Check if function returned an error response (200 with error field)
-      if (data && (data as any).error && !(data as any).assistant_message) {
-        throw new Error((data as any).error);
+      if (data && 'error' in data && typeof data.error === 'string' && !data.assistant_message) {
+        throw new Error(data.error);
       }
 
       if (error) throw error;
@@ -104,26 +104,28 @@ export function TutorProvider({ children }: { children: React.ReactNode }) {
           setSessionId(data.session_id);
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error sending message:', error);
       
-      let errorMessage = 'Failed to get response from tutor. Please try again.';
+      const errorMessage = error instanceof Error ? error.message : String(error);
       
-      if (error.message?.includes('LOVABLE_API_KEY not configured') || 
-          error.message?.includes('Tutor is not configured on the server')) {
-        errorMessage = 'The tutor is not fully configured on the server yet. Please contact support.';
-      } else if (error.message?.includes('429') || error.message?.includes('Rate limit')) {
-        errorMessage = 'Too many requests. Please wait a moment and try again.';
-      } else if (error.message?.includes('402') || error.message?.includes('credits exhausted')) {
-        errorMessage = 'AI credits exhausted. Please contact support.';
-      } else if (error.message && error.message.length < 200 && !error.message.includes('fetch')) {
+      let displayMessage = 'Failed to get response from tutor. Please try again.';
+      
+      if (errorMessage.includes('LOVABLE_API_KEY not configured') || 
+          errorMessage.includes('Tutor is not configured on the server')) {
+        displayMessage = 'The tutor is not fully configured on the server yet. Please contact support.';
+      } else if (errorMessage.includes('429') || errorMessage.includes('Rate limit')) {
+        displayMessage = 'Too many requests. Please wait a moment and try again.';
+      } else if (errorMessage.includes('402') || errorMessage.includes('credits exhausted')) {
+        displayMessage = 'AI credits exhausted. Please contact support.';
+      } else if (errorMessage.length < 200 && !errorMessage.includes('fetch')) {
         // Show the actual error message if it's user-safe
-        errorMessage = error.message;
+        displayMessage = errorMessage;
       }
 
       toast({
         title: 'Error',
-        description: errorMessage,
+        description: displayMessage,
         variant: 'destructive',
       });
 
