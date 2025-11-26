@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 
 interface DrillComponentProps {
   drill: DrillSession;
-  onComplete: (score: number) => void;
+  onComplete: (score: number, answers: number[]) => void;
   onBack: () => void;
 }
 
@@ -33,7 +33,7 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
     ).length;
     
     const score = Math.round((correctCount / drill.questions.length) * 100);
-    onComplete(score);
+    onComplete(score, finalAnswers);
   };
 
   useEffect(() => {
