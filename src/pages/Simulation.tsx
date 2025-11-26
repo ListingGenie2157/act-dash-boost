@@ -20,6 +20,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useTestCompanion } from '@/hooks/useTestCompanion';
+import { TestCompanion } from '@/components/TestCompanion';
 import { Loader2, Home } from 'lucide-react';
 
 interface Question {
@@ -67,6 +69,7 @@ export default function Simulation() {
   const [state, setState] = useState<SimulationState>('form-picker');
   const [selectedForm, setSelectedForm] = useState<string>('');
   const [selectedSection, setSelectedSection] = useState<string>('');
+  const [isCoachMode, setIsCoachMode] = useState(false);
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -74,6 +77,19 @@ export default function Simulation() {
   const [loading, setLoading] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
+
+  // Test Companion for coached mode
+  const companion = useTestCompanion({
+    enabled: isCoachMode,
+    section: selectedSection,
+    currentQuestionIndex,
+    totalQuestions: sessionData?.questions.length || 0,
+    timeOnCurrentQuestion: Date.now() - questionStartTime,
+    totalTimeLeftSec: timeLeft,
+    totalTimeSec: sessionData?.time_limit_sec || 0,
+    hasAnswer: sessionData ? !!answers[sessionData.questions[currentQuestionIndex]?.id] : false,
+    answeredCount: Object.keys(answers).length,
+  });
 
   // Explicit auth header helper (temporary until we confirm automatic header attach works reliably on all browsers)
   const getAuthHeaders = async (): Promise<Record<string, string>> => {
@@ -301,8 +317,9 @@ export default function Simulation() {
     setState('section-picker');
   };
 
-  const handleSectionSelect = (section: string) => {
+  const handleSectionSelect = (section: string, coached: boolean = false) => {
     setSelectedSection(section);
+    setIsCoachMode(coached);
     setState('loading');
     startSession(selectedForm, section);
   };
@@ -352,6 +369,9 @@ export default function Simulation() {
 
     return (
       <div className="min-h-screen bg-background">
+        {/* Test Companion Badge */}
+        <TestCompanion enabled={isCoachMode} tipCount={companion.tipCount} />
+
         {/* Header with Timer */}
         <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
           <div className="container mx-auto px-4 py-3">
