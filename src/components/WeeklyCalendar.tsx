@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { BookOpen, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { format, isToday, differenceInDays } from 'date-fns';
+import type { PlanTaskJson } from '@/types/studyPlan';
 
 interface StudyTask {
   type: string;
@@ -57,8 +58,10 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
         // Build tasks by date from tasks_json
         const tasksByDate: Record<string, StudyTask[]> = {};
         planDays?.forEach(day => {
-          const dayTasks = Array.isArray(day.tasks_json) ? day.tasks_json as any[] : [];
-          tasksByDate[day.the_date] = dayTasks.map((t: any) => ({
+          const dayTasks = Array.isArray(day.tasks_json) 
+            ? (day.tasks_json as unknown as PlanTaskJson[])
+            : [];
+          tasksByDate[day.the_date] = dayTasks.map((t: PlanTaskJson) => ({
             type: t.type,
             title: t.title,
             skill_id: t.skill_id ?? undefined,

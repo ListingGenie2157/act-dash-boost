@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import type { PlanTaskJson } from '@/types/studyPlan';
 
 export default function TaskLauncher() {
   const { date, idx } = useParams<{ date?: string; idx?: string }>();
@@ -45,7 +46,9 @@ export default function TaskLauncher() {
         return;
       }
 
-      const tasks = planDay.tasks_json as any[];
+      const tasks = Array.isArray(planDay.tasks_json)
+        ? (planDay.tasks_json as unknown as PlanTaskJson[])
+        : [];
       
       // Validate idx is in range
       if (i < 0 || i >= tasks.length) {

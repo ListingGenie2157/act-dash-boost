@@ -9,6 +9,15 @@ import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { FlaskConical, BarChart3, Users } from 'lucide-react';
 import { sanitizeHTML } from '@/lib/sanitize';
 
+interface MarkedTextReference {
+  start: number;
+  end: number;
+  label?: string;
+  text?: string;
+}
+
+type MarkedText = Record<string, MarkedTextReference>;
+
 interface Question {
   id: string;
   ord?: number;
@@ -28,7 +37,7 @@ interface Question {
 interface Passage {
   title: string;
   passage_text: string;
-  marked_text?: Record<string, any> | null;
+  marked_text?: MarkedText | null;
   passage_format?: string | null;
   passage_type?: string | null;
   has_charts?: boolean | null;
@@ -95,7 +104,7 @@ export function PassageLayout({
   };
 
   // Render paragraph with inline references
-  const renderParagraphWithReferences = (text: string, paragraphIndex: number, markedText: Record<string, any> | null) => {
+  const renderParagraphWithReferences = (text: string, paragraphIndex: number, markedText: MarkedText | null) => {
     if (!markedText) {
       return text;
     }
