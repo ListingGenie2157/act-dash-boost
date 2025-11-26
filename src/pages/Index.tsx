@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { Session, PostgrestResponse, PostgrestSingleResponse } from '@supabase/supabase-js';
 import { useNavigate, Link } from 'react-router-dom';
 import { StudyPlanWidget } from '@/components/StudyPlanWidget';
 import { StudyPlanWizard } from '@/components/StudyPlanWizard';
@@ -12,14 +13,31 @@ import { WeeklyCalendar } from '@/components/WeeklyCalendar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/utils/logger';
 import { AnimatedCounter } from '@/components/landing/AnimatedCounter';
 import { FeatureCard } from '@/components/landing/FeatureCard';
 import { Calculator, Target, Bot, TrendingUp, Shuffle, Calendar, Sparkles, ArrowRight, BookOpen, Clock, Zap, User } from 'lucide-react';
 
+const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+};
+
 const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   
   interface Profile {
     test_date?: string | null;
@@ -38,7 +56,7 @@ const Index = () => {
   useEffect(() => {
     let mounted = true;
 
-    const syncAuthAndProfile = async (session: any) => {
+    const syncAuthAndProfile = async (session: Session | null) => {
       if (!mounted) return;
 
       if (import.meta.env.DEV) console.log('[Index] syncAuthAndProfile called', { hasSession: !!session });
@@ -50,26 +68,17 @@ const Index = () => {
         try {
           if (import.meta.env.DEV) console.log('[Index] Fetching profile for user:', session.user.id);
 
-          // Add timeout but handle it gracefully
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Query timeout')), 10000)
+          const profileResult = await withTimeout<PostgrestSingleResponse<Profile>>(
+            supabase
+              .from('profiles')
+              .select('test_date, onboarding_complete, has_study_plan, first_name')
+              .eq('id', session.user.id)
+              .maybeSingle(),
+            10_000,
+            'Profile query timeout'
           );
-
-          const profilePromise = supabase
-            .from('profiles')
-            .select('test_date, onboarding_complete, has_study_plan, first_name')
-            .eq('id', session.user.id)
-            .maybeSingle();
-
-          const result = await Promise.race([
-            profilePromise,
-            timeoutPromise
-          ]);
           
-          const { data: profile, error: profileError } = result as { 
-            data: any; 
-            error: any; 
-          };
+          const { data: profile, error: profileError } = profileResult;
 
           if (import.meta.env.DEV) console.log('[Index] Profile result:', { profile, profileError });
 
@@ -88,27 +97,21 @@ const Index = () => {
 
             // Verify study plan exists in database (override profile flag if needed)
             try {
-              const planCheckPromise = supabase
-                .from('study_tasks')
-                .select('id')
-                .eq('user_id', session.user.id)
-                .limit(1);
-
-              const planCheckTimeout = new Promise((resolve) =>
-                setTimeout(() => resolve({ data: null }), 3000)
+              const planCheckResult = await withTimeout<PostgrestResponse<{ id: string }>>(
+                supabase
+                  .from('study_tasks')
+                  .select('id')
+                  .eq('user_id', session.user.id)
+                  .limit(1),
+                3000,
+                'Plan check timeout'
               );
 
-              const planResult = await Promise.race([
-                planCheckPromise,
-                planCheckTimeout
-              ]);
-              
-              const { data: planCheck } = planResult as { data: any[] | null };
-
-              const actuallyHasPlan = profile.has_study_plan || (planCheck && planCheck.length > 0);
+              const planCheck = planCheckResult.data;
+              const actuallyHasPlan = Boolean(profile.has_study_plan || (planCheck && planCheck.length > 0));
               setHasStudyPlan(actuallyHasPlan);
-            } catch {
-              // If plan check fails, just use profile flag
+            } catch (planCheckError) {
+              logger.warn('Plan check failed, defaulting to profile flag', { error: planCheckError });
               setHasStudyPlan(profile.has_study_plan ?? false);
             }
 

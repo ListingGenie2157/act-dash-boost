@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import type { StudyPlanDay, StudyPlanTask } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Target, GraduationCap, RotateCcw, Zap, Clock, Calendar, TrendingUp, type LucideIcon } from 'lucide-react';
 import { CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { useAuthUser } from '@/hooks/queries/useAuth';
+import { useRegenerateStudyPlan, useStudyPlanRange, type NormalizedStudyPlanTask } from '@/features/study-plan/hooks';
 
 const TASK_CONFIG: Record<string, { icon: LucideIcon; gradient: string; label: string }> = {
   LEARN: { icon: GraduationCap, gradient: 'from-primary to-primary/80', label: 'Lesson' },
@@ -19,94 +19,38 @@ const TASK_CONFIG: Record<string, { icon: LucideIcon; gradient: string; label: s
 
 export default function Plan() {
   const navigate = useNavigate();
-  const [plans, setPlans] = useState<StudyPlanDay[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [generating, setGenerating] = useState(false);
+  const { data: user, isLoading: userLoading } = useAuthUser();
 
-  useEffect(() => {
-    const fetchPlans = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setPlans([]);
-          setLoading(false);
-          return;
-        }
-        const today = new Date().toISOString().split('T')[0];
-        const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0];
-        const { data: planDays, error: fetchError } = await supabase
-          .from('study_plan_days')
-          .select('the_date, tasks_json, generated_at, user_id')
-          .eq('user_id', user.id)
-          .gte('the_date', today)
-          .lte('the_date', sevenDaysFromNow)
-          .order('the_date');
-        
-        if (fetchError) {
-          throw fetchError;
-        }
-
-        // Type cast and validate tasks_json
-        const typedPlans: StudyPlanDay[] = (planDays || []).map(day => ({
-          ...day,
-          tasks_json: Array.isArray(day.tasks_json) ? day.tasks_json as unknown as StudyPlanTask[] : []
-        }));
-
-        setPlans(typedPlans);
-      } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load plan';
-        setError(errorMessage);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPlans();
+  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const sevenDaysFromNow = useMemo(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 7);
+    return date.toISOString().split('T')[0];
   }, []);
 
+  const {
+    data: plans = [],
+    isLoading: planLoading,
+    isError,
+    error,
+  } = useStudyPlanRange({
+    userId: user?.id,
+    startDate: today,
+    endDate: sevenDaysFromNow,
+  });
+
+  const { mutateAsync: regeneratePlan, isPending: generating } = useRegenerateStudyPlan();
+
+  const loading = userLoading || planLoading;
+
   const handleGeneratePlan = async () => {
-    setGenerating(true);
     try {
-      const { error: planError } = await supabase.functions.invoke('generate-study-plan', {
-        body: { force: true }
-      });
-
-      if (planError) {
-        console.error('Error generating plan:', planError);
-        toast.error(planError.message || 'Failed to generate study plan');
-      } else {
-        toast.success('Your study plan is ready!');
-        // Refetch plans
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        
-        const today = new Date().toISOString().split('T')[0];
-        const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0];
-        const { data: planDays } = await supabase
-          .from('study_plan_days')
-          .select('the_date, tasks_json, generated_at, user_id')
-          .eq('user_id', user.id)
-          .gte('the_date', today)
-          .lte('the_date', sevenDaysFromNow)
-          .order('the_date');
-
-        // Type cast and validate tasks_json
-        const typedPlans: StudyPlanDay[] = (planDays || []).map(day => ({
-          ...day,
-          tasks_json: Array.isArray(day.tasks_json) ? day.tasks_json as unknown as StudyPlanTask[] : []
-        }));
-
-        setPlans(typedPlans);
-      }
+      await regeneratePlan({ force: true });
+      toast.success('Your study plan is ready!');
     } catch (err) {
-      console.error('Error:', err);
-      toast.error('Failed to generate study plan');
-    } finally {
-      setGenerating(false);
+      const message = err instanceof Error ? err.message : 'Failed to generate study plan';
+      console.error('Error generating plan:', err);
+      toast.error(message);
     }
   };
 
@@ -123,7 +67,8 @@ export default function Plan() {
     );
   }
   
-  if (error) {
+  if (isError) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to load plan';
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-5xl mx-auto">
@@ -132,14 +77,12 @@ export default function Plan() {
             Back to Dashboard
           </Button>
           <Card className="p-8 text-center">
-            <p className="text-destructive">Error: {error}</p>
+            <p className="text-destructive">Error: {errorMessage}</p>
           </Card>
         </div>
       </div>
     );
   }
-
-  const today = new Date().toISOString().split('T')[0];
 
   return (
     <div className="min-h-screen bg-background">
@@ -171,10 +114,10 @@ export default function Plan() {
           };
           
           plans.forEach(plan => {
-            (plan.tasks_json || []).forEach((task: StudyPlanTask) => {
+            plan.tasks.forEach((task: NormalizedStudyPlanTask) => {
               if (task.type === 'LEARN' || task.type === 'DRILL') {
                 // Extract subject from title or use type
-                const subject = task.title?.split(':')[0]?.trim() || 'Other';
+                const subject = task.subject ?? task.title?.split(':')[0]?.trim() ?? 'Other';
                 if (subjectCounts[subject] !== undefined) {
                   subjectCounts[subject]++;
                 }
@@ -250,13 +193,13 @@ export default function Plan() {
         ) : (
           <div className="space-y-6">
             {plans.map((plan, idx) => {
-              const allTasks: StudyPlanTask[] = plan.tasks_json ?? [];
+              const allTasks = plan.tasks ?? [];
               const tasks = allTasks.filter(t => t.type !== 'SIM');
               
               if (tasks.length === 0) return null;
 
-              const isToday = plan.the_date === today;
-              const dayDate = new Date(plan.the_date + 'T00:00:00');
+              const isToday = plan.date === today;
+              const dayDate = new Date(`${plan.date}T00:00:00`);
               const dayName = dayDate.toLocaleDateString('en-US', { weekday: 'long' });
               const dateFormatted = dayDate.toLocaleDateString('en-US', { 
                 month: 'short', 
@@ -293,14 +236,14 @@ export default function Plan() {
                   
                   <div className="p-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {tasks.sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0)).map((task: StudyPlanTask, taskIdx: number) => {
+                      {tasks.sort((a, b) => a.sequence - b.sequence).map((task: NormalizedStudyPlanTask, taskIdx: number) => {
                         const config = TASK_CONFIG[task.type] || TASK_CONFIG.DRILL;
                         const Icon = config.icon;
                         
                         return (
                           <Link
                             key={taskIdx}
-                            to={`/task/${plan.the_date}/${taskIdx}`}
+                            to={`/task/${plan.date}/${taskIdx}`}
                             className="block group"
                           >
                             <Card

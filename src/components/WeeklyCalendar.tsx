@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { BookOpen, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { format, isToday, differenceInDays } from 'date-fns';
-import type { PlanTaskJson } from '@/types/studyPlan';
+import { useStudyPlanRange } from '@/features/study-plan/hooks';
 
 interface StudyTask {
   type: string;
@@ -30,75 +29,56 @@ interface WeeklyCalendarProps {
 }
 
 export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
-  const [weekData, setWeekData] = useState<WeekDay[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [daysUntilTest, setDaysUntilTest] = useState<number | null>(null);
+  const baseDate = useMemo(() => new Date(), []);
+  const dateStrings = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(baseDate);
+      date.setDate(baseDate.getDate() + i);
+      return date.toISOString().split('T')[0];
+    });
+  }, [baseDate]);
 
-  useEffect(() => {
-    const fetchWeeklyPlan = async () => {
-      try {
-        const today = new Date();
-        const dates: string[] = [];
-        for (let i = 0; i < 7; i++) {
-          const date = new Date(today);
-          date.setDate(today.getDate() + i);
-          dates.push(date.toISOString().split('T')[0]);
-        }
+  const {
+    data: planDays = [],
+    isLoading: loading,
+  } = useStudyPlanRange({
+    userId,
+    startDate: dateStrings[0],
+    endDate: dateStrings[dateStrings.length - 1],
+    enabled: Boolean(userId),
+  });
 
-        // Fetch study plan days (source of truth)
-        const { data: planDays, error: planError } = await supabase
-          .from('study_plan_days')
-          .select('the_date, tasks_json')
-          .eq('user_id', userId)
-          .in('the_date', dates)
-          .order('the_date');
+  const weekData: WeekDay[] = useMemo(() => {
+    const tasksByDate = new Map<string, StudyTask[]>();
 
-        if (planError) throw planError;
+    planDays.forEach((day) => {
+      tasksByDate.set(
+        day.date,
+        day.tasks.map((task) => ({
+          type: task.type,
+          title: task.title,
+          skillId: task.skillId,
+          status: 'PENDING' as const,
+        }))
+      );
+    });
 
-        // Build tasks by date from tasks_json
-        const tasksByDate: Record<string, StudyTask[]> = {};
-        planDays?.forEach(day => {
-          const dayTasks = Array.isArray(day.tasks_json) 
-            ? (day.tasks_json as unknown as PlanTaskJson[])
-            : [];
-          tasksByDate[day.the_date] = dayTasks.map((t: PlanTaskJson) => ({
-            type: t.type,
-            title: t.title,
-            skill_id: t.skill_id ?? undefined,
-            status: 'PENDING' as const,
-          }));
-        });
+    return dateStrings.map((dateStr) => {
+      const dateObj = new Date(`${dateStr}T00:00:00`);
+      return {
+        date: dateStr,
+        dateObj,
+        tasks: tasksByDate.get(dateStr) ?? [],
+        isToday: isToday(dateObj),
+      };
+    });
+  }, [dateStrings, planDays]);
 
-        // Build week data
-        const week: WeekDay[] = dates.map(dateStr => {
-          const dateTasks = tasksByDate[dateStr] || [];
-          const dateObj = new Date(dateStr);
-
-          return {
-            date: dateStr,
-            dateObj,
-            tasks: dateTasks,
-            isToday: isToday(dateObj),
-          };
-        });
-
-        setWeekData(week);
-
-        // Calculate days until test
-        if (testDate) {
-          const testDateObj = new Date(testDate);
-          const days = differenceInDays(testDateObj, today);
-          setDaysUntilTest(days);
-        }
-      } catch (err) {
-        console.error('Error fetching weekly plan:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchWeeklyPlan();
-  }, [userId, testDate]);
+  const daysUntilTest = useMemo(() => {
+    if (!testDate) return null;
+    const diff = differenceInDays(new Date(testDate), new Date());
+    return Number.isNaN(diff) ? null : diff;
+  }, [testDate]);
 
   if (loading) {
     return (

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchPlanDayRaw } from '@/features/study-plan/api';
 import { toast } from 'sonner';
 import type { PlanTaskJson } from '@/types/studyPlan';
 
@@ -33,22 +34,14 @@ export default function TaskLauncher() {
         return;
       }
 
-      // Fetch tasks for the date from study_plan_days table
-      const { data: planDay, error } = await supabase
-        .from('study_plan_days')
-        .select('tasks_json')
-        .eq('the_date', date)
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (error || !planDay?.tasks_json) {
+      let tasks: PlanTaskJson[] = [];
+      try {
+        tasks = await fetchPlanDayRaw(user.id, date);
+      } catch (planError) {
+        console.error('Failed to load plan day', planError);
         navigate('/plan', { replace: true });
         return;
       }
-
-      const tasks = Array.isArray(planDay.tasks_json)
-        ? (planDay.tasks_json as unknown as PlanTaskJson[])
-        : [];
       
       // Validate idx is in range
       if (i < 0 || i >= tasks.length) {
