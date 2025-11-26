@@ -13,13 +13,15 @@ const corsHeaders = {
 const SessionStartSchema = z.object({
   form_id: z.string().min(1).max(50),
   section: z.enum(['EN', 'MATH', 'RD', 'SCI']),
-  mode: z.enum(['simulation', 'practice', 'booster'])
+  mode: z.enum(['simulation', 'practice', 'booster']),
+  coached: z.boolean().optional().default(false)
 });
 
 interface SessionStartRequest {
   form_id: string;
   section: string;
   mode: 'simulation' | 'practice' | 'booster';
+  coached?: boolean;
 }
 
 serve(async (req) => {
@@ -78,7 +80,7 @@ serve(async (req) => {
       });
     }
 
-    const { form_id, section, mode } = validationResult.data;
+    const { form_id, section, mode, coached } = validationResult.data;
 
     // Validate form_id format for simulations
     if (mode === 'simulation' && !['FA_', 'FB_', 'FC_'].some(prefix => form_id.startsWith(prefix))) {
@@ -117,6 +119,7 @@ serve(async (req) => {
         section,
         mode,
         time_limit_sec,
+        coached,
       })
       .select()
       .single();

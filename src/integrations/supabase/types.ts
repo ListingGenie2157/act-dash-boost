@@ -179,13 +179,6 @@ export type Database = {
             referencedRelation: "questions"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "error_bank_question_id_fkey"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "v_form_section"
-            referencedColumns: ["question_id"]
-          },
         ]
       }
       form_questions: {
@@ -226,25 +219,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "form_questions_passage_id_fkey"
-            columns: ["passage_id"]
-            isOneToOne: false
-            referencedRelation: "v_form_section"
-            referencedColumns: ["passage_id"]
-          },
-          {
             foreignKeyName: "form_questions_question_id_fkey"
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "questions"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "form_questions_question_id_fkey"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "v_form_section"
-            referencedColumns: ["question_id"]
           },
         ]
       }
@@ -737,13 +716,6 @@ export type Database = {
             referencedRelation: "questions"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "review_queue_question_id_fkey"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "v_form_section"
-            referencedColumns: ["question_id"]
-          },
         ]
       }
       rewards_ledger: {
@@ -818,6 +790,7 @@ export type Database = {
       }
       sessions: {
         Row: {
+          coached: boolean
           created_at: string
           ended_at: string | null
           form_id: string
@@ -829,6 +802,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          coached?: boolean
           created_at?: string
           ended_at?: string | null
           form_id: string
@@ -840,6 +814,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          coached?: boolean
           created_at?: string
           ended_at?: string | null
           form_id?: string
@@ -1309,6 +1284,20 @@ export type Database = {
             columns: ["form_id"]
             isOneToOne: false
             referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_questions_passage_id_fkey"
+            columns: ["passage_id"]
+            isOneToOne: false
+            referencedRelation: "passages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_questions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
             referencedColumns: ["id"]
           },
         ]

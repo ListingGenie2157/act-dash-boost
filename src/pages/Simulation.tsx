@@ -84,7 +84,6 @@ export default function Simulation() {
     section: selectedSection,
     currentQuestionIndex,
     totalQuestions: sessionData?.questions.length || 0,
-    timeOnCurrentQuestion: Date.now() - questionStartTime,
     totalTimeLeftSec: timeLeft,
     totalTimeSec: sessionData?.time_limit_sec || 0,
     hasAnswer: sessionData ? !!answers[sessionData.questions[currentQuestionIndex]?.id] : false,
@@ -167,7 +166,7 @@ export default function Simulation() {
     loadExistingSession();
   }, [sessionData, state]);
 
-  const startSession = async (formId: string, section: string) => {
+  const startSession = async (formId: string, section: string, coached: boolean = false) => {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('session-start', {
@@ -175,7 +174,8 @@ export default function Simulation() {
         body: {
           form_id: formId,
           section: section,
-          mode: 'simulation'
+          mode: 'simulation',
+          coached
         }
       });
 
@@ -199,7 +199,23 @@ export default function Simulation() {
         questions,
         passages
       });
-      setTimeLeft(time_limit_sec);
+      
+      // Calculate actual time remaining based on started_at from database
+      const { data: sessionRecord } = await supabase
+        .from('sessions')
+        .select('started_at')
+        .eq('id', session_id)
+        .single();
+
+      if (sessionRecord) {
+        const startedAt = new Date(sessionRecord.started_at).getTime();
+        const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+        const remaining = Math.max(0, time_limit_sec - elapsed);
+        setTimeLeft(remaining);
+      } else {
+        setTimeLeft(time_limit_sec);
+      }
+      
       setState('active');
 
       toast({
@@ -321,7 +337,7 @@ export default function Simulation() {
     setSelectedSection(section);
     setIsCoachMode(coached);
     setState('loading');
-    startSession(selectedForm, section);
+    startSession(selectedForm, section, coached);
   };
 
   const handleBackToForms = () => {
