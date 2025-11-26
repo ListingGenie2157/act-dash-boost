@@ -29,11 +29,15 @@ export default function DrillPlayer() {
           return;
         }
 
-        // Map subject to drill form ID
+        // Map subject to drill form ID (accepts full subject names)
         const formIdMap: Record<string, string> = {
+          'Reading': 'DR_RD',
           'RD': 'DR_RD',
+          'Math': 'DR_MA',
           'MA': 'DR_MA',
+          'English': 'DR_EN',
           'EN': 'DR_EN',
+          'Science': 'DR_SC',
           'SC': 'DR_SC',
         };
         const drillFormId = formIdMap[subject];
@@ -200,9 +204,11 @@ export default function DrillPlayer() {
     void fetchQuestions();
   }, [subject, mode, questionCount, timeLimit, skillId, navigate]);
 
-  const handleComplete = async (score: number) => {
+  const handleComplete = async (score: number, answers: number[]) => {
+    if (!drill) return;
+    
     // Calculate stats from drill
-    const total = drill?.questions.length || 0;
+    const total = drill.questions.length;
     const correct = Math.round((score / 100) * total);
     
     console.log('Drill completed:', { score, correct, total });
@@ -211,6 +217,45 @@ export default function DrillPlayer() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Record missed questions to error_bank
+      for (let i = 0; i < drill.questions.length; i++) {
+        const userAnswer = answers[i];
+        const correctAnswer = drill.questions[i].correctAnswer;
+        
+        if (userAnswer !== -1 && userAnswer !== correctAnswer) {
+          // Question was answered incorrectly
+          const questionIdStr = drill.questions[i].id;
+          
+          // Check if error_bank entry exists
+          const { data: existingError } = await supabase
+            .from('error_bank')
+            .select('miss_count')
+            .eq('user_id', user.id)
+            .eq('question_id', questionIdStr)
+            .single();
+          
+          if (existingError) {
+            // Update existing record
+            await supabase
+              .from('error_bank')
+              .update({
+                miss_count: (existingError.miss_count || 0) + 1,
+                last_missed_at: new Date().toISOString(),
+              })
+              .eq('user_id', user.id)
+              .eq('question_id', questionIdStr);
+          } else {
+            // Insert new record
+            await supabase.from('error_bank').insert({
+              user_id: user.id,
+              question_id: questionIdStr,
+              last_missed_at: new Date().toISOString(),
+              miss_count: 1,
+            });
+          }
+        }
+      }
 
       await supabase.from('study_tasks').insert({
         user_id: user.id,

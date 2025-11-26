@@ -1,10 +1,19 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Zod schema for input validation
+const SubmitResponseSchema = z.object({
+  session_id: z.string().uuid(),
+  question_id: z.string().uuid(),
+  selected: z.string().length(1).regex(/^[A-E]$/),
+  time_ms: z.number().int().nonnegative().max(600000).optional() // Max 10 minutes
+});
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -30,14 +39,20 @@ serve(async (req) => {
       );
     }
 
-    const { session_id, question_id, selected, time_ms } = await req.json();
-
-    if (!session_id || !question_id || !selected) {
+    const body = await req.json();
+    const validationResult = SubmitResponseSchema.safeParse(body);
+    
+    if (!validationResult.success) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: session_id, question_id, selected' }),
+        JSON.stringify({ 
+          error: 'Invalid request data',
+          details: validationResult.error.errors
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const { session_id, question_id, selected, time_ms } = validationResult.data;
 
     // Verify session belongs to user
     const { data: session, error: sessionError } = await supabase

@@ -30,7 +30,8 @@ export const TI84_LAYOUT: CalculatorButton[][] = [
     { id: 'alpha', label: 'ALPHA', color: 'secondary' },
     { id: 'x-t-theta-n', label: 'X,T,θ,n', alphaLabel: 'A', color: 'dark' },
     { id: 'math', label: 'MATH', secondaryLabel: 'APPS', alphaLabel: 'B', color: 'dark' },
-    { id: 'apps', label: 'APPS', secondaryLabel: 'MATRIX', alphaLabel: 'C', color: 'dark' },
+    { id: 'prgm', label: 'PRGM', alphaLabel: 'C', color: 'dark' },
+    { id: 'apps', label: 'APPS', secondaryLabel: 'MATRIX', alphaLabel: 'D', color: 'dark' },
   ],
   // Row 4: Navigation arrows
   [

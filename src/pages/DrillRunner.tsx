@@ -56,11 +56,15 @@ export default function DrillRunner() {
         const nParam = searchParams.get('n');
         const n = nParam ? parseInt(nParam, 10) : 10;
 
-        // Map subject to drill form ID
+        // Map subject to drill form ID (accepts full subject names)
         const formIdMap: Record<string, string> = {
+          'Reading': 'DR_RD',
           'RD': 'DR_RD',
+          'Math': 'DR_MA',
           'MA': 'DR_MA',
+          'English': 'DR_EN',
           'EN': 'DR_EN',
+          'Science': 'DR_SC',
           'SC': 'DR_SC',
         };
         const drillFormId = formIdMap[decodeURIComponent(subject)];
@@ -135,6 +139,74 @@ export default function DrillRunner() {
     void fetchData();
   }, [subject, searchParams, userId, authLoading]);
 
+  const handleAnswer = async (selectedIdx: number) => {
+    if (!userId) return;
+    const q = questions[current];
+    if (!q) return;
+    
+    const correctIdx = ['A', 'B', 'C', 'D'].indexOf(q.answer);
+    
+    try {
+      // Track attempt in database
+      await supabase.from('attempts').insert({
+        user_id: userId,
+        question_id: q.id,
+        form_id: q.form_id ?? 'drill',
+        question_ord: current + 1,
+        choice_order: [0, 1, 2, 3],
+        correct_idx: correctIdx,
+        selected_idx: selectedIdx,
+      });
+      
+      // Add to review queue if incorrect (spaced repetition)
+      if (selectedIdx !== correctIdx) {
+        const dueDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+        await supabase.from('review_queue').insert({
+          user_id: userId,
+          question_id: q.id,
+          due_at: dueDate.toISOString(),
+          interval_days: 2,
+        });
+        
+        // Also record in error_bank for missed questions page
+        const { data: existingError } = await supabase
+          .from('error_bank')
+          .select('miss_count')
+          .eq('user_id', userId)
+          .eq('question_id', q.id)
+          .single();
+        
+        if (existingError) {
+          // Update existing record
+          await supabase
+            .from('error_bank')
+            .update({
+              miss_count: (existingError.miss_count || 0) + 1,
+              last_missed_at: new Date().toISOString(),
+            })
+            .eq('user_id', userId)
+            .eq('question_id', q.id);
+        } else {
+          // Insert new record
+          await supabase.from('error_bank').insert({
+            user_id: userId,
+            question_id: q.id,
+            last_missed_at: new Date().toISOString(),
+            miss_count: 1,
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Error tracking drill answer:', err);
+    }
+    
+    // Move to next question
+    if (current + 1 < questions.length) {
+      setCurrent(current + 1);
+    } else {
+      setCompleted(true);
+    }
+  };
 
   // Shuffle current question's choices
   const shuffled = useMemo(() => {
