@@ -1,10 +1,13 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { Question } from '@/types';
 import { shuffleQuestionChoices } from '@/lib/shuffle';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { useAuthState } from '@/hooks/useAuthState';
+import { useQuestionHandler } from '@/hooks/useQuestionHandler';
+import { logger } from '@/lib/logger';
 
 export default function DrillRunner() {
   const navigate = useNavigate();
@@ -14,19 +17,35 @@ export default function DrillRunner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [current, setCurrent] = useState(0);
-  const [userId, setUserId] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
 
+  const { user, loading: authLoading, error: authError } = useAuthState();
+  const userId = user?.id ?? null;
+
+  const handleComplete = useCallback(() => {
+    if (current + 1 < questions.length) {
+      setCurrent(current + 1);
+    } else {
+      setCompleted(true);
+    }
+  }, [current, questions.length]);
+
+  const { handleAnswer: handleQuestionAnswer, isSubmitting } = useQuestionHandler(userId, {
+    formId: 'drill',
+    onComplete: handleComplete,
+  });
+
   useEffect(() => {
+    if (authLoading) return;
+    
+    if (authError || !userId) {
+      setError('Not authenticated');
+      setLoading(false);
+      return;
+    }
+
     const fetchData = async () => {
       try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-          setError('Not authenticated');
-          setLoading(false);
-          return;
-        }
-        setUserId(user.id);
 
         if (!subject) {
           setError('No subject specified');
@@ -60,91 +79,62 @@ export default function DrillRunner() {
           .limit(n);
 
         if (qError) {
+          logger.error('Failed to fetch drill questions', qError, { subject, formId: drillFormId });
           setError(qError.message);
-        } else if (!data || data.length === 0) {
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          logger.warn('No questions found for drill', { subject, formId: drillFormId });
           setError('No questions found for this section');
+          return;
+        }
+
+        // Map staging_items to Question type
+        const mappedQuestions: Question[] = data.map((q) => ({
+          id: String(q.staging_id || ''),
+          stem: q.question || '',
+          choice_a: q.choice_a || '',
+          choice_b: q.choice_b || '',
+          choice_c: q.choice_c || '',
+          choice_d: q.choice_d || '',
+          answer: (q.answer.toUpperCase() as 'A' | 'B' | 'C' | 'D') || 'A',
+          explanation: q.explanation ?? undefined,
+          skill_code: q.skill_code ?? undefined,
+          form_id: q.form_id ?? undefined,
+        }));
+        
+        // Filter out questions with invalid answers
+        const validQuestions = mappedQuestions.filter(q => {
+          const isValid = q.answer && ['A', 'B', 'C', 'D'].includes(q.answer);
+          if (!isValid) {
+            logger.warn('Skipping question with invalid answer', { questionId: q.id, answer: q.answer });
+          }
+          return isValid;
+        });
+        
+        if (validQuestions.length === 0) {
+          setError('No valid questions found for this section');
         } else {
-          // Map staging_items to Question type
-          const mappedQuestions: Question[] = data.map((q) => ({
-            id: String(q.staging_id || ''),
-            stem: q.question || '',
-            choice_a: q.choice_a || '',
-            choice_b: q.choice_b || '',
-            choice_c: q.choice_c || '',
-            choice_d: q.choice_d || '',
-            answer: (q.answer.toUpperCase() as 'A' | 'B' | 'C' | 'D') || 'A',
-            explanation: q.explanation ?? undefined,
-            skill_code: q.skill_code ?? undefined,
-            form_id: q.form_id ?? undefined,
-          }));
-          
-          // Filter out questions with invalid answers
-          const validQuestions = mappedQuestions.filter(q => {
-            const isValid = q.answer && ['A', 'B', 'C', 'D'].includes(q.answer);
-            if (!isValid) {
-              console.warn(`Skipping question ${q.id} with invalid answer: "${q.answer}"`);
-            }
-            return isValid;
-          });
-          
-          if (validQuestions.length === 0) {
-            setError('No valid questions found for this section');
-          } else {
-            setQuestions(validQuestions);
-            if (validQuestions.length < mappedQuestions.length) {
-              console.warn(`Filtered out ${mappedQuestions.length - validQuestions.length} questions with invalid answers`);
-            }
+          setQuestions(validQuestions);
+          if (validQuestions.length < mappedQuestions.length) {
+            logger.warn('Filtered out invalid questions', {
+              total: mappedQuestions.length,
+              valid: validQuestions.length,
+            });
           }
         }
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Failed to load questions');
+        const error = err instanceof Error ? err : new Error(String(err));
+        logger.error('Failed to load drill questions', error, { subject });
+        setError(error.message);
       } finally {
         setLoading(false);
       }
     };
     void fetchData();
-  }, [subject, searchParams]);
+  }, [subject, searchParams, userId, authLoading]);
 
-  const handleAnswer = async (selectedIdx: number) => {
-    if (!userId) return;
-    const q = questions[current];
-    if (!q) return;
-    
-    const correctIdx = ['A', 'B', 'C', 'D'].indexOf(q.answer);
-    
-    try {
-      // Track attempt in database
-      await supabase.from('attempts').insert({
-        user_id: userId,
-        question_id: q.id,
-        form_id: q.form_id ?? 'drill',
-        question_ord: current + 1,
-        choice_order: [0, 1, 2, 3],
-        correct_idx: correctIdx,
-        selected_idx: selectedIdx,
-      });
-      
-      // Add to review queue if incorrect (spaced repetition)
-      if (selectedIdx !== correctIdx) {
-        const dueDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
-        await supabase.from('review_queue').insert({
-          user_id: userId,
-          question_id: q.id,
-          due_at: dueDate.toISOString(),
-          interval_days: 2,
-        });
-      }
-    } catch (err) {
-      console.error('Error tracking drill answer:', err);
-    }
-    
-    // Move to next question
-    if (current + 1 < questions.length) {
-      setCurrent(current + 1);
-    } else {
-      setCompleted(true);
-    }
-  };
 
   // Shuffle current question's choices
   const shuffled = useMemo(() => {
@@ -153,7 +143,7 @@ export default function DrillRunner() {
     return shuffleQuestionChoices(questions[current], seed);
   }, [current, questions, userId]);
 
-  if (loading) return (
+  if (authLoading || loading) return (
     <div className="container mx-auto p-4">
       <Button variant="outline" onClick={() => navigate('/drill-runner')}>
         <ArrowLeft className="h-4 w-4 mr-2" />
@@ -208,13 +198,13 @@ export default function DrillRunner() {
 
   if (!shuffled) return <div className="p-4">Loading question...</div>;
 
-  const handleShuffledAnswer = async (shuffledIndex: number) => {
-    if (!shuffled) return;
+  const handleShuffledAnswer = useCallback(async (shuffledIndex: number) => {
+    if (!shuffled || !questions[current]) return;
     
     // Map shuffled index back to original index
     const originalIndex = shuffled.choiceOrder[shuffledIndex];
-    await handleAnswer(originalIndex);
-  };
+    await handleQuestionAnswer(questions[current], originalIndex, current);
+  }, [shuffled, questions, current, handleQuestionAnswer]);
 
   return (
     <div className="container mx-auto p-4">
@@ -232,8 +222,9 @@ export default function DrillRunner() {
         {shuffled.choices.map((choice, i) => (
           <button
             key={i}
-            className="w-full border rounded-md p-2 text-left hover:bg-muted"
+            className="w-full border rounded-md p-2 text-left hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => handleShuffledAnswer(i)}
+            disabled={isSubmitting}
           >
             <span className="font-semibold mr-2">{['A', 'B', 'C', 'D'][i]})</span>
             {choice}

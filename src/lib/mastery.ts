@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from './logger';
 
 /**
  * Mastery thresholds and levels
@@ -193,7 +194,9 @@ export async function updateMastery(
     });
 
   if (error) {
-    console.error('Error updating mastery:', error);
+    logger.error('Error updating mastery', error, { userId, skillId });
+  } else {
+    logger.debug('Mastery updated', { userId, skillId, correct: newCorrect, total: newTotal });
   }
 }
 
