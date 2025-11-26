@@ -2,11 +2,27 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { updateReviewQueueOnAnswer, type ReviewMode } from '../_shared/review.ts';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Zod schemas for input validation
+const AnswerSchema = z.object({
+  question_id: z.string().uuid(),
+  user_answer: z.enum(['A', 'B', 'C', 'D']),
+  correct: z.boolean(),
+  time_ms: z.number().int().nonnegative().max(600000) // Max 10 minutes per question
+});
+
+const CompleteTaskSchema = z.object({
+  task_id: z.string().uuid(),
+  accuracy: z.number().min(0).max(1),
+  time_ms: z.number().int().nonnegative().max(7200000), // Max 2 hours
+  answers: z.array(AnswerSchema).optional()
+});
 
 interface CompleteTaskRequest {
   task_id: string;
@@ -67,17 +83,21 @@ serve(async (req) => {
       });
     }
 
-    // Parse request body
-    const { task_id, accuracy, time_ms, answers }: CompleteTaskRequest = await req.json();
-
-    if (!task_id || accuracy === undefined || time_ms === undefined) {
+    // Parse and validate request body
+    const body = await req.json();
+    const validationResult = CompleteTaskSchema.safeParse(body);
+    
+    if (!validationResult.success) {
       return new Response(JSON.stringify({ 
-        error: 'Missing required fields: task_id, accuracy, time_ms' 
+        error: 'Invalid request data',
+        details: validationResult.error.errors
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    const { task_id, accuracy, time_ms, answers } = validationResult.data;
 
     console.log(`Completing task ${task_id} for user ${user.id}`);
 

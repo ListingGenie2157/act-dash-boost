@@ -1,9 +1,32 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
 }
+
+// Zod schemas for input validation
+const QuestionSchema = z.object({
+  id: z.string().min(1),
+  skill_tags: z.array(z.string()).optional()
+});
+
+const AnswerSchema = z.object({
+  questionId: z.string().min(1),
+  selectedAnswer: z.string().min(1).max(1),
+  isCorrect: z.boolean()
+});
+
+const DiagnosticBlockSchema = z.object({
+  questions: z.array(QuestionSchema).min(1).max(100),
+  answers: z.array(AnswerSchema).min(1).max(100)
+});
+
+const DiagnosticRequestSchema = z.object({
+  section: z.enum(['English', 'Math', 'Reading', 'Science']),
+  blocks: z.array(DiagnosticBlockSchema).min(1).max(10)
+});
 
 interface DiagnosticBlock {
   questions: Array<{
@@ -101,7 +124,21 @@ Deno.serve(async (req) => {
       );
     }
 
-    const body: DiagnosticRequest = await req.json();
+    const requestBody = await req.json();
+    const validationResult = DiagnosticRequestSchema.safeParse(requestBody);
+    
+    if (!validationResult.success) {
+      console.error('Validation error:', validationResult.error);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request data',
+          details: validationResult.error.errors
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const body: DiagnosticRequest = validationResult.data;
     console.log('Processing diagnostic for section:', body.section);
 
     // Score the diagnostic

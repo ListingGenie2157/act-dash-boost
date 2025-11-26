@@ -1,12 +1,20 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
+
+// Zod schema for input validation
+const SessionStartSchema = z.object({
+  form_id: z.string().min(1).max(50),
+  section: z.enum(['EN', 'MATH', 'RD', 'SCI']),
+  mode: z.enum(['simulation', 'practice', 'booster'])
+});
 
 interface SessionStartRequest {
   form_id: string;
@@ -56,7 +64,21 @@ serve(async (req) => {
       });
     }
 
-    const { form_id, section, mode }: SessionStartRequest = await req.json();
+    const body = await req.json();
+    
+    // Validate input with zod
+    const validationResult = SessionStartSchema.safeParse(body);
+    if (!validationResult.success) {
+      return new Response(JSON.stringify({ 
+        error: 'Invalid request data',
+        details: validationResult.error.errors 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { form_id, section, mode } = validationResult.data;
 
     // Validate form_id format for simulations
     if (mode === 'simulation' && !['FA_', 'FB_', 'FC_'].some(prefix => form_id.startsWith(prefix))) {
