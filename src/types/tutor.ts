@@ -38,7 +38,16 @@ export interface TutorChatRequest {
   session_id?: string;
 }
 
-export interface TutorChatResponse {
+// Success response
+export interface TutorChatSuccessResponse {
   assistant_message: string;
   session_id?: string;
 }
+
+// Error response (when edge function returns 200 with error)
+export interface TutorChatErrorResponse {
+  error: string;
+}
+
+// Union type for all possible responses
+export type TutorChatResponse = TutorChatSuccessResponse | TutorChatErrorResponse;

@@ -1,7 +1,15 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import type { TutorMessage, TutorContextData, TutorChatRequest, TutorChatResponse } from '@/types/tutor';
+import type { TutorMessage, TutorContextData, TutorChatRequest, TutorChatResponse, TutorChatErrorResponse, TutorChatSuccessResponse } from '@/types/tutor';
+
+function isTutorError(data: TutorChatResponse | null): data is TutorChatErrorResponse {
+  return data !== null && 'error' in data && typeof data.error === 'string';
+}
+
+function isTutorSuccess(data: TutorChatResponse | null): data is TutorChatSuccessResponse {
+  return data !== null && 'assistant_message' in data;
+}
 
 interface TutorContextType {
   isOpen: boolean;
@@ -84,13 +92,24 @@ export function TutorProvider({ children }: { children: React.ReactNode }) {
       });
 
       // Check if function returned an error response (200 with error field)
-      if (data && 'error' in data && typeof data.error === 'string' && !data.assistant_message) {
+      if (isTutorError(data)) {
         throw new Error(data.error);
       }
 
       if (error) throw error;
 
-      if (data?.assistant_message) {
+      if (isTutorSuccess(data)) {
+        if (!data.assistant_message.trim()) {
+          // Empty response - show a helpful message
+          toast({
+            title: 'Empty Response',
+            description: 'The tutor returned an empty response. Please try rephrasing your question.',
+            variant: 'default',
+          });
+          setMessages((prev) => prev.slice(0, -1)); // Remove user message
+          return;
+        }
+
         const assistantMessage: TutorMessage = {
           id: crypto.randomUUID(),
           role: 'assistant',
