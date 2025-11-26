@@ -14,7 +14,6 @@ interface UseTestCompanionParams {
   section: string;
   currentQuestionIndex: number;
   totalQuestions: number;
-  timeOnCurrentQuestion: number;
   totalTimeLeftSec: number;
   totalTimeSec: number;
   hasAnswer: boolean;
@@ -29,7 +28,6 @@ export function useTestCompanion({
   section,
   currentQuestionIndex,
   totalQuestions,
-  timeOnCurrentQuestion,
   totalTimeLeftSec,
   totalTimeSec,
   hasAnswer,
@@ -41,9 +39,24 @@ export function useTestCompanion({
     lastTipTime: Date.now(),
     firedTips: new Set(),
   });
+  const [internalTimeOnQuestion, setInternalTimeOnQuestion] = useState(0);
 
   const stateRef = useRef(state);
   stateRef.current = state;
+
+  // Track time on current question internally with setInterval
+  useEffect(() => {
+    if (!enabled) return;
+    
+    setInternalTimeOnQuestion(0);
+    const startTime = Date.now();
+    
+    const interval = setInterval(() => {
+      setInternalTimeOnQuestion(Date.now() - startTime);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [enabled, currentQuestionIndex]);
 
   const canShowTip = useCallback(() => {
     const now = Date.now();
@@ -82,12 +95,12 @@ export function useTestCompanion({
     if (!enabled) return;
 
     // Spending too long on one question
-    if (timeOnCurrentQuestion > 60000 && !hasAnswer) {
+    if (internalTimeOnQuestion > 60000 && !hasAnswer) {
       fireTip('TIME_WARNING_60S');
-    } else if (timeOnCurrentQuestion > 90000 && !hasAnswer) {
+    } else if (internalTimeOnQuestion > 90000 && !hasAnswer) {
       fireTip('TIME_WARNING_90S');
     }
-  }, [enabled, timeOnCurrentQuestion, hasAnswer, fireTip]);
+  }, [enabled, internalTimeOnQuestion, hasAnswer, fireTip]);
 
   // Progress-based triggers
   useEffect(() => {
