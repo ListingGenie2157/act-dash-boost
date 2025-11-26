@@ -1,5 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('useStreak');
 
 export function useStreak() {
   return useQuery({
@@ -8,12 +11,20 @@ export function useStreak() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return { currentStreak: 0, longestStreak: 0, lastActiveDate: null };
 
-      const { data: tasks } = await supabase
+      log.query('study_tasks', 'select', { userId: user.id });
+      
+      // Only select fields we need for streak calculation
+      const { data: tasks, error } = await supabase
         .from('study_tasks')
-        .select('the_date, status')
+        .select('the_date')
         .eq('user_id', user.id)
         .eq('status', 'DONE')
         .order('the_date', { ascending: false });
+      
+      if (error) {
+        log.error('Failed to fetch streak data', error);
+        return { currentStreak: 0, longestStreak: 0, lastActiveDate: null };
+      }
 
       if (!tasks || tasks.length === 0) {
         return { currentStreak: 0, longestStreak: 0, lastActiveDate: null };
@@ -59,6 +70,8 @@ export function useStreak() {
         }
       }
       longestStreak = Math.max(longestStreak, tempStreak);
+
+      log.debug('Streak calculated', { currentStreak, longestStreak });
 
       return {
         currentStreak,

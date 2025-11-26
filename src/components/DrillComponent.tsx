@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -6,6 +6,9 @@ import { Timer, Play, Pause, RotateCcw, ArrowLeft, CheckCircle, XCircle } from '
 import type { DrillSession } from '@/types';
 import { useTimer } from '@/hooks/useTimer';
 import { useToast } from '@/hooks/use-toast';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('DrillComponent');
 
 interface DrillComponentProps {
   drill: DrillSession;
@@ -24,7 +27,8 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
   // Toast API for immediate feedback during drills.
   const { toast } = useToast();
 
-  const handleFinish = (finalAnswers: number[]) => {
+  // Memoize handleFinish to avoid dependency issues
+  const handleFinish = useCallback((finalAnswers: number[]) => {
     pauseTimer();
     setShowResults(true);
     
@@ -33,14 +37,17 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
     ).length;
     
     const score = Math.round((correctCount / drill.questions.length) * 100);
+    log.info('Drill completed', { score, correctCount, total: drill.questions.length });
     onComplete(score);
-  };
+  }, [pauseTimer, drill.questions, onComplete]);
 
+  // Handle timer completion
   useEffect(() => {
-    if (isCompleted && hasStarted) {
+    if (isCompleted && hasStarted && !showResults) {
+      log.debug('Timer completed, finishing drill');
       handleFinish(answers);
     }
-  }, [isCompleted, hasStarted, answers, handleFinish]);
+  }, [isCompleted, hasStarted, showResults, answers, handleFinish]);
 
   const handleStart = () => {
     setHasStarted(true);

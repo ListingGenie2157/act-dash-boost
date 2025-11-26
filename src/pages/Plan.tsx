@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { StudyPlanDay, StudyPlanTask } from '@/types';
@@ -8,6 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Target, GraduationCap, RotateCcw, Zap, Clock, Calendar, TrendingUp, type LucideIcon } from 'lucide-react';
 import { CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('Plan');
 
 const TASK_CONFIG: Record<string, { icon: LucideIcon; gradient: string; label: string }> = {
   LEARN: { icon: GraduationCap, gradient: 'from-primary to-primary/80', label: 'Lesson' },
@@ -17,6 +20,44 @@ const TASK_CONFIG: Record<string, { icon: LucideIcon; gradient: string; label: s
   SIM: { icon: Clock, gradient: 'from-destructive to-rose-500', label: 'Test' }
 };
 
+const SUBJECT_COLORS: Record<string, string> = {
+  Math: 'bg-blue-500',
+  English: 'bg-green-500',
+  Reading: 'bg-orange-500',
+  Science: 'bg-purple-500'
+};
+
+/**
+ * Fetch study plans for a user within the next 7 days
+ */
+async function fetchStudyPlans(userId: string): Promise<StudyPlanDay[]> {
+  const today = new Date().toISOString().split('T')[0];
+  const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split('T')[0];
+
+  log.query('study_plan_days', 'select', { userId, today, sevenDaysFromNow });
+
+  const { data: planDays, error } = await supabase
+    .from('study_plan_days')
+    .select('the_date, tasks_json, generated_at, user_id')
+    .eq('user_id', userId)
+    .gte('the_date', today)
+    .lte('the_date', sevenDaysFromNow)
+    .order('the_date');
+
+  if (error) {
+    log.error('Failed to fetch study plans', error);
+    throw error;
+  }
+
+  // Type cast and validate tasks_json
+  return (planDays ?? []).map(day => ({
+    ...day,
+    tasks_json: Array.isArray(day.tasks_json) ? day.tasks_json as unknown as StudyPlanTask[] : []
+  }));
+}
+
 export default function Plan() {
   const navigate = useNavigate();
   const [plans, setPlans] = useState<StudyPlanDay[]>([]);
@@ -24,8 +65,18 @@ export default function Plan() {
   const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
 
+  // Extracted refetch function to avoid duplication
+  const refetchPlans = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    
+    const fetchedPlans = await fetchStudyPlans(user.id);
+    setPlans(fetchedPlans);
+    log.info('Plans refetched', { count: fetchedPlans.length });
+  }, []);
+
   useEffect(() => {
-    const fetchPlans = async () => {
+    const loadPlans = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
@@ -33,82 +84,68 @@ export default function Plan() {
           setLoading(false);
           return;
         }
-        const today = new Date().toISOString().split('T')[0];
-        const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0];
-        const { data: planDays, error: fetchError } = await supabase
-          .from('study_plan_days')
-          .select('the_date, tasks_json, generated_at, user_id')
-          .eq('user_id', user.id)
-          .gte('the_date', today)
-          .lte('the_date', sevenDaysFromNow)
-          .order('the_date');
         
-        if (fetchError) {
-          throw fetchError;
-        }
-
-        // Type cast and validate tasks_json
-        const typedPlans: StudyPlanDay[] = (planDays || []).map(day => ({
-          ...day,
-          tasks_json: Array.isArray(day.tasks_json) ? day.tasks_json as unknown as StudyPlanTask[] : []
-        }));
-
-        setPlans(typedPlans);
+        const fetchedPlans = await fetchStudyPlans(user.id);
+        setPlans(fetchedPlans);
+        log.info('Plans loaded', { count: fetchedPlans.length });
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load plan';
+        log.error('Failed to load plans', err);
         setError(errorMessage);
       } finally {
         setLoading(false);
       }
     };
-    fetchPlans();
+    
+    void loadPlans();
   }, []);
 
-  const handleGeneratePlan = async () => {
+  const handleGeneratePlan = useCallback(async () => {
     setGenerating(true);
     try {
+      log.info('Generating study plan');
       const { error: planError } = await supabase.functions.invoke('generate-study-plan', {
         body: { force: true }
       });
 
       if (planError) {
-        console.error('Error generating plan:', planError);
+        log.error('Failed to generate plan', planError);
         toast.error(planError.message || 'Failed to generate study plan');
       } else {
         toast.success('Your study plan is ready!');
-        // Refetch plans
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        
-        const today = new Date().toISOString().split('T')[0];
-        const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0];
-        const { data: planDays } = await supabase
-          .from('study_plan_days')
-          .select('the_date, tasks_json, generated_at, user_id')
-          .eq('user_id', user.id)
-          .gte('the_date', today)
-          .lte('the_date', sevenDaysFromNow)
-          .order('the_date');
-
-        // Type cast and validate tasks_json
-        const typedPlans: StudyPlanDay[] = (planDays || []).map(day => ({
-          ...day,
-          tasks_json: Array.isArray(day.tasks_json) ? day.tasks_json as unknown as StudyPlanTask[] : []
-        }));
-
-        setPlans(typedPlans);
+        await refetchPlans();
       }
     } catch (err) {
-      console.error('Error:', err);
+      log.error('Error generating plan', err);
       toast.error('Failed to generate study plan');
     } finally {
       setGenerating(false);
     }
-  };
+  }, [refetchPlans]);
+
+  // Memoized subject distribution calculation
+  const subjectDistribution = useMemo(() => {
+    const counts: Record<string, number> = {
+      Math: 0,
+      English: 0,
+      Reading: 0,
+      Science: 0
+    };
+
+    plans.forEach(plan => {
+      (plan.tasks_json ?? []).forEach((task) => {
+        if (task.type === 'LEARN' || task.type === 'DRILL') {
+          const subject = task.title?.split(':')[0]?.trim() ?? 'Other';
+          if (counts[subject] !== undefined) {
+            counts[subject]++;
+          }
+        }
+      });
+    });
+
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    return { counts, total };
+  }, [plans]);
 
   if (loading) {
     return (
@@ -160,77 +197,46 @@ export default function Plan() {
       </div>
 
       <div className="max-w-5xl mx-auto p-6">
-        {/* Subject Balance Overview */}
-        {plans.length > 0 && (() => {
-          // Calculate subject distribution
-          const subjectCounts: Record<string, number> = {
-            Math: 0,
-            English: 0,
-            Reading: 0,
-            Science: 0
-          };
-          
-          plans.forEach(plan => {
-            (plan.tasks_json || []).forEach((task: StudyPlanTask) => {
-              if (task.type === 'LEARN' || task.type === 'DRILL') {
-                // Extract subject from title or use type
-                const subject = task.title?.split(':')[0]?.trim() || 'Other';
-                if (subjectCounts[subject] !== undefined) {
-                  subjectCounts[subject]++;
-                }
-              }
-            });
-          });
-          
-          const total = Object.values(subjectCounts).reduce((a, b) => a + b, 0);
-          
-          if (total > 0) {
-            return (
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    Subject Balance Overview
-                  </CardTitle>
-                  <CardDescription>
-                    Distribution of learning tasks across all 4 ACT subjects
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {Object.entries(subjectCounts).map(([subject, count]) => {
-                      const percentage = total > 0 ? (count / total) * 100 : 0;
-                      const colors: Record<string, string> = {
-                        Math: 'bg-blue-500',
-                        English: 'bg-green-500',
-                        Reading: 'bg-orange-500',
-                        Science: 'bg-purple-500'
-                      };
-                      
-                      return (
-                        <div key={subject}>
-                          <div className="flex items-center justify-between mb-1 text-sm">
-                            <span className="font-medium">{subject}</span>
-                            <span className="text-muted-foreground">
-                              {count} task{count !== 1 ? 's' : ''} ({percentage.toFixed(0)}%)
-                            </span>
-                          </div>
-                          <div className="h-2 bg-muted rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full ${colors[subject]} transition-all`}
-                              style={{ width: `${percentage}%` }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          }
-          return null;
-        })()}
+        {/* Subject Balance Overview - now using memoized calculation */}
+        {plans.length > 0 && subjectDistribution.total > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Subject Balance Overview
+              </CardTitle>
+              <CardDescription>
+                Distribution of learning tasks across all 4 ACT subjects
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {Object.entries(subjectDistribution.counts).map(([subject, count]) => {
+                  const percentage = subjectDistribution.total > 0 
+                    ? (count / subjectDistribution.total) * 100 
+                    : 0;
+                  
+                  return (
+                    <div key={subject}>
+                      <div className="flex items-center justify-between mb-1 text-sm">
+                        <span className="font-medium">{subject}</span>
+                        <span className="text-muted-foreground">
+                          {count} task{count !== 1 ? 's' : ''} ({percentage.toFixed(0)}%)
+                        </span>
+                      </div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full ${SUBJECT_COLORS[subject]} transition-all`}
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
         {plans.length === 0 ? (
           <Card className="p-12 text-center">
             <Calendar className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />

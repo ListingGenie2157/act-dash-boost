@@ -15,19 +15,22 @@ import { supabase } from '@/integrations/supabase/client';
 import { AnimatedCounter } from '@/components/landing/AnimatedCounter';
 import { FeatureCard } from '@/components/landing/FeatureCard';
 import { Calculator, Target, Bot, TrendingUp, Shuffle, Calendar, Sparkles, ArrowRight, BookOpen, Clock, Zap, User } from 'lucide-react';
+import { createLogger } from '@/lib/logger';
+import type { Session } from '@supabase/supabase-js';
+
+const log = createLogger('Index');
+
+interface Profile {
+  test_date?: string | null;
+  onboarding_complete?: boolean | null;
+  has_study_plan?: boolean | null;
+  first_name?: string | null;
+}
 
 const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [session, setSession] = useState<any>(null);
-  
-  interface Profile {
-    test_date?: string | null;
-    onboarding_complete?: boolean | null;
-    has_study_plan?: boolean | null;
-    first_name?: string | null;
-  }
-  
+  const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [hasStudyPlan, setHasStudyPlan] = useState<boolean | null>(null);
   const [hasDiagnostic, setHasDiagnostic] = useState<boolean>(false);
@@ -38,27 +41,27 @@ const Index = () => {
   useEffect(() => {
     let mounted = true;
 
-    const syncAuthAndProfile = async (session: any) => {
+    const syncAuthAndProfile = async (currentSession: Session | null) => {
       if (!mounted) return;
 
-      if (import.meta.env.DEV) console.log('[Index] syncAuthAndProfile called', { hasSession: !!session });
+      log.debug('syncAuthAndProfile called', { hasSession: !!currentSession });
 
-      if (session) {
-        setSession(session);
+      if (currentSession) {
+        setSession(currentSession);
         setIsAuthenticated(true);
         
         try {
-          if (import.meta.env.DEV) console.log('[Index] Fetching profile for user:', session.user.id);
+          log.debug('Fetching profile', { userId: currentSession.user.id });
 
           // Add timeout but handle it gracefully
-          const timeoutPromise = new Promise((_, reject) =>
+          const timeoutPromise = new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error('Query timeout')), 10000)
           );
 
           const profilePromise = supabase
             .from('profiles')
             .select('test_date, onboarding_complete, has_study_plan, first_name')
-            .eq('id', session.user.id)
+            .eq('id', currentSession.user.id)
             .maybeSingle();
 
           const result = await Promise.race([
@@ -66,15 +69,12 @@ const Index = () => {
             timeoutPromise
           ]);
           
-          const { data: profile, error: profileError } = result as { 
-            data: any; 
-            error: any; 
-          };
+          const { data: profileData, error: profileError } = result;
 
-          if (import.meta.env.DEV) console.log('[Index] Profile result:', { profile, profileError });
+          log.debug('Profile result', { profileData, profileError });
 
           if (profileError && mounted) {
-            console.error('[Index] Profile query error:', profileError);
+            log.error('Profile query error', profileError);
             // On error, assume they need onboarding
             setIsLoading(false);
             navigate('/onboarding', { replace: true });
@@ -82,19 +82,19 @@ const Index = () => {
           }
 
           // If user has completed onboarding OR has test_date, stay on dashboard
-          if ((profile?.onboarding_complete || profile?.test_date) && mounted) {
-            if (import.meta.env.DEV) console.log('[Index] User has completed onboarding, showing dashboard');
-            setProfile(profile);
+          if ((profileData?.onboarding_complete || profileData?.test_date) && mounted) {
+            log.debug('User has completed onboarding, showing dashboard');
+            setProfile(profileData as Profile);
 
             // Verify study plan exists in database (override profile flag if needed)
             try {
               const planCheckPromise = supabase
                 .from('study_tasks')
                 .select('id')
-                .eq('user_id', session.user.id)
+                .eq('user_id', currentSession.user.id)
                 .limit(1);
 
-              const planCheckTimeout = new Promise((resolve) =>
+              const planCheckTimeout = new Promise<{ data: null }>((resolve) =>
                 setTimeout(() => resolve({ data: null }), 3000)
               );
 
@@ -103,13 +103,13 @@ const Index = () => {
                 planCheckTimeout
               ]);
               
-              const { data: planCheck } = planResult as { data: any[] | null };
+              const { data: planCheck } = planResult;
 
-              const actuallyHasPlan = profile.has_study_plan || (planCheck && planCheck.length > 0);
-              setHasStudyPlan(actuallyHasPlan);
+              const actuallyHasPlan = profileData?.has_study_plan || (planCheck && planCheck.length > 0);
+              setHasStudyPlan(actuallyHasPlan ?? false);
             } catch {
               // If plan check fails, just use profile flag
-              setHasStudyPlan(profile.has_study_plan ?? false);
+              setHasStudyPlan(profileData?.has_study_plan ?? false);
             }
 
             // Check if user has completed a diagnostic (exclude test/self-generated records)
@@ -117,7 +117,7 @@ const Index = () => {
               const { data: diagnosticData } = await supabase
                 .from('diagnostics')
                 .select('id')
-                .eq('user_id', session.user.id)
+                .eq('user_id', currentSession.user.id)
                 .eq('source', 'diagnostic')  // Only count actual diagnostic assessments
                 .not('completed_at', 'is', null)
                 .limit(1);
@@ -133,13 +133,13 @@ const Index = () => {
 
           // Otherwise, redirect to onboarding
           if (mounted) {
-            if (import.meta.env.DEV) console.log('[Index] Redirecting to onboarding - no onboarding_complete or test_date');
+            log.debug('Redirecting to onboarding - no onboarding_complete or test_date');
             setIsLoading(false);
             navigate('/onboarding', { replace: true });
             return;
           }
         } catch (error) {
-          console.error('[Index] Profile check failed:', error);
+          log.error('Profile check failed', error);
           // On timeout or error, show dashboard anyway (user is authenticated)
           if (mounted) {
             setProfile({ onboarding_complete: true, has_study_plan: false, test_date: null });
@@ -148,7 +148,7 @@ const Index = () => {
           }
         }
       } else {
-        if (import.meta.env.DEV) console.log('[Index] No session, showing landing page');
+        log.debug('No session, showing landing page');
         setSession(null);
         setIsAuthenticated(false);
         setProfile(null);
@@ -162,9 +162,9 @@ const Index = () => {
 
     // Set up single auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (import.meta.env.DEV) console.log('Auth state changed:', { event, session: !!session });
-        await syncAuthAndProfile(session);
+      async (event, newSession) => {
+        log.debug('Auth state changed', { event, hasSession: !!newSession });
+        await syncAuthAndProfile(newSession);
       }
     );
 
@@ -424,11 +424,14 @@ const Index = () => {
                   size="sm"
                   className="bg-background/50 backdrop-blur-sm hover:bg-background/80"
                   onClick={async () => {
+                    const userId = session?.user?.id;
+                    if (!userId) return;
+                    
                     if (confirm('Switch to self-directed learning mode? Your study plan will remain saved.')) {
                       const { error } = await supabase
                         .from('profiles')
                         .update({ has_study_plan: false })
-                        .eq('id', session?.user?.id);
+                        .eq('id', userId);
 
                       if (!error) {
                         setHasStudyPlan(false);

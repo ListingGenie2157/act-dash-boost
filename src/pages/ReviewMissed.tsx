@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { XCircle, Target, Filter } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,6 +9,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { BackButton } from '@/components/BackButton';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { toast } from 'sonner';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('ReviewMissed');
 
 interface MissedQuestion {
   question_id: string;
@@ -33,11 +36,24 @@ export default function ReviewMissed() {
   const [subjectFilter, setSubjectFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'recent' | 'most'>('recent');
 
-  useEffect(() => {
-    loadMissedQuestions();
-  }, [subjectFilter, sortBy]);
+  // Define the shape of the joined Supabase response
+  interface ErrorBankRow {
+    question_id: string;
+    miss_count: number;
+    last_missed_at: string;
+    questions: {
+      id: string;
+      stem: string;
+      skill_id: string;
+      difficulty: number;
+      skills: {
+        name: string;
+        subject: string;
+      };
+    };
+  }
 
-  const loadMissedQuestions = async () => {
+  const loadMissedQuestions = useCallback(async () => {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -82,7 +98,7 @@ export default function ReviewMissed() {
       if (error) throw error;
 
       // Transform data to match interface
-      const transformed = data?.map((item: any) => ({
+      const transformed = (data as ErrorBankRow[] | null)?.map((item) => ({
         question_id: item.question_id,
         miss_count: item.miss_count,
         last_missed_at: item.last_missed_at,
@@ -96,16 +112,20 @@ export default function ReviewMissed() {
             subject: item.questions.skills.subject
           }
         }
-      })) || [];
+      })) ?? [];
 
       setMissedQuestions(transformed);
     } catch (error) {
-      console.error('Error loading missed questions:', error);
+      log.error('Error loading missed questions', error);
       toast.error('Failed to load missed questions');
     } finally {
       setLoading(false);
     }
-  };
+  }, [subjectFilter, sortBy, navigate]);
+
+  useEffect(() => {
+    loadMissedQuestions();
+  }, [loadMissedQuestions]);
 
   const handlePracticeAll = () => {
     // Navigate to drill with missed mode

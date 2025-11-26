@@ -5,6 +5,9 @@ import type { Question } from '@/types';
 import { shuffleQuestionChoices } from '@/lib/shuffle';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('DrillRunner');
 
 export default function DrillRunner() {
   const navigate = useNavigate();
@@ -53,6 +56,8 @@ export default function DrillRunner() {
         }
 
         // Fetch questions from staging_items using drill form ID
+        log.query('staging_items', 'select', { formId: drillFormId, limit: n });
+        
         const { data, error: qError } = await supabase
           .from('staging_items')
           .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, answer, explanation, skill_code, form_id')
@@ -60,6 +65,7 @@ export default function DrillRunner() {
           .limit(n);
 
         if (qError) {
+          log.error('Failed to fetch drill questions', qError);
           setError(qError.message);
         } else if (!data || data.length === 0) {
           setError('No questions found for this section');
@@ -135,7 +141,7 @@ export default function DrillRunner() {
         });
       }
     } catch (err) {
-      console.error('Error tracking drill answer:', err);
+      log.error('Error tracking drill answer', err);
     }
     
     // Move to next question

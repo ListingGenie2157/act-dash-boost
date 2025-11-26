@@ -5,6 +5,9 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { DrillComponent } from '@/components/DrillComponent';
 import { toast } from 'sonner';
 import type { DrillSession, LegacyQuestion } from '@/types';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('DrillPlayer');
 
 export default function DrillPlayer() {
   const { subject } = useParams<{ subject: string }>();
@@ -157,9 +160,13 @@ export default function DrillPlayer() {
 
         const { data, error } = await query;
 
-        if (error) throw error;
+        if (error) {
+          log.error('Failed to fetch drill questions', error);
+          throw error;
+        }
 
         if (!data || data.length === 0) {
+          log.warn('No questions available for drill', { subject, mode });
           toast.error('No questions available for this drill');
           navigate(`/drill/${subject}/setup`);
           return;
@@ -187,9 +194,10 @@ export default function DrillPlayer() {
           questions,
         };
 
+        log.info('Drill session created', { questionCount: questions.length, mode });
         setDrill(drillSession);
       } catch (error) {
-        console.error('Error fetching questions:', error);
+        log.error('Error fetching questions', error);
         toast.error('Failed to load drill questions');
         navigate(`/drill/${subject}/setup`);
       } finally {
@@ -202,16 +210,18 @@ export default function DrillPlayer() {
 
   const handleComplete = async (score: number) => {
     // Calculate stats from drill
-    const total = drill?.questions.length || 0;
+    const total = drill?.questions.length ?? 0;
     const correct = Math.round((score / 100) * total);
     
-    console.log('Drill completed:', { score, correct, total });
+    log.info('Drill completed', { score, correct, total });
     
     // Save drill session to database
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      log.query('study_tasks', 'insert', { type: 'DRILL', accuracy: correct / total });
+      
       await supabase.from('study_tasks').insert({
         user_id: user.id,
         type: 'DRILL',
@@ -225,7 +235,7 @@ export default function DrillPlayer() {
 
       toast.success(`Drill complete! ${correct}/${total} correct (${score}%)`);
     } catch (error) {
-      console.error('Error saving drill results:', error);
+      log.error('Error saving drill results', error);
     }
 
     // Navigate back after a delay

@@ -1,5 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('useWeakAreasDb');
 
 interface WeakAreaDb {
   skill_id: string | null;
@@ -22,6 +25,8 @@ export function useWeakAreasDb(limit: number = 3) {
       } = await supabase.auth.getUser();
       if (!user) return [];
 
+      log.query('vw_user_skill_stats', 'select', { userId: user.id, limit });
+
       const { data, error } = await supabase
         .from('vw_user_skill_stats')
         .select('skill_id, skill_name, subject, combined_accuracy, seen')
@@ -32,11 +37,12 @@ export function useWeakAreasDb(limit: number = 3) {
         .limit(limit);
 
       if (error) {
-        console.error('Error fetching weak areas:', error);
+        log.error('Error fetching weak areas', error);
         return [];
       }
 
-      return data || [];
+      log.debug('Weak areas fetched', { count: data?.length ?? 0 });
+      return data ?? [];
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
