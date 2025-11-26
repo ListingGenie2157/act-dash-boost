@@ -1,11 +1,11 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, FileText, BookOpen, Microscope, Calculator } from 'lucide-react';
+import { Clock, FileText, BookOpen, Microscope, Calculator, Sparkles } from 'lucide-react';
 
 interface SectionPickerProps {
   formId: string;
-  onSectionSelect: (section: string) => void;
+  onSectionSelect: (section: string, coached?: boolean) => void;
   onBack: () => void;
 }
 
@@ -75,6 +75,35 @@ export function SectionPicker({ formId, onSectionSelect, onBack }: SectionPicker
         </div>
       </div>
 
+      {/* Mode Selection Info */}
+      <div className="max-w-4xl mx-auto mb-6">
+        <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <Sparkles className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <h3 className="font-semibold text-blue-900 mb-1">Try Coached Mode!</h3>
+                <p className="text-sm text-blue-800 mb-3">
+                  Get helpful test-taking reminders and strategy tips during your practice test. 
+                  Perfect for building good habits under pressure.
+                </p>
+                <div className="flex items-center gap-2 text-xs text-blue-700">
+                  <Badge variant="outline" className="bg-white/50 text-blue-700 border-blue-300">
+                    Time management tips
+                  </Badge>
+                  <Badge variant="outline" className="bg-white/50 text-blue-700 border-blue-300">
+                    Section strategies
+                  </Badge>
+                  <Badge variant="outline" className="bg-white/50 text-blue-700 border-blue-300">
+                    Pacing reminders
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
         {sections.map((section) => {
           const Icon = section.icon;
@@ -115,13 +144,25 @@ export function SectionPicker({ formId, onSectionSelect, onBack }: SectionPicker
                   </div>
                 </div>
                 
-                <Button 
-                  className="w-full" 
-                  disabled={!available}
-                  onClick={() => available && onSectionSelect(section.id)}
-                >
-                  {available ? 'Start Section' : 'Coming Soon'}
-                </Button>
+                <div className="space-y-2">
+                  <Button 
+                    className="w-full" 
+                    disabled={!available}
+                    onClick={() => available && onSectionSelect(section.id, false)}
+                  >
+                    {available ? 'Start Timed Test' : 'Coming Soon'}
+                  </Button>
+                  {available && (
+                    <Button 
+                      variant="outline"
+                      className="w-full border-blue-300 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
+                      onClick={() => onSectionSelect(section.id, true)}
+                    >
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Start Coached Test
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           );
