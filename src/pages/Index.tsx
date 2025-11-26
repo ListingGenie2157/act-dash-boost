@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { StudyPlanWidget } from '@/components/StudyPlanWidget';
 import { StudyPlanWizard } from '@/components/StudyPlanWizard';
 import { TestWeekBanner } from '@/components/TestWeekBanner';
@@ -17,6 +18,7 @@ import { FeatureCard } from '@/components/landing/FeatureCard';
 import { Calculator, Target, Bot, TrendingUp, Shuffle, Calendar, Sparkles, ArrowRight, BookOpen, Clock, Zap, User } from 'lucide-react';
 
 const Index = () => {
+  const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [session, setSession] = useState<any>(null);
@@ -433,6 +435,8 @@ const Index = () => {
                       if (!error) {
                         setHasStudyPlan(false);
                         setProfile((prev) => prev ? { ...prev, has_study_plan: false } : prev);
+                        // Invalidate profile cache so other components see the update
+                        queryClient.invalidateQueries({ queryKey: ['profile'] });
                       }
                     }
                   }}
@@ -664,6 +668,8 @@ const Index = () => {
         onPlanGenerated={() => {
           setHasStudyPlan(true);
           setProfile((prev) => prev ? { ...prev, has_study_plan: true } : prev);
+          // Invalidate profile cache so other components see the update
+          queryClient.invalidateQueries({ queryKey: ['profile'] });
         }}
       />
     </div>
