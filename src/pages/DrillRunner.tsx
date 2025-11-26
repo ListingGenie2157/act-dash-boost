@@ -37,11 +37,15 @@ export default function DrillRunner() {
         const nParam = searchParams.get('n');
         const n = nParam ? parseInt(nParam, 10) : 10;
 
-        // Map subject to drill form ID
+        // Map subject to drill form ID (accepts full subject names)
         const formIdMap: Record<string, string> = {
+          'Reading': 'DR_RD',
           'RD': 'DR_RD',
+          'Math': 'DR_MA',
           'MA': 'DR_MA',
+          'English': 'DR_EN',
           'EN': 'DR_EN',
+          'Science': 'DR_SC',
           'SC': 'DR_SC',
         };
         const drillFormId = formIdMap[decodeURIComponent(subject)];
@@ -133,6 +137,34 @@ export default function DrillRunner() {
           due_at: dueDate.toISOString(),
           interval_days: 2,
         });
+        
+        // Also record in error_bank for missed questions page
+        const { data: existingError } = await supabase
+          .from('error_bank')
+          .select('miss_count')
+          .eq('user_id', userId)
+          .eq('question_id', q.id)
+          .single();
+        
+        if (existingError) {
+          // Update existing record
+          await supabase
+            .from('error_bank')
+            .update({
+              miss_count: (existingError.miss_count || 0) + 1,
+              last_missed_at: new Date().toISOString(),
+            })
+            .eq('user_id', userId)
+            .eq('question_id', q.id);
+        } else {
+          // Insert new record
+          await supabase.from('error_bank').insert({
+            user_id: userId,
+            question_id: q.id,
+            last_missed_at: new Date().toISOString(),
+            miss_count: 1,
+          });
+        }
       }
     } catch (err) {
       console.error('Error tracking drill answer:', err);

@@ -61,7 +61,7 @@ export default function ParentPortal() {
       if (!existingParent) {
         const { data: newParent, error } = await supabase
           .from('parents')
-          .insert({ email: user.email })
+          .insert({ id: user.id, email: user.email })
           .select('id')
           .single();
 
