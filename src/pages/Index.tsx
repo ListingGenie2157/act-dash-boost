@@ -16,12 +16,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { AnimatedCounter } from '@/components/landing/AnimatedCounter';
 import { FeatureCard } from '@/components/landing/FeatureCard';
 import { Calculator, Target, Bot, TrendingUp, Shuffle, Calendar, Sparkles, ArrowRight, BookOpen, Clock, Zap, User } from 'lucide-react';
+import type { Session } from '@supabase/supabase-js';
 
 const Index = () => {
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   
   interface Profile {
     test_date?: string | null;

@@ -92,10 +92,10 @@ export default function DiagnosticTest() {
     if (timeLeft > 0) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
       return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && questions.length > 0) {
+    } else if (timeLeft === 0 && questions.length > 0 && !loading && !submitting) {
       handleSubmit();
     }
-  }, [timeLeft]);
+  }, [timeLeft, questions.length, loading, submitting, handleSubmit]);
 
   const loadDiagnostic = async () => {
     try {
