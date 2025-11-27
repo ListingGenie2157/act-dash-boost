@@ -52,97 +52,100 @@ const Index = () => {
         try {
           if (import.meta.env.DEV) console.log('[Index] Fetching profile for user:', session.user.id);
 
-          // Add timeout but handle it gracefully
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Query timeout')), 10000)
-          );
+          // Use AbortController for proper timeout handling
+          const abortController = new AbortController();
+          const timeoutId = setTimeout(() => abortController.abort(), 10000);
 
-          const profilePromise = supabase
-            .from('profiles')
-            .select('test_date, onboarding_complete, has_study_plan, first_name')
-            .eq('id', session.user.id)
-            .maybeSingle();
+          try {
+            const { data: profile, error: profileError } = await supabase
+              .from('profiles')
+              .select('test_date, onboarding_complete, has_study_plan, first_name')
+              .eq('id', session.user.id)
+              .abortSignal(abortController.signal)
+              .maybeSingle();
 
-          const result = await Promise.race([
-            profilePromise,
-            timeoutPromise
-          ]);
-          
-          const { data: profile, error: profileError } = result as { 
-            data: any; 
-            error: any; 
-          };
+            clearTimeout(timeoutId);
 
-          if (import.meta.env.DEV) console.log('[Index] Profile result:', { profile, profileError });
+            if (import.meta.env.DEV) console.log('[Index] Profile result:', { profile, profileError });
 
-          if (profileError && mounted) {
-            console.error('[Index] Profile query error:', profileError);
-            // On error, assume they need onboarding
-            setIsLoading(false);
-            navigate('/onboarding', { replace: true });
-            return;
-          }
-
-          // If user has completed onboarding OR has test_date, stay on dashboard
-          if ((profile?.onboarding_complete || profile?.test_date) && mounted) {
-            if (import.meta.env.DEV) console.log('[Index] User has completed onboarding, showing dashboard');
-            setProfile(profile);
-
-            // Verify study plan exists in database (override profile flag if needed)
-            try {
-              const planCheckPromise = supabase
-                .from('study_tasks')
-                .select('id')
-                .eq('user_id', session.user.id)
-                .limit(1);
-
-              const planCheckTimeout = new Promise((resolve) =>
-                setTimeout(() => resolve({ data: null }), 3000)
-              );
-
-              const planResult = await Promise.race([
-                planCheckPromise,
-                planCheckTimeout
-              ]);
-              
-              const { data: planCheck } = planResult as { data: any[] | null };
-
-              const actuallyHasPlan = profile.has_study_plan || (planCheck && planCheck.length > 0);
-              setHasStudyPlan(actuallyHasPlan);
-            } catch {
-              // If plan check fails, just use profile flag
-              setHasStudyPlan(profile.has_study_plan ?? false);
+            if (profileError && mounted) {
+              console.error('[Index] Profile query error:', profileError);
+              // On error, assume they need onboarding
+              setIsLoading(false);
+              navigate('/onboarding', { replace: true });
+              return;
             }
 
-            // Check if user has completed a diagnostic (exclude test/self-generated records)
-            try {
-              const { data: diagnosticData } = await supabase
-                .from('diagnostics')
-                .select('id')
-                .eq('user_id', session.user.id)
-                .eq('source', 'diagnostic')  // Only count actual diagnostic assessments
-                .not('completed_at', 'is', null)
-                .limit(1);
-              
-              setHasDiagnostic((diagnosticData?.length ?? 0) > 0);
-            } catch {
-              setHasDiagnostic(false);
+            // If user has completed onboarding OR has test_date, stay on dashboard
+            if ((profile?.onboarding_complete || profile?.test_date) && mounted) {
+              if (import.meta.env.DEV) console.log('[Index] User has completed onboarding, showing dashboard');
+              setProfile(profile);
+
+              // Verify study plan exists in database (override profile flag if needed)
+              try {
+                const planAbortController = new AbortController();
+                const planTimeoutId = setTimeout(() => planAbortController.abort(), 3000);
+
+                try {
+                  const { data: planCheck } = await supabase
+                    .from('study_tasks')
+                    .select('id')
+                    .eq('user_id', session.user.id)
+                    .abortSignal(planAbortController.signal)
+                    .limit(1);
+
+                  clearTimeout(planTimeoutId);
+                  const actuallyHasPlan = profile.has_study_plan || (planCheck && planCheck.length > 0);
+                  setHasStudyPlan(actuallyHasPlan);
+                } catch {
+                  clearTimeout(planTimeoutId);
+                  // If plan check fails, just use profile flag
+                  setHasStudyPlan(profile.has_study_plan ?? false);
+                }
+              } catch {
+                // If plan check fails, just use profile flag
+                setHasStudyPlan(profile.has_study_plan ?? false);
+              }
+
+              // Check if user has completed a diagnostic (exclude test/self-generated records)
+              try {
+                const { data: diagnosticData } = await supabase
+                  .from('diagnostics')
+                  .select('id')
+                  .eq('user_id', session.user.id)
+                  .eq('source', 'diagnostic')  // Only count actual diagnostic assessments
+                  .not('completed_at', 'is', null)
+                  .limit(1);
+                
+                setHasDiagnostic((diagnosticData?.length ?? 0) > 0);
+              } catch {
+                setHasDiagnostic(false);
+              }
+
+              setIsLoading(false);
+              return;
             }
 
-            setIsLoading(false);
-            return;
-          }
-
-          // Otherwise, redirect to onboarding
-          if (mounted) {
-            if (import.meta.env.DEV) console.log('[Index] Redirecting to onboarding - no onboarding_complete or test_date');
-            setIsLoading(false);
-            navigate('/onboarding', { replace: true });
-            return;
+            // Otherwise, redirect to onboarding
+            if (mounted) {
+              if (import.meta.env.DEV) console.log('[Index] Redirecting to onboarding - no onboarding_complete or test_date');
+              setIsLoading(false);
+              navigate('/onboarding', { replace: true });
+              return;
+            }
+          } catch (abortError) {
+            clearTimeout(timeoutId);
+            console.error('[Index] Profile fetch aborted or failed:', abortError);
+            // On timeout or error, show dashboard anyway (user is authenticated)
+            if (mounted) {
+              setProfile({ onboarding_complete: true, has_study_plan: false, test_date: null });
+              setHasStudyPlan(false);
+              setIsLoading(false);
+            }
           }
         } catch (error) {
           console.error('[Index] Profile check failed:', error);
-          // On timeout or error, show dashboard anyway (user is authenticated)
+          // On error, show dashboard anyway (user is authenticated)
           if (mounted) {
             setProfile({ onboarding_complete: true, has_study_plan: false, test_date: null });
             setHasStudyPlan(false);

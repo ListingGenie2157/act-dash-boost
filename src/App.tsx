@@ -49,7 +49,21 @@ import CalculatorLab from "./pages/CalculatorLab";
 import AdminSkillCodes from "./pages/AdminSkillCodes";
 
 
-const queryClient = new QueryClient();
+// Configure QueryClient with production-ready defaults
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 3, // Retry failed queries 3 times
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+      staleTime: 5 * 60 * 1000, // Data is fresh for 5 minutes
+      refetchOnWindowFocus: false, // Prevent excessive refetches
+      refetchOnReconnect: true, // Refetch when network reconnects
+    },
+    mutations: {
+      retry: 1, // Retry mutations once on failure
+    },
+  },
+});
 
 const App = () => (
   <ErrorBoundary>

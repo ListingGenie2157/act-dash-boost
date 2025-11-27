@@ -56,6 +56,9 @@ export async function flushOfflineQueue() {
   
   console.warn(`Flushing ${items.length} offline attempts`);
   
+  let syncedCount = 0;
+  let failedCount = 0;
+  
   for (const item of items) {
     try {
       const { error } = await supabase
@@ -77,12 +80,22 @@ export async function flushOfflineQueue() {
       // Remove successfully synced item
       if (item.id) {
         await database.delete('attemptQueue', item.id);
+        syncedCount++;
       }
       
     } catch (error) {
       console.error('Failed to sync attempt:', error);
+      failedCount++;
       // Keep item in queue for retry
     }
+  }
+  
+  if (syncedCount > 0) {
+    console.log(`✓ Synced ${syncedCount} offline attempts`);
+  }
+  
+  if (failedCount > 0) {
+    console.warn(`⚠ Failed to sync ${failedCount} attempts - will retry later`);
   }
 }
 
@@ -95,6 +108,15 @@ export async function getQueuedAttemptsCount(): Promise<number> {
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => {
     console.warn('Back online, flushing offline queue');
-    flushOfflineQueue();
+    flushOfflineQueue().catch((error) => {
+      console.error('Failed to flush offline queue:', error);
+      // Schedule retry after 5 seconds
+      setTimeout(() => {
+        console.warn('Retrying offline queue flush...');
+        flushOfflineQueue().catch((retryError) => {
+          console.error('Retry failed:', retryError);
+        });
+      }, 5000);
+    });
   });
 }
