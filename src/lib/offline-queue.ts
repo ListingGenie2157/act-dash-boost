@@ -95,6 +95,9 @@ export async function getQueuedAttemptsCount(): Promise<number> {
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => {
     console.warn('Back online, flushing offline queue');
-    flushOfflineQueue();
+    flushOfflineQueue().catch((error) => {
+      console.error('Failed to flush offline queue after coming online:', error);
+      // Queue will be retried on next online event or manual flush
+    });
   });
 }
