@@ -102,7 +102,7 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
         .map((task: PlanTaskJson) => task.skill_id)
         .filter((id): id is string => Boolean(id));
       
-      let skillsMap = new Map<string, { name: string; subject: string }>();
+      const skillsMap = new Map<string, { name: string; subject: string }>();
       if (skillIds.length > 0) {
         const { data: skillsData } = await supabase
           .from('skills')

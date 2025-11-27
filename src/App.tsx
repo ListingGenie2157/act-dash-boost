@@ -9,6 +9,8 @@ import { PageLoadingSpinner } from './components/LoadingSpinner';
 import { TutorProvider } from './hooks/useTutor';
 import { TutorPanel } from './components/tutor/TutorPanel';
 import { AppLayout } from './components/AppLayout';
+import { RequireAuth } from './components/RequireAuth';
+import { ProtectedAdminRoute } from './components/ProtectedAdminRoute';
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import SimpleLogin from "./pages/SimpleLogin";
@@ -82,7 +84,7 @@ const App = () => (
           <Route path="/update-password" element={<UpdatePassword />} />
           
           {/* Protected routes with sidebar layout */}
-          <Route element={<AppLayout />}>
+          <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
             <Route path="/" element={<Index />} />
             <Route path="/dashboard" element={<Index />} />
             <Route path="/onboarding" element={<Onboarding />} />
@@ -128,16 +130,24 @@ const App = () => (
           } />
           {/* Admin routes */}
           <Route path="/admin-import" element={
-            <LazyLoader>
-              <LazyAdminImport />
-            </LazyLoader>
+            <ProtectedAdminRoute>
+              <LazyLoader>
+                <LazyAdminImport />
+              </LazyLoader>
+            </ProtectedAdminRoute>
           } />
           <Route path="/admin-lesson-import" element={
-            <LazyLoader>
-              <LazyAdminLessonImport />
-            </LazyLoader>
+            <ProtectedAdminRoute>
+              <LazyLoader>
+                <LazyAdminLessonImport />
+              </LazyLoader>
+            </ProtectedAdminRoute>
           } />
-          <Route path="/admin/skill-codes" element={<AdminSkillCodes />} />
+          <Route path="/admin/skill-codes" element={
+            <ProtectedAdminRoute>
+              <AdminSkillCodes />
+            </ProtectedAdminRoute>
+          } />
           {/* Parent portal route */}
           <Route path="/parent-portal" element={
             <LazyLoader>

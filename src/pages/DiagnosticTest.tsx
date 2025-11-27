@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -75,55 +75,109 @@ export default function DiagnosticTest() {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Validate formId parameter
-  let formId: string;
-  try {
-    const validated = validateInput(
-      diagnosticFormIdSchema,
-      { formId: params.formId },
-      'Invalid diagnostic form'
-    );
-    formId = validated.formId;
-  } catch (error) {
-    // Show error and redirect to dashboard
-    useEffect(() => {
-      toast({
-        title: 'Invalid Form',
-        description: error instanceof Error ? error.message : 'Invalid form ID',
-        variant: 'destructive',
-      });
-      navigate('/', { replace: true });
-    }, []);
-    
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">
-              {error instanceof Error ? error.message : 'Invalid form ID'}
-            </p>
-            <Button onClick={() => navigate('/')} className="w-full mt-4">
-              Return to Dashboard
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-  
+  // ALL HOOKS AT TOP - UNCONDITIONALLY
   const [questions, setQuestions] = useState<(Question & { skill_id?: string | null })[]>([]);
   const [attempts, setAttempts] = useState<Record<string, Attempt>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  
+  // Validate formId - store result in state with useMemo
+  const validationResult = useMemo(() => {
+    try {
+      const validated = validateInput(
+        diagnosticFormIdSchema,
+        { formId: params.formId },
+        'Invalid diagnostic form'
+      );
+      return { formId: validated.formId, error: null };
+    } catch (error) {
+      return { 
+        formId: null, 
+        error: error instanceof Error ? error.message : 'Invalid form ID' 
+      };
+    }
+  }, [params.formId]);
 
+  const formId = validationResult.formId;
+
+  // Define handleSubmit BEFORE the useEffect that uses it
+  const handleSubmit = useCallback(async () => {
+    if (submitting || !formId) return;
+    setSubmitting(true);
+
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return;
+
+      // Call finish-diagnostic edge function with real skill IDs
+      const { error } = await supabase.functions.invoke('finish-diagnostic', {
+        body: {
+          section: formId.startsWith('D2') ? formId.slice(2) : formId,
+          blocks: [{
+            questions: questions.map(q => ({ 
+              id: q.question_id, 
+              skill_tags: q.skill_id ? [q.skill_id] : []
+            })),
+            answers: Object.entries(attempts).map(([questionId, attempt]) => ({
+              questionId,
+              selectedAnswer: attempt.selected_idx?.toString() || '',
+              isCorrect: attempt.selected_idx === attempt.correct_idx
+            }))
+          }]
+        }
+      });
+
+      if (error) throw error;
+
+      // Mark this section as complete in localStorage
+      const completed = JSON.parse(localStorage.getItem('diagnostic_completed_sections') || '[]');
+      if (!completed.includes(formId)) {
+        completed.push(formId);
+        localStorage.setItem('diagnostic_completed_sections', JSON.stringify(completed));
+      }
+
+      // Navigate back to diagnostic orchestrator
+      toast({
+        title: "Section Complete!",
+        description: `${formId} section saved successfully.`,
+      });
+
+      navigate('/diagnostic');
+
+    } catch (error) {
+      console.error('Error submitting diagnostic:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit diagnostic test",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  }, [submitting, formId, questions, attempts, toast, navigate]);
+
+  // Handle validation error with useEffect
+  useEffect(() => {
+    if (validationResult.error) {
+      toast({
+        title: 'Invalid Form',
+        description: validationResult.error,
+        variant: 'destructive',
+      });
+      navigate('/', { replace: true });
+    }
+  }, [validationResult.error, toast, navigate]);
+
+  // Load diagnostic when formId is valid
   useEffect(() => {
     if (formId) {
       loadDiagnostic();
     }
   }, [formId]);
 
+  // Timer effect
   useEffect(() => {
     if (timeLeft > 0) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
@@ -131,9 +185,11 @@ export default function DiagnosticTest() {
     } else if (timeLeft === 0 && questions.length > 0) {
       handleSubmit();
     }
-  }, [timeLeft]);
+  }, [timeLeft, questions.length, handleSubmit]);
 
   const loadDiagnostic = async () => {
+    if (!formId) return; // Guard against null formId
+    
     try {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) {
@@ -270,7 +326,7 @@ export default function DiagnosticTest() {
     const question = questions[currentIndex];
     const attempt = attempts[question.question_id];
     
-    if (!attempt) return;
+    if (!attempt || !formId) return;
 
     const updatedAttempt = { ...attempt, selected_idx: choiceIndex };
     setAttempts(prev => ({ ...prev, [question.question_id]: updatedAttempt }));
@@ -290,62 +346,6 @@ export default function DiagnosticTest() {
       console.error('Error saving answer:', error);
     }
   };
-
-  const handleSubmit = useCallback(async () => {
-    if (submitting) return;
-    setSubmitting(true);
-
-    try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return;
-
-      
-      // Call finish-diagnostic edge function with real skill IDs
-      const { error } = await supabase.functions.invoke('finish-diagnostic', {
-        body: {
-          section: formId.startsWith('D2') ? formId.slice(2) : formId,
-          blocks: [{
-            questions: questions.map(q => ({ 
-              id: q.question_id, 
-              skill_tags: q.skill_id ? [q.skill_id] : []
-            })),
-            answers: Object.entries(attempts).map(([questionId, attempt]) => ({
-              questionId,
-              selectedAnswer: attempt.selected_idx?.toString() || '',
-              isCorrect: attempt.selected_idx === attempt.correct_idx
-            }))
-          }]
-        }
-      });
-
-      if (error) throw error;
-
-      // Mark this section as complete in localStorage
-      const completed = JSON.parse(localStorage.getItem('diagnostic_completed_sections') || '[]');
-      if (!completed.includes(formId)) {
-        completed.push(formId);
-        localStorage.setItem('diagnostic_completed_sections', JSON.stringify(completed));
-      }
-
-      // Navigate back to diagnostic orchestrator
-      toast({
-        title: "Section Complete!",
-        description: `${formId} section saved successfully.`,
-      });
-
-      navigate('/diagnostic');
-
-    } catch (error) {
-      console.error('Error submitting diagnostic:', error);
-      toast({
-        title: "Error",
-        description: "Failed to submit diagnostic test",
-        variant: "destructive",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  }, [submitting, formId, questions, attempts, toast, navigate]);
 
 
   const formatTime = (seconds: number) => {
