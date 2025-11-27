@@ -13,7 +13,7 @@ interface ErrorContext {
 /**
  * Report an error to monitoring service
  * In development: logs to console
- * In production: sends to error tracking service (configure VITE_ERROR_TRACKING_DSN)
+ * In production: sends to Sentry (if configured)
  */
 export function reportError(
   error: Error,
@@ -25,20 +25,25 @@ export function reportError(
     return;
   }
 
-  // Production error reporting
+  // Production error reporting with Sentry
   try {
-    // TODO: Integrate with error tracking service (Sentry, LogRocket, etc.)
-    // Example for Sentry:
-    // if (window.Sentry) {
-    //   window.Sentry.captureException(error, {
-    //     contexts: {
-    //       custom: context
-    //     }
-    //   });
-    // }
-
-    // For now, send to console.error (always available)
-    console.error('[Production Error]', error.message, context);
+    // Check if Sentry is available (loaded via main.tsx)
+    if (typeof window !== 'undefined' && (window as any).Sentry) {
+      const Sentry = (window as any).Sentry;
+      Sentry.captureException(error, {
+        contexts: {
+          custom: context
+        },
+        tags: {
+          component: context?.component,
+          page: context?.page,
+        },
+        user: context?.userId ? { id: context.userId } : undefined,
+      });
+    } else {
+      // Fallback to console if Sentry not configured
+      console.error('[Production Error]', error.message, context);
+    }
   } catch (reportingError) {
     // Fail silently if error reporting fails
     console.error('[ErrorReporter] Failed to report error:', reportingError);
@@ -54,8 +59,17 @@ export function reportWarning(
 ) {
   if (import.meta.env.DEV) {
     console.warn('[Warning]', message, context);
+    return;
   }
   
-  // In production, you might want to send warnings to a separate channel
-  // or filter them based on severity
+  // Send warnings to Sentry in production with lower severity
+  if (typeof window !== 'undefined' && (window as any).Sentry) {
+    const Sentry = (window as any).Sentry;
+    Sentry.captureMessage(message, {
+      level: 'warning',
+      contexts: {
+        custom: context
+      },
+    });
+  }
 }
