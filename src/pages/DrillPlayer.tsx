@@ -5,6 +5,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { DrillComponent } from '@/components/DrillComponent';
 import { toast } from 'sonner';
 import type { DrillSession, LegacyQuestion } from '@/types';
+import { logger } from '@/lib/logger';
 
 export default function DrillPlayer() {
   const { subject } = useParams<{ subject: string }>();
@@ -211,7 +212,7 @@ export default function DrillPlayer() {
     const total = drill.questions.length;
     const correct = Math.round((score / 100) * total);
     
-    console.log('Drill completed:', { score, correct, total });
+    logger.debug('Drill completed:', { score, correct, total });
     
     // Save drill session to database
     try {

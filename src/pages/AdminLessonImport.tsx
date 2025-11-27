@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, FileText, CheckCircle } from 'lucide-react';
 import { sanitizeHTML } from '@/lib/sanitize';
+import { logger } from '@/lib/logger';
 
 interface ExtractedContent {
   skill_code: string;
@@ -118,7 +119,7 @@ export default function AdminLessonImport() {
           lesson.skill_code = normalizedCode;
           
           if (originalCode !== normalizedCode) {
-            console.log(`Normalized skill code: "${originalCode}" → "${normalizedCode}"`);
+            logger.debug(`Normalized skill code: "${originalCode}" → "${normalizedCode}"`);
           }
           
           lessons.push(lesson as ExtractedContent);
