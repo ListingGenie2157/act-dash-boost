@@ -235,8 +235,14 @@ export default function ReviewMissed() {
                     variant="outline" 
                     size="sm"
                     onClick={() => {
-                      // TODO: Navigate to practice this specific question
-                      toast.info('Practice mode coming soon!');
+                      // Navigate to drill runner with this specific question
+                      navigate('/drill-runner', { 
+                        state: { 
+                          mode: 'targeted',
+                          questionIds: [item.question_id],
+                          source: 'missed-review'
+                        } 
+                      });
                     }}
                   >
                     <Target className="h-4 w-4 mr-2" />

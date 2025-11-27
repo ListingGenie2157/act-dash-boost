@@ -13,15 +13,17 @@ import { WeeklyCalendar } from '@/components/WeeklyCalendar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
+import type { Session } from '@supabase/supabase-js';
 import { AnimatedCounter } from '@/components/landing/AnimatedCounter';
 import { FeatureCard } from '@/components/landing/FeatureCard';
 import { Calculator, Target, Bot, TrendingUp, Shuffle, Calendar, Sparkles, ArrowRight, BookOpen, Clock, Zap, User } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 const Index = () => {
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   
   interface Profile {
     test_date?: string | null;
@@ -40,17 +42,17 @@ const Index = () => {
   useEffect(() => {
     let mounted = true;
 
-    const syncAuthAndProfile = async (session: any) => {
+    const syncAuthAndProfile = async (session: Session | null) => {
       if (!mounted) return;
 
-      if (import.meta.env.DEV) console.log('[Index] syncAuthAndProfile called', { hasSession: !!session });
+      logger.debug('[Index] syncAuthAndProfile called', { hasSession: !!session });
 
       if (session) {
         setSession(session);
         setIsAuthenticated(true);
         
         try {
-          if (import.meta.env.DEV) console.log('[Index] Fetching profile for user:', session.user.id);
+          logger.debug('[Index] Fetching profile for user:', session.user.id);
 
           // Use AbortController for proper timeout handling
           const abortController = new AbortController();
@@ -66,10 +68,10 @@ const Index = () => {
 
             clearTimeout(timeoutId);
 
-            if (import.meta.env.DEV) console.log('[Index] Profile result:', { profile, profileError });
+            logger.debug('[Index] Profile result:', { profile, profileError });
 
             if (profileError && mounted) {
-              console.error('[Index] Profile query error:', profileError);
+              logger.error('[Index] Profile query error:', profileError);
               // On error, assume they need onboarding
               setIsLoading(false);
               navigate('/onboarding', { replace: true });
@@ -78,7 +80,7 @@ const Index = () => {
 
             // If user has completed onboarding OR has test_date, stay on dashboard
             if ((profile?.onboarding_complete || profile?.test_date) && mounted) {
-              if (import.meta.env.DEV) console.log('[Index] User has completed onboarding, showing dashboard');
+              logger.debug('[Index] User has completed onboarding, showing dashboard');
               setProfile(profile);
 
               // Verify study plan exists in database (override profile flag if needed)
@@ -128,14 +130,14 @@ const Index = () => {
 
             // Otherwise, redirect to onboarding
             if (mounted) {
-              if (import.meta.env.DEV) console.log('[Index] Redirecting to onboarding - no onboarding_complete or test_date');
+              logger.debug('[Index] Redirecting to onboarding - no onboarding_complete or test_date');
               setIsLoading(false);
               navigate('/onboarding', { replace: true });
               return;
             }
           } catch (abortError) {
             clearTimeout(timeoutId);
-            console.error('[Index] Profile fetch aborted or failed:', abortError);
+            logger.error('[Index] Profile fetch aborted or failed:', abortError);
             // On timeout or error, show dashboard anyway (user is authenticated)
             if (mounted) {
               setProfile({ onboarding_complete: true, has_study_plan: false, test_date: null });
@@ -144,7 +146,7 @@ const Index = () => {
             }
           }
         } catch (error) {
-          console.error('[Index] Profile check failed:', error);
+          logger.error('[Index] Profile check failed:', error);
           // On error, show dashboard anyway (user is authenticated)
           if (mounted) {
             setProfile({ onboarding_complete: true, has_study_plan: false, test_date: null });
@@ -153,7 +155,7 @@ const Index = () => {
           }
         }
       } else {
-        if (import.meta.env.DEV) console.log('[Index] No session, showing landing page');
+        logger.debug('[Index] No session, showing landing page');
         setSession(null);
         setIsAuthenticated(false);
         setProfile(null);
@@ -168,7 +170,7 @@ const Index = () => {
     // Set up single auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (import.meta.env.DEV) console.log('Auth state changed:', { event, session: !!session });
+        logger.debug('Auth state changed:', { event, session: !!session });
         await syncAuthAndProfile(session);
       }
     );
@@ -429,11 +431,13 @@ const Index = () => {
                   size="sm"
                   className="bg-background/50 backdrop-blur-sm hover:bg-background/80"
                   onClick={async () => {
+                    if (!session?.user?.id) return;
+                    
                     if (confirm('Switch to self-directed learning mode? Your study plan will remain saved.')) {
                       const { error } = await supabase
                         .from('profiles')
                         .update({ has_study_plan: false })
-                        .eq('id', session?.user?.id);
+                        .eq('id', session.user.id);
 
                       if (!error) {
                         setHasStudyPlan(false);
