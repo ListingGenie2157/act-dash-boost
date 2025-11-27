@@ -1,5 +1,6 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 interface AttemptQueueItem {
   id?: number;
@@ -45,7 +46,7 @@ export async function queueAttemptOffline(attempt: Omit<AttemptQueueItem, 'id' |
   };
   
   await database.add('attemptQueue', item);
-  console.warn('Queued attempt offline:', item);
+  logger.warn('Queued attempt offline:', item);
 }
 
 export async function flushOfflineQueue() {
@@ -54,7 +55,7 @@ export async function flushOfflineQueue() {
   
   if (items.length === 0) return;
   
-  console.warn(`Flushing ${items.length} offline attempts`);
+  logger.warn(`Flushing ${items.length} offline attempts`);
   
   let syncedCount = 0;
   let failedCount = 0;
@@ -84,18 +85,18 @@ export async function flushOfflineQueue() {
       }
       
     } catch (error) {
-      console.error('Failed to sync attempt:', error);
+      logger.error('Failed to sync attempt:', error);
       failedCount++;
       // Keep item in queue for retry
     }
   }
   
   if (syncedCount > 0) {
-    console.log(`✓ Synced ${syncedCount} offline attempts`);
+    logger.info(`✓ Synced ${syncedCount} offline attempts`);
   }
   
   if (failedCount > 0) {
-    console.warn(`⚠ Failed to sync ${failedCount} attempts - will retry later`);
+    logger.warn(`⚠ Failed to sync ${failedCount} attempts - will retry later`);
   }
 }
 
@@ -107,14 +108,14 @@ export async function getQueuedAttemptsCount(): Promise<number> {
 // Auto-flush when coming back online
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => {
-    console.warn('Back online, flushing offline queue');
+    logger.warn('Back online, flushing offline queue');
     flushOfflineQueue().catch((error) => {
-      console.error('Failed to flush offline queue:', error);
+      logger.error('Failed to flush offline queue:', error);
       // Schedule retry after 5 seconds
       setTimeout(() => {
-        console.warn('Retrying offline queue flush...');
+        logger.warn('Retrying offline queue flush...');
         flushOfflineQueue().catch((retryError) => {
-          console.error('Retry failed:', retryError);
+          logger.error('Retry failed:', retryError);
         });
       }, 5000);
     });
