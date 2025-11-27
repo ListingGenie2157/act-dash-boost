@@ -1,5 +1,8 @@
 project_id = "hhbkmxrzxcswwokmbtbz"
 
+[functions.health]
+verify_jwt = false
+
 [functions.tutor-chat]
 verify_jwt = false
 

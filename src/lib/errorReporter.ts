@@ -7,7 +7,7 @@ interface ErrorContext {
   component?: string;
   page?: string;
   userId?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
