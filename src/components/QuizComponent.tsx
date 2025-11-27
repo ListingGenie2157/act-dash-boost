@@ -7,6 +7,7 @@ import type { LegacyQuestion, QuizAnswers } from '@/types';
 import { updateMastery } from '@/lib/mastery';
 import { supabase } from '@/integrations/supabase/client';
 import { seededRandom } from '@/lib/shuffle';
+import { logger } from '@/lib/logger';
 
 interface QuizComponentProps {
   questions: LegacyQuestion[];
@@ -170,7 +171,7 @@ export const QuizComponent = ({
           };
         });
 
-        console.log('DEBUG masteryResults length:', masteryResults.length, masteryResults);
+        logger.debug('Mastery results:', { length: masteryResults.length, results: masteryResults });
 
         for (const result of masteryResults) {
           await updateMastery(

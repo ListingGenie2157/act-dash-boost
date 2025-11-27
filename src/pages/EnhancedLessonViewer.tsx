@@ -31,6 +31,7 @@ import { PeriodicTable } from '@/components/lesson/PeriodicTable';
 import { YouTubeEmbed, extractYouTubeId } from '@/components/lesson/YouTubeEmbed';
 import { TutorTrigger } from '@/components/tutor/TutorTrigger';
 import { mapToTutorSubject } from '@/lib/tutorSubjectMapper';
+import { logger } from '@/lib/logger';
 
 export default function EnhancedLessonViewer() {
   const { topic } = useParams<{ topic?: string }>();
@@ -97,9 +98,9 @@ export default function EnhancedLessonViewer() {
       setError(null);
       try {
         const code = topic ?? '';
-        console.log('Fetching lesson for skill code:', code);
+        logger.debug('Fetching lesson for skill code:', code);
         const { data, error: fetchError } = await getEnhancedLesson(code);
-        console.log('Lesson fetch result:', { data, fetchError });
+        logger.debug('Lesson fetch result:', { data, fetchError });
         
         if (fetchError) {
           setError(fetchError.message || 'Failed to load lesson');

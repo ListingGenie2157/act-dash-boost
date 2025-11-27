@@ -17,6 +17,7 @@ export default function DrillRunner() {
   const [current, setCurrent] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -117,10 +118,11 @@ export default function DrillRunner() {
   }, [subject, searchParams]);
 
   const handleAnswer = async (selectedIdx: number) => {
-    if (!userId) return;
+    if (!userId || isSubmitting) return;
     const q = questions[current];
     if (!q) return;
     
+    setIsSubmitting(true);
     const correctIdx = ['A', 'B', 'C', 'D'].indexOf(q.answer);
     
     try {
@@ -175,6 +177,8 @@ export default function DrillRunner() {
       }
     } catch (err) {
       console.error('Error tracking drill answer:', err);
+    } finally {
+      setIsSubmitting(false);
     }
     
     // Move to next question
@@ -271,8 +275,9 @@ export default function DrillRunner() {
         {shuffled.choices.map((choice, i) => (
           <button
             key={i}
-            className="w-full border rounded-md p-2 text-left hover:bg-muted"
+            className="w-full border rounded-md p-2 text-left hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => handleShuffledAnswer(i)}
+            disabled={isSubmitting}
           >
             <span className="font-semibold mr-2">{['A', 'B', 'C', 'D'][i]})</span>
             {choice}
