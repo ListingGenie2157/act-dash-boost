@@ -82,9 +82,25 @@ export default function ReviewMissed() {
       if (error) throw error;
 
       // Transform data to match interface
-      const transformed = data?.map((item: any) => ({
+      interface RawQuestionData {
+        question_id: string;
+        miss_count: number | null;
+        last_missed_at: string;
+        questions: {
+          id: string;
+          stem: string;
+          skill_id: string;
+          difficulty: number;
+          skills: {
+            name: string;
+            subject: string;
+          };
+        };
+      }
+      
+      const transformed = data?.map((item: RawQuestionData) => ({
         question_id: item.question_id,
-        miss_count: item.miss_count,
+        miss_count: item.miss_count || 0,
         last_missed_at: item.last_missed_at,
         question: {
           id: item.questions.id,
