@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getAccommodatedTime } from '@/utils/accommodations';
+import { diagnosticFormIdSchema, validateInput } from '@/lib/validation/edgeFunctionSchemas';
 
 interface Question {
   ord: number;
@@ -71,9 +72,44 @@ function shuffle<T>(array: T[], seed: number): T[] {
 
 export default function DiagnosticTest() {
   const params = useParams<{ formId?: string }>();
-  const formId = params.formId!; // Assert non-null - we validate in render
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Validate formId parameter
+  let formId: string;
+  try {
+    const validated = validateInput(
+      diagnosticFormIdSchema,
+      { formId: params.formId },
+      'Invalid diagnostic form'
+    );
+    formId = validated.formId;
+  } catch (error) {
+    // Show error and redirect to dashboard
+    useEffect(() => {
+      toast({
+        title: 'Invalid Form',
+        description: error instanceof Error ? error.message : 'Invalid form ID',
+        variant: 'destructive',
+      });
+      navigate('/', { replace: true });
+    }, []);
+    
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">
+              {error instanceof Error ? error.message : 'Invalid form ID'}
+            </p>
+            <Button onClick={() => navigate('/')} className="w-full mt-4">
+              Return to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
   
   const [questions, setQuestions] = useState<(Question & { skill_id?: string | null })[]>([]);
   const [attempts, setAttempts] = useState<Record<string, Attempt>>({});

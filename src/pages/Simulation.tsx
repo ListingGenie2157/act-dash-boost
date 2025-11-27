@@ -9,6 +9,12 @@ import { PassageLayout } from '@/components/PassageLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { 
+  sessionStartSchema, 
+  submitResponseSchema, 
+  sessionFinishSchema,
+  validateInput 
+} from '@/lib/validation/edgeFunctionSchemas';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -169,13 +175,22 @@ export default function Simulation() {
   const startSession = async (formId: string, section: string, coached: boolean = false) => {
     setLoading(true);
     try {
+      // Validate inputs before calling edge function
+      const validatedInput = validateInput(
+        sessionStartSchema,
+        {
+          form_id: formId,
+          section: section,
+          coached: coached
+        },
+        'Invalid session parameters'
+      );
+
       const { data, error } = await supabase.functions.invoke('session-start', {
         headers: await getAuthHeaders(),
         body: {
-          form_id: formId,
-          section: section,
-          mode: 'simulation',
-          coached
+          ...validatedInput,
+          mode: 'simulation'
         }
       });
 
@@ -227,9 +242,10 @@ export default function Simulation() {
       console.error('Error starting session:', error);
       toast({
         title: "Error",
-        description: "Failed to start session. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to start session. Please try again.",
         variant: "destructive",
       });
+      setState('section-picker'); // Reset to section picker on error
     } finally {
       setLoading(false);
     }
@@ -244,24 +260,31 @@ export default function Simulation() {
     // Calculate time taken for this question
     const timeMs = Date.now() - questionStartTime;
 
-    // Save to database via edge function
+    // Validate inputs before calling edge function
     try {
-      const { error } = await supabase.functions.invoke('submit-response', {
-        headers: await getAuthHeaders(),
-        body: {
+      const validatedInput = validateInput(
+        submitResponseSchema,
+        {
           session_id: sessionData.session_id,
           question_id: questionId,
           selected: selectedAnswer,
           time_ms: timeMs
-        }
+        },
+        'Invalid response data'
+      );
+
+      // Save to database via edge function
+      const { error } = await supabase.functions.invoke('submit-response', {
+        headers: await getAuthHeaders(),
+        body: validatedInput
       });
 
       if (error) {
         console.error('Error saving response:', error);
         // Continue anyway - don't block user from proceeding
       }
-    } catch (error) {
-      console.error('Failed to submit response:', error);
+    } catch (validationError) {
+      console.error('Validation error:', validationError);
       // Continue anyway - user can still complete test
     }
   }, [sessionData, questionStartTime]);
@@ -292,9 +315,16 @@ export default function Simulation() {
 
     setLoading(true);
     try {
+      // Validate input before calling edge function
+      const validatedInput = validateInput(
+        sessionFinishSchema,
+        { session_id: sessionData.session_id },
+        'Invalid session ID'
+      );
+
       const { data, error } = await supabase.functions.invoke('session-finish', {
         headers: await getAuthHeaders(),
-        body: { session_id: sessionData.session_id }
+        body: validatedInput
       });
 
       if (error) throw error;
@@ -312,7 +342,7 @@ export default function Simulation() {
       console.error('Error finishing session:', error);
       toast({
         title: "Error",
-        description: "Failed to submit test. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to submit test. Please try again.",
         variant: "destructive",
       });
     } finally {

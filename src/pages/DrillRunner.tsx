@@ -5,6 +5,7 @@ import type { Question } from '@/types';
 import { shuffleQuestionChoices } from '@/lib/shuffle';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { drillRunnerSchema, safeValidateInput } from '@/lib/validation/edgeFunctionSchemas';
 
 export default function DrillRunner() {
   const navigate = useNavigate();
@@ -28,14 +29,20 @@ export default function DrillRunner() {
         }
         setUserId(user.id);
 
-        if (!subject) {
-          setError('No subject specified');
+        // Validate parameters
+        const nParam = searchParams.get('n');
+        const validation = safeValidateInput(drillRunnerSchema, {
+          subject: subject,
+          n: nParam ? parseInt(nParam, 10) : undefined
+        });
+
+        if (!validation.success) {
+          setError(validation.error);
           setLoading(false);
           return;
         }
 
-        const nParam = searchParams.get('n');
-        const n = nParam ? parseInt(nParam, 10) : 10;
+        const { subject: validSubject, n } = validation.data;
 
         // Map subject to drill form ID (accepts full subject names)
         const formIdMap: Record<string, string> = {
@@ -48,7 +55,7 @@ export default function DrillRunner() {
           'Science': 'DR_SC',
           'SC': 'DR_SC',
         };
-        const drillFormId = formIdMap[decodeURIComponent(subject)];
+        const drillFormId = formIdMap[validSubject];
 
         if (!drillFormId) {
           setError('Invalid drill subject');
@@ -61,7 +68,7 @@ export default function DrillRunner() {
           .from('staging_items')
           .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, answer, explanation, skill_code, form_id')
           .eq('form_id', drillFormId)
-          .limit(n);
+          .limit(n ?? 10); // Use default of 10 if undefined
 
         if (qError) {
           setError(qError.message);
