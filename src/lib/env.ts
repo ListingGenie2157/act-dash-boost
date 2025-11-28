@@ -1,43 +1,19 @@
-const REQUIRED_ENV_KEYS = {
-  VITE_SUPABASE_URL: 'https://your-project.supabase.co',
-  VITE_SUPABASE_ANON_KEY: 'public-anon-key',
-} as const;
-
-type RequiredEnvKey = keyof typeof REQUIRED_ENV_KEYS;
-
-type SupabaseConfigStatus = {
-  url: 'Set' | 'Missing';
-  anonKey: 'Set' | 'Missing';
-};
-
-const readEnvValue = (key: RequiredEnvKey): string => {
-  const value = import.meta.env[key];
-
-  if (!value) {
-    const example = REQUIRED_ENV_KEYS[key];
-    throw new Error(
-      `Missing environment variable: ${key}. Set it in your .env file (e.g. ${key}=${example}).`,
-    );
-  }
-
-  return value;
-};
+// Supabase configuration - these are public/publishable values
+const SUPABASE_URL = 'https://hhbkmxrzxcswwokmbtbz.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhoYmtteHJ6eGNzd3dva21idGJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyNTI5MzcsImV4cCI6MjA3MTgyODkzN30.SWsosSuVDjtaAvlIdEyAwUx9zOY_uViTJWw_5UbgIGE';
 
 export const isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
 
-export const getSupabaseUrl = (): string => readEnvValue('VITE_SUPABASE_URL');
+export const getSupabaseUrl = (): string => SUPABASE_URL;
 
-export const getSupabaseAnonKey = (): string => readEnvValue('VITE_SUPABASE_ANON_KEY');
+export const getSupabaseAnonKey = (): string => SUPABASE_ANON_KEY;
 
-export const getSupabaseConfigStatus = (): SupabaseConfigStatus => ({
-  url: import.meta.env.VITE_SUPABASE_URL ? 'Set' : 'Missing',
-  anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Set' : 'Missing',
+export const getSupabaseConfigStatus = () => ({
+  url: 'Set' as const,
+  anonKey: 'Set' as const,
 });
 
 export const logSupabaseConfigStatus = (): void => {
-  if (!import.meta.env.DEV) {
-    return;
-  }
-
-  console.info('[env] Supabase config status', getSupabaseConfigStatus());
+  if (!isBrowser) return;
+  console.info('[env] Supabase config: ✓ URL and anon key configured');
 };
