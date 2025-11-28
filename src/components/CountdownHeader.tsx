@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { CalendarIcon, Clock, Calendar as CalendarCmp } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,7 +30,7 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
-  const fetchDaysLeft = async () => {
+  const fetchDaysLeft = useCallback(async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase.functions.invoke('days-left', {
@@ -84,11 +84,11 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchDaysLeft();
-  }, []);
+  }, [fetchDaysLeft]);
 
   const handleSetTestDate = async (date: Date) => {
     if (!date) return;

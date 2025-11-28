@@ -38,7 +38,7 @@ export const diagnosticFormIdSchema = z.object({
   formId: z.string()
     .min(1, 'Form ID is required')
     .refine(
-      (val) => VALID_FORM_IDS.includes(val as any),
+      (val): val is typeof VALID_FORM_IDS[number] => VALID_FORM_IDS.includes(val as typeof VALID_FORM_IDS[number]),
       {
         message: `Invalid form ID. Must be one of: ${VALID_FORM_IDS.join(', ')}`
       }
@@ -54,7 +54,7 @@ export const drillRunnerSchema = z.object({
   subject: z.string()
     .min(1, 'Subject is required')
     .refine(
-      (val) => VALID_DRILL_SUBJECTS.includes(val as any),
+      (val): val is typeof VALID_DRILL_SUBJECTS[number] => VALID_DRILL_SUBJECTS.includes(val as typeof VALID_DRILL_SUBJECTS[number]),
       {
         message: `Invalid subject. Must be one of: ${VALID_DRILL_SUBJECTS.join(', ')}`
       }
@@ -76,7 +76,7 @@ export const sessionStartSchema = z.object({
   form_id: z.string()
     .min(1, 'Form ID is required')
     .refine(
-      (val) => VALID_FORM_IDS.includes(val as any),
+      (val): val is typeof VALID_FORM_IDS[number] => VALID_FORM_IDS.includes(val as typeof VALID_FORM_IDS[number]),
       {
         message: `Invalid form ID. Must be one of: ${VALID_FORM_IDS.join(', ')}`
       }
