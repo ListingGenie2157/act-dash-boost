@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { XCircle, Target, Filter } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -35,9 +35,9 @@ export default function ReviewMissed() {
 
   useEffect(() => {
     loadMissedQuestions();
-  }, [subjectFilter, sortBy]);
+  }, [loadMissedQuestions]);
 
-  const loadMissedQuestions = async () => {
+  const loadMissedQuestions = useCallback(async () => {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -121,7 +121,7 @@ export default function ReviewMissed() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [subjectFilter, sortBy, navigate]);
 
   const handlePracticeAll = () => {
     // Navigate to drill with missed mode

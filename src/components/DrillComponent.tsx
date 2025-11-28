@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -24,7 +24,7 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
   // Toast API for immediate feedback during drills.
   const { toast } = useToast();
 
-  const handleFinish = (finalAnswers: number[]) => {
+  const handleFinish = useCallback((finalAnswers: number[]) => {
     pauseTimer();
     setShowResults(true);
     
@@ -34,7 +34,7 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
     
     const score = Math.round((correctCount / drill.questions.length) * 100);
     onComplete(score, finalAnswers);
-  };
+  }, [pauseTimer, drill.questions, onComplete]);
 
   useEffect(() => {
     if (isCompleted && hasStarted) {

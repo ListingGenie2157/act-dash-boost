@@ -21,11 +21,7 @@ export function LessonsQuickAccess() {
   
   const { data: masteryMap } = useUserMastery();
 
-  useEffect(() => {
-    loadRecommendedLessons();
-  }, [masteryMap]);
-
-  const loadRecommendedLessons = async () => {
+  const loadRecommendedLessons = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -93,7 +89,11 @@ export function LessonsQuickAccess() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [masteryMap]);
+
+  useEffect(() => {
+    loadRecommendedLessons();
+  }, [loadRecommendedLessons]);
 
   const subjectConfig = {
     English: { 

@@ -175,7 +175,7 @@ export default function DiagnosticTest() {
     if (formId) {
       loadDiagnostic();
     }
-  }, [formId]);
+  }, [formId, loadDiagnostic]);
 
   // Timer effect
   useEffect(() => {
@@ -187,7 +187,7 @@ export default function DiagnosticTest() {
     }
   }, [timeLeft, questions.length, handleSubmit]);
 
-  const loadDiagnostic = async () => {
+  const loadDiagnostic = useCallback(async () => {
     if (!formId) return; // Guard against null formId
     
     try {
@@ -320,7 +320,7 @@ export default function DiagnosticTest() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [formId, toast, navigate]);
 
   const handleAnswerSelect = async (choiceIndex: number) => {
     const question = questions[currentIndex];

@@ -49,10 +49,19 @@ interface Question {
   calculator_allowed?: boolean | null;
 }
 
+interface MarkedTextReference {
+  start: number;
+  end: number;
+  label?: string;
+  text?: string;
+}
+
+type MarkedText = Record<string, MarkedTextReference>;
+
 interface Passage {
   title: string;
   passage_text: string;
-  marked_text?: Record<string, any> | null;
+  marked_text?: MarkedText | null;
   passage_format?: string | null;
   passage_type?: string | null;
   has_charts?: boolean | null;

@@ -28,8 +28,15 @@ export function reportError(
   // Production error reporting with Sentry
   try {
     // Check if Sentry is available (loaded via main.tsx)
-    if (typeof window !== 'undefined' && (window as any).Sentry) {
-      const Sentry = (window as any).Sentry;
+    interface WindowWithSentry extends Window {
+      Sentry?: {
+        captureException: (error: Error, options: Record<string, unknown>) => void;
+        captureMessage: (message: string, options: Record<string, unknown>) => void;
+      };
+    }
+    
+    if (typeof window !== 'undefined' && (window as WindowWithSentry).Sentry) {
+      const Sentry = (window as WindowWithSentry).Sentry!
       Sentry.captureException(error, {
         contexts: {
           custom: context
@@ -63,8 +70,15 @@ export function reportWarning(
   }
   
   // Send warnings to Sentry in production with lower severity
-  if (typeof window !== 'undefined' && (window as any).Sentry) {
-    const Sentry = (window as any).Sentry;
+  interface WindowWithSentry extends Window {
+    Sentry?: {
+      captureException: (error: Error, options: Record<string, unknown>) => void;
+      captureMessage: (message: string, options: Record<string, unknown>) => void;
+    };
+  }
+  
+  if (typeof window !== 'undefined' && (window as WindowWithSentry).Sentry) {
+    const Sentry = (window as WindowWithSentry).Sentry!
     Sentry.captureMessage(message, {
       level: 'warning',
       contexts: {

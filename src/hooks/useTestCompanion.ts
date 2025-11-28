@@ -69,7 +69,7 @@ export function useTestCompanion({
     );
   }, []);
 
-  const fireTip = useCallback((tipKey: string, context?: Record<string, any>) => {
+  const fireTip = useCallback((tipKey: string, context?: Record<string, unknown>) => {
     if (!canShowTip()) return;
     if (stateRef.current.firedTips.has(tipKey)) return;
 
