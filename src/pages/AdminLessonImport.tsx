@@ -98,16 +98,16 @@ export default function AdminLessonImport() {
 
       for (const row of dataRows) {
         const values = row.split('\t').map(v => v.trim());
-        const lesson: any = {};
+        const lesson: Partial<ExtractedContent> = {};
 
         headers.forEach((header, idx) => {
           const value = values[idx]?.trim() || '';
           if (value !== '') {
             if (header === 'estimated_minutes') {
               const n = Number(value);
-              lesson[header] = Number.isFinite(n) && n > 0 ? n : undefined;
+              lesson.estimated_minutes = Number.isFinite(n) && n > 0 ? n : undefined;
             } else {
-              lesson[header] = value;
+              (lesson as Record<string, string | number | undefined>)[header] = value;
             }
           }
         });
@@ -237,7 +237,7 @@ export default function AdminLessonImport() {
       const parser = new DOMParser();
       const doc = parser.parseFromString(htmlContent, 'text/html');
 
-      const sections: any = { skill_code: '' };
+      const sections: Record<string, string> = { skill_code: '' };
 
       const sectionIds = [
         'overview',
@@ -326,11 +326,16 @@ export default function AdminLessonImport() {
 
       if (error) throw error;
 
+      interface ImportError {
+        skill_code: string;
+        error: string;
+      }
+
       setImportStatus({
         totalProcessed: data?.total_processed || lessonsToImport.length,
         successCount: data?.success_count || data?.imported || 0,
         errorCount: data?.error_count || data?.failed || 0,
-        errors: data?.errors || (data?.details?.errors || []).map((e: any) => `${e.skill_code}: ${e.error}`) || [],
+        errors: data?.errors || (data?.details?.errors || []).map((e: ImportError) => `${e.skill_code}: ${e.error}`) || [],
       });
 
       if ((data?.success_count || data?.imported || 0) > 0) {
