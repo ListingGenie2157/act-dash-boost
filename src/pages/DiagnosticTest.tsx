@@ -170,6 +170,16 @@ export default function DiagnosticTest() {
     }
   }, [validationResult.error, toast, navigate]);
 
+  // Timer effect - countdown timer
+  useEffect(() => {
+    if (timeLeft > 0 && !loading) {
+      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (timeLeft === 0 && questions.length > 0 && !loading) {
+      handleSubmit();
+    }
+  }, [timeLeft, questions.length, loading, handleSubmit]);
+
   const loadDiagnostic = useCallback(async () => {
     if (!formId) return; // Guard against null formId
     
