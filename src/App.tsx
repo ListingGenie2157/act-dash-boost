@@ -158,6 +158,7 @@ const App = () => (
   <Route path="/task/:date/:idx" element={<TaskLauncher />} />
   <Route path="/lesson/:topic" element={<EnhancedLessonViewer />} />
   <Route path="/lessons" element={<LessonsLibrary />} />
+  <Route path="/drills" element={<TimedDrills />} />
   <Route path="/drill-runner" element={<TimedDrills />} />
   <Route path="/drill/:subject/setup" element={<DrillSetup />} />
   <Route path="/drill/:subject/play" element={<DrillPlayer />} />
