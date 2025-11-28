@@ -170,23 +170,6 @@ export default function DiagnosticTest() {
     }
   }, [validationResult.error, toast, navigate]);
 
-  // Load diagnostic when formId is valid
-  useEffect(() => {
-    if (formId) {
-      loadDiagnostic();
-    }
-  }, [formId, loadDiagnostic]);
-
-  // Timer effect
-  useEffect(() => {
-    if (timeLeft > 0) {
-      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && questions.length > 0) {
-      handleSubmit();
-    }
-  }, [timeLeft, questions.length, handleSubmit]);
-
   const loadDiagnostic = useCallback(async () => {
     if (!formId) return; // Guard against null formId
     
@@ -321,6 +304,13 @@ export default function DiagnosticTest() {
       setLoading(false);
     }
   }, [formId, toast, navigate]);
+
+  // Load diagnostic when formId is valid
+  useEffect(() => {
+    if (formId) {
+      loadDiagnostic();
+    }
+  }, [formId, loadDiagnostic]);
 
   const handleAnswerSelect = async (choiceIndex: number) => {
     const question = questions[currentIndex];

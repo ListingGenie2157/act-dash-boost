@@ -30,10 +30,6 @@ export default function SimulationResults() {
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<SimulationSummary | null>(null);
 
-  useEffect(() => {
-    loadResults();
-  }, [loadResults]);
-
   const loadResults = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -156,6 +152,10 @@ export default function SimulationResults() {
       setLoading(false);
     }
   }, [navigate, location.state]);
+
+  useEffect(() => {
+    loadResults();
+  }, [loadResults]);
 
   const generateStudyPlan = async () => {
     try {
