@@ -35,10 +35,6 @@ export default function ReviewSpaced() {
   const [loading, setLoading] = useState(true);
   const [reviewed, setReviewed] = useState(0);
 
-  useEffect(() => {
-    loadDueCards();
-  }, [loadDueCards]);
-
   const loadDueCards = useCallback(async () => {
     try {
       setLoading(true);
@@ -83,6 +79,10 @@ export default function ReviewSpaced() {
       setLoading(false);
     }
   }, [navigate]);
+
+  useEffect(() => {
+    loadDueCards();
+  }, [loadDueCards]);
 
   const handleAnswerSelect = (answer: string) => {
     setSelectedAnswer(answer);

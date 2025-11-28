@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { GraduationCap, ArrowRight, PenTool, Calculator, BookOpen, Microscope } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';

@@ -33,10 +33,6 @@ export default function ReviewMissed() {
   const [subjectFilter, setSubjectFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'recent' | 'most'>('recent');
 
-  useEffect(() => {
-    loadMissedQuestions();
-  }, [loadMissedQuestions]);
-
   const loadMissedQuestions = useCallback(async () => {
     try {
       setLoading(true);
@@ -122,6 +118,10 @@ export default function ReviewMissed() {
       setLoading(false);
     }
   }, [subjectFilter, sortBy, navigate]);
+
+  useEffect(() => {
+    loadMissedQuestions();
+  }, [loadMissedQuestions]);
 
   const handlePracticeAll = () => {
     // Navigate to drill with missed mode

@@ -40,10 +40,6 @@ export default function ParentPortal() {
     threshold: { days: 5 }
   });
 
-  useEffect(() => {
-    initializeParentPortal();
-  }, [initializeParentPortal]);
-
   const initializeParentPortal = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -85,6 +81,10 @@ export default function ParentPortal() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    initializeParentPortal();
+  }, [initializeParentPortal]);
 
   const fetchRules = async (parentId: string) => {
     const { data, error } = await supabase
