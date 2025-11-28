@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,11 +40,7 @@ export default function ParentPortal() {
     threshold: { days: 5 }
   });
 
-  useEffect(() => {
-    initializeParentPortal();
-  }, []);
-
-  const initializeParentPortal = async () => {
+  const initializeParentPortal = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user?.email) return;
@@ -84,7 +80,11 @@ export default function ParentPortal() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    initializeParentPortal();
+  }, [initializeParentPortal]);
 
   const fetchRules = async (parentId: string) => {
     const { data, error } = await supabase

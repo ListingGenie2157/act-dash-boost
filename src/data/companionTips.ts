@@ -111,7 +111,7 @@ const SECTION_TIP_MAP: Record<string, TipCategory> = {
 export function getCompanionTip(
   tipKey: string,
   section: string,
-  _context?: Record<string, any>
+  _context?: Record<string, unknown>
 ): CompanionTip | null {
   // Check section-specific tips first
   const sectionTips = SECTION_TIP_MAP[section];

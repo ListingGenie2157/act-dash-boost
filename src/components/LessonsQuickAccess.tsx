@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { GraduationCap, ArrowRight, PenTool, Calculator, BookOpen, Microscope } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -21,11 +21,7 @@ export function LessonsQuickAccess() {
   
   const { data: masteryMap } = useUserMastery();
 
-  useEffect(() => {
-    loadRecommendedLessons();
-  }, [masteryMap]);
-
-  const loadRecommendedLessons = async () => {
+  const loadRecommendedLessons = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -93,7 +89,11 @@ export function LessonsQuickAccess() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [masteryMap]);
+
+  useEffect(() => {
+    loadRecommendedLessons();
+  }, [loadRecommendedLessons]);
 
   const subjectConfig = {
     English: { 

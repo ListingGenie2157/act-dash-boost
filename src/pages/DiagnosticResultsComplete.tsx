@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +11,7 @@ import { Brain, TrendingUp, Target } from 'lucide-react';
 interface SectionResult {
   section: string;
   score: number;
-  completed_at: string;
+  completed_at: string | null;
 }
 
 interface WeakSkill {
@@ -33,7 +33,7 @@ export default function DiagnosticResultsComplete() {
     fetchAllResults();
   }, []);
 
-  const fetchAllResults = async () => {
+  const fetchAllResults = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -58,7 +58,12 @@ export default function DiagnosticResultsComplete() {
       }
 
       // Get the most recent result for each section
-      const latestBySectionMap = new Map<string, any>();
+      interface DiagnosticRecord {
+        section: string;
+        score: number | null;
+        completed_at: string | null;
+      }
+      const latestBySectionMap = new Map<string, DiagnosticRecord>();
       
       for (const diag of diagnostics) {
         const section = diag.section;
@@ -149,7 +154,11 @@ export default function DiagnosticResultsComplete() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
+
+  useEffect(() => {
+    fetchAllResults();
+  }, [fetchAllResults]);
 
   const generateStudyPlan = async () => {
     try {

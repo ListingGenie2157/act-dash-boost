@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,11 +30,7 @@ export default function SimulationResults() {
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<SimulationSummary | null>(null);
 
-  useEffect(() => {
-    loadResults();
-  }, []);
-
-  const loadResults = async () => {
+  const loadResults = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -155,7 +151,11 @@ export default function SimulationResults() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate, location.state]);
+
+  useEffect(() => {
+    loadResults();
+  }, [loadResults]);
 
   const generateStudyPlan = async () => {
     try {

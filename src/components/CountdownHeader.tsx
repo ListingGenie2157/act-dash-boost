@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { CalendarIcon, Clock, Calendar as CalendarCmp } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
+import { reportError } from '@/lib/errorReporter';
 
 interface DaysLeftResponse {
   today: string;
@@ -29,7 +30,7 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
-  const fetchDaysLeft = async () => {
+  const fetchDaysLeft = useCallback(async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase.functions.invoke('days-left', {
@@ -37,7 +38,7 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
       });
 
       if (error) {
-        console.error('Error fetching days left:', error);
+        reportError(error as Error, { component: 'CountdownHeader', action: 'fetchDaysLeft' });
         
         // Fallback: Query profiles table directly
         const { data: { user } } = await supabase.auth.getUser();
@@ -74,7 +75,7 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
 
       setDaysLeft(data);
     } catch (error) {
-      console.error('Error fetching days left:', error);
+      reportError(error as Error, { component: 'CountdownHeader', action: 'fetchDaysLeft-catch' });
       toast({
         title: 'Error',
         description: 'Failed to fetch test countdown. Please try again.',
@@ -83,11 +84,11 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchDaysLeft();
-  }, []);
+  }, [fetchDaysLeft]);
 
   const handleSetTestDate = async (date: Date) => {
     if (!date) return;
@@ -101,7 +102,7 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
       });
 
       if (error) {
-        console.error('Error setting test date:', error);
+        reportError(error as Error, { component: 'CountdownHeader', action: 'setTestDate' });
         toast({
           title: 'Error',
           description: 'Failed to set test date. Please try again.',
@@ -132,7 +133,7 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
       });
 
     } catch (error) {
-      console.error('Error setting test date:', error);
+      reportError(error as Error, { component: 'CountdownHeader', action: 'setTestDate-catch' });
       toast({
         title: 'Error',
         description: 'Failed to set test date. Please try again.',

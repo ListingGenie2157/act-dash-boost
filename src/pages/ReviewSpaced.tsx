@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RotateCcw, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,11 +35,7 @@ export default function ReviewSpaced() {
   const [loading, setLoading] = useState(true);
   const [reviewed, setReviewed] = useState(0);
 
-  useEffect(() => {
-    loadDueCards();
-  }, []);
-
-  const loadDueCards = async () => {
+  const loadDueCards = useCallback(async () => {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -82,7 +78,11 @@ export default function ReviewSpaced() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
+
+  useEffect(() => {
+    loadDueCards();
+  }, [loadDueCards]);
 
   const handleAnswerSelect = (answer: string) => {
     setSelectedAnswer(answer);

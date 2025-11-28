@@ -7,6 +7,7 @@ interface ErrorContext {
   component?: string;
   page?: string;
   userId?: string;
+<
   source?: string;
   filename?: string;
   lineno?: number;
@@ -17,7 +18,7 @@ interface ErrorContext {
 /**
  * Report an error to monitoring service
  * In development: logs to console
- * In production: sends to error tracking service (configure VITE_ERROR_TRACKING_DSN)
+ * In production: sends to Sentry (if configured)
  */
 export function reportError(
   error: Error,
@@ -29,8 +30,9 @@ export function reportError(
     return;
   }
 
-  // Production error reporting
+  // Production error reporting with Sentry
   try {
+
     // Check if Sentry is available (via environment variable)
     const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
     
@@ -53,6 +55,30 @@ export function reportError(
     // Fallback: Log to console (always available)
     // In production, consider sending to a logging service
     console.error('[Production Error]', error.message, context);
+    // Check if Sentry is available (loaded via main.tsx)
+    interface WindowWithSentry extends Window {
+      Sentry?: {
+        captureException: (error: Error, options: Record<string, unknown>) => void;
+        captureMessage: (message: string, options: Record<string, unknown>) => void;
+      };
+    }
+    
+    if (typeof window !== 'undefined' && (window as WindowWithSentry).Sentry) {
+      const Sentry = (window as WindowWithSentry).Sentry!
+      Sentry.captureException(error, {
+        contexts: {
+          custom: context
+        },
+        tags: {
+          component: context?.component,
+          page: context?.page,
+        },
+        user: context?.userId ? { id: context.userId } : undefined,
+      });
+    } else {
+      // Fallback to console if Sentry not configured
+      console.error('[Production Error]', error.message, context);
+    }
   } catch (reportingError) {
     // Fail silently if error reporting fails to prevent error loops
     console.error('[ErrorReporter] Failed to report error:', reportingError);
@@ -68,9 +94,27 @@ export function reportWarning(
 ) {
   if (import.meta.env.DEV) {
     console.warn('[Warning]', message, context);
+    return;
   }
   
   // In production, warnings are typically not sent to error tracking
   // but could be logged to a separate channel if needed
   // For now, only log in development to avoid noise
+  // Send warnings to Sentry in production with lower severity
+  interface WindowWithSentry extends Window {
+    Sentry?: {
+      captureException: (error: Error, options: Record<string, unknown>) => void;
+      captureMessage: (message: string, options: Record<string, unknown>) => void;
+    };
+  }
+  
+  if (typeof window !== 'undefined' && (window as WindowWithSentry).Sentry) {
+    const Sentry = (window as WindowWithSentry).Sentry!
+    Sentry.captureMessage(message, {
+      level: 'warning',
+      contexts: {
+        custom: context
+      },
+    });
+  }
 }
