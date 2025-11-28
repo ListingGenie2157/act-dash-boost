@@ -21,7 +21,7 @@ const Index = () => {
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<{ user: { id: string } } | null>(null);
   
   interface Profile {
     test_date?: string | null;
@@ -40,7 +40,7 @@ const Index = () => {
   useEffect(() => {
     let mounted = true;
 
-    const syncAuthAndProfile = async (session: any) => {
+    const syncAuthAndProfile = async (session: { user: { id: string } } | null) => {
       if (!mounted) return;
 
       if (import.meta.env.DEV) console.log('[Index] syncAuthAndProfile called', { hasSession: !!session });
@@ -430,10 +430,12 @@ const Index = () => {
                   className="bg-background/50 backdrop-blur-sm hover:bg-background/80"
                   onClick={async () => {
                     if (confirm('Switch to self-directed learning mode? Your study plan will remain saved.')) {
+                      if (!session?.user?.id) return;
+                      
                       const { error } = await supabase
                         .from('profiles')
                         .update({ has_study_plan: false })
-                        .eq('id', session?.user?.id);
+                        .eq('id', session.user.id);
 
                       if (!error) {
                         setHasStudyPlan(false);

@@ -75,65 +75,48 @@ export default function DiagnosticTest() {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Validate formId parameter
-  let formId: string;
-  try {
-    const validated = validateInput(
-      diagnosticFormIdSchema,
-      { formId: params.formId },
-      'Invalid diagnostic form'
-    );
-    formId = validated.formId;
-  } catch (error) {
-    // Show error and redirect to dashboard
-    useEffect(() => {
-      toast({
-        title: 'Invalid Form',
-        description: error instanceof Error ? error.message : 'Invalid form ID',
-        variant: 'destructive',
-      });
-      navigate('/', { replace: true });
-    }, []);
-    
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">
-              {error instanceof Error ? error.message : 'Invalid form ID'}
-            </p>
-            <Button onClick={() => navigate('/')} className="w-full mt-4">
-              Return to Dashboard
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-  
+  // ALL HOOKS MUST BE CALLED FIRST - BEFORE ANY CONDITIONAL LOGIC
   const [questions, setQuestions] = useState<(Question & { skill_id?: string | null })[]>([]);
   const [attempts, setAttempts] = useState<Record<string, Attempt>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [formId, setFormId] = useState<string | null>(null);
 
+  // Validate formId parameter - store in state instead of early return
   useEffect(() => {
-    if (formId) {
-      loadDiagnostic();
+    if (!params.formId) {
+      setValidationError('Invalid test form');
+      return;
     }
-  }, [formId]);
 
-  useEffect(() => {
-    if (timeLeft > 0) {
-      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && questions.length > 0) {
-      handleSubmit();
+    try {
+      const validated = validateInput(
+        diagnosticFormIdSchema,
+        { formId: params.formId },
+        'Invalid diagnostic form'
+      );
+      setFormId(validated.formId);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Invalid form ID';
+      setValidationError(errorMessage);
+      toast({
+        title: 'Invalid Form',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      // Navigate after a short delay to allow toast to show
+      setTimeout(() => {
+        navigate('/', { replace: true });
+      }, 2000);
     }
-  }, [timeLeft]);
+  }, [params.formId, navigate, toast]);
 
-  const loadDiagnostic = async () => {
+  const loadDiagnostic = useCallback(async () => {
+    if (!formId) return;
+    
     try {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) {
@@ -264,35 +247,16 @@ export default function DiagnosticTest() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [formId, navigate, toast]);
 
-  const handleAnswerSelect = async (choiceIndex: number) => {
-    const question = questions[currentIndex];
-    const attempt = attempts[question.question_id];
-    
-    if (!attempt) return;
-
-    const updatedAttempt = { ...attempt, selected_idx: choiceIndex };
-    setAttempts(prev => ({ ...prev, [question.question_id]: updatedAttempt }));
-
-    // Save to database
-    try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return;
-
-      await supabase
-        .from('attempts')
-        .update({ selected_idx: choiceIndex })
-        .eq('user_id', user.user.id)
-        .eq('form_id', formId)
-        .eq('question_id', question.question_id);
-    } catch (error) {
-      console.error('Error saving answer:', error);
+  useEffect(() => {
+    if (formId && !validationError) {
+      loadDiagnostic();
     }
-  };
+  }, [formId, validationError, loadDiagnostic]);
 
   const handleSubmit = useCallback(async () => {
-    if (submitting) return;
+    if (submitting || !formId) return;
     setSubmitting(true);
 
     try {
@@ -347,6 +311,42 @@ export default function DiagnosticTest() {
     }
   }, [submitting, formId, questions, attempts, toast, navigate]);
 
+  useEffect(() => {
+    if (timeLeft > 0) {
+      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (timeLeft === 0 && questions.length > 0 && formId) {
+      handleSubmit();
+    }
+  }, [timeLeft, questions.length, handleSubmit, formId]);
+
+  const handleAnswerSelect = async (choiceIndex: number) => {
+    const question = questions[currentIndex];
+    const attempt = attempts[question.question_id];
+    
+    if (!attempt) return;
+
+    const updatedAttempt = { ...attempt, selected_idx: choiceIndex };
+    setAttempts(prev => ({ ...prev, [question.question_id]: updatedAttempt }));
+
+    // Save to database
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return;
+
+      if (!formId) return;
+      
+      await supabase
+        .from('attempts')
+        .update({ selected_idx: choiceIndex })
+        .eq('user_id', user.user.id)
+        .eq('form_id', formId)
+        .eq('question_id', question.question_id);
+    } catch (error) {
+      console.error('Error saving answer:', error);
+    }
+  };
+
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -370,6 +370,24 @@ export default function DiagnosticTest() {
     return questions.every(q => isAnswered(q.question_id));
   };
 
+  // Show validation error UI
+  if (validationError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">
+              {validationError}
+            </p>
+            <Button onClick={() => navigate('/')} className="w-full mt-4">
+              Return to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -381,7 +399,7 @@ export default function DiagnosticTest() {
     );
   }
 
-  if (!params.formId) {
+  if (!formId) {
     return (
       <div className="container mx-auto p-6">
         <Card>
@@ -425,7 +443,7 @@ export default function DiagnosticTest() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">
-            {formId} Diagnostic - Question {currentIndex + 1} of {questions.length}
+            {formId || 'Diagnostic'} - Question {currentIndex + 1} of {questions.length}
           </h1>
           <div className="text-lg font-mono">
             {formatTime(timeLeft)}

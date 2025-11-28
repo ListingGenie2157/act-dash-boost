@@ -47,6 +47,7 @@ import QuizRunner from "./pages/QuizRunner";
 import WeakAreas from "./pages/WeakAreas";
 import CalculatorLab from "./pages/CalculatorLab";
 import AdminSkillCodes from "./pages/AdminSkillCodes";
+import { HealthCheck } from "./pages/HealthCheck";
 
 
 // Configure QueryClient with production-ready defaults
@@ -167,6 +168,9 @@ const App = () => (
               </LazyLoader>
             } />
           </Route>
+          
+          {/* Health check route */}
+          <Route path="/health" element={<HealthCheck />} />
           
           {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />

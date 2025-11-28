@@ -7,7 +7,11 @@ interface ErrorContext {
   component?: string;
   page?: string;
   userId?: string;
-  [key: string]: any;
+  source?: string;
+  filename?: string;
+  lineno?: number;
+  colno?: number;
+  [key: string]: unknown;
 }
 
 /**
@@ -27,20 +31,30 @@ export function reportError(
 
   // Production error reporting
   try {
-    // TODO: Integrate with error tracking service (Sentry, LogRocket, etc.)
-    // Example for Sentry:
-    // if (window.Sentry) {
-    //   window.Sentry.captureException(error, {
-    //     contexts: {
-    //       custom: context
-    //     }
-    //   });
-    // }
+    // Check if Sentry is available (via environment variable)
+    const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
+    
+    if (sentryDsn && typeof window !== 'undefined') {
+      // Dynamic import to avoid bundling Sentry if not configured
+      // In production, Sentry should be initialized in main.tsx
+      // This is a fallback for errors that occur before initialization
+      if ('Sentry' in window && typeof (window as { Sentry?: { captureException: (error: Error, options?: unknown) => void } }).Sentry?.captureException === 'function') {
+        (window as { Sentry: { captureException: (error: Error, options?: unknown) => void } }).Sentry.captureException(error, {
+          contexts: {
+            custom: context
+          },
+          tags: context?.page ? { page: context.page } : undefined,
+          user: context?.userId ? { id: context.userId } : undefined,
+        });
+        return; // Successfully reported to Sentry
+      }
+    }
 
-    // For now, send to console.error (always available)
+    // Fallback: Log to console (always available)
+    // In production, consider sending to a logging service
     console.error('[Production Error]', error.message, context);
   } catch (reportingError) {
-    // Fail silently if error reporting fails
+    // Fail silently if error reporting fails to prevent error loops
     console.error('[ErrorReporter] Failed to report error:', reportingError);
   }
 }
@@ -56,6 +70,7 @@ export function reportWarning(
     console.warn('[Warning]', message, context);
   }
   
-  // In production, you might want to send warnings to a separate channel
-  // or filter them based on severity
+  // In production, warnings are typically not sent to error tracking
+  // but could be logged to a separate channel if needed
+  // For now, only log in development to avoid noise
 }
