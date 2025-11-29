@@ -434,6 +434,8 @@ const Index = () => {
                     if (!session?.user?.id) return;
                     
                     if (confirm('Switch to self-directed learning mode? Your study plan will remain saved.')) {
+                      if (!session?.user?.id) return;
+                      
                       const { error } = await supabase
                         .from('profiles')
                         .update({ has_study_plan: false })

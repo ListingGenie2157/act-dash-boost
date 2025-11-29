@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -75,6 +75,7 @@ export default function DiagnosticTest() {
   const navigate = useNavigate();
   const { toast } = useToast();
   
+  // ALL HOOKS MUST BE CALLED FIRST - BEFORE ANY CONDITIONAL LOGIC
   // ALL HOOKS AT TOP - UNCONDITIONALLY
   const [questions, setQuestions] = useState<(Question & { skill_id?: string | null })[]>([]);
   const [attempts, setAttempts] = useState<Record<string, Attempt>>({});
@@ -82,27 +83,38 @@ export default function DiagnosticTest() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  
-  // Validate formId - store result in state with useMemo
-  const validationResult = useMemo(() => {
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [formId, setFormId] = useState<string | null>(null);
+
+  // Validate formId parameter - store in state instead of early return
+  useEffect(() => {
+    if (!params.formId) {
+      setValidationError('Invalid test form');
+      return;
+    }
+
     try {
       const validated = validateInput(
         diagnosticFormIdSchema,
         { formId: params.formId },
         'Invalid diagnostic form'
       );
-      return { formId: validated.formId, error: null };
+      setFormId(validated.formId);
     } catch (error) {
-      return { 
-        formId: null, 
-        error: error instanceof Error ? error.message : 'Invalid form ID' 
-      };
+      const errorMessage = error instanceof Error ? error.message : 'Invalid form ID';
+      setValidationError(errorMessage);
+      toast({
+        title: 'Invalid Form',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      // Navigate after a short delay to allow toast to show
+      setTimeout(() => {
+        navigate('/', { replace: true });
+      }, 2000);
     }
-  }, [params.formId]);
+  }, [params.formId, navigate, toast]);
 
-  const formId = validationResult.formId;
-
-  // Define handleSubmit BEFORE the useEffect that uses it
   const handleSubmit = useCallback(async () => {
     if (submitting || !formId) return;
     setSubmitting(true);
@@ -158,30 +170,8 @@ export default function DiagnosticTest() {
     }
   }, [submitting, formId, questions, attempts, toast, navigate]);
 
-  // Handle validation error with useEffect
-  useEffect(() => {
-    if (validationResult.error) {
-      toast({
-        title: 'Invalid Form',
-        description: validationResult.error,
-        variant: 'destructive',
-      });
-      navigate('/', { replace: true });
-    }
-  }, [validationResult.error, toast, navigate]);
-
-  // Timer effect - countdown timer
-  useEffect(() => {
-    if (timeLeft > 0 && !loading) {
-      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && questions.length > 0 && !loading) {
-      handleSubmit();
-    }
-  }, [timeLeft, questions.length, loading, handleSubmit]);
-
   const loadDiagnostic = useCallback(async () => {
-    if (!formId) return; // Guard against null formId
+    if (!formId) return;
     
     try {
       const { data: user } = await supabase.auth.getUser();
@@ -313,14 +303,22 @@ export default function DiagnosticTest() {
     } finally {
       setLoading(false);
     }
-  }, [formId, toast, navigate]);
+  }, [formId, navigate, toast]);
 
-  // Load diagnostic when formId is valid
   useEffect(() => {
-    if (formId) {
+    if (formId && !validationError) {
       loadDiagnostic();
     }
-  }, [formId, loadDiagnostic]);
+  }, [formId, validationError, loadDiagnostic]);
+
+  useEffect(() => {
+    if (timeLeft > 0) {
+      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (timeLeft === 0 && questions.length > 0 && formId) {
+      handleSubmit();
+    }
+  }, [timeLeft, questions.length, handleSubmit, formId]);
 
   const handleAnswerSelect = async (choiceIndex: number) => {
     const question = questions[currentIndex];
@@ -335,7 +333,7 @@ export default function DiagnosticTest() {
     try {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) return;
-
+      
       await supabase
         .from('attempts')
         .update({ selected_idx: choiceIndex })
@@ -370,6 +368,24 @@ export default function DiagnosticTest() {
     return questions.every(q => isAnswered(q.question_id));
   };
 
+  // Show validation error UI
+  if (validationError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">
+              {validationError}
+            </p>
+            <Button onClick={() => navigate('/')} className="w-full mt-4">
+              Return to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -381,7 +397,7 @@ export default function DiagnosticTest() {
     );
   }
 
-  if (!params.formId) {
+  if (!formId) {
     return (
       <div className="container mx-auto p-6">
         <Card>
@@ -425,7 +441,7 @@ export default function DiagnosticTest() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">
-            {formId} Diagnostic - Question {currentIndex + 1} of {questions.length}
+            {formId || 'Diagnostic'} - Question {currentIndex + 1} of {questions.length}
           </h1>
           <div className="text-lg font-mono">
             {formatTime(timeLeft)}

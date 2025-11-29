@@ -7,6 +7,10 @@ interface ErrorContext {
   component?: string;
   page?: string;
   userId?: string;
+  source?: string;
+  filename?: string;
+  lineno?: number;
+  colno?: number;
   [key: string]: unknown;
 }
 
@@ -36,7 +40,7 @@ export function reportError(
     }
     
     if (typeof window !== 'undefined' && (window as WindowWithSentry).Sentry) {
-      const Sentry = (window as WindowWithSentry).Sentry!
+      const Sentry = (window as WindowWithSentry).Sentry!;
       Sentry.captureException(error, {
         contexts: {
           custom: context
@@ -47,12 +51,13 @@ export function reportError(
         },
         user: context?.userId ? { id: context.userId } : undefined,
       });
-    } else {
-      // Fallback to console if Sentry not configured
-      console.error('[Production Error]', error.message, context);
+      return; // Successfully reported to Sentry
     }
+    
+    // Fallback: Log to console if Sentry not configured
+    console.error('[Production Error]', error.message, context);
   } catch (reportingError) {
-    // Fail silently if error reporting fails
+    // Fail silently if error reporting fails to prevent error loops
     console.error('[ErrorReporter] Failed to report error:', reportingError);
   }
 }
@@ -69,6 +74,9 @@ export function reportWarning(
     return;
   }
   
+  // In production, warnings are typically not sent to error tracking
+  // but could be logged to a separate channel if needed
+  // For now, only log in development to avoid noise
   // Send warnings to Sentry in production with lower severity
   interface WindowWithSentry extends Window {
     Sentry?: {
