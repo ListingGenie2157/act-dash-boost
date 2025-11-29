@@ -23,7 +23,6 @@ const Index = () => {
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [session, setSession] = useState<{ user: { id: string } } | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   
   interface Profile {
@@ -43,7 +42,6 @@ const Index = () => {
   useEffect(() => {
     let mounted = true;
 
-    const syncAuthAndProfile = async (session: { user: { id: string } } | null) => {
     const syncAuthAndProfile = async (session: Session | null) => {
       if (!mounted) return;
 

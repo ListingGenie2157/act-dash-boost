@@ -7,7 +7,6 @@ interface ErrorContext {
   component?: string;
   page?: string;
   userId?: string;
-<
   source?: string;
   filename?: string;
   lineno?: number;
@@ -32,29 +31,6 @@ export function reportError(
 
   // Production error reporting with Sentry
   try {
-
-    // Check if Sentry is available (via environment variable)
-    const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
-    
-    if (sentryDsn && typeof window !== 'undefined') {
-      // Dynamic import to avoid bundling Sentry if not configured
-      // In production, Sentry should be initialized in main.tsx
-      // This is a fallback for errors that occur before initialization
-      if ('Sentry' in window && typeof (window as { Sentry?: { captureException: (error: Error, options?: unknown) => void } }).Sentry?.captureException === 'function') {
-        (window as { Sentry: { captureException: (error: Error, options?: unknown) => void } }).Sentry.captureException(error, {
-          contexts: {
-            custom: context
-          },
-          tags: context?.page ? { page: context.page } : undefined,
-          user: context?.userId ? { id: context.userId } : undefined,
-        });
-        return; // Successfully reported to Sentry
-      }
-    }
-
-    // Fallback: Log to console (always available)
-    // In production, consider sending to a logging service
-    console.error('[Production Error]', error.message, context);
     // Check if Sentry is available (loaded via main.tsx)
     interface WindowWithSentry extends Window {
       Sentry?: {
@@ -64,7 +40,7 @@ export function reportError(
     }
     
     if (typeof window !== 'undefined' && (window as WindowWithSentry).Sentry) {
-      const Sentry = (window as WindowWithSentry).Sentry!
+      const Sentry = (window as WindowWithSentry).Sentry!;
       Sentry.captureException(error, {
         contexts: {
           custom: context
@@ -75,10 +51,11 @@ export function reportError(
         },
         user: context?.userId ? { id: context.userId } : undefined,
       });
-    } else {
-      // Fallback to console if Sentry not configured
-      console.error('[Production Error]', error.message, context);
+      return; // Successfully reported to Sentry
     }
+    
+    // Fallback: Log to console if Sentry not configured
+    console.error('[Production Error]', error.message, context);
   } catch (reportingError) {
     // Fail silently if error reporting fails to prevent error loops
     console.error('[ErrorReporter] Failed to report error:', reportingError);
