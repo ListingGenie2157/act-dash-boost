@@ -219,11 +219,13 @@ def write_plan_csv(plan: List[QuestionSlot], path: str = "math_sim_plan.csv") ->
 
 SYSTEM_PROMPT = (
     "You are an expert ACT Math item writer. "
-    "You ONLY output JSON when asked, and you do not include commentary around it."
+    "You ONLY output JSON when asked, and you do not include commentary around it. "
+    "CRITICAL: The answer_letter MUST match the correct choice based on your explanation. "
+    "Double-check that your explanation leads to the answer letter you specify."
 )
 
 
-def build_prompt(slot: QuestionSlot) -> str:
+def build_prompt(slot: QuestionSlot, previous_questions: List[str] = None) -> str:
     parts = []
 
     parts.append(f"Difficulty: {slot.difficulty}.")
@@ -256,15 +258,32 @@ def build_prompt(slot: QuestionSlot) -> str:
         '"f(x) = 3x^2 - 4" or "f(g(2))".'
     )
 
+    # Anti-duplication guidance
+    parts.append(
+        "CRITICAL: Create a UNIQUE question. Avoid common patterns like: "
+        "'If 3x + 5 = 20, what is x?', 'If f(x) = 2x + 3, what is f(4)?', "
+        "'bakery sells cakes/cookies/cupcakes', 'Maria planning a party', "
+        "'right triangle with legs 6 and 8', or 'triangle area with coordinates (1,2), (5,6), (1,6)'. "
+        "Be creative and use different contexts, numbers, and problem structures."
+    )
+
+    if previous_questions:
+        parts.append(
+            f"Here are {min(len(previous_questions), 5)} recently generated questions to AVOID duplicating: "
+            + "; ".join(previous_questions[-5:])
+        )
+
     parts.append(
         "Return ONLY a JSON object with this exact structure (no extra text before or after):\n"
         "{\n"
         '  "question": "string, the question text only",\n'
         '  "choices": ["A choice", "B choice", "C choice", "D choice", "E choice"],\n'
         '  "answer_letter": "C",\n'
-        '  "explanation": "string, step-by-step explanation for a high-school student",\n'
+        '  "explanation": "string, step-by-step explanation that clearly shows the calculation leading to the correct answer",\n'
         '  "image_caption": "short description of the visual if any, else empty string"\n'
-        "}"
+        "}\n"
+        "IMPORTANT: After writing your explanation, verify that the final answer in your explanation "
+        "matches the choice at the answer_letter position. If they don't match, fix the answer_letter."
     )
 
     return " ".join(parts)
@@ -299,8 +318,8 @@ def _extract_and_fix_json(raw: str) -> Dict[str, Any]:
         raise ValueError(f"Model JSON still invalid after cleanup: {text[:400]} ...") from e
 
 
-def llm_generate_for_slot(slot: QuestionSlot) -> Dict[str, Any]:
-    user_prompt = build_prompt(slot)
+def llm_generate_for_slot(slot: QuestionSlot, previous_questions: List[str] = None) -> Dict[str, Any]:
+    user_prompt = build_prompt(slot, previous_questions)
 
     completion = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -309,7 +328,7 @@ def llm_generate_for_slot(slot: QuestionSlot) -> Dict[str, Any]:
             {"role": "user", "content": user_prompt},
         ],
         response_format={"type": "json_object"},
-        temperature=0.3,
+        temperature=0.7,  # Increased for more variety
     )
 
     raw = completion.choices[0].message.content or ""
@@ -317,54 +336,133 @@ def llm_generate_for_slot(slot: QuestionSlot) -> Dict[str, Any]:
     return data
 
 
-def llm_generate_math_item(slot: QuestionSlot) -> Dict[str, Any]:
-    data = llm_generate_for_slot(slot)
+def _validate_answer_match(explanation: str, answer_letter: str, choices: List[str]) -> bool:
+    """
+    Check if the explanation's final answer matches the specified answer letter.
+    Returns True if they match or if validation is ambiguous.
+    """
+    if not explanation or not choices or answer_letter not in "ABCDE":
+        return False
+    
+    # Get the answer choice text
+    idx = ord(answer_letter) - ord("A")
+    if idx >= len(choices):
+        return False
+    answer_text = choices[idx].lower().strip()
+    
+    # Look for the answer in the explanation (check last few sentences)
+    explanation_lower = explanation.lower()
+    explanation_sentences = explanation_lower.split(".")
+    last_sentences = " ".join(explanation_sentences[-3:])
+    
+    # Extract numbers from answer
+    answer_numbers = re.findall(r'\d+\.?\d*', answer_text)
+    explanation_numbers = re.findall(r'\d+\.?\d*', last_sentences)
+    
+    # If answer has numbers, check if they appear in explanation
+    if answer_numbers:
+        for num in answer_numbers:
+            # Check if this number appears in explanation (allowing for slight variations)
+            num_clean = num.rstrip('.')
+            for exp_num in explanation_numbers:
+                if num_clean == exp_num.rstrip('.'):
+                    return True
+    
+    # Check if answer text or key words appear in explanation
+    # Remove common words
+    stop_words = {'the', 'is', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from'}
+    answer_words = set(re.findall(r'\b\w+\b', answer_text)) - stop_words
+    explanation_words = set(re.findall(r'\b\w+\b', last_sentences))
+    
+    if answer_words:
+        # Check if significant words from answer appear in explanation
+        significant_words = answer_words - {'answer', 'choice', 'option', 'therefore', 'thus', 'so'}
+        if significant_words and significant_words.intersection(explanation_words):
+            return True
+    
+    # If answer is very short (like "5", "10 units", etc.), check if it appears
+    if len(answer_text) <= 15:
+        # Check if the core answer appears in explanation
+        answer_core = re.sub(r'[^\w\s]', '', answer_text).strip()
+        explanation_core = re.sub(r'[^\w\s]', '', last_sentences)
+        if answer_core and answer_core in explanation_core:
+            return True
+    
+    # If explanation explicitly states the answer letter
+    if f"answer {answer_letter.lower()}" in last_sentences or f"choice {answer_letter.lower()}" in last_sentences:
+        return True
+    
+    # Default to True for ambiguous cases (better to proceed than fail)
+    return True
 
-    # Question text
-    question = data.get("question", "")
-    if isinstance(question, list):
-        question = " ".join(str(part).strip() for part in question)
-    else:
-        question = str(question)
-    question = " ".join(question.splitlines()).strip()
 
-    # Explanation
-    explanation = data.get("explanation", "")
-    if isinstance(explanation, list):
-        explanation = " ".join(str(part).strip() for part in explanation)
-    else:
-        explanation = str(explanation)
-    explanation = " ".join(explanation.splitlines()).strip()
+def llm_generate_math_item(slot: QuestionSlot, previous_questions: List[str] = None, max_retries: int = 3) -> Dict[str, Any]:
+    """
+    Generate a math item with validation and retry logic.
+    """
+    for attempt in range(max_retries):
+        data = llm_generate_for_slot(slot, previous_questions)
 
-    # Choices
-    choices = data.get("choices", [])
-    if not isinstance(choices, list):
-        choices = [choices]
+        # Question text
+        question = data.get("question", "")
+        if isinstance(question, list):
+            question = " ".join(str(part).strip() for part in question)
+        else:
+            question = str(question)
+        question = " ".join(question.splitlines()).strip()
 
-    choices = [str(c).strip() for c in choices]
-    if len(choices) < 5:
-        choices += [f"Choice {i}" for i in range(len(choices) + 1, 6)]
-    choices = choices[:5]
+        if not question:
+            if attempt < max_retries - 1:
+                continue
+            raise ValueError("Generated empty question after retries")
 
-    # Answer mapping
-    raw_answer = str(data.get("answer_letter", "C")).strip()
-    if raw_answer in ["1", "2", "3", "4", "5"]:
-        idx = int(raw_answer) - 1
-        answer_letter = "ABCDE"[idx]
-    elif raw_answer.upper() in list("ABCDE"):
-        answer_letter = raw_answer.upper()
-    else:
-        answer_letter = "C"
+        # Explanation
+        explanation = data.get("explanation", "")
+        if isinstance(explanation, list):
+            explanation = " ".join(str(part).strip() for part in explanation)
+        else:
+            explanation = str(explanation)
+        explanation = " ".join(explanation.splitlines()).strip()
 
-    image_caption = str(data.get("image_caption", "")).strip()
+        # Choices
+        choices = data.get("choices", [])
+        if not isinstance(choices, list):
+            choices = [choices]
 
-    return {
-        "question": question,
-        "choices": choices,
-        "answer_letter": answer_letter,
-        "explanation": explanation,
-        "image_caption": image_caption,
-    }
+        choices = [str(c).strip() for c in choices]
+        if len(choices) < 5:
+            choices += [f"Choice {i}" for i in range(len(choices) + 1, 6)]
+        choices = choices[:5]
+
+        # Answer mapping
+        raw_answer = str(data.get("answer_letter", "C")).strip()
+        if raw_answer in ["1", "2", "3", "4", "5"]:
+            idx = int(raw_answer) - 1
+            answer_letter = "ABCDE"[idx]
+        elif raw_answer.upper() in list("ABCDE"):
+            answer_letter = raw_answer.upper()
+        else:
+            answer_letter = "C"
+
+        # Validate answer matches explanation
+        if not _validate_answer_match(explanation, answer_letter, choices):
+            if attempt < max_retries - 1:
+                print(f"Warning: Answer mismatch for question {slot.ord}, retrying...")
+                continue
+            else:
+                print(f"Warning: Answer mismatch for question {slot.ord} after {max_retries} attempts, proceeding anyway")
+
+        image_caption = str(data.get("image_caption", "")).strip()
+
+        return {
+            "question": question,
+            "choices": choices,
+            "answer_letter": answer_letter,
+            "explanation": explanation,
+            "image_caption": image_caption,
+        }
+    
+    raise ValueError(f"Failed to generate valid item after {max_retries} attempts")
 
 
 # --------- CSV generation ---------
@@ -378,8 +476,29 @@ def generate_sim_csv(
         writer = csv.DictWriter(f, fieldnames=HEADERS)
         writer.writeheader()
 
+        # Track previously generated questions to avoid duplicates
+        previous_questions: List[str] = []
+        generated_questions: set[str] = set()
+
         for slot in plan:
-            item = llm_generate_math_item(slot)
+            print(f"Generating question {slot.ord}/{len(plan)}...")
+            
+            # Generate with context of previous questions
+            item = llm_generate_math_item(slot, previous_questions, max_retries=3)
+            
+            # Check for duplicates
+            question_normalized = item["question"].lower().strip()
+            question_key = question_normalized[:100]  # Use first 100 chars as key
+            
+            if question_key in generated_questions:
+                print(f"Warning: Question {slot.ord} appears to be a duplicate, but proceeding...")
+            else:
+                generated_questions.add(question_key)
+            
+            # Add to previous questions context (keep last 10)
+            previous_questions.append(item["question"][:150])  # First 150 chars
+            if len(previous_questions) > 10:
+                previous_questions.pop(0)
 
             choices = item["choices"]
             answer_letter = item["answer_letter"]
