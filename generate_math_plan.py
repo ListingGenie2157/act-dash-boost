@@ -299,13 +299,35 @@ def build_prompt(slot: QuestionSlot, previous_questions: List[str] = None) -> st
         )
 
     parts.append(
-        "WORKFLOW: "
-        "1. First, solve the problem completely and get a numerical answer. "
-        "2. Then, create 5 answer choices where ONE of them is your calculated answer. "
-        "3. Set answer_letter to point to that correct choice. "
-        "4. Write an explanation that shows your calculation step-by-step, ending with the exact answer. "
-        "5. NEVER mention 'closest', 'approximately', 'does not match', 'I miscalculated', or similar phrases. "
-        "6. Your explanation must be definitive and show the answer matches one of the choices exactly."
+        "MANDATORY WORKFLOW - Follow these steps in order:\n"
+        "\n"
+        "STEP 1: Write the question text.\n"
+        "\n"
+        "STEP 2: Solve the problem completely. Calculate the EXACT answer.\n"
+        "  Example: For 'If 2x + 5 = 17, what is x?', calculate: 2x = 12, so x = 6\n"
+        "  Write down this number: 6\n"
+        "\n"
+        "STEP 3: Create 5 answer choices. ONE choice MUST contain your exact answer from Step 2.\n"
+        "  Example: ['A 4', 'B 5', 'C 6', 'D 7', 'E 8']\n"
+        "  Notice: Your answer 6 is in choice C\n"
+        "\n"
+        "STEP 4: Set answer_letter to the letter of the choice with your answer.\n"
+        "  Example: answer_letter = 'C' (because 6 is in choice C)\n"
+        "\n"
+        "STEP 5: Write explanation ending with: 'Therefore, the answer is [your number], which is choice [letter].'\n"
+        "  Example: 'Subtract 5: 2x = 12. Divide by 2: x = 6. Therefore, the answer is 6, which is choice C.'\n"
+        "\n"
+        "VERIFICATION CHECKLIST before submitting:\n"
+        "  [ ] My calculated answer appears in exactly one choice\n"
+        "  [ ] answer_letter points to that choice\n"
+        "  [ ] Explanation ends with 'Therefore, the answer is X, which is choice Y'\n"
+        "  [ ] X matches my calculated answer\n"
+        "  [ ] Y matches answer_letter\n"
+        "\n"
+        "FORBIDDEN PHRASES (never use these):\n"
+        "  - 'closest answer', 'approximately', 'does not match'\n"
+        "  - 'I miscalculated', 'I need to update', 'I made a mistake'\n"
+        "  - 'not in the options', 'not listed', 'must be corrected'"
     )
     
     parts.append(
@@ -317,8 +339,11 @@ def build_prompt(slot: QuestionSlot, previous_questions: List[str] = None) -> st
         '  "explanation": "string, step-by-step explanation ending with: Therefore, the answer is [exact value], which is choice [letter].",\n'
         '  "image_caption": "short description of the visual if any, else empty string"\n'
         "}\n"
-        "CRITICAL: Your explanation must end with a clear statement like 'Therefore, the answer is X, which corresponds to choice Y.' "
-        "The value X must appear exactly in one of your choices, and Y must match answer_letter."
+        "VERIFICATION: Before submitting, verify that:\n"
+        "1. Your calculated answer appears in exactly one of the 5 choices\n"
+        "2. The answer_letter points to that choice\n"
+        "3. Your explanation ends with 'Therefore, the answer is [number], which is choice [letter]'\n"
+        "4. The number and letter in your explanation match your choices and answer_letter"
     )
 
     return " ".join(parts)
@@ -353,11 +378,14 @@ def _extract_and_fix_json(raw: str) -> Dict[str, Any]:
         raise ValueError(f"Model JSON still invalid after cleanup: {text[:400]} ...") from e
 
 
-def llm_generate_for_slot(slot: QuestionSlot, previous_questions: List[str] = None) -> Dict[str, Any]:
+def llm_generate_for_slot(slot: QuestionSlot, previous_questions: List[str] = None, use_better_model: bool = False) -> Dict[str, Any]:
     user_prompt = build_prompt(slot, previous_questions)
+    
+    # Use better model if validation keeps failing
+    model = "gpt-4o" if use_better_model else "gpt-4o-mini"
 
     completion = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=model,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
@@ -476,39 +504,69 @@ def _validate_answer_match(explanation: str, answer_letter: str, choices: List[s
                 except ValueError:
                     continue
     
-    # Check if answer choice text appears in explanation (last 2 sentences)
+    # Check if explanation explicitly states the answer letter
     explanation_lower = explanation.lower()
     sentences = explanation_lower.split(".")
-    last_sentences = " ".join(sentences[-2:])
+    last_sentences = " ".join(sentences[-3:])  # Check last 3 sentences
     
-    # Check if the normalized choice text appears
+    # Check for explicit mention of answer letter: "choice A", "answer B", "option C", etc.
+    explicit_patterns = [
+        f"choice {answer_letter.lower()}",
+        f"answer {answer_letter.lower()}",
+        f"option {answer_letter.lower()}",
+        f"is choice {answer_letter.lower()}",
+        f"corresponds to {answer_letter.lower()}",
+        f"which is {answer_letter.lower()}",
+    ]
+    
+    if any(pattern in last_sentences for pattern in explicit_patterns):
+        # If explicitly stated, also verify the numeric answer matches if we extracted one
+        if numeric_answer is not None:
+            choice_numbers = re.findall(r'\d+\.?\d*', answer_choice_normalized)
+            for num_str in choice_numbers:
+                try:
+                    choice_num = float(num_str)
+                    if abs(numeric_answer - choice_num) < 0.01:
+                        return True
+                except ValueError:
+                    continue
+        else:
+            # If no numeric extracted but explicitly states the letter, trust it
+            return True
+    
+    # Check if answer choice text appears in explanation
     answer_words = set(re.findall(r'\b\w+\b', answer_choice_normalized.lower()))
     explanation_words = set(re.findall(r'\b\w+\b', last_sentences))
     
     # Remove stop words
-    stop_words = {'the', 'is', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'answer', 'choice', 'option'}
+    stop_words = {'the', 'is', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'answer', 'choice', 'option', 'which', 'that', 'this'}
     answer_words = answer_words - stop_words
     
+    # If significant words match AND explanation mentions the letter
     if answer_words and answer_words.intersection(explanation_words):
-        # Check if explanation explicitly mentions this choice
-        if f"choice {answer_letter.lower()}" in last_sentences or f"answer {answer_letter.lower()}" in last_sentences:
+        if any(pattern in last_sentences for pattern in explicit_patterns):
             return True
     
-    # If answer is very short and appears verbatim
-    if len(answer_choice_normalized) <= 10:
-        if answer_choice_normalized.lower() in last_sentences:
+    # If answer is very short and appears verbatim in explanation
+    if len(answer_choice_normalized) <= 15:
+        # Check if the core content appears
+        answer_core = re.sub(r'[^\w\s]', '', answer_choice_normalized).strip().lower()
+        explanation_core = re.sub(r'[^\w\s]', '', last_sentences)
+        if answer_core and answer_core in explanation_core:
             return True
     
     # If we can't validate, be strict - return False
     return False
 
 
-def llm_generate_math_item(slot: QuestionSlot, previous_questions: List[str] = None, max_retries: int = 3) -> Dict[str, Any]:
+def llm_generate_math_item(slot: QuestionSlot, previous_questions: List[str] = None, max_retries: int = 3, use_better_model: bool = False) -> Dict[str, Any]:
     """
     Generate a math item with validation and retry logic.
     """
     for attempt in range(max_retries):
-        data = llm_generate_for_slot(slot, previous_questions)
+        # Use better model on last 2 attempts if still failing
+        use_better = use_better_model or (attempt >= max_retries - 2)
+        data = llm_generate_for_slot(slot, previous_questions, use_better_model=use_better)
 
         # Question text
         question = data.get("question", "")
@@ -566,15 +624,29 @@ def llm_generate_math_item(slot: QuestionSlot, previous_questions: List[str] = N
                 raise ValueError(error_msg)
 
         # Validate answer matches explanation
-        if not _validate_answer_match(explanation, answer_letter, choices):
+        validation_result = _validate_answer_match(explanation, answer_letter, choices)
+        if not validation_result:
             if attempt < max_retries - 1:
-                print(f"  Retry {attempt + 1}/{max_retries}: Answer doesn't match explanation, regenerating...")
+                # Show debug info on retry
+                idx = ord(answer_letter) - ord('A')
+                selected_choice = choices[idx] if idx < len(choices) else 'N/A'
+                numeric_answer = _extract_numeric_answer(explanation)
+                print(f"  Retry {attempt + 1}/{max_retries}: Answer mismatch detected")
+                print(f"    Answer letter: {answer_letter}, Selected choice: {selected_choice}")
+                print(f"    Extracted numeric from explanation: {numeric_answer}")
+                print(f"    Regenerating...")
                 continue
             else:
+                idx = ord(answer_letter) - ord('A')
+                selected_choice = choices[idx] if idx < len(choices) else 'N/A'
+                numeric_answer = _extract_numeric_answer(explanation)
                 error_msg = (
-                    f"Question {slot.ord} REJECTED after {max_retries} attempts. "
-                    f"The calculated answer in the explanation does not match the specified answer_letter. "
-                    f"Answer letter: {answer_letter}, Choice: {choices[ord(answer_letter) - ord('A')] if ord(answer_letter) - ord('A') < len(choices) else 'N/A'}"
+                    f"Question {slot.ord} REJECTED after {max_retries} attempts.\n"
+                    f"  Answer letter: {answer_letter}\n"
+                    f"  Selected choice: {selected_choice}\n"
+                    f"  Extracted numeric from explanation: {numeric_answer}\n"
+                    f"  All choices: {choices}\n"
+                    f"The calculated answer in the explanation does not match the specified answer_letter."
                 )
                 print(f"ERROR: {error_msg}")
                 raise ValueError(error_msg)
@@ -611,7 +683,8 @@ def generate_sim_csv(
             print(f"Generating question {slot.ord}/{len(plan)}...")
             
             # Generate with context of previous questions (will raise error if invalid after retries)
-            item = llm_generate_math_item(slot, previous_questions, max_retries=5)
+            # Try with better model if we're having issues
+            item = llm_generate_math_item(slot, previous_questions, max_retries=5, use_better_model=False)
             
             # Check for duplicates
             question_normalized = item["question"].lower().strip()
