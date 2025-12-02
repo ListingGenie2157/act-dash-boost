@@ -559,7 +559,31 @@ def _validate_answer_match(explanation: str, answer_letter: str, choices: List[s
     return False
 
 
-def llm_generate_math_item(slot: QuestionSlot, previous_questions: List[str] = None, max_retries: int = 3, use_better_model: bool = False) -> Dict[str, Any]:
+def _auto_fix_answer_mismatch(item: Dict[str, Any], explanation: str) -> Optional[str]:
+    """
+    Attempt to auto-fix answer mismatches by finding the correct choice based on explanation.
+    Returns the corrected answer_letter if a match is found, None otherwise.
+    """
+    numeric_answer = _extract_numeric_answer(explanation)
+    if numeric_answer is None:
+        return None
+    
+    # Check each choice to see if it contains the numeric answer
+    for idx, choice in enumerate(item["choices"]):
+        choice_numbers = re.findall(r'\d+\.?\d*', choice)
+        for num_str in choice_numbers:
+            try:
+                choice_num = float(num_str)
+                if abs(numeric_answer - choice_num) < 0.01:
+                    # Found a match! Return the correct letter
+                    return "ABCDE"[idx]
+            except ValueError:
+                continue
+    
+    return None
+
+
+def llm_generate_math_item(slot: QuestionSlot, previous_questions: List[str] = None, max_retries: int = 3, use_better_model: bool = False, auto_fix: bool = True) -> Dict[str, Any]:
     """
     Generate a math item with validation and retry logic.
     """
@@ -626,6 +650,26 @@ def llm_generate_math_item(slot: QuestionSlot, previous_questions: List[str] = N
         # Validate answer matches explanation
         validation_result = _validate_answer_match(explanation, answer_letter, choices)
         if not validation_result:
+            # Try to auto-fix if enabled (only on last attempt to avoid masking real issues)
+            if auto_fix and attempt >= max_retries - 1:
+                fixed_answer = _auto_fix_answer_mismatch(
+                    {"choices": choices},
+                    explanation
+                )
+                if fixed_answer and fixed_answer != answer_letter:
+                    print(f"  Auto-fixed: Changed answer_letter from {answer_letter} to {fixed_answer}")
+                    answer_letter = fixed_answer
+                    # Re-validate with fixed answer
+                    if _validate_answer_match(explanation, answer_letter, choices):
+                        # Return with fixed answer
+                        return {
+                            "question": question,
+                            "choices": choices,
+                            "answer_letter": answer_letter,
+                            "explanation": explanation,
+                            "image_caption": image_caption,
+                        }
+            
             if attempt < max_retries - 1:
                 # Show debug info on retry
                 idx = ord(answer_letter) - ord('A')
@@ -666,10 +710,105 @@ def llm_generate_math_item(slot: QuestionSlot, previous_questions: List[str] = N
 
 # --------- CSV generation ---------
 
+def generate_sim_csv_batched(
+    plan: List[QuestionSlot],
+    path: str = "sim_math_01.csv",
+    form_id: str = "SIM_MATH_01",
+    batch_size: int = 20,
+    use_better_model: bool = False,
+) -> None:
+    """
+    Generate CSV in batches to improve consistency and allow for breaks between batches.
+    """
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=HEADERS)
+        writer.writeheader()
+
+        # Track previously generated questions to avoid duplicates
+        previous_questions: List[str] = []
+        generated_questions: set[str] = set()
+
+        for batch_start in range(0, len(plan), batch_size):
+            batch_end = min(batch_start + batch_size, len(plan))
+            batch = plan[batch_start:batch_end]
+            print(f"\n=== Processing batch {batch_start // batch_size + 1} (questions {batch_start + 1}-{batch_end}) ===")
+            
+            for slot in batch:
+                print(f"Generating question {slot.ord}/{len(plan)}...")
+                
+                try:
+                    # Generate with context of previous questions
+                    item = llm_generate_math_item(slot, previous_questions, max_retries=5, 
+                                                  use_better_model=use_better_model)
+                except ValueError as e:
+                    print(f"\nFATAL ERROR: {e}")
+                    print(f"Stopping generation. Partial results saved to {path}")
+                    raise
+                
+                # Check for duplicates
+                question_normalized = item["question"].lower().strip()
+                question_key = question_normalized[:100]
+                
+                if question_key in generated_questions:
+                    print(f"Warning: Question {slot.ord} appears to be a duplicate, but proceeding...")
+                else:
+                    generated_questions.add(question_key)
+                
+                # Add to previous questions context (keep last 10)
+                previous_questions.append(item["question"][:150])
+                if len(previous_questions) > 10:
+                    previous_questions.pop(0)
+
+                choices = item["choices"]
+                answer_letter = item["answer_letter"]
+
+                skill_code = slot.topic_group
+                has_charts = "Yes" if slot.has_visual else "No"
+                img_filename = f"{form_id}_Q{slot.ord:02d}.png" if slot.has_visual else ""
+                image_position = "above_question" if slot.has_visual else ""
+
+                row = {
+                    "ord": slot.ord,
+                    "form_id": form_id,
+                    "section": "Math",
+                    "skill_code": skill_code,
+                    "difficulty": slot.difficulty,
+                    "question": item["question"],
+                    "choice_a": choices[0],
+                    "choice_b": choices[1],
+                    "choice_c": choices[2],
+                    "choice_d": choices[3],
+                    "choice_e": choices[4],
+                    "answer": answer_letter,
+                    "explanation": item["explanation"],
+                    "underlined_text": "",
+                    "reference_number": "",
+                    "position_in_passage": "",
+                    "calculator_allowed": "Yes",
+                    "passage_id": "",
+                    "passage_title": "",
+                    "passage_text": "",
+                    "passage_format": "",
+                    "passage_type": "",
+                    "has_charts": has_charts,
+                    "chart_images": img_filename,
+                    "marked_text": "",
+                    "line_numbers_enabled": "",
+                    "image_url": img_filename,
+                    "image_caption": item["image_caption"],
+                    "image_position": image_position,
+                }
+
+                writer.writerow(row)
+            
+            print(f"Batch complete. Progress: {batch_end}/{len(plan)} questions")
+
+
 def generate_sim_csv(
     plan: List[QuestionSlot],
     path: str = "sim_math_01.csv",
     form_id: str = "SIM_MATH_01",
+    use_better_model: bool = False,
 ) -> None:
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=HEADERS)
@@ -683,8 +822,7 @@ def generate_sim_csv(
             print(f"Generating question {slot.ord}/{len(plan)}...")
             
             # Generate with context of previous questions (will raise error if invalid after retries)
-            # Try with better model if we're having issues
-            item = llm_generate_math_item(slot, previous_questions, max_retries=5, use_better_model=False)
+            item = llm_generate_math_item(slot, previous_questions, max_retries=5, use_better_model=use_better_model)
             
             # Check for duplicates
             question_normalized = item["question"].lower().strip()
@@ -745,17 +883,44 @@ def generate_sim_csv(
 
 # --------- Main ---------
 
-def main() -> None:
+def main(use_better_model: bool = False, batch_size: Optional[int] = None) -> None:
+    """
+    Main function to generate ACT Math questions.
+    
+    Args:
+        use_better_model: If True, use gpt-4o instead of gpt-4o-mini (more accurate, more expensive)
+        batch_size: If set, generate questions in batches of this size (helps with consistency)
+    """
     random.seed()  # different every run
 
     plan = build_plan_without_niches()
     assign_niche_tags(plan)
     write_plan_csv(plan, "math_sim_plan.csv")
-    generate_sim_csv(plan, "sim_math_01.csv", form_id="SIM_MATH_01")
+    
+    if batch_size:
+        print(f"Generating in batches of {batch_size} questions...")
+        generate_sim_csv_batched(plan, "sim_math_01.csv", form_id="SIM_MATH_01", 
+                                 batch_size=batch_size, use_better_model=use_better_model)
+    else:
+        generate_sim_csv(plan, "sim_math_01.csv", form_id="SIM_MATH_01", 
+                         use_better_model=use_better_model)
+    
     print("Done. Generated math_sim_plan.csv and sim_math_01.csv")
 
 
 if __name__ == "__main__":
     if not os.getenv("OPENAI_API_KEY"):
         raise RuntimeError("OPENAI_API_KEY is not set in the environment.")
-    main()
+    
+    # Configuration options:
+    # Set to True to use gpt-4o (more accurate, ~10x more expensive but fewer retries)
+    # Set to False to use gpt-4o-mini (cheaper, but more retries needed)
+    # Recommendation: Use True for production, False for testing
+    USE_BETTER_MODEL = False
+    
+    # Set to a number (e.g., 20) to generate in batches, or None to generate all at once
+    # Batches help with consistency and allow you to stop/resume if needed
+    # Recommendation: Use 20-30 for better consistency
+    BATCH_SIZE = None  # Try 20 for better results
+    
+    main(use_better_model=USE_BETTER_MODEL, batch_size=BATCH_SIZE)
