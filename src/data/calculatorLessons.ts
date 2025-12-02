@@ -40,7 +40,7 @@ export const calculatorLessons: CalculatorLesson[] = [
     description: 'Use rref() to solve systems of linear equations instantly instead of substitution/elimination',
     timeSaved: '~2 minutes per problem',
     difficulty: 'intermediate',
-    videoId: 'qcD71nxJfKY',
+    videoId: 'zhypLK9nK80',
     whenToUse: 'Any problem asking you to solve 2 or 3 equations with 2 or 3 variables',
     steps: [
       'Press [2nd] then [x⁻¹] to access MATRIX menu',
@@ -138,7 +138,7 @@ export const calculatorLessons: CalculatorLesson[] = [
     description: 'Find roots of quadratics and higher-degree polynomials without factoring or quadratic formula',
     timeSaved: '~90 seconds per problem',
     difficulty: 'beginner',
-    videoId: 'KfDLw90Mi6E',
+    videoId: 'D9uwg8IQbfE',
     whenToUse: 'Finding x-intercepts, solving polynomial equations, factor questions',
     steps: [
       'Press [MATH], scroll down to Solver',
@@ -194,7 +194,7 @@ export const calculatorLessons: CalculatorLesson[] = [
     description: 'Use graphing to find intersection points instead of solving algebraically',
     timeSaved: '~2 minutes per problem',
     difficulty: 'beginner',
-    videoId: 'S6GA8PJdxz0',
+    videoId: '5SHu7YbVCRk',
     whenToUse: 'Finding where two functions are equal, optimization problems, break-even points',
     steps: [
       'Press [Y=]',
@@ -285,7 +285,7 @@ export const calculatorLessons: CalculatorLesson[] = [
     description: 'Convert decimals to fractions and vice versa with one button',
     timeSaved: '~30 seconds per conversion',
     difficulty: 'beginner',
-    videoId: 'OKJsDN1ysvc',
+    videoId: 'CGngzXwFN3Q',
     whenToUse: 'Answer choices are fractions but your calculation gives decimal (or reverse)',
     steps: [
       'Enter your decimal or calculation',
@@ -334,7 +334,7 @@ export const calculatorLessons: CalculatorLesson[] = [
     description: 'Calculate mean, median, standard deviation using list editor instead of manual computation',
     timeSaved: '~1 minute per problem',
     difficulty: 'beginner',
-    videoId: 'CK6OFFsy_zk',
+    videoId: 'fkEhAb3QFu8',
     whenToUse: 'Mean, median, mode, standard deviation, or any stats calculation',
     steps: [
       'Press [STAT], select 1: Edit',
@@ -421,6 +421,7 @@ export const calculatorLessons: CalculatorLesson[] = [
     description: 'Enter a, b, c coefficients and get both roots instantly',
     timeSaved: '~45 seconds per problem',
     difficulty: 'advanced',
+    videoId: 'oJa_PHe013s',
     whenToUse: 'Any quadratic that doesn\'t factor nicely',
     steps: [
       'Download or manually enter the program (see video)',
@@ -500,7 +501,6 @@ export const calculatorLessons: CalculatorLesson[] = [
     description: 'Evaluate functions at multiple x-values simultaneously',
     timeSaved: '~1 minute when testing multiple values',
     difficulty: 'beginner',
-    videoId: 'Bvc47bQJ6o4',
     whenToUse: 'Testing which x-value satisfies an equation, finding patterns',
     steps: [
       'Press [Y=] and enter your function',
@@ -584,6 +584,7 @@ export const calculatorLessons: CalculatorLesson[] = [
     description: 'Avoid catastrophic errors by setting correct angle mode',
     timeSaved: 'Prevents wrong answers',
     difficulty: 'beginner',
+    videoId: 'CGngzXwFN3Q',
     whenToUse: 'EVERY trig problem - check before starting',
     steps: [
       'Press [MODE]',

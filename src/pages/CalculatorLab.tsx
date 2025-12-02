@@ -280,7 +280,7 @@ export default function CalculatorLab() {
                   </div>
 
                   {/* Video */}
-                  {lesson.videoId && (
+                  {lesson.videoId ? (
                     <div className="mb-6">
                       <div className="aspect-video rounded-lg overflow-hidden">
                         <iframe
@@ -291,6 +291,11 @@ export default function CalculatorLab() {
                           allowFullScreen
                         />
                       </div>
+                    </div>
+                  ) : (
+                    <div className="mb-6 p-6 bg-muted/50 rounded-lg border border-dashed text-center">
+                      <PlayCircle className="w-12 h-12 mx-auto mb-2 text-muted-foreground/50" />
+                      <p className="text-sm text-muted-foreground">Video tutorial coming soon</p>
                     </div>
                   )}
 
