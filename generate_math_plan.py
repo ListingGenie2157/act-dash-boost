@@ -915,12 +915,12 @@ if __name__ == "__main__":
     # Configuration options:
     # Set to True to use gpt-4o (more accurate, ~10x more expensive but fewer retries)
     # Set to False to use gpt-4o-mini (cheaper, but more retries needed)
-    # Recommendation: Use True for production, False for testing
-    USE_BETTER_MODEL = False
+    # Since you're only generating ~7 times, cost doesn't matter - use the better model!
+    USE_BETTER_MODEL = True
     
     # Set to a number (e.g., 20) to generate in batches, or None to generate all at once
     # Batches help with consistency and allow you to stop/resume if needed
-    # Recommendation: Use 20-30 for better consistency
-    BATCH_SIZE = None  # Try 20 for better results
+    # For 60 questions, batches aren't necessary but can help
+    BATCH_SIZE = None  # None = generate all at once
     
     main(use_better_model=USE_BETTER_MODEL, batch_size=BATCH_SIZE)
