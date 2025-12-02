@@ -650,6 +650,9 @@ def llm_generate_math_item(slot: QuestionSlot, previous_questions: List[str] = N
         else:
             answer_letter = "C"
 
+        # Image caption
+        image_caption = str(data.get("image_caption", "")).strip()
+
         # Validate explanation doesn't contain invalid language
         if _contains_invalid_language(explanation):
             if attempt < max_retries - 1:
@@ -736,8 +739,7 @@ def llm_generate_math_item(slot: QuestionSlot, previous_questions: List[str] = N
                 print(f"❌ ERROR: {error_msg}")
                 raise ValueError(error_msg)
 
-        image_caption = str(data.get("image_caption", "")).strip()
-
+        # All validation passed - return the item
         return {
             "question": question,
             "choices": choices,
