@@ -34,7 +34,6 @@ if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN) {
   // This will only work if @sentry/react is installed
   const initSentry = async () => {
     try {
-      // @ts-expect-error - @sentry/react may not be installed, that's ok
       const Sentry = await import('@sentry/react');
       Sentry.init({
         dsn: import.meta.env.VITE_SENTRY_DSN,

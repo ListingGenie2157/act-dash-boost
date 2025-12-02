@@ -291,12 +291,14 @@ function getTestWeekTasks(
   section?: string;
   size: number;
   estimated_mins: number;
+  title: string;
 }> {
   const tasks: Array<{
     type: string;
     section?: string;
     size: number;
     estimated_mins: number;
+    title: string;
   }> = [];
 
   // Final week focuses on review and light practice, not full simulations
@@ -305,18 +307,21 @@ function getTestWeekTasks(
       type: "REVIEW",
       size: 15,
       estimated_mins: 30,
+      title: "Final Week Review"
     });
   } else if (daysLeft === 2) {
     tasks.push({
       type: "REVIEW",
       size: 10,
       estimated_mins: 20,
+      title: "Pre-Test Review"
     });
   } else if (daysLeft === 1) {
     tasks.push({
       type: "WARMUP",
       size: 5,
       estimated_mins: 15,
+      title: "Test Day Warmup"
     });
   }
 
