@@ -569,18 +569,38 @@ def _auto_fix_answer_mismatch(item: Dict[str, Any], explanation: str) -> Optiona
         return None
     
     # Check each choice to see if it contains the numeric answer
+    best_match = None
+    best_diff = float('inf')
+    
     for idx, choice in enumerate(item["choices"]):
-        choice_numbers = re.findall(r'\d+\.?\d*', choice)
+        # Normalize choice text (remove labels, units, etc.)
+        choice_normalized = _normalize_choice_text(choice)
+        
+        # Extract all numbers from the choice
+        choice_numbers = re.findall(r'\d+\.?\d*', choice_normalized)
+        if not choice_numbers:
+            # If no numbers found, try the original choice
+            choice_numbers = re.findall(r'\d+\.?\d*', choice)
+        
         for num_str in choice_numbers:
             try:
                 choice_num = float(num_str)
-                if abs(numeric_answer - choice_num) < 0.01:
-                    # Found a match! Return the correct letter
+                diff = abs(numeric_answer - choice_num)
+                # Exact match (within 0.01) - return immediately
+                if diff < 0.01:
                     return "ABCDE"[idx]
+                # Track closest match (within 2.0) as fallback for rounding errors
+                if diff < 2.0 and diff < best_diff:
+                    best_match = "ABCDE"[idx]
+                    best_diff = diff
             except ValueError:
                 continue
     
-    return None
+    # Return closest match if found, otherwise None
+    if best_match and best_diff > 0.01:
+        print(f"    Note: Using closest match (difference: {best_diff:.2f})")
+    
+    return best_match
 
 
 def llm_generate_math_item(slot: QuestionSlot, previous_questions: List[str] = None, max_retries: int = 3, use_better_model: bool = False, auto_fix: bool = True) -> Dict[str, Any]:
@@ -649,27 +669,41 @@ def llm_generate_math_item(slot: QuestionSlot, previous_questions: List[str] = N
 
         # Validate answer matches explanation
         validation_result = _validate_answer_match(explanation, answer_letter, choices)
+        
+        # Try auto-fix FIRST if there's a mismatch (don't wait for last attempt)
+        if not validation_result and auto_fix:
+            numeric_from_explanation = _extract_numeric_answer(explanation)
+            fixed_answer = _auto_fix_answer_mismatch(
+                {"choices": choices},
+                explanation
+            )
+            if fixed_answer and fixed_answer != answer_letter:
+                idx_old = ord(answer_letter) - ord('A')
+                idx_new = ord(fixed_answer) - ord('A')
+                old_choice = choices[idx_old] if idx_old < len(choices) else 'N/A'
+                new_choice = choices[idx_new] if idx_new < len(choices) else 'N/A'
+                print(f"  Auto-fixing: Explanation calculates {numeric_from_explanation}, but answer_letter {answer_letter} points to '{old_choice}'. Changing to {fixed_answer} which points to '{new_choice}'.")
+                answer_letter = fixed_answer
+                # Re-validate with fixed answer
+                if _validate_answer_match(explanation, answer_letter, choices):
+                    # Return with fixed answer
+                    return {
+                        "question": question,
+                        "choices": choices,
+                        "answer_letter": answer_letter,
+                        "explanation": explanation,
+                        "image_caption": image_caption,
+                    }
+                else:
+                    # Even after fix, still doesn't match - continue to retry
+                    print(f"  Auto-fix didn't fully resolve (validation still fails), retrying...")
+            elif numeric_from_explanation is not None:
+                # Couldn't find a matching choice - show what we're looking for
+                idx = ord(answer_letter) - ord('A')
+                selected_choice = choices[idx] if idx < len(choices) else 'N/A'
+                print(f"  Mismatch: Explanation calculates {numeric_from_explanation}, but answer_letter {answer_letter} points to '{selected_choice}'. No matching choice found in: {choices}")
+        
         if not validation_result:
-            # Try to auto-fix if enabled (only on last attempt to avoid masking real issues)
-            if auto_fix and attempt >= max_retries - 1:
-                fixed_answer = _auto_fix_answer_mismatch(
-                    {"choices": choices},
-                    explanation
-                )
-                if fixed_answer and fixed_answer != answer_letter:
-                    print(f"  Auto-fixed: Changed answer_letter from {answer_letter} to {fixed_answer}")
-                    answer_letter = fixed_answer
-                    # Re-validate with fixed answer
-                    if _validate_answer_match(explanation, answer_letter, choices):
-                        # Return with fixed answer
-                        return {
-                            "question": question,
-                            "choices": choices,
-                            "answer_letter": answer_letter,
-                            "explanation": explanation,
-                            "image_caption": image_caption,
-                        }
-            
             if attempt < max_retries - 1:
                 # Show debug info on retry
                 idx = ord(answer_letter) - ord('A')
