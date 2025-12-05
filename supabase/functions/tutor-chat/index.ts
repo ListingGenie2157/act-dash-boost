@@ -6,7 +6,6 @@ const corsHeaders = {
 };
 
 interface TutorChatRequest {
-  user_id?: string;
   subject: string;
   topic: string;
   mode: 'practice' | 'quiz' | 'test';
@@ -119,6 +118,33 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    
+    // Authenticate user from JWT token
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create client with anon key to verify user token
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid or expired token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = user.id;
+    
+    // Create service role client for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse body with error handling
@@ -210,50 +236,49 @@ ${body.problem.user_work ? `- Student's Work: ${body.problem.user_work}` : ''}`;
     const aiData = await aiResponse.json();
     const assistantMessage = aiData.choices?.[0]?.message?.content || 'Sorry, I could not generate a response.';
 
-    // Optional: Log to database (non-blocking)
+    // Log to database (non-blocking) - use authenticated userId
     let sessionId = body.session_id;
     try {
-      if (body.user_id) {
-        if (!sessionId) {
-          // Create new session
-          const { data: newSession, error: sessionError } = await supabase
-            .from('tutor_sessions')
-            .insert({
-              user_id: body.user_id,
-              subject: body.subject,
-              topic: body.topic,
-              mode: body.mode,
-            })
-            .select()
-            .single();
+      if (!sessionId) {
+        // Create new session
+        const { data: newSession, error: sessionError } = await supabase
+          .from('tutor_sessions')
+          .insert({
+            user_id: userId,
+            subject: body.subject,
+            topic: body.topic,
+            mode: body.mode,
+          })
+          .select()
+          .single();
 
-          if (!sessionError && newSession) {
-            sessionId = newSession.id;
-          }
-        } else {
-          // Update existing session
-          await supabase
-            .from('tutor_sessions')
-            .update({ last_used_at: new Date().toISOString() })
-            .eq('id', sessionId);
+        if (!sessionError && newSession) {
+          sessionId = newSession.id;
         }
+      } else {
+        // Update existing session
+        await supabase
+          .from('tutor_sessions')
+          .update({ last_used_at: new Date().toISOString() })
+          .eq('id', sessionId)
+          .eq('user_id', userId); // Ensure user owns the session
+      }
 
-        // Log messages
-        if (sessionId) {
-          const lastUserMessage = body.messages[body.messages.length - 1];
-          await supabase.from('tutor_messages').insert([
-            {
-              session_id: sessionId,
-              role: lastUserMessage.role,
-              content: lastUserMessage.content,
-            },
-            {
-              session_id: sessionId,
-              role: 'assistant',
-              content: assistantMessage,
-            },
-          ]);
-        }
+      // Log messages
+      if (sessionId) {
+        const lastUserMessage = body.messages[body.messages.length - 1];
+        await supabase.from('tutor_messages').insert([
+          {
+            session_id: sessionId,
+            role: lastUserMessage.role,
+            content: lastUserMessage.content,
+          },
+          {
+            session_id: sessionId,
+            role: 'assistant',
+            content: assistantMessage,
+          },
+        ]);
       }
     } catch (loggingError) {
       console.error('Logging error (non-fatal):', loggingError);

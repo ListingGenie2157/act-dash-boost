@@ -14,6 +14,26 @@ serve(async (req) => {
   }
 
   try {
+    // Verify cron secret to prevent unauthorized triggering
+    const cronSecret = req.headers.get('x-cron-secret');
+    const expectedSecret = Deno.env.get('CRON_SECRET');
+    
+    if (!expectedSecret) {
+      console.error('CRON_SECRET not configured');
+      return new Response(JSON.stringify({ error: 'Server misconfiguration' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    if (cronSecret !== expectedSecret) {
+      console.warn('Unauthorized cron attempt');
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     console.log('Starting daily cron job...');
 
     // Initialize Supabase client with service role key for admin operations
