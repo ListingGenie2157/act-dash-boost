@@ -4,7 +4,7 @@ project_id = "hhbkmxrzxcswwokmbtbz"
 verify_jwt = false
 
 [functions.tutor-chat]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-study-plan]
 verify_jwt = true
