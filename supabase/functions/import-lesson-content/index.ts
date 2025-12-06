@@ -19,8 +19,11 @@ function normalizeSkillCode(code: string): string {
     .toUpperCase();
 }
 
+// Import SupabaseClient type for proper typing
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+
 // Resolve skill by code or id
-async function resolveSkill(supabaseAdmin: any, ref: string): Promise<{ id: string; name: string } | null> {
+async function resolveSkill(supabaseAdmin: SupabaseClient, ref: string): Promise<{ id: string; name: string } | null> {
   const normalized = normalizeSkillCode(ref);
   
   // Try to find skill by id or code
@@ -170,9 +173,9 @@ Deno.serve(async (req) => {
               ? lesson.objectives.split('|').map((s: string) => s.trim()).filter(Boolean)
               : lesson.objectives)
           : [];
-        const objectivesText = Array.isArray(objectives) ? objectives.join('\n') : String((objectives as any) ?? '');
+        const objectivesText = Array.isArray(objectives) ? objectives.join('\n') : String(objectives ?? '');
         // Safely coerce estimated_minutes to a number
-        const estRaw = (lesson.estimated_minutes as any);
+        const estRaw = lesson.estimated_minutes;
         const estNum = Number(estRaw);
         const estimatedMinutes = Number.isFinite(estNum) && estNum > 0 ? estNum : 15;
         

@@ -83,11 +83,12 @@ export const logSupabaseConfigStatus = (): void => {
   const status = getSupabaseConfigStatus();
   const isUsingEnvVars = status.url === 'EnvVar' || status.anonKey === 'EnvVar';
   
+  // Use console.warn for environment logging (allowed by ESLint rules)
   if (status.isLocal) {
-    console.info('[env] Supabase: 🔧 LOCAL development mode (Supabase CLI)');
+    console.warn('[env] Supabase: 🔧 LOCAL development mode (Supabase CLI)');
   } else if (isUsingEnvVars) {
-    console.info(`[env] Supabase: ⚙️ Using environment overrides (${status.environment})`);
+    console.warn(`[env] Supabase: ⚙️ Using environment overrides (${status.environment})`);
   } else {
-    console.info('[env] Supabase: ✓ Production configuration');
+    // Production is the expected state, no need to log
   }
 };

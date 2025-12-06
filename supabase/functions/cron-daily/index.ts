@@ -117,7 +117,8 @@ serve(async (req) => {
           }
 
           // Extract the access token from the response
-          const accessToken = (tokenData as any)?.properties?.access_token;
+          const tokenProperties = tokenData?.properties as { access_token?: string } | undefined;
+          const accessToken = tokenProperties?.access_token;
           
           if (!accessToken) {
             throw new Error('No access token generated');

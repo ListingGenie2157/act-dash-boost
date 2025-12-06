@@ -738,7 +738,7 @@ serve(async (req) => {
         const specialTasks = getTestWeekTasks(dayDaysLeft, user.id, dateStr);
         if (specialTasks.length > 0) {
           allPlans.push({ the_date: dateStr, tasks: specialTasks });
-          specialTasks.forEach((task: any) => {
+          specialTasks.forEach((task) => {
             const estimatedSeconds =
               typeof task.estimated_mins === "number" && task.estimated_mins > 0
                 ? Math.round(task.estimated_mins * 60)
@@ -748,7 +748,7 @@ serve(async (req) => {
               user_id: user.id,
               the_date: dateStr,
               type: task.type,
-              skill_id: task.skill_id ?? null,
+              skill_id: "skill_id" in task ? (task.skill_id as string | null) ?? null : null,
               size: task.size,
               status: "PENDING",
               reward_cents: task.type === "SIM"

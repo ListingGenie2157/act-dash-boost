@@ -29,10 +29,6 @@ export default function DiagnosticResultsComplete() {
   const [weakSkills, setWeakSkills] = useState<WeakSkill[]>([]);
   const [overallScore, setOverallScore] = useState(0);
 
-  useEffect(() => {
-    fetchAllResults();
-  }, []);
-
   const fetchAllResults = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();

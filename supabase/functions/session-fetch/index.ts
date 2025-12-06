@@ -81,8 +81,38 @@ serve(async (req) => {
     const useStaging = session.form_id.startsWith('F');
     console.log(`Fetching questions from ${useStaging ? 'staging_items' : 'v_form_section'} for form ${session.form_id}, section ${session.section}`);
     
-    let questionsData: any[];
-    let questionsError: any;
+    // Define type for question data from both sources
+    interface QuestionRecord {
+      question_id?: string;
+      id?: string;
+      ord: number;
+      question?: string;
+      stem?: string;
+      choice_a: string;
+      choice_b: string;
+      choice_c: string;
+      choice_d: string;
+      choice_e?: string | null;
+      passage_id?: string | null;
+      passage_text?: string | null;
+      passage_title?: string | null;
+      image_url?: string | null;
+      image_caption?: string | null;
+      image_position?: string | null;
+      underlined_text?: string | null;
+      reference_number?: number | null;
+      position_in_passage?: number | null;
+      calculator_allowed?: boolean | null;
+      marked_text?: unknown;
+      passage_format?: string | null;
+      passage_type?: string | null;
+      has_charts?: boolean | null;
+      chart_images?: string[] | null;
+      line_numbers_enabled?: boolean | null;
+    }
+    
+    let questionsData: QuestionRecord[];
+    let questionsError: { message: string } | null;
 
     if (useStaging) {
       const { data, error } = await supabase
@@ -149,7 +179,17 @@ serve(async (req) => {
     }));
 
     // Collect unique passages for RD/SCI sections with all fields
-    const passages: Record<string, any> = {};
+    interface PassageData {
+      title: string;
+      passage_text: string;
+      marked_text?: unknown;
+      passage_format?: string | null;
+      passage_type?: string | null;
+      has_charts?: boolean | null;
+      chart_images?: string[] | null;
+      line_numbers_enabled?: boolean | null;
+    }
+    const passages: Record<string, PassageData> = {};
     
     if (['RD', 'SCI'].includes(session.section)) {
       questionsData.forEach(q => {

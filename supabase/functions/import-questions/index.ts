@@ -50,13 +50,13 @@ function parseTSV(tsvContent: string): StagingRow[] {
   for (let i = 1; i < lines.length; i++) {
     const values = lines[i].split('\t').map(v => v.trim().replace(/"/g, ''));
     if (values.length === headers.length) {
-      const row: Record<string, string> = {};
+      const row: Record<string, string | number> = {};
       headers.forEach((header, index) => {
         row[header] = values[index];
       });
       
       // Convert numeric fields
-      (row as any).ord = parseInt(row.ord as string) || 0;
+      row.ord = parseInt(row.ord as string) || 0;
       
       rows.push(row as unknown as StagingRow);
     }

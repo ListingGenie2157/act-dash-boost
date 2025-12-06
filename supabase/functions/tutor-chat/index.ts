@@ -293,24 +293,26 @@ ${body.problem.user_work ? `- Student's Work: ${body.problem.user_work}` : ''}`;
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in tutor-chat:', error);
 
     let statusCode = 500;
     let errorMessage = 'Internal server error';
+    
+    const errorMsg = error instanceof Error ? error.message : String(error);
 
-    if (error.message?.includes('LOVABLE_API_KEY not configured')) {
+    if (errorMsg.includes('LOVABLE_API_KEY not configured')) {
       statusCode = 500;
       errorMessage = 'Tutor is not configured on the server (missing AI key). Please contact support.';
-    } else if (error.message?.includes('429')) {
+    } else if (errorMsg.includes('429')) {
       statusCode = 429;
       errorMessage = 'Rate limit exceeded. Please try again later.';
-    } else if (error.message?.includes('402')) {
+    } else if (errorMsg.includes('402')) {
       statusCode = 402;
       errorMessage = 'AI credits exhausted. Please contact support.';
-    } else if (error.message && error.message.length < 200) {
+    } else if (errorMsg.length < 200) {
       // If error message is reasonably short, include it for better debugging
-      errorMessage = error.message;
+      errorMessage = errorMsg;
     }
 
     return new Response(
