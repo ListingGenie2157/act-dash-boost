@@ -1,28 +1,93 @@
 /**
  * Supabase Configuration
  * 
- * These values are hardcoded because:
- * 1. They are PUBLIC/PUBLISHABLE values - safe to expose in client code
- * 2. Lovable's build system doesn't support VITE_* env vars the same way local Vite does
- * 3. Only SECRET keys (like SERVICE_ROLE_KEY) should be in Supabase secrets
+ * Environment-aware configuration:
+ * - Development: Uses localhost Supabase or staging project (via VITE_* env vars)
+ * - Production: Uses production Supabase project (hardcoded fallback)
  * 
- * This is the official pattern for Lovable projects with Supabase.
+ * To use a different environment:
+ * 1. Create a .env.local file with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+ * 2. For local dev with Supabase CLI: use http://127.0.0.1:54321
+ * 
+ * Only SECRET keys (like SERVICE_ROLE_KEY) should be in Supabase Edge Function secrets.
  */
-const SUPABASE_URL = 'https://hhbkmxrzxcswwokmbtbz.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhoYmtteHJ6eGNzd3dva21idGJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyNTI5MzcsImV4cCI6MjA3MTgyODkzN30.SWsosSuVDjtaAvlIdEyAwUx9zOY_uViTJWw_5UbgIGE';
+
+// Production fallback values (safe to expose - these are public/anon keys)
+const PROD_SUPABASE_URL = 'https://hhbkmxrzxcswwokmbtbz.supabase.co';
+const PROD_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhoYmtteHJ6eGNzd3dva21idGJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyNTI5MzcsImV4cCI6MjA3MTgyODkzN30.SWsosSuVDjtaAvlIdEyAwUx9zOY_uViTJWw_5UbgIGE';
+
+// Check for environment variable overrides (for local dev / staging)
+const getEnvVar = (key: string): string | undefined => {
+  // Vite injects these at build time
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    return import.meta.env[key] as string | undefined;
+  }
+  return undefined;
+};
 
 export const isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
 
-export const getSupabaseUrl = (): string => SUPABASE_URL;
+/**
+ * Detect current environment
+ */
+export const getEnvironment = (): 'production' | 'development' | 'test' => {
+  const env = getEnvVar('MODE') || getEnvVar('VITE_ENV');
+  if (env === 'test') return 'test';
+  if (env === 'development' || getEnvVar('DEV') === 'true') return 'development';
+  return 'production';
+};
 
-export const getSupabaseAnonKey = (): string => SUPABASE_ANON_KEY;
+/**
+ * Check if running with local Supabase CLI
+ */
+export const isLocalSupabase = (): boolean => {
+  const url = getEnvVar('VITE_SUPABASE_URL');
+  return url?.includes('127.0.0.1') || url?.includes('localhost') || false;
+};
 
-export const getSupabaseConfigStatus = () => ({
-  url: 'Set' as const,
-  anonKey: 'Set' as const,
-});
+export const getSupabaseUrl = (): string => {
+  // Check for environment variable override first
+  const envUrl = getEnvVar('VITE_SUPABASE_URL');
+  if (envUrl) {
+    return envUrl;
+  }
+  // Fall back to production
+  return PROD_SUPABASE_URL;
+};
+
+export const getSupabaseAnonKey = (): string => {
+  // Check for environment variable override first
+  const envKey = getEnvVar('VITE_SUPABASE_ANON_KEY');
+  if (envKey) {
+    return envKey;
+  }
+  // Fall back to production
+  return PROD_SUPABASE_ANON_KEY;
+};
+
+export const getSupabaseConfigStatus = () => {
+  const envUrl = getEnvVar('VITE_SUPABASE_URL');
+  const envKey = getEnvVar('VITE_SUPABASE_ANON_KEY');
+  
+  return {
+    url: envUrl ? 'EnvVar' : 'Fallback' as const,
+    anonKey: envKey ? 'EnvVar' : 'Fallback' as const,
+    environment: getEnvironment(),
+    isLocal: isLocalSupabase(),
+  };
+};
 
 export const logSupabaseConfigStatus = (): void => {
   if (!isBrowser) return;
-  console.info('[env] Supabase config: ✓ URL and anon key configured');
+  
+  const status = getSupabaseConfigStatus();
+  const isUsingEnvVars = status.url === 'EnvVar' || status.anonKey === 'EnvVar';
+  
+  if (status.isLocal) {
+    console.info('[env] Supabase: 🔧 LOCAL development mode (Supabase CLI)');
+  } else if (isUsingEnvVars) {
+    console.info(`[env] Supabase: ⚙️ Using environment overrides (${status.environment})`);
+  } else {
+    console.info('[env] Supabase: ✓ Production configuration');
+  }
 };
