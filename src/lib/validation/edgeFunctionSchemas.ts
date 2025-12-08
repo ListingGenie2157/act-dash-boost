@@ -9,17 +9,17 @@ import { z } from 'zod';
  * Valid form IDs for diagnostic tests and simulations
  */
 const VALID_FORM_IDS = [
-  'ONB', 'D2EN', 'D2MA', 'D2RD', 'D2SCI', // Diagnostic forms
-  'EN_A', 'EN_B', 'EN_C', // English forms
-  'MATH_A', 'MATH_B', 'MATH_C', // Math forms
-  'RD_A', 'RD_B', 'RD_C', // Reading forms
-  'SCI_A', 'SCI_B', 'SCI_C', // Science forms
+  'ONB', 'D2EN', 'D2MA', 'D2RD', 'D2SC',  // Diagnostic forms
+  'FA_EN', 'FA_MA', 'FA_RD', 'FA_SC',     // Form A sections
+  'FB_EN', 'FB_MA', 'FB_RD', 'FB_SC',     // Form B sections
+  'FC_EN', 'FC_MA', 'FC_RD', 'FC_SC',     // Form C sections
+  'DR_EN', 'DR_MA', 'DR_RD', 'DR_SC',     // Drill forms
 ] as const;
 
 /**
  * Valid sections for simulations
  */
-const VALID_SECTIONS = ['english', 'math', 'reading', 'science'] as const;
+const VALID_SECTIONS = ['EN', 'MATH', 'RD', 'SCI'] as const;
 
 /**
  * Valid drill subjects
