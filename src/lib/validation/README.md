@@ -37,8 +37,8 @@ if (result.success) {
 Validates session-start edge function parameters
 ```typescript
 const validatedInput = validateInput(sessionStartSchema, {
-  form_id: 'EN_A',
-  section: 'english',
+  form_id: 'FA_EN',
+  section: 'EN',
   coached: true
 });
 ```
