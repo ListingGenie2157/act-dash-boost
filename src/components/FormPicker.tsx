@@ -41,30 +41,24 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
               'SCI': 'ACT Science'
             };
 
-            // Count questions for this form/section
-            const { count } = await supabase
-              .from('form_questions')
-              .select('*', { count: 'exact', head: true })
-              .eq('form_id', formId);
+         // Count questions for this form/section
+         const { count, error } = await supabase
+           .from('staging_items')
+           .select('*', { count: 'exact', head: true })
+           .eq('form_id', formId);
 
-            const expectedCounts: Record<string, number> = {
-              'EN': 75,
-              'MA': 60,
-              'RD': 40,
-              'SCI': 40
-            };
+        if (error) {
+          console.error('Error counting questions for form', formId, error);
+        }
 
-            const expected = expectedCounts[section];
-            const actual = count || 0;
+        const actual = count ?? 0;
 
-            return {
-              id: formId,
-              label: `${sectionNames[section]} – Form ${prefix.replace('F', '')}`,
-              questionCount: actual,
-              isAvailable: actual >= expected
-            };
-          })
-        );
+        return {
+          id: formId,
+          label: `${sectionNames[section]} – Form ${prefix.replace('F', '')}`,
+          questionCount: actual,
+          isAvailable: actual > 0,
+        };
 
         setForms(formData);
       } catch (error) {
