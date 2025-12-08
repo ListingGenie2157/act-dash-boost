@@ -419,6 +419,24 @@ export default function Simulation() {
   }
 
   if (state === 'active' && sessionData) {
+    // Handle empty questions array - show user-friendly message
+    if (sessionData.questions.length === 0) {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <Card className="p-8 text-center max-w-md">
+            <h2 className="text-xl font-semibold mb-4">No Questions Available</h2>
+            <p className="text-muted-foreground mb-6">
+              No questions were found for this form and section combination. 
+              Please try a different section or contact support.
+            </p>
+            <Button onClick={() => setState('section-picker')}>
+              Choose Another Section
+            </Button>
+          </Card>
+        </div>
+      );
+    }
+
     const currentQuestion = sessionData.questions[currentQuestionIndex];
     const isPassageSection = selectedSection === 'RD' || selectedSection === 'SCI';
 
