@@ -17,6 +17,15 @@ serve(async (req) => {
 
   // Accept both GET and POST methods
 
+  // Map abbreviated section names to full names used in staging_items
+  const sectionMapping: Record<string, string> = {
+    'EN': 'English',
+    'MATH': 'Math',
+    'RD': 'Reading',
+    'SCI': 'Science',
+    'SC': 'Science', // Handle both variants
+  };
+
   try {
     // Initialize Supabase client with anon key and auth header
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -79,7 +88,9 @@ serve(async (req) => {
 
     // Fetch questions: use staging_items for F* forms, v_form_section for others
     const useStaging = session.form_id.startsWith('F');
-    console.log(`Fetching questions from ${useStaging ? 'staging_items' : 'v_form_section'} for form ${session.form_id}, section ${session.section}`);
+    // Map section name for staging_items (uses full names like 'English', 'Math')
+    const dbSection = useStaging ? (sectionMapping[session.section] || session.section) : session.section;
+    console.log(`Fetching questions from ${useStaging ? 'staging_items' : 'v_form_section'} for form ${session.form_id}, section ${session.section} (mapped to: ${dbSection})`);
     
     let questionsData: any[];
     let questionsError: any;
@@ -89,7 +100,7 @@ serve(async (req) => {
         .from('staging_items')
         .select('*')
         .eq('form_id', session.form_id)
-        .eq('section', session.section)
+        .eq('section', dbSection)
         .order('ord');
       questionsData = data || [];
       questionsError = error;
