@@ -53,12 +53,14 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
 
         const actual = count ?? 0;
 
-        return {
-          id: formId,
-          label: `${sectionNames[section]} – Form ${prefix.replace('F', '')}`,
-          questionCount: actual,
-          isAvailable: actual > 0,
-        };
+            return {
+              id: formId,
+              label: `${sectionNames[section]} – Form ${prefix.replace('F', '')}`,
+              questionCount: actual,
+              isAvailable: actual > 0,
+            };
+          })
+        );
 
         setForms(formData);
       } catch (error) {
