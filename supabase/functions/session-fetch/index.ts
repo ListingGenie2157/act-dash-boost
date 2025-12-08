@@ -17,13 +17,23 @@ serve(async (req) => {
 
   // Accept both GET and POST methods
 
-  // Map abbreviated section names to full names used in staging_items
+  // Map form_id suffix to full section names used in staging_items
+  // Form IDs like FA_MA, FA_EN have section encoded in the suffix
+  const formSuffixToSection: Record<string, string> = {
+    'EN': 'English',
+    'MA': 'Math',
+    'RD': 'Reading',
+    'SC': 'Science',
+    'SCI': 'Science',
+  };
+  
+  // Also keep abbreviation mapping for fallback
   const sectionMapping: Record<string, string> = {
     'EN': 'English',
     'MATH': 'Math',
     'RD': 'Reading',
     'SCI': 'Science',
-    'SC': 'Science', // Handle both variants
+    'SC': 'Science',
   };
 
   try {
@@ -88,9 +98,19 @@ serve(async (req) => {
 
     // Fetch questions: use staging_items for F* forms, v_form_section for others
     const useStaging = session.form_id.startsWith('F');
-    // Map section name for staging_items (uses full names like 'English', 'Math')
-    const dbSection = useStaging ? (sectionMapping[session.section] || session.section) : session.section;
-    console.log(`Fetching questions from ${useStaging ? 'staging_items' : 'v_form_section'} for form ${session.form_id}, section ${session.section} (mapped to: ${dbSection})`);
+    
+    // Derive section from form_id suffix (e.g., FA_MA → MA → Math)
+    // This is more reliable than using session.section which may be mismatched
+    const formParts = session.form_id.split('_');
+    const formSuffix = formParts.length > 1 ? formParts[formParts.length - 1] : null;
+    const derivedSection = formSuffix ? formSuffixToSection[formSuffix] : null;
+    
+    // Use derived section from form_id, fall back to mapped session.section
+    const dbSection = useStaging 
+      ? (derivedSection || sectionMapping[session.section] || session.section) 
+      : session.section;
+    
+    console.log(`Fetching questions from ${useStaging ? 'staging_items' : 'v_form_section'} for form ${session.form_id}, section ${session.section} (derived: ${derivedSection}, using: ${dbSection})`);
     
     let questionsData: any[];
     let questionsError: any;
