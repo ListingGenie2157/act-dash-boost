@@ -42,10 +42,25 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
             };
 
             // Count questions for this form/section
-            const { count } = await supabase
-              .from('form_questions')
+            // Forms starting with F use staging_items, others use form_questions
+            const useStaging = formId.startsWith('F');
+            let query = supabase
+              .from(useStaging ? 'staging_items' : 'form_questions')
               .select('*', { count: 'exact', head: true })
               .eq('form_id', formId);
+            
+            // Map section code to database section name for staging_items
+            if (useStaging) {
+              const sectionMap: Record<string, string> = {
+                'EN': 'EN',
+                'MA': 'MATH',
+                'RD': 'RD',
+                'SCI': 'SCI'
+              };
+              query = query.eq('section', sectionMap[section] || section);
+            }
+            
+            const { count } = await query;
 
             const expectedCounts: Record<string, number> = {
               'EN': 75,

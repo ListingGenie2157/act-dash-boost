@@ -21,7 +21,7 @@ export function SectionPicker({ formId, onSectionSelect, onBack }: SectionPicker
       color: 'bg-blue-100 text-blue-700',
     },
     {
-      id: 'MATH',
+      id: 'MA',
       name: 'Math',
       icon: Calculator,
       timeLimit: 60,
@@ -54,7 +54,7 @@ export function SectionPicker({ formId, onSectionSelect, onBack }: SectionPicker
 
   const isAvailable = (sectionId: string) => {
     // FB_SCI is incomplete (only 29 questions)
-    if (formId === 'FB_SCI' || (formId.startsWith('FB_') && sectionId === 'SCI')) {
+    if (formId === 'FB_SCI' || (formId.startsWith('FB_') && (sectionId === 'SCI' || sectionId === 'MA'))) {
       return false;
     }
     // All other FA, FB (except SCI), FC sections are available
@@ -148,7 +148,7 @@ export function SectionPicker({ formId, onSectionSelect, onBack }: SectionPicker
                   <Button 
                     className="w-full" 
                     disabled={!available}
-                    onClick={() => available && onSectionSelect(section.id, false)}
+                    onClick={() => available && onSectionSelect(section.id === 'MA' ? 'MATH' : section.id, false)}
                   >
                     {available ? 'Start Timed Test' : 'Coming Soon'}
                   </Button>
@@ -156,7 +156,7 @@ export function SectionPicker({ formId, onSectionSelect, onBack }: SectionPicker
                     <Button 
                       variant="outline"
                       className="w-full border-blue-300 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
-                      onClick={() => onSectionSelect(section.id, true)}
+                      onClick={() => onSectionSelect(section.id === 'MA' ? 'MATH' : section.id, true)}
                     >
                       <Sparkles className="h-4 w-4 mr-2" />
                       Start Coached Test

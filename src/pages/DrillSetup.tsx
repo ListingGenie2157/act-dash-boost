@@ -55,11 +55,24 @@ export default function DrillSetup() {
           return;
         }
 
+        // Map subject codes to full names for skills table
+        const subjectNameMap: Record<string, string> = {
+          'EN': 'English',
+          'MA': 'Math',
+          'RD': 'Reading',
+          'SCI': 'Science',
+          'English': 'English',
+          'Math': 'Math',
+          'Reading': 'Reading',
+          'Science': 'Science'
+        };
+        const subjectName = subjectNameMap[subject] || subject;
+
         // Fetch all skills for this subject
         const { data: skillsData, error: skillsError } = await supabase
           .from('skills')
           .select('id, name')
-          .eq('subject', subject)
+          .eq('subject', subjectName)
           .order('order_index');
 
         if (skillsError) throw skillsError;
@@ -113,7 +126,19 @@ export default function DrillSetup() {
     navigate(`/drill/${subject}/play?${params.toString()}`);
   };
 
-  const subjectWeakAreas = weakAreas?.filter(w => w.subject === subject) || [];
+  // Map subject code to full name for weak areas filter
+  const subjectNameMap: Record<string, string> = {
+    'EN': 'English',
+    'MA': 'Math',
+    'RD': 'Reading',
+    'SCI': 'Science',
+    'English': 'English',
+    'Math': 'Math',
+    'Reading': 'Reading',
+    'Science': 'Science'
+  };
+  const subjectName = subjectNameMap[subject || ''] || subject;
+  const subjectWeakAreas = weakAreas?.filter(w => w.subject === subjectName) || [];
 
   if (loading) {
     return <LoadingSpinner />;
@@ -133,7 +158,7 @@ export default function DrillSetup() {
       <div className="flex items-center gap-3 mb-6">
         <Target className="h-8 w-8 text-primary" />
         <div>
-          <h1 className="text-3xl font-bold">{subject} Drill Setup</h1>
+          <h1 className="text-3xl font-bold">{subjectName || subject} Drill Setup</h1>
           <p className="text-muted-foreground">Customize your practice session</p>
         </div>
       </div>
@@ -217,7 +242,7 @@ export default function DrillSetup() {
                       <span className="font-semibold">Mixed Review</span>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Random questions from all {subject} skills
+                      Random questions from all {subjectName || subject} skills
                     </p>
                   </Label>
                 </div>

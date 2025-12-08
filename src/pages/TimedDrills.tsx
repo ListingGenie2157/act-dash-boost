@@ -33,11 +33,19 @@ export default function TimedDrills() {
           return;
         }
 
-        // Count questions per section
+        // Count questions per section, mapping database section names to display names
+        const sectionMap: Record<string, string> = {
+          'EN': 'English',
+          'MATH': 'Math',
+          'RD': 'Reading',
+          'SCI': 'Science'
+        };
+        
         const counts: Record<string, number> = {};
         data.forEach(item => {
           if (item.section) {
-            counts[item.section] = (counts[item.section] || 0) + 1;
+            const displaySection = sectionMap[item.section] || item.section;
+            counts[displaySection] = (counts[displaySection] || 0) + 1;
           }
         });
 
@@ -115,8 +123,17 @@ export default function TimedDrills() {
             {subjects.map(stat => {
               const hasContent = stat.questionCount > 0;
               
+              // Map display names to drill subject codes
+              const subjectCodeMap: Record<string, string> = {
+                'English': 'EN',
+                'Math': 'MA',
+                'Reading': 'RD',
+                'Science': 'SCI'
+              };
+              const drillSubject = subjectCodeMap[stat.subject] || stat.subject;
+              
               return hasContent ? (
-                <Link key={stat.subject} to={`/drill/${encodeURIComponent(stat.subject)}/setup`}>
+                <Link key={stat.subject} to={`/drill/${encodeURIComponent(drillSubject)}/setup`}>
                   <Card className="h-full hover:shadow-lg hover:border-primary cursor-pointer transition-all group">
                     <CardHeader>
                       <CardTitle className="text-xl group-hover:text-primary transition-colors flex items-center gap-2">
