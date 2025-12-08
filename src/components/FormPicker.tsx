@@ -26,9 +26,9 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
       try {
         // Query actual question counts from database
         const formIds = [
-          'FA_EN', 'FA_MA', 'FA_RD', 'FA_SCI',
-          'FB_EN', 'FB_MA', 'FB_RD', 'FB_SCI',
-          'FC_EN', 'FC_MA', 'FC_RD', 'FC_SCI'
+          'FA_EN', 'FA_MA', 'FA_RD', 'FA_SC',
+          'FB_EN', 'FB_MA', 'FB_RD', 'FB_SC',
+          'FC_EN', 'FC_MA', 'FC_RD', 'FC_SC'
         ];
 
         const formData: Form[] = await Promise.all(
@@ -38,7 +38,7 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
               'EN': 'ACT English',
               'MA': 'ACT Math',
               'RD': 'ACT Reading',
-              'SCI': 'ACT Science'
+              'SC': 'ACT Science'
             };
 
          // Count questions for this form/section
@@ -148,14 +148,14 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
                       'EN': 'English',
                       'MA': 'Math', 
                       'RD': 'Reading',
-                      'SCI': 'Science'
+                      'SC': 'Science'
                     };
                     
                     const timeLimits: Record<string, string> = {
                       'EN': '45 min',
                       'MA': '60 min',
                       'RD': '35 min', 
-                      'SCI': '35 min'
+                      'SC': '35 min'
                     };
 
                     return (
