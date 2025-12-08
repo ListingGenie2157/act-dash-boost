@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      _orphan_cleanup_log: {
+        Row: {
+          cleaned_at: string | null
+          id: number
+          orphan_count: number
+          table_name: string
+        }
+        Insert: {
+          cleaned_at?: string | null
+          id?: number
+          orphan_count: number
+          table_name: string
+        }
+        Update: {
+          cleaned_at?: string | null
+          id?: number
+          orphan_count?: number
+          table_name?: string
+        }
+        Relationships: []
+      }
       accommodations: {
         Row: {
           accommodation_type: string
@@ -78,7 +99,22 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "attempts_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attempts_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       calculator_practice: {
         Row: {

@@ -1,5 +1,5 @@
 // src/types/api.ts
-import type { ACTSection, TaskType, TaskStatus } from '@/lib/constants';
+import type { ACTSection, TaskType, TaskStatus } from '@/lib/constant';
 
 export interface StudyPlanTask {
   id: string;
