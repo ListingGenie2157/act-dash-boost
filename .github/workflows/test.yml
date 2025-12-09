@@ -1,0 +1,135 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint-and-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run linter
+        run: npm run lint
+      
+      - name: Run type checks
+        run: npm run typecheck
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run unit tests
+        run: npm run test
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        if: always()
+
+  e2e-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+      
+      - name: Run E2E tests
+        run: npx playwright test --project=${{ matrix.browser }}
+        env:
+          CI: true
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: playwright-results-${{ matrix.browser }}
+          path: playwright-report/
+
+  mobile-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        device: [mobile-chrome, mobile-safari]
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+      
+      - name: Run mobile E2E tests
+        run: npx playwright test --project=${{ matrix.device }}
+        env:
+          CI: true
+
+  performance-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+      
+      - name: Run performance tests
+        run: npx playwright test e2e/performance.spec.ts
+        env:
+          CI: true
+      
+      - name: Upload performance results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: performance-results
+          path: playwright-report/
