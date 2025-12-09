@@ -30,12 +30,12 @@ interface Attempt {
   question_ord: number;
 }
 
-const TIMERS = {
-  ONB: 20 * 60, // 20 minutes
+const TIMERS: Record<string, number> = {
+  ONB: 20 * 60, // 20 minutes - quick diagnostic
   D2EN: 20 * 60, // 20 minutes  
   D2MA: 25 * 60, // 25 minutes
   D2RD: 18 * 60, // 18 minutes
-  D2SCI: 18 * 60, // 18 minutes
+  D2SC: 18 * 60, // 18 minutes - fixed from D2SCI
   // Official ACT section timers
   EN_A: 45 * 60, EN_B: 45 * 60, EN_C: 45 * 60, // 45 minutes
   MATH_A: 60 * 60, MATH_B: 60 * 60, MATH_C: 60 * 60, // 60 minutes
@@ -150,13 +150,26 @@ export default function DiagnosticTest() {
         localStorage.setItem('diagnostic_completed_sections', JSON.stringify(completed));
       }
 
-      // Navigate back to diagnostic orchestrator
       toast({
         title: "Section Complete!",
         description: `${formId} section saved successfully.`,
       });
 
-      navigate('/diagnostic');
+      // ONB (quick diagnostic) goes straight to results, thorough goes back to orchestrator
+      if (formId === 'ONB') {
+        // Mark diagnostic as complete in profile
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase
+            .from('profiles')
+            .update({ diagnostic_completed: true })
+            .eq('id', user.id);
+        }
+        localStorage.removeItem('diagnostic_completed_sections');
+        navigate('/diagnostic-results-complete');
+      } else {
+        navigate('/diagnostic');
+      }
 
     } catch (error) {
       console.error('Error submitting diagnostic:', error);
