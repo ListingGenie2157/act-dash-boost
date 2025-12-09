@@ -181,11 +181,13 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
           toast.success('Your personalized study plan is ready!');
           onPlanGenerated?.();
         }
+      } else if (form.diagnosticChoice === 'quick') {
+        // Quick diagnostic goes directly to ONB combined test
+        toast.info('Starting 20-minute quick diagnostic...');
+        navigate('/diagnostic-test/ONB');
       } else {
-        // Take diagnostic first; finish-diagnostic will be called after the test
-        toast.info(
-          `Taking ${form.diagnosticChoice === 'quick' ? '20-minute' : '60-minute'} diagnostic...`
-        );
+        // Thorough diagnostic goes to multi-section orchestrator
+        toast.info('Starting 60-minute thorough diagnostic...');
         navigate('/diagnostic');
       }
     } catch (error) {

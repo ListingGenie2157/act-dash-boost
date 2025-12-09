@@ -22,7 +22,7 @@ export default function Diagnostic() {
     { id: 'D2EN', label: 'English', description: '20 minutes - Grammar, punctuation, and style' },
     { id: 'D2MA', label: 'Math', description: '25 minutes - Algebra, geometry, and trigonometry' },
     { id: 'D2RD', label: 'Reading', description: '18 minutes - Comprehension and analysis' },
-    { id: 'D2SCI', label: 'Science', description: '18 minutes - Data interpretation and reasoning' }
+    { id: 'D2SC', label: 'Science', description: '18 minutes - Data interpretation and reasoning' }
   ];
 
   const currentSectionIndex = completedSections.length;
