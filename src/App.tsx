@@ -36,6 +36,7 @@ import ReviewSpaced from "./pages/ReviewSpaced";
 import DrillSetup from "./pages/DrillSetup";
 import DrillPlayer from "./pages/DrillPlayer";
 import DrillHistory from "./pages/DrillHistory";
+import DrillDetail from "./pages/DrillDetail";
 import DiagnosticTest from "./pages/DiagnosticTest";
 import DiagnosticResults from "./pages/DiagnosticResults";
 import DiagnosticResultsComplete from "./pages/DiagnosticResultsComplete";
@@ -164,6 +165,7 @@ const App = () => (
   <Route path="/drill/:subject/setup" element={<DrillSetup />} />
   <Route path="/drill/:subject/play" element={<DrillPlayer />} />
   <Route path="/drill-history" element={<DrillHistory />} />
+  <Route path="/drill-detail/:taskId" element={<DrillDetail />} />
   <Route path="/drill/:subject" element={<DrillRunner />} />
             <Route path="/quiz/:section" element={<QuizRunner />} />
             <Route path="/weak-areas" element={<WeakAreas />} />
