@@ -207,15 +207,7 @@ export type Database = {
           question_id?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "error_bank_question_id_fkey"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "questions"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       form_questions: {
         Row: {

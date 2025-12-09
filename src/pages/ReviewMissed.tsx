@@ -14,16 +14,11 @@ interface MissedQuestion {
   question_id: string;
   miss_count: number;
   last_missed_at: string;
-  question: {
-    id: string;
-    stem: string;
-    skill_id: string;
-    difficulty: number;
-    skill: {
-      name: string;
-      subject: string;
-    };
-  };
+  staging_id: number;
+  question: string;
+  section: string;
+  skill_code: string;
+  difficulty: string;
 }
 
 export default function ReviewMissed() {
@@ -42,75 +37,73 @@ export default function ReviewMissed() {
         return;
       }
 
-      let query = supabase
+      // First, get error_bank entries for this user
+      let errorQuery = supabase
         .from('error_bank')
-        .select(`
-          question_id,
-          miss_count,
-          last_missed_at,
-          questions!inner (
-            id,
-            stem,
-            skill_id,
-            difficulty,
-            skills!inner (
-              name,
-              subject
-            )
-          )
-        `)
+        .select('question_id, miss_count, last_missed_at')
         .eq('user_id', user.id);
+
+      if (sortBy === 'recent') {
+        errorQuery = errorQuery.order('last_missed_at', { ascending: false });
+      } else {
+        errorQuery = errorQuery.order('miss_count', { ascending: false });
+      }
+
+      const { data: errorData, error: errorError } = await errorQuery;
+
+      if (errorError) throw errorError;
+      if (!errorData || errorData.length === 0) {
+        setMissedQuestions([]);
+        return;
+      }
+
+      // Extract staging_ids from question_id (stored as text)
+      const stagingIds = errorData.map(e => parseInt(e.question_id, 10)).filter(id => !isNaN(id));
+
+      if (stagingIds.length === 0) {
+        setMissedQuestions([]);
+        return;
+      }
+
+      // Fetch corresponding questions from staging_items
+      let stagingQuery = supabase
+        .from('staging_items')
+        .select('staging_id, question, section, skill_code, difficulty')
+        .in('staging_id', stagingIds);
 
       // Apply subject filter
       if (subjectFilter !== 'all') {
-        query = query.eq('questions.skills.subject', subjectFilter);
+        stagingQuery = stagingQuery.eq('section', subjectFilter);
       }
 
-      // Apply sorting
-      if (sortBy === 'recent') {
-        query = query.order('last_missed_at', { ascending: false });
-      } else {
-        query = query.order('miss_count', { ascending: false });
-      }
+      const { data: stagingData, error: stagingError } = await stagingQuery;
 
-      const { data, error } = await query;
+      if (stagingError) throw stagingError;
 
-      if (error) throw error;
+      // Create a map for quick lookup
+      const stagingMap = new Map(
+        (stagingData || []).map(s => [s.staging_id.toString(), s])
+      );
 
-      // Transform data to match interface
-      interface RawQuestionData {
-        question_id: string;
-        miss_count: number | null;
-        last_missed_at: string;
-        questions: {
-          id: string;
-          stem: string;
-          skill_id: string;
-          difficulty: number;
-          skills: {
-            name: string;
-            subject: string;
-          };
-        };
-      }
-      
-      const transformed = data?.map((item: RawQuestionData) => ({
-        question_id: item.question_id,
-        miss_count: item.miss_count || 0,
-        last_missed_at: item.last_missed_at,
-        question: {
-          id: item.questions.id,
-          stem: item.questions.stem,
-          skill_id: item.questions.skill_id,
-          difficulty: item.questions.difficulty,
-          skill: {
-            name: item.questions.skills.name,
-            subject: item.questions.skills.subject
-          }
+      // Merge error_bank with staging_items data
+      const merged: MissedQuestion[] = [];
+      for (const err of errorData) {
+        const staging = stagingMap.get(err.question_id);
+        if (staging) {
+          merged.push({
+            question_id: err.question_id,
+            miss_count: err.miss_count || 1,
+            last_missed_at: err.last_missed_at,
+            staging_id: staging.staging_id,
+            question: staging.question,
+            section: staging.section,
+            skill_code: staging.skill_code,
+            difficulty: staging.difficulty
+          });
         }
-      })) || [];
+      }
 
-      setMissedQuestions(transformed);
+      setMissedQuestions(merged);
     } catch (error) {
       console.error('Error loading missed questions:', error);
       toast.error('Failed to load missed questions');
@@ -124,10 +117,18 @@ export default function ReviewMissed() {
   }, [loadMissedQuestions]);
 
   const handlePracticeAll = () => {
-    // Navigate to drill with missed mode
     if (missedQuestions.length > 0) {
-      const subject = missedQuestions[0].question.skill.subject;
-      navigate(`/drill/${subject}/setup?mode=missed`);
+      const section = missedQuestions[0].section;
+      navigate(`/drill/${section}/setup?mode=missed`);
+    }
+  };
+
+  const getDifficultyNumber = (diff: string): number => {
+    switch (diff.toLowerCase()) {
+      case 'easy': return 1;
+      case 'medium': return 2;
+      case 'hard': return 3;
+      default: return 2;
     }
   };
 
@@ -218,28 +219,27 @@ export default function ReviewMissed() {
                         Missed {item.miss_count}x
                       </Badge>
                       <Badge variant="outline">
-                        {item.question.skill.subject}
+                        {item.section}
                       </Badge>
                       <Badge variant="secondary" className="text-xs">
-                        Difficulty: {item.question.difficulty}/3
+                        Difficulty: {getDifficultyNumber(item.difficulty)}/3
                       </Badge>
                     </div>
                     <CardTitle className="text-base mb-1">
-                      {item.question.skill.name}
+                      {item.skill_code}
                     </CardTitle>
                     <CardDescription className="line-clamp-2">
-                      {item.question.stem}
+                      {item.question}
                     </CardDescription>
                   </div>
                   <Button 
                     variant="outline" 
                     size="sm"
                     onClick={() => {
-                      // Navigate to drill runner with this specific question
                       navigate('/drill-runner', { 
                         state: { 
                           mode: 'targeted',
-                          questionIds: [item.question_id],
+                          stagingIds: [item.staging_id],
                           source: 'missed-review'
                         } 
                       });
