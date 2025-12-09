@@ -37,6 +37,7 @@ interface QuestionCardProps {
   onPrevious: () => void;
   onSubmit: () => void;
   lockAnswers?: boolean;
+  showCalculatorBadge?: boolean;
 }
 
 export function QuestionCard({
@@ -49,6 +50,7 @@ export function QuestionCard({
   onPrevious,
   onSubmit,
   lockAnswers = false,
+  showCalculatorBadge = false,
 }: QuestionCardProps) {
   const [localAnswer, setLocalAnswer] = useState(selectedAnswer || '');
   const [imageZoomed, setImageZoomed] = useState(false);
@@ -110,8 +112,8 @@ export function QuestionCard({
             <CardTitle className="text-lg">
               Question {currentIndex + 1} of {totalQuestions}
             </CardTitle>
-            <div className="flex items-center space-x-2">
-              {question.calculator_allowed !== null && question.calculator_allowed !== undefined && (
+          <div className="flex items-center space-x-2">
+              {showCalculatorBadge && question.calculator_allowed !== null && question.calculator_allowed !== undefined && (
                 <Badge 
                   variant={question.calculator_allowed ? "default" : "secondary"}
                   className="text-xs flex items-center gap-1"
