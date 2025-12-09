@@ -12,6 +12,7 @@ interface ImportReport {
   validRows: number;
   invalidRows: number;
   errors: string[];
+  warnings: string[];
   insertedQuestions?: number;
   insertedSkills?: number;
   insertedFormQuestions?: number;
@@ -90,6 +91,43 @@ function validateStagingRow(row: StagingRow): string[] {
   }
   
   return errors;
+}
+
+function validateAnswerDistribution(rows: StagingRow[]): string[] {
+  const warnings: string[] = [];
+  
+  // Group by section
+  const bySection: Record<string, StagingRow[]> = {};
+  for (const row of rows) {
+    if (!bySection[row.section]) bySection[row.section] = [];
+    bySection[row.section].push(row);
+  }
+  
+  // Check distribution per section
+  for (const [section, sectionRows] of Object.entries(bySection)) {
+    if (sectionRows.length < 10) continue; // Skip small sets
+    
+    const counts: Record<string, number> = { A: 0, B: 0, C: 0, D: 0 };
+    for (const row of sectionRows) {
+      const answer = row.answer?.toUpperCase();
+      if (answer in counts) counts[answer]++;
+    }
+    
+    const total = sectionRows.length;
+    const expected = total / 4;
+    const tolerance = 0.15; // 15% tolerance
+    
+    for (const [letter, count] of Object.entries(counts)) {
+      const pct = count / total;
+      if (pct > 0.25 + tolerance) {
+        warnings.push(`${section}: Answer ${letter} is over-represented (${Math.round(pct * 100)}%, expected ~25%)`);
+      } else if (pct < 0.25 - tolerance) {
+        warnings.push(`${section}: Answer ${letter} is under-represented (${Math.round(pct * 100)}%, expected ~25%)`);
+      }
+    }
+  }
+  
+  return warnings;
 }
 
 function mapDifficulty(difficulty: string): number {
@@ -206,6 +244,7 @@ serve(async (req) => {
       validRows: 0,
       invalidRows: 0,
       errors: [],
+      warnings: [],
       dryRun
     };
 
@@ -223,6 +262,12 @@ serve(async (req) => {
         report.validRows++;
         validRows.push(row);
       }
+    }
+    
+    // Check answer distribution and add warnings
+    const distributionWarnings = validateAnswerDistribution(validRows);
+    if (distributionWarnings.length > 0) {
+      report.warnings.push(...distributionWarnings);
     }
 
     if (!dryRun && validRows.length > 0) {

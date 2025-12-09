@@ -28,7 +28,7 @@ FA_RD_026	A	RD	26	R3	Humanities	Essay			R3.F	Medium		Vocabulary in context: “f
 FA_RD_027	A	RD	27	R3	Humanities	Essay			R3.G	Medium		What attitude does the narrator convey toward visitors who are “irritated”?	sarcastic	disdainful	appreciative yet firm	indifferent	C	Mara said ‘Good’” shows she welcomes the challenge for visitors.
 FA_RD_028	A	RD	28	R3	Humanities	Essay			R3.H	Hard		Which inference is most supported about the labels?	They list designer biographies only.	They prioritize how objects were used.	They are replaced by audio tours.	They contain no dates.	B	Text: “Labels were rewritten to show use before authorship.”
 FA_RD_029	A	RD	29	R3	Humanities	Essay			R3.I	Medium		Which statement best captures the relationship between donors and Mara?	Donors directly choose the objects.	Mara flatly refuses donor input.	Donors ask; Mara listens but makes curatorial decisions.	Mara depends on donors to write labels.	C	She nods but returns to her plan.
-FA_RD_030	A	RD	30	R3	Humanities	Essay			R3.J	Medium				second-person instructions	a sequence of donor interviews	chronological history of chairs	A	Visitor expectations vs Mara’s arrangement drives the piece.
+FA_RD_030	A	RD	30	R3	Humanities	Essay			R3.J	Medium		Structure: The passage develops primarily through __.	tension between visitor expectations and curatorial choices	second-person instructions	a sequence of donor interviews	chronological history of chairs	A	Visitor expectations vs Mara’s arrangement drives the piece.
 FA_RD_031	A	RD	31	R4	Natural Science	Explanatory			R4.A	Medium	Cool Roofs, Hot Cities	What is the main purpose of the passage?	to advocate for ending air-conditioning	to explain evidence that reflective roofs reduce heat loads	to show that clouds eliminate any benefits	to dismiss concerns about glare	B	Presents measurements and outcomes showing benefits.
 FA_RD_032	A	RD	32	R4	Natural Science	Explanatory			R4.B	Easy		Which finding directly supports energy savings?	Coated roofs were 18–25°C cooler.	Indoor cooling energy dropped 12 percent.	Differences shrank on cloudy days.	Aerial images showed hot spots.	B	Energy metric is explicit.
 FA_RD_033	A	RD	33	R4	Natural Science	Explanatory			R4.C	Medium		What role do the cloudy-week results play?	They contradict the program’s conclusions.	They show the effect varies with conditions but persists.	They prove sensors were inaccurate.	They show winter benefits only.	B	Smaller but nonzero differences indicate robustness.
@@ -39,37 +39,3 @@ FA_RD_037	A	RD	37	R4	Natural Science	Explanatory			R4.G	Medium		Which conclusion
 FA_RD_038	A	RD	38	R4	Natural Science	Explanatory			R4.H	Medium		If a coated roof reduces peak surface temperature by 20°C and indoor cooling by 10%, which scenario most likely reduces benefits?	a string of clear days	a building shaded by taller neighbors	more rooftop insulation	program expansion to schools	B	Shade lessens solar input; effect size shrinks.
 FA_RD_039	A	RD	39	R4	Natural Science	Explanatory			R4.I	Hard		Which additional evidence would most strengthen the program’s case?	Photos of white roofs in other cities	A winter-week test showing identical results	Three-year billing data showing sustained lower kWh	Interviews with roofers about installation	C	Long-term energy billing confirms durable impact.
 FA_RD_040	A	RD	40	R4	Natural Science	Explanatory			R4.J	Medium		Structure: The passage develops primarily through __.	definition, methods, results, and implications	anecdotes and opinions	a legal debate about building codes	a chronological memoir	A	Classic explanatory arc: define problem → test → results → response.
-																		
-																		
-																		
-																		
-																		
-																		
-																		
-																		
-																		
-																		
-																		
-																		
-																		
-																		
-																		
-																		
-																		
-																		
-																		
-																		
-																		
-																		
-																		
-																		
-FA_EN_016																		
-FA_EN_017																		
-FA_EN_018																		
-FA_EN_019																		
-FA_EN_020																		
-FA_EN_021																		
-FA_EN_022																		
-FA_EN_023																		
-FA_EN_024																		
-FA_EN_025																		
