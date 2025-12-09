@@ -935,6 +935,7 @@ export type Database = {
       staging_items: {
         Row: {
           answer: string
+          calculator_allowed: boolean | null
           choice_a: string
           choice_b: string
           choice_c: string
@@ -950,13 +951,17 @@ export type Database = {
           passage_id: string | null
           passage_text: string | null
           passage_title: string | null
+          position_in_passage: number | null
           question: string
+          reference_number: number | null
           section: string
           skill_code: string
           staging_id: number
+          underlined_text: string | null
         }
         Insert: {
           answer: string
+          calculator_allowed?: boolean | null
           choice_a: string
           choice_b: string
           choice_c: string
@@ -972,13 +977,17 @@ export type Database = {
           passage_id?: string | null
           passage_text?: string | null
           passage_title?: string | null
+          position_in_passage?: number | null
           question: string
+          reference_number?: number | null
           section: string
           skill_code: string
           staging_id?: number
+          underlined_text?: string | null
         }
         Update: {
           answer?: string
+          calculator_allowed?: boolean | null
           choice_a?: string
           choice_b?: string
           choice_c?: string
@@ -994,10 +1003,13 @@ export type Database = {
           passage_id?: string | null
           passage_text?: string | null
           passage_title?: string | null
+          position_in_passage?: number | null
           question?: string
+          reference_number?: number | null
           section?: string
           skill_code?: string
           staging_id?: number
+          underlined_text?: string | null
         }
         Relationships: [
           {
