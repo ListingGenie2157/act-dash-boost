@@ -72,6 +72,7 @@ export type Database = {
           question_id: string
           question_ord: number
           selected_idx: number | null
+          task_id: string | null
           updated_at: string | null
           user_id: string
         }
@@ -84,6 +85,7 @@ export type Database = {
           question_id: string
           question_ord: number
           selected_idx?: number | null
+          task_id?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -96,6 +98,7 @@ export type Database = {
           question_id?: string
           question_ord?: number
           selected_idx?: number | null
+          task_id?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -112,6 +115,13 @@ export type Database = {
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attempts_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "study_tasks"
             referencedColumns: ["id"]
           },
         ]

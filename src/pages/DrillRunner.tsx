@@ -18,6 +18,10 @@ export default function DrillRunner() {
   const [userId, setUserId] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [taskId, setTaskId] = useState<string | null>(null);
+  const [answerTimes, setAnswerTimes] = useState<number[]>([]);
+  const [lastAnswerTime, setLastAnswerTime] = useState(Date.now());
+  const [correctCount, setCorrectCount] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -106,6 +110,25 @@ export default function DrillRunner() {
             if (validQuestions.length < mappedQuestions.length) {
               console.warn(`Filtered out ${mappedQuestions.length - validQuestions.length} questions with invalid answers`);
             }
+            
+            // Create study_task for tracking
+            const { data: taskData, error: taskError } = await supabase
+              .from('study_tasks')
+              .insert({
+                user_id: user.id,
+                type: 'DRILL',
+                the_date: new Date().toISOString().split('T')[0],
+                size: validQuestions.length,
+                status: 'IN_PROGRESS',
+              })
+              .select('id')
+              .single();
+            
+            if (!taskError && taskData) {
+              setTaskId(taskData.id);
+            }
+            
+            setLastAnswerTime(Date.now());
           }
         }
       } catch (err: unknown) {
@@ -124,9 +147,17 @@ export default function DrillRunner() {
     
     setIsSubmitting(true);
     const correctIdx = ['A', 'B', 'C', 'D'].indexOf(q.answer);
+    const isCorrect = selectedIdx === correctIdx;
+    const now = Date.now();
+    const timeSpent = now - lastAnswerTime;
+    
+    // Track timing
+    setAnswerTimes(prev => [...prev, timeSpent]);
+    setLastAnswerTime(now);
+    if (isCorrect) setCorrectCount(prev => prev + 1);
     
     try {
-      // Track attempt in database
+      // Track attempt in database with task_id
       await supabase.from('attempts').insert({
         user_id: userId,
         question_id: q.id,
@@ -135,10 +166,11 @@ export default function DrillRunner() {
         choice_order: [0, 1, 2, 3],
         correct_idx: correctIdx,
         selected_idx: selectedIdx,
+        task_id: taskId,
       });
       
       // Add to review queue if incorrect (spaced repetition)
-      if (selectedIdx !== correctIdx) {
+      if (!isCorrect) {
         const dueDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
         await supabase.from('review_queue').insert({
           user_id: userId,
@@ -156,7 +188,6 @@ export default function DrillRunner() {
           .single();
         
         if (existingError) {
-          // Update existing record
           await supabase
             .from('error_bank')
             .update({
@@ -166,7 +197,6 @@ export default function DrillRunner() {
             .eq('user_id', userId)
             .eq('question_id', q.id);
         } else {
-          // Insert new record
           await supabase.from('error_bank').insert({
             user_id: userId,
             question_id: q.id,
@@ -181,10 +211,28 @@ export default function DrillRunner() {
       setIsSubmitting(false);
     }
     
-    // Move to next question
+    // Move to next question or complete
     if (current + 1 < questions.length) {
       setCurrent(current + 1);
     } else {
+      // Drill complete - update study_task
+      const newAnswerTimes = [...answerTimes, timeSpent];
+      const finalCorrectCount = correctCount + (isCorrect ? 1 : 0);
+      const accuracy = finalCorrectCount / questions.length;
+      const sortedTimes = [...newAnswerTimes].sort((a, b) => a - b);
+      const medianTime = sortedTimes[Math.floor(sortedTimes.length / 2)] || 0;
+      
+      if (taskId) {
+        await supabase
+          .from('study_tasks')
+          .update({
+            status: 'DONE',
+            accuracy,
+            median_time_ms: medianTime,
+          })
+          .eq('id', taskId);
+      }
+      
       setCompleted(true);
     }
   };
