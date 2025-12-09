@@ -503,6 +503,7 @@ export default function Simulation() {
                 onNext={handleNext}
                 onPrevious={handlePrevious}
                 onSubmit={finishSession}
+                showCalculatorBadge={selectedSection === 'MATH'}
               />
             </div>
           )}
