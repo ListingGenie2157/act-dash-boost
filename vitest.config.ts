@@ -8,6 +8,13 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/tests/setup.ts'],
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/e2e/**', // Playwright tests - run separately
+      '**/supabase/functions/**', // Deno tests - run with deno test
+    ],
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
   },
   resolve: {
     alias: {
