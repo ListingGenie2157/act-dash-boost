@@ -4,13 +4,21 @@ import {
   Card, Button, Badge,
   CardContent, CardDescription, CardHeader, CardTitle
 } from '@/components/ui';
-import { Brain, Clock, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Brain, Clock, CheckCircle2, ArrowRight, Zap, Timer } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
-
+type DiagnosticMode = 'choice' | 'thorough';
 
 export default function Diagnostic() {
   const navigate = useNavigate();
+  
+  // Check if user has already started a thorough diagnostic
+  const [mode, setMode] = useState<DiagnosticMode>(() => {
+    const stored = localStorage.getItem('diagnostic_completed_sections');
+    const completed = stored ? JSON.parse(stored) : [];
+    // If they've started sections, show thorough mode
+    return completed.length > 0 ? 'thorough' : 'choice';
+  });
   
   // Track which diagnostic sections have been completed
   const [completedSections, setCompletedSections] = useState<string[]>(() => {
@@ -27,6 +35,14 @@ export default function Diagnostic() {
 
   const currentSectionIndex = completedSections.length;
   const allComplete = completedSections.length >= 4;
+
+  const handleStartQuick = () => {
+    navigate('/diagnostic-test/ONB');
+  };
+
+  const handleStartThorough = () => {
+    setMode('thorough');
+  };
 
   const handleStartNext = () => {
     if (currentSectionIndex < sections.length) {
@@ -67,6 +83,99 @@ export default function Diagnostic() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  // Choice screen - let user pick quick or thorough
+  if (mode === 'choice') {
+    return (
+      <div className="min-h-screen bg-background py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <Card className="p-6">
+            <CardHeader className="text-center">
+              <CardTitle className="flex items-center justify-center gap-2 text-2xl">
+                <Brain className="w-8 h-8 text-primary" />
+                Choose Your Diagnostic
+              </CardTitle>
+              <CardDescription className="text-base mt-2">
+                Take a diagnostic to identify your strengths and weaknesses across all ACT sections
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 gap-6 mt-4">
+                {/* Quick Diagnostic Option */}
+                <Card 
+                  className="p-6 cursor-pointer border-2 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300"
+                  onClick={handleStartQuick}
+                >
+                  <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="p-4 rounded-full bg-primary/10">
+                      <Zap className="w-8 h-8 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">Quick Diagnostic</h3>
+                      <p className="text-muted-foreground mt-1">
+                        Get a fast snapshot of your skills
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="w-4 h-4" />
+                      <span>~20 minutes</span>
+                    </div>
+                    <ul className="text-sm text-muted-foreground space-y-1 text-left w-full">
+                      <li>• 30 mixed questions</li>
+                      <li>• All 4 subjects sampled</li>
+                      <li>• Immediate results</li>
+                    </ul>
+                    <Button className="w-full mt-4">
+                      Start Quick Test
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
+                </Card>
+
+                {/* Thorough Diagnostic Option */}
+                <Card 
+                  className="p-6 cursor-pointer border-2 hover:border-secondary/50 hover:bg-secondary/5 transition-all duration-300"
+                  onClick={handleStartThorough}
+                >
+                  <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="p-4 rounded-full bg-secondary/10">
+                      <Timer className="w-8 h-8 text-secondary" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">Thorough Diagnostic</h3>
+                      <p className="text-muted-foreground mt-1">
+                        Comprehensive skill assessment
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="w-4 h-4" />
+                      <span>~80 minutes</span>
+                    </div>
+                    <ul className="text-sm text-muted-foreground space-y-1 text-left w-full">
+                      <li>• 4 separate section tests</li>
+                      <li>• Detailed skill breakdown</li>
+                      <li>• Pause between sections</li>
+                    </ul>
+                    <Button variant="secondary" className="w-full mt-4">
+                      Start Full Test
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
+                </Card>
+              </div>
+
+              <div className="mt-8 text-center">
+                <Button variant="ghost" onClick={() => navigate('/')}>
+                  Return to Dashboard
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Thorough diagnostic flow - section by section
   return (
     <div className="min-h-screen bg-background py-8">
       <div className="max-w-4xl mx-auto px-4">
