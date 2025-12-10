@@ -8,33 +8,51 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
 
+/**
+ * Get all possible database variants for a section code.
+ * This handles the mixed section naming in staging_items during the transition period.
+ */
+function getAllSectionVariants(sectionCode: string): string[] {
+  const upper = sectionCode.toUpperCase();
+  
+  switch (upper) {
+    case 'EN':
+    case 'ENGLISH':
+      return ['EN', 'English', 'ENGLISH', 'english'];
+    case 'MATH':
+    case 'MA':
+      return ['MA', 'Math', 'MATH', 'math'];
+    case 'RD':
+    case 'READING':
+      return ['RD', 'Reading', 'READING', 'reading'];
+    case 'SCI':
+    case 'SC':
+    case 'SCIENCE':
+      return ['SC', 'SCI', 'Science', 'SCIENCE', 'science'];
+    default:
+      return [sectionCode];
+  }
+}
+
+/**
+ * Normalize section code to full name for v_form_section queries
+ */
+function normalizeToFullName(section: string): string {
+  const upper = section.toUpperCase();
+  if (['EN', 'ENGLISH'].includes(upper)) return 'English';
+  if (['MA', 'MATH'].includes(upper)) return 'Math';
+  if (['RD', 'READING'].includes(upper)) return 'Reading';
+  if (['SC', 'SCI', 'SCIENCE'].includes(upper)) return 'Science';
+  return section;
+}
+
 serve(async (req) => {
   console.log('[session-fetch] hit', { method: req.method, hasAuth: !!req.headers.get('authorization') });
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-
-  // Accept both GET and POST methods
-
-  // Map form_id suffix to full section names used in staging_items
-  // Form IDs like FA_MA, FA_EN have section encoded in the suffix
-  const formSuffixToSection: Record<string, string> = {
-    'EN': 'English',
-    'MA': 'Math',
-    'RD': 'Reading',
-    'SC': 'Science',
-    'SCI': 'Science',
-  };
-  
-  // Also keep abbreviation mapping for fallback
-  const sectionMapping: Record<string, string> = {
-    'EN': 'English',
-    'MATH': 'Math',
-    'RD': 'Reading',
-    'SCI': 'Science',
-    'SC': 'Science',
-  };
 
   try {
     // Initialize Supabase client with anon key and auth header
@@ -96,47 +114,51 @@ serve(async (req) => {
       });
     }
 
-    // Fetch questions: use staging_items for F* forms, v_form_section for others
-    const useStaging = session.form_id.startsWith('F');
+    // Determine data source: staging_items for F* forms, v_form_section for others
+    const useStaging = session.form_id.startsWith('F') || session.form_id.startsWith('DR_') || session.form_id.startsWith('D2') || session.form_id.startsWith('ONB');
     
-    // Derive section from form_id suffix (e.g., FA_MA → MA → Math)
-    // This is more reliable than using session.section which may be mismatched
-    const formParts = session.form_id.split('_');
-    const formSuffix = formParts.length > 1 ? formParts[formParts.length - 1] : null;
-    const derivedSection = formSuffix ? formSuffixToSection[formSuffix] : null;
+    // Get all possible section variants to handle mixed naming in database
+    const sectionVariants = getAllSectionVariants(session.section);
+    const fullNameSection = normalizeToFullName(session.section);
     
-    // Use derived section from form_id, fall back to mapped session.section
-    const dbSection = useStaging 
-      ? (derivedSection || sectionMapping[session.section] || session.section) 
-      : session.section;
-    
-    console.log(`Fetching questions from ${useStaging ? 'staging_items' : 'v_form_section'} for form ${session.form_id}, section ${session.section} (derived: ${derivedSection}, using: ${dbSection})`);
+    console.log(`[session-fetch] Fetching from ${useStaging ? 'staging_items' : 'v_form_section'}`, {
+      form_id: session.form_id,
+      session_section: session.section,
+      sectionVariants,
+      fullNameSection,
+    });
     
     let questionsData: any[];
     let questionsError: any;
 
     if (useStaging) {
+      // Query staging_items with all possible section variants using .in()
       const { data, error } = await supabase
         .from('staging_items')
         .select('*')
         .eq('form_id', session.form_id)
-        .eq('section', dbSection)
+        .in('section', sectionVariants)
         .order('ord');
       questionsData = data || [];
       questionsError = error;
+      
+      console.log(`[session-fetch] staging_items query result: ${questionsData.length} questions found`);
     } else {
+      // Query v_form_section with full name
       const { data, error } = await supabase
         .from('v_form_section')
         .select('*')
         .eq('form_id', session.form_id)
-        .eq('section', session.section)
+        .eq('section', fullNameSection)
         .order('ord');
       questionsData = data || [];
       questionsError = error;
+      
+      console.log(`[session-fetch] v_form_section query result: ${questionsData.length} questions found`);
     }
 
     if (questionsError) {
-      console.error('Questions fetch error:', {
+      console.error('[session-fetch] Questions fetch error:', {
         error: questionsError,
         form_id: session.form_id,
         section: session.section,
@@ -149,19 +171,20 @@ serve(async (req) => {
     }
 
     if (!questionsData || questionsData.length === 0) {
-      console.warn('No questions found for session:', {
+      console.warn('[session-fetch] No questions found:', {
         session_id,
         form_id: session.form_id,
         section: session.section,
+        sectionVariants,
         useStaging
       });
     } else {
-      console.log(`Successfully fetched ${questionsData.length} questions`);
+      console.log(`[session-fetch] Successfully fetched ${questionsData.length} questions`);
     }
 
     // Format questions: map all ACT-style fields including staging_items columns
     const questions = questionsData.map(q => ({
-      id: q.question_id ?? q.id ?? `${session.form_id}_${session.section}_${q.ord}`,
+      id: q.question_id ?? q.id ?? q.staging_id?.toString() ?? `${session.form_id}_${session.section}_${q.ord}`,
       ord: q.ord,
       question: q.question ?? q.stem,
       choice_a: q.choice_a,
@@ -181,8 +204,10 @@ serve(async (req) => {
 
     // Collect unique passages for RD/SCI sections with all fields
     const passages: Record<string, any> = {};
+    const sessionSectionUpper = session.section.toUpperCase();
+    const isPassageSection = ['RD', 'READING', 'SCI', 'SC', 'SCIENCE'].includes(sessionSectionUpper);
     
-    if (['RD', 'SCI'].includes(session.section)) {
+    if (isPassageSection) {
       questionsData.forEach(q => {
         const pid = q.passage_id;
         const text = q.passage_text ?? q.passage;
@@ -198,7 +223,7 @@ serve(async (req) => {
           };
         }
       });
-      console.log(`Extracted ${Object.keys(passages).length} passages for ${session.section} section`);
+      console.log(`[session-fetch] Extracted ${Object.keys(passages).length} passages for ${session.section} section`);
     }
 
     return new Response(JSON.stringify({
@@ -209,7 +234,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error in session-fetch function:', error);
+    console.error('[session-fetch] Error:', error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
