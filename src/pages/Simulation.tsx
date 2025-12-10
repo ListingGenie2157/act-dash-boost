@@ -28,7 +28,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useTestCompanion } from '@/hooks/useTestCompanion';
 import { TestCompanion } from '@/components/TestCompanion';
-import { Loader2, Home } from 'lucide-react';
+import { Loader2, Home, Flag } from 'lucide-react';
 
 interface Question {
   id: string;
@@ -88,10 +88,23 @@ export default function Simulation() {
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [flaggedQuestions, setFlaggedQuestions] = useState<Set<string>>(new Set());
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
+
+  const handleToggleFlag = useCallback((questionId: string) => {
+    setFlaggedQuestions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(questionId)) {
+        newSet.delete(questionId);
+      } else {
+        newSet.add(questionId);
+      }
+      return newSet;
+    });
+  }, []);
 
   // Test Companion for coached mode
   const companion = useTestCompanion({
@@ -491,6 +504,8 @@ export default function Simulation() {
               onNext={handleNext}
               onPrevious={handlePrevious}
               onSubmit={finishSession}
+              flaggedQuestions={flaggedQuestions}
+              onToggleFlag={handleToggleFlag}
             />
           ) : (
             <div className="max-w-4xl mx-auto">
@@ -504,6 +519,8 @@ export default function Simulation() {
                 onPrevious={handlePrevious}
                 onSubmit={finishSession}
                 showCalculatorBadge={selectedSection === 'MATH'}
+                isFlagged={flaggedQuestions.has(currentQuestion.id)}
+                onToggleFlag={handleToggleFlag}
               />
             </div>
           )}
@@ -517,16 +534,20 @@ export default function Simulation() {
                 {sessionData.questions.map((q, index) => {
                   const isAnswered = !!answers[q.id];
                   const isCurrent = index === currentQuestionIndex;
+                  const isFlagged = flaggedQuestions.has(q.id);
                   
                   return (
                     <Button
                       key={q.id}
                       size="sm"
                       variant={isCurrent ? 'default' : isAnswered ? 'secondary' : 'outline'}
-                      className="h-8 w-8 p-0 text-xs"
+                      className={`h-8 w-8 p-0 text-xs relative ${isFlagged ? 'ring-2 ring-amber-500' : ''}`}
                       onClick={() => navigateToQuestion(index)}
                     >
                       {index + 1}
+                      {isFlagged && (
+                        <Flag className="h-2.5 w-2.5 absolute -top-1 -right-1 text-amber-500 fill-amber-500" />
+                      )}
                     </Button>
                   );
                 })}

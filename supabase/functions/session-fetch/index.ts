@@ -10,7 +10,6 @@ const corsHeaders = {
 
 /**
  * Get all possible database variants for a section code.
- * This handles the mixed section naming in staging_items during the transition period.
  */
 function getAllSectionVariants(sectionCode: string): string[] {
   const upper = sectionCode.toUpperCase();
@@ -35,14 +34,14 @@ function getAllSectionVariants(sectionCode: string): string[] {
 }
 
 /**
- * Normalize section code to full name for v_form_section queries
+ * Normalize section code to standard code for passages table query
  */
-function normalizeToFullName(section: string): string {
+function normalizeToCode(section: string): string {
   const upper = section.toUpperCase();
-  if (['EN', 'ENGLISH'].includes(upper)) return 'English';
-  if (['MA', 'MATH'].includes(upper)) return 'Math';
-  if (['RD', 'READING'].includes(upper)) return 'Reading';
-  if (['SC', 'SCI', 'SCIENCE'].includes(upper)) return 'Science';
+  if (['EN', 'ENGLISH'].includes(upper)) return 'EN';
+  if (['MA', 'MATH'].includes(upper)) return 'MATH';
+  if (['RD', 'READING'].includes(upper)) return 'RD';
+  if (['SC', 'SCI', 'SCIENCE'].includes(upper)) return 'SCI';
   return section;
 }
 
@@ -55,7 +54,6 @@ serve(async (req) => {
   }
 
   try {
-    // Initialize Supabase client with anon key and auth header
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const authHeader = req.headers.get('authorization');
@@ -71,7 +69,6 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } }
     });
 
-    // Get the user from the JWT token
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
@@ -114,25 +111,22 @@ serve(async (req) => {
       });
     }
 
-    // Determine data source: staging_items for F* forms, v_form_section for others
+    // Determine data source
     const useStaging = session.form_id.startsWith('F') || session.form_id.startsWith('DR_') || session.form_id.startsWith('D2') || session.form_id.startsWith('ONB');
-    
-    // Get all possible section variants to handle mixed naming in database
     const sectionVariants = getAllSectionVariants(session.section);
-    const fullNameSection = normalizeToFullName(session.section);
+    const sectionCode = normalizeToCode(session.section);
     
     console.log(`[session-fetch] Fetching from ${useStaging ? 'staging_items' : 'v_form_section'}`, {
       form_id: session.form_id,
       session_section: session.section,
       sectionVariants,
-      fullNameSection,
+      sectionCode,
     });
     
     let questionsData: any[];
     let questionsError: any;
 
     if (useStaging) {
-      // Query staging_items with all possible section variants using .in()
       const { data, error } = await supabase
         .from('staging_items')
         .select('*')
@@ -142,47 +136,29 @@ serve(async (req) => {
       questionsData = data || [];
       questionsError = error;
       
-      console.log(`[session-fetch] staging_items query result: ${questionsData.length} questions found`);
+      console.log(`[session-fetch] staging_items query: ${questionsData.length} questions`);
     } else {
-      // Query v_form_section with full name
       const { data, error } = await supabase
         .from('v_form_section')
         .select('*')
         .eq('form_id', session.form_id)
-        .eq('section', fullNameSection)
+        .in('section', sectionVariants)
         .order('ord');
       questionsData = data || [];
       questionsError = error;
       
-      console.log(`[session-fetch] v_form_section query result: ${questionsData.length} questions found`);
+      console.log(`[session-fetch] v_form_section query: ${questionsData.length} questions`);
     }
 
     if (questionsError) {
-      console.error('[session-fetch] Questions fetch error:', {
-        error: questionsError,
-        form_id: session.form_id,
-        section: session.section,
-        useStaging
-      });
+      console.error('[session-fetch] Questions fetch error:', questionsError);
       return new Response(JSON.stringify({ error: 'Failed to fetch questions' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    if (!questionsData || questionsData.length === 0) {
-      console.warn('[session-fetch] No questions found:', {
-        session_id,
-        form_id: session.form_id,
-        section: session.section,
-        sectionVariants,
-        useStaging
-      });
-    } else {
-      console.log(`[session-fetch] Successfully fetched ${questionsData.length} questions`);
-    }
-
-    // Format questions: map all ACT-style fields including staging_items columns
+    // Format questions
     const questions = questionsData.map(q => ({
       id: q.question_id ?? q.id ?? q.staging_id?.toString() ?? `${session.form_id}_${session.section}_${q.ord}`,
       ord: q.ord,
@@ -202,16 +178,17 @@ serve(async (req) => {
       calculator_allowed: q.calculator_allowed ?? true,
     }));
 
-    // Collect unique passages for RD/SCI sections with all fields
+    // Collect passages from multiple sources
     const passages: Record<string, any> = {};
     const sessionSectionUpper = session.section.toUpperCase();
     const isPassageSection = ['RD', 'READING', 'SCI', 'SC', 'SCIENCE'].includes(sessionSectionUpper);
     
     if (isPassageSection) {
+      // 1. First extract passages from staging_items rows (some have passage_text inline)
       questionsData.forEach(q => {
         const pid = q.passage_id;
         const text = q.passage_text ?? q.passage;
-        if (pid && text) {
+        if (pid && text && !passages[pid]) {
           passages[pid] = {
             title: q.passage_title || '',
             passage_text: text,
@@ -223,7 +200,64 @@ serve(async (req) => {
           };
         }
       });
-      console.log(`[session-fetch] Extracted ${Object.keys(passages).length} passages for ${session.section} section`);
+      
+      console.log(`[session-fetch] Extracted ${Object.keys(passages).length} passages from questions`);
+
+      // 2. Query the passages table for any missing passages
+      const passageIds = [...new Set(questionsData.map(q => q.passage_id).filter(Boolean))];
+      const missingPassageIds = passageIds.filter(id => !passages[id]);
+      
+      if (missingPassageIds.length > 0) {
+        console.log(`[session-fetch] Fetching ${missingPassageIds.length} passages from passages table:`, missingPassageIds);
+        
+        const { data: passageData, error: passageError } = await supabase
+          .from('passages')
+          .select('*')
+          .in('id', missingPassageIds);
+        
+        if (passageError) {
+          console.error('[session-fetch] Error fetching passages:', passageError);
+        } else if (passageData) {
+          passageData.forEach(p => {
+            passages[p.id] = {
+              title: p.title || '',
+              passage_text: p.passage_text,
+              marked_text: p.marked_text ?? null,
+              passage_format: p.passage_format ?? null,
+              passage_type: p.passage_type ?? null,
+              has_charts: p.has_charts ?? false,
+              chart_images: p.chart_images ?? null,
+            };
+          });
+          console.log(`[session-fetch] Added ${passageData.length} passages from passages table`);
+        }
+      }
+
+      // 3. For questions without passage_id but with passage_text, create synthetic passage
+      questionsData.forEach((q, idx) => {
+        const text = q.passage_text ?? q.passage;
+        if (!q.passage_id && text) {
+          const syntheticId = `inline_${idx}`;
+          // Assign this synthetic passage_id to the question
+          const questionToUpdate = questions.find(qn => qn.ord === q.ord);
+          if (questionToUpdate) {
+            questionToUpdate.passage_id = syntheticId;
+          }
+          if (!passages[syntheticId]) {
+            passages[syntheticId] = {
+              title: q.passage_title || `Passage ${idx + 1}`,
+              passage_text: text,
+              marked_text: null,
+              passage_format: null,
+              passage_type: null,
+              has_charts: false,
+              chart_images: null,
+            };
+          }
+        }
+      });
+
+      console.log(`[session-fetch] Final passage count: ${Object.keys(passages).length}`);
     }
 
     return new Response(JSON.stringify({

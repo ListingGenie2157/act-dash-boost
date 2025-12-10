@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
-import { ZoomIn, Calculator, Ban } from 'lucide-react';
+import { ZoomIn, Calculator, Ban, Flag } from 'lucide-react';
 
 interface Question {
   id: string;
@@ -38,6 +38,8 @@ interface QuestionCardProps {
   onSubmit: () => void;
   lockAnswers?: boolean;
   showCalculatorBadge?: boolean;
+  isFlagged?: boolean;
+  onToggleFlag?: (questionId: string) => void;
 }
 
 export function QuestionCard({
@@ -51,6 +53,8 @@ export function QuestionCard({
   onSubmit,
   lockAnswers = false,
   showCalculatorBadge = false,
+  isFlagged = false,
+  onToggleFlag,
 }: QuestionCardProps) {
   const [localAnswer, setLocalAnswer] = useState(selectedAnswer || '');
   const [imageZoomed, setImageZoomed] = useState(false);
@@ -139,6 +143,16 @@ export function QuestionCard({
               <Badge variant="secondary" className="text-xs">
                 {Math.round(((currentIndex + 1) / totalQuestions) * 100)}%
               </Badge>
+              {onToggleFlag && (
+                <Button
+                  variant={isFlagged ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => onToggleFlag(question.id)}
+                  className={`h-8 px-2 ${isFlagged ? 'bg-amber-500 hover:bg-amber-600 text-white' : ''}`}
+                >
+                  <Flag className={`h-4 w-4 ${isFlagged ? 'fill-current' : ''}`} />
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
