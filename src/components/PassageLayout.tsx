@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { QuestionCard } from './QuestionCard';
 import { ReadingPreferences } from './ReadingPreferences';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
-import { FlaskConical, BarChart3, Users } from 'lucide-react';
+import { FlaskConical, BarChart3, Users, Flag } from 'lucide-react';
 import { sanitizeHTML } from '@/lib/sanitize';
 
 interface MarkedTextReference {
@@ -55,6 +55,8 @@ interface PassageLayoutProps {
   onPrevious: () => void;
   onSubmit: () => void;
   lockAnswers?: boolean;
+  flaggedQuestions?: Set<string>;
+  onToggleFlag?: (questionId: string) => void;
 }
 
 export function PassageLayout({
@@ -68,6 +70,8 @@ export function PassageLayout({
   onPrevious,
   onSubmit,
   lockAnswers = false,
+  flaggedQuestions = new Set(),
+  onToggleFlag,
 }: PassageLayoutProps) {
   const [selectedPassage, setSelectedPassage] = useState<string>('');
   const passageRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -299,16 +303,20 @@ export function PassageLayout({
                                 const questionIndex = questions.findIndex(question => question.id === q.id);
                                 const isAnswered = !!answers[q.id];
                                 const isCurrent = questionIndex === currentQuestionIndex;
+                                const isFlagged = flaggedQuestions.has(q.id);
                                 
                                 return (
                                   <Button
                                     key={q.id}
                                     size="sm"
                                     variant={isCurrent ? 'default' : isAnswered ? 'secondary' : 'outline'}
-                                    className="h-8 w-8 p-0 text-xs"
+                                    className={`h-8 w-8 p-0 text-xs relative ${isFlagged ? 'ring-2 ring-amber-500' : ''}`}
                                     onClick={() => onQuestionChange(questionIndex)}
                                   >
                                     {questionIndex + 1}
+                                    {isFlagged && (
+                                      <Flag className="h-2.5 w-2.5 absolute -top-1 -right-1 text-amber-500 fill-amber-500" />
+                                    )}
                                   </Button>
                                 );
                               })}
@@ -353,6 +361,8 @@ export function PassageLayout({
                 onPrevious={onPrevious}
                 onSubmit={onSubmit}
                 lockAnswers={lockAnswers}
+                isFlagged={flaggedQuestions.has(currentQuestion.id)}
+                onToggleFlag={onToggleFlag}
               />
             )}
           </div>
