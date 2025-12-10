@@ -6,6 +6,7 @@ import { SectionPicker } from '@/components/SectionPicker';
 import { TimerBar } from '@/components/TimerBar';
 import { QuestionCard } from '@/components/QuestionCard';
 import { PassageLayout } from '@/components/PassageLayout';
+import { EnglishPassageLayout } from '@/components/EnglishPassageLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -451,6 +452,7 @@ export default function Simulation() {
     }
 
     const currentQuestion = sessionData.questions[currentQuestionIndex];
+    const isEnglishSection = selectedSection === 'EN';
     const isPassageSection = selectedSection === 'RD' || selectedSection === 'SCI';
 
     return (
@@ -492,8 +494,22 @@ export default function Simulation() {
         </div>
 
         {/* Main Content */}
-        <div className="container mx-auto px-4 py-6">
-          {isPassageSection ? (
+        <div className={isEnglishSection || isPassageSection ? '' : 'container mx-auto px-4 py-6'}>
+          {isEnglishSection ? (
+            <EnglishPassageLayout
+              questions={sessionData.questions}
+              passages={sessionData.passages}
+              currentQuestionIndex={currentQuestionIndex}
+              answers={answers}
+              onAnswerSelect={handleAnswerSelect}
+              onQuestionChange={navigateToQuestion}
+              onNext={handleNext}
+              onPrevious={handlePrevious}
+              onSubmit={finishSession}
+              flaggedQuestions={flaggedQuestions}
+              onToggleFlag={handleToggleFlag}
+            />
+          ) : isPassageSection ? (
             <PassageLayout
               questions={sessionData.questions}
               passages={sessionData.passages}
