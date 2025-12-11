@@ -84,13 +84,10 @@ serve(async (req) => {
       });
     }
 
-    // Get all responses for the session with question details
+    // Get all responses for the session (no join - questions table may not have staging_items data)
     const { data: responses, error: responsesError } = await supabase
       .from('responses')
-      .select(`
-        *,
-        questions!inner(skill_id)
-      `)
+      .select('*')
       .eq('session_id', session_id);
 
     if (responsesError) {
@@ -102,28 +99,45 @@ serve(async (req) => {
     }
 
     // Calculate summary statistics
-    const totalQuestions = responses.length;
-    const correctAnswers = responses.filter(r => r.correct).length;
+    const totalQuestions = responses?.length || 0;
+    const correctAnswers = responses?.filter(r => r.correct).length || 0;
     const rawScore = correctAnswers;
     const accuracy = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
-    const avgTimeMs = totalQuestions > 0 ? responses.reduce((sum, r) => sum + r.time_ms, 0) / totalQuestions : 0;
+    const avgTimeMs = totalQuestions > 0 ? responses.reduce((sum, r) => sum + (r.time_ms || 0), 0) / totalQuestions : 0;
 
-    // Calculate per-skill statistics
-    const skillStats: Record<string, { correct: number; total: number; totalTime: number }> = {};
+    // For per-skill stats, try to get skill_code from staging_items
+    // question_id in responses may be staging_id (integer as string)
+    const questionIds = responses?.map(r => r.question_id) || [];
+    const stagingIds = questionIds.map(id => parseInt(id)).filter(id => !isNaN(id));
     
-    responses.forEach(response => {
-      const skillId = response.questions?.skill_id;
-      if (skillId) {
-        if (!skillStats[skillId]) {
-          skillStats[skillId] = { correct: 0, total: 0, totalTime: 0 };
+    let skillStats: Record<string, { correct: number; total: number; totalTime: number }> = {};
+    
+    if (stagingIds.length > 0) {
+      const { data: stagingItems } = await supabase
+        .from('staging_items')
+        .select('staging_id, skill_code')
+        .in('staging_id', stagingIds);
+      
+      const stagingSkillMap = new Map<number, string>();
+      stagingItems?.forEach(item => {
+        stagingSkillMap.set(item.staging_id, item.skill_code);
+      });
+      
+      responses?.forEach(response => {
+        const stagingId = parseInt(response.question_id);
+        const skillCode = stagingSkillMap.get(stagingId);
+        if (skillCode) {
+          if (!skillStats[skillCode]) {
+            skillStats[skillCode] = { correct: 0, total: 0, totalTime: 0 };
+          }
+          skillStats[skillCode].total++;
+          skillStats[skillCode].totalTime += response.time_ms || 0;
+          if (response.correct) {
+            skillStats[skillCode].correct++;
+          }
         }
-        skillStats[skillId].total++;
-        skillStats[skillId].totalTime += response.time_ms;
-        if (response.correct) {
-          skillStats[skillId].correct++;
-        }
-      }
-    });
+      });
+    }
 
     const perSkill = Object.entries(skillStats).map(([skill_id, stats]) => ({
       skill_id,

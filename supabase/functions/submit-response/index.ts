@@ -4,13 +4,13 @@ import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
 };
 
 // Zod schema for input validation
 const SubmitResponseSchema = z.object({
   session_id: z.string().uuid(),
-  question_id: z.string().uuid(),
+  question_id: z.string().min(1), // Can be staging_id (integer as string) or UUID
   selected: z.string().length(1).regex(/^[A-E]$/),
   time_ms: z.number().int().nonnegative().max(600000).optional() // Max 10 minutes
 });
@@ -76,17 +76,44 @@ serve(async (req) => {
       );
     }
 
-    // Look up correct answer from v_form_section
-    const { data: questionData, error: questionError } = await supabase
-      .from('v_form_section')
-      .select('answer')
-      .eq('form_id', session.form_id)
-      .eq('section', session.section)
-      .eq('question_id', question_id)
-      .single();
+    // Look up correct answer from staging_items using staging_id
+    // question_id can be either a staging_id (integer) or UUID
+    const stagingId = parseInt(question_id);
+    const isValidStagingId = !isNaN(stagingId);
+    
+    let questionData: { answer: string } | null = null;
+    
+    if (isValidStagingId) {
+      // Query staging_items by staging_id and form_id
+      const { data, error } = await supabase
+        .from('staging_items')
+        .select('answer')
+        .eq('staging_id', stagingId)
+        .eq('form_id', session.form_id)
+        .single();
+      
+      if (!error && data) {
+        questionData = data;
+      }
+    }
+    
+    // Fallback: try v_form_section for UUID-based question IDs
+    if (!questionData) {
+      const { data, error } = await supabase
+        .from('v_form_section')
+        .select('answer')
+        .eq('form_id', session.form_id)
+        .eq('section', session.section)
+        .eq('question_id', question_id)
+        .single();
+      
+      if (!error && data) {
+        questionData = data;
+      }
+    }
 
-    if (questionError || !questionData) {
-      console.error('Question not found:', questionError);
+    if (!questionData) {
+      console.error('Question not found for id:', question_id, 'form:', session.form_id);
       return new Response(
         JSON.stringify({ error: 'Question not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
