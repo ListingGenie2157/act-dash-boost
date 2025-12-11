@@ -542,8 +542,8 @@ export default function Simulation() {
           )}
         </div>
 
-        {/* Question Navigation (for non-passage sections) */}
-        {!isPassageSection && (
+        {/* Question Navigation (for Math only - English and passage sections have their own navigation) */}
+        {!isPassageSection && !isEnglishSection && (
           <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2">
             <Card className="p-4 bg-background/95 backdrop-blur">
               <div className="flex flex-wrap gap-1 max-w-lg">
