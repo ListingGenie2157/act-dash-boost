@@ -181,24 +181,36 @@ serve(async (req) => {
     // Collect passages from multiple sources
     const passages: Record<string, any> = {};
     const sessionSectionUpper = session.section.toUpperCase();
-    const isPassageSection = ['RD', 'READING', 'SCI', 'SC', 'SCIENCE'].includes(sessionSectionUpper);
+    const isPassageSection = ['EN', 'ENGLISH', 'RD', 'READING', 'SCI', 'SC', 'SCIENCE'].includes(sessionSectionUpper);
     
     if (isPassageSection) {
-      // 1. First extract passages from staging_items rows (some have passage_text inline)
+      // 1. First extract passages from staging_items rows
+      // For English, passage_text may only be on first question of each passage group
+      // So we collect all text we find and keep the first non-null value per passage_id
+      const passageTextMap = new Map<string, { text: string; title: string }>();
+      
       questionsData.forEach(q => {
         const pid = q.passage_id;
         const text = q.passage_text ?? q.passage;
-        if (pid && text && !passages[pid]) {
-          passages[pid] = {
-            title: q.passage_title || '',
-            passage_text: text,
-            marked_text: q.marked_text ?? null,
-            passage_format: q.passage_format ?? null,
-            passage_type: q.passage_type ?? null,
-            has_charts: q.has_charts ?? false,
-            chart_images: q.chart_images ?? null,
-          };
+        if (pid && text && !passageTextMap.has(pid)) {
+          passageTextMap.set(pid, {
+            text: text,
+            title: q.passage_title || ''
+          });
         }
+      });
+      
+      // Build passages from collected data
+      passageTextMap.forEach((value, pid) => {
+        passages[pid] = {
+          title: value.title,
+          passage_text: value.text,
+          marked_text: null,
+          passage_format: null,
+          passage_type: null,
+          has_charts: false,
+          chart_images: null,
+        };
       });
       
       console.log(`[session-fetch] Extracted ${Object.keys(passages).length} passages from questions`);
