@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -124,36 +125,65 @@ serve(async (req) => {
     });
   }
 
+  // Rate limiting: 10 requests per minute per IP for admin import
+  const clientIp = getClientIp(req);
+  if (!checkRateLimit(clientIp, 10, 60000)) {
+    console.warn(`Rate limit exceeded for import-questions from IP: ${clientIp}`);
+    return createRateLimitResponse(corsHeaders);
+  }
+
   try {
-    // Initialize Supabase client with proper env validation
+    // Initialize Supabase client with service role key for admin operations
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
 
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing required environment variables: SUPABASE_URL or SUPABASE_ANON_KEY');
+    if (!supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
+      throw new Error('Missing required environment variables');
     }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get the authorization header
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      return new Response(JSON.stringify({ error: 'Unauthorized: Missing authorization header' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    // Create client with user's auth to verify token
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
     // Verify the JWT token
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
     
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      console.error('Authentication failed:', authError?.message);
+      return new Response(JSON.stringify({ error: 'Unauthorized: Invalid token' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // CRITICAL: Verify user is an admin before allowing import operations
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    const { data: adminCheck, error: adminError } = await supabase.rpc('is_admin', {
+      user_email: user.email,
+    });
+
+    if (adminError || !adminCheck) {
+      console.warn(`Unauthorized admin access attempt by user: ${user.email}`);
+      return new Response(JSON.stringify({ error: 'Forbidden: Admin access required' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log(`Admin access granted for: ${user.email}`);
 
     const body = await req.json();
     const { dryRun = true, useStaging = false } = body;
