@@ -1,28 +1,79 @@
+import { z } from 'zod';
+
 /**
- * Supabase Configuration
- * 
- * These values are hardcoded because:
- * 1. They are PUBLIC/PUBLISHABLE values - safe to expose in client code
- * 2. Lovable's build system doesn't support VITE_* env vars the same way local Vite does
- * 3. Only SECRET keys (like SERVICE_ROLE_KEY) should be in Supabase secrets
- * 
- * This is the official pattern for Lovable projects with Supabase.
+ * Client-side env access (Vite)
+ *
+ * Security rules:
+ * - Supabase keys must come from environment variables only (no hard-coding).
+ * - Never log secrets.
  */
-const SUPABASE_URL = 'https://hhbkmxrzxcswwokmbtbz.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhoYmtteHJ6eGNzd3dva21idGJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyNTI5MzcsImV4cCI6MjA3MTgyODkzN30.SWsosSuVDjtaAvlIdEyAwUx9zOY_uViTJWw_5UbgIGE';
 
-export const isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
-
-export const getSupabaseUrl = (): string => SUPABASE_URL;
-
-export const getSupabaseAnonKey = (): string => SUPABASE_ANON_KEY;
-
-export const getSupabaseConfigStatus = () => ({
-  url: 'Set' as const,
-  anonKey: 'Set' as const,
+const envSchema = z.object({
+  VITE_SUPABASE_URL: z.string().url(),
+  VITE_SUPABASE_ANON_KEY: z.string().min(1),
 });
+
+type ClientEnv = z.infer<typeof envSchema>;
+
+function readClientEnv(): ClientEnv {
+  const maybeProcessEnv =
+    typeof process !== 'undefined' && typeof process.env === 'object'
+      ? process.env
+      : undefined;
+
+  const candidate = {
+    VITE_SUPABASE_URL:
+      import.meta.env.VITE_SUPABASE_URL ??
+      (maybeProcessEnv?.VITE_SUPABASE_URL as string | undefined),
+    VITE_SUPABASE_ANON_KEY:
+      import.meta.env.VITE_SUPABASE_ANON_KEY ??
+      (maybeProcessEnv?.VITE_SUPABASE_ANON_KEY as string | undefined),
+  };
+
+  const parsed = envSchema.safeParse(candidate);
+  if (!parsed.success) {
+    const issues = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
+    throw new Error(`[env] Missing/invalid env vars: ${issues}`);
+  }
+  return parsed.data;
+}
+
+export const isBrowser =
+  typeof window !== 'undefined' && typeof document !== 'undefined';
+
+export const getSupabaseUrl = (): string => readClientEnv().VITE_SUPABASE_URL;
+
+export const getSupabaseAnonKey = (): string =>
+  readClientEnv().VITE_SUPABASE_ANON_KEY;
+
+export const getSupabaseConfigStatus = () => {
+  const maybeProcessEnv =
+    typeof process !== 'undefined' && typeof process.env === 'object'
+      ? process.env
+      : undefined;
+
+  const candidate = {
+    VITE_SUPABASE_URL:
+      import.meta.env.VITE_SUPABASE_URL ??
+      (maybeProcessEnv?.VITE_SUPABASE_URL as string | undefined),
+    VITE_SUPABASE_ANON_KEY:
+      import.meta.env.VITE_SUPABASE_ANON_KEY ??
+      (maybeProcessEnv?.VITE_SUPABASE_ANON_KEY as string | undefined),
+  };
+
+  const parsed = envSchema.safeParse(candidate);
+  return {
+    url: parsed.success ? ('Set' as const) : ('Missing' as const),
+    anonKey: parsed.success ? ('Set' as const) : ('Missing' as const),
+  };
+};
 
 export const logSupabaseConfigStatus = (): void => {
   if (!isBrowser) return;
-  console.info('[env] Supabase config: ✓ URL and anon key configured');
+  const status = getSupabaseConfigStatus();
+  console.info(
+    `[env] Supabase config: url=${status.url === 'Set' ? '✓' : '✗'} anonKey=${
+      status.anonKey === 'Set' ? '✓' : '✗'
+    }`,
+  );
 };

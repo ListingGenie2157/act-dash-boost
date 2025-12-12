@@ -2,15 +2,22 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseUrl, getSupabaseAnonKey } from '@/lib/env';
 
-const SUPABASE_URL = getSupabaseUrl();
-const SUPABASE_ANON_KEY = getSupabaseAnonKey();
+const shouldRunRlsTests =
+  process.env.RUN_RLS_TESTS === 'true' &&
+  !!process.env.VITE_SUPABASE_URL &&
+  !!process.env.VITE_SUPABASE_ANON_KEY;
 
-describe('Row Level Security Tests', () => {
+const describeRls = shouldRunRlsTests ? describe : describe.skip;
+
+describeRls('Row Level Security Tests', () => {
   let anonClient: SupabaseClient;
   let authClient: SupabaseClient;
   let testUserId: string;
 
   beforeAll(async () => {
+    const SUPABASE_URL = getSupabaseUrl();
+    const SUPABASE_ANON_KEY = getSupabaseAnonKey();
+
     // Anonymous client
     anonClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
