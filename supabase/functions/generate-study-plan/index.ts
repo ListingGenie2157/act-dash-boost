@@ -1,12 +1,35 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.56.0";
+import { checkRateLimit, createRateLimitResponse, getClientIp } from "../_shared/rateLimit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-app",
 };
+
+type SkillRow = { id: string; name: string; subject: string; cluster: string; order_index: number };
+let cachedAllSkills: { data: SkillRow[]; fetchedAt: number } | null = null;
+const ALL_SKILLS_TTL_MS = 5 * 60 * 1000;
+
+async function getAllSkillsCached(supabase: ReturnType<typeof createClient>): Promise<SkillRow[]> {
+  const now = Date.now();
+  if (cachedAllSkills && (now - cachedAllSkills.fetchedAt) < ALL_SKILLS_TTL_MS) {
+    return cachedAllSkills.data;
+  }
+
+  const { data, error } = await supabase
+    .from("skills")
+    .select("id, name, subject, cluster, order_index")
+    .order("order_index", { ascending: true });
+
+  if (error) throw error;
+
+  const skills = (data ?? []) as SkillRow[];
+  cachedAllSkills = { data: skills, fetchedAt: now };
+  return skills;
+}
 
 // Helper function to select lessons for a specific day with subject balancing
 function selectLessonsForDay(
@@ -416,10 +439,14 @@ serve(async (req) => {
   }
 
   try {
+    const ip = getClientIp(req);
+    if (!checkRateLimit(`ip:${ip}`, 30, 60_000)) {
+      return createRateLimitResponse(corsHeaders);
+    }
+
     // Get the authorization header first
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
-      console.warn("No authorization header provided");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -453,20 +480,19 @@ serve(async (req) => {
     );
 
     if (authError || !user) {
-      console.warn("Authentication failed:", authError?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    if (!checkRateLimit(`user:${user.id}:generate-study-plan`, 3, 60_000)) {
+      return createRateLimitResponse(corsHeaders);
+    }
+
     // Parse request body for force flag
     const body = await req.json();
     const force = body?.force === true;
-
-    console.log(
-      `Generate study plan called. Force: ${force}, User: ${user.id}`,
-    );
 
     const today = getTodayInChicago();
     const todayStr = today.toISOString().split("T")[0];
@@ -478,8 +504,6 @@ serve(async (req) => {
 
     // If force=true, delete existing pending tasks
     if (force) {
-      console.log("Force regeneration: Deleting existing plans...");
-
       const { error: deleteDaysError } = await supabase
         .from("study_plan_days")
         .delete()
@@ -501,10 +525,6 @@ serve(async (req) => {
       if (deleteTasksError) {
         console.error("Error deleting study_tasks:", deleteTasksError);
       }
-
-      console.log(
-        "Existing plans deleted. Proceeding with fresh generation...",
-      );
     }
 
     // Check if plan already exists (skip if force=true)
@@ -517,8 +537,6 @@ serve(async (req) => {
         .lte("the_date", weekEndStr);
 
       if (existingPlans && existingPlans.length === 7) {
-        console.warn("7-day plan already exists for this week");
-
         // Set has_study_plan flag even for existing plans
         const { error: profileUpdateError } = await supabase
           .from("profiles")
@@ -579,10 +597,7 @@ serve(async (req) => {
       .single();
 
     // Get all skills for lesson tracking
-    const { data: allSkills } = await supabase
-      .from("skills")
-      .select("id, name, subject, cluster, order_index")
-      .order("order_index", { ascending: true });
+    const allSkills = await getAllSkillsCached(supabase);
 
     // Create skill name lookup map
     const skillNameMap = new Map<string, string>();
@@ -624,16 +639,16 @@ serve(async (req) => {
       is_critical: true,
     }));
 
-    console.warn(
-      `Study mode: ${mode.name}, Days left: ${daysLeft}, Time cap: ${dailyTimeCap}mins, Time multiplier: ${timeMultiplier}, SIM dates: ${simDates.length}`,
-    );
-
     // Calculate lesson metrics for time-adaptive planning
-    const { data: lessonsWithContent } = await supabase
+    const { count: lessonsWithContentCount, error: lessonsCountError } = await supabase
       .from("lesson_content")
-      .select("skill_code");
+      .select("skill_code", { count: "exact", head: true });
 
-    const totalLessonsAvailable = lessonsWithContent?.length || 30;
+    if (lessonsCountError) {
+      console.error("Error counting lessons:", lessonsCountError);
+    }
+
+    const totalLessonsAvailable = lessonsWithContentCount ?? 30;
 
     // Get completed lessons (mastery level >= 3)
     const { data: masteryData } = await supabase
@@ -652,10 +667,6 @@ serve(async (req) => {
     const lessonsPerDay = daysLeft && daysLeft > 0
       ? Math.min(Math.ceil(lessonsRemaining / daysLeft), 3)
       : Math.min(lessonsRemaining, 3);
-
-    console.log(
-      `📚 Lessons: ${lessonsRemaining} remaining, ${lessonsPerDay} per day needed (${daysLeft} days left)`,
-    );
 
     // Fetch review and weakness data once for all days
     const { data: dueReviews } = await supabase
@@ -709,13 +720,9 @@ serve(async (req) => {
       const dayDaysLeft = daysLeft !== null ? daysLeft - dayOffset : null;
       const dayMode = getStudyMode(dayDaysLeft);
 
-      console.log(`\n📅 Generating plan for ${dateStr} (${dayOffset + 1}/7)`);
-
       // Skip normal tasks on SIM days
       const isSimDay = simDateSet.has(dateStr);
       if (isSimDay) {
-        console.log(`🎯 SIM day ${dateStr} – skipping normal tasks`);
-
         // Reflect SIM in study_plan_days
         allPlans.push({
           the_date: dateStr,
@@ -734,7 +741,6 @@ serve(async (req) => {
 
       // Check for test week special scheduling
       if (dayDaysLeft !== null && dayDaysLeft > 0 && dayDaysLeft <= 7) {
-        console.warn(`Test week mode: ${dayDaysLeft} days until test`);
         const specialTasks = getTestWeekTasks(dayDaysLeft, user.id, dateStr);
         if (specialTasks.length > 0) {
           allPlans.push({ the_date: dateStr, tasks: specialTasks });
@@ -856,7 +862,6 @@ serve(async (req) => {
 
       // Select tasks within time cap
       const selectedTasks = selectPlaylist(priorities, dailyTimeCap);
-      console.log(`Selected ${selectedTasks.length} tasks for ${dateStr}`);
 
       // Add DRILL tasks immediately after LEARN tasks for same skill
       const tasksWithDrills: Task[] = [];
@@ -877,7 +882,6 @@ serve(async (req) => {
               estimatedMins: drillMins,
               priority: task.priority - 0.1, // Slightly lower priority
             });
-            console.log(`Added DRILL for LEARN skill: ${task.skillId}`);
           }
         }
       });
@@ -952,22 +956,9 @@ serve(async (req) => {
 
     if (profileUpdateError) {
       console.error("❌ Error updating has_study_plan:", profileUpdateError);
-    } else {
-      console.log("✅ Profile updated: has_study_plan = true");
     }
 
     // Save all study tasks
-    console.log(`📊 Attempting to save ${allStudyTasks.length} tasks to study_tasks table`);
-    
-    if (allStudyTasks.length === 0) {
-      console.warn("⚠️ WARNING: No study tasks generated!");
-      console.warn("Weak skills count:", weakestSkills?.length || 0);
-      console.warn("Available skills count:", allSkills?.length || 0);
-      console.warn("Lessons per day:", lessonsPerDay);
-    } else {
-      console.log("Sample task:", JSON.stringify(allStudyTasks[0], null, 2));
-    }
-    
     if (allStudyTasks.length > 0) {
       // Delete existing NON-SIM tasks for the 7-day range
       await supabase
@@ -988,11 +979,6 @@ serve(async (req) => {
 
       if (tasksError) {
         console.error("❌ Error saving study tasks:", tasksError);
-        console.error("Failed tasks sample:", JSON.stringify(allStudyTasks.slice(0, 2), null, 2));
-      } else {
-        console.log(
-          `✅ Saved ${allStudyTasks.length} non-SIM study tasks across 7 days`,
-        );
       }
     }
 
@@ -1009,8 +995,6 @@ serve(async (req) => {
 
       if (simError) {
         console.error("Error upserting SIM study tasks:", simError);
-      } else {
-        console.log(`🎯 Upserted ${simTasks.length} SIM tasks (3–2–1 weeks before test)`);
       }
     }
 
@@ -1022,8 +1006,6 @@ serve(async (req) => {
       lessons_per_day: lessonsPerDay,
       total_tasks: allStudyTasks.length,
     };
-
-    console.warn("7-day study plan generated successfully:", response);
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

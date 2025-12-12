@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import { checkRateLimit, createRateLimitResponse, getClientIp } from "../_shared/rateLimit.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -116,6 +117,12 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const ip = getClientIp(req);
+    // Protect the endpoint even before auth
+    if (!checkRateLimit(`ip:${ip}`, 60, 60_000)) {
+      return createRateLimitResponse(corsHeaders);
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -143,6 +150,11 @@ Deno.serve(async (req) => {
     }
 
     const userId = user.id;
+
+    // Expensive endpoint: strong per-user limit
+    if (!checkRateLimit(`user:${userId}:tutor-chat`, 10, 60_000)) {
+      return createRateLimitResponse(corsHeaders);
+    }
     
     // Create service role client for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -219,7 +231,7 @@ ${body.problem.user_work ? `- Student's Work: ${body.problem.user_work}` : ''}`;
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error('AI API Error:', aiResponse.status, errorText);
+      console.error('AI API Error:', aiResponse.status);
       
       // Try to parse error details
       let errorDetail = errorText;

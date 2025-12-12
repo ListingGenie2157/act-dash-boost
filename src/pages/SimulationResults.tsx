@@ -38,25 +38,29 @@ export default function SimulationResults() {
         return;
       }
 
+      const fetchSkillNamesById = async (skillIds: string[]) => {
+        const uniqueIds = Array.from(new Set(skillIds)).filter(Boolean);
+        if (uniqueIds.length === 0) return new Map<string, string>();
+
+        const { data: skillsData, error } = await supabase
+          .from('skills')
+          .select('id, name')
+          .in('id', uniqueIds);
+
+        if (error) throw error;
+
+        return new Map<string, string>((skillsData ?? []).map((s) => [s.id, s.name]));
+      };
+
       // Try to get results from navigation state first
       const stateData = location.state as SimulationSummary | undefined;
       
       if (stateData && stateData.sessionId) {
-        // Fetch skill names for each skill_id
-        const enrichedSkills = await Promise.all(
-          stateData.perSkill.map(async (skill) => {
-            const { data: skillData } = await supabase
-              .from('skills')
-              .select('name')
-              .eq('id', skill.skill_id)
-              .maybeSingle();
-            
-            return {
-              ...skill,
-              skill_name: skillData?.name || skill.skill_id
-            };
-          })
-        );
+        const skillNameById = await fetchSkillNamesById(stateData.perSkill.map((s) => s.skill_id));
+        const enrichedSkills = stateData.perSkill.map((skill) => ({
+          ...skill,
+          skill_name: skillNameById.get(skill.skill_id) ?? skill.skill_id,
+        }));
 
         setSummary({
           ...stateData,
@@ -98,42 +102,39 @@ export default function SimulationResults() {
           ? responses.reduce((sum, r) => sum + r.time_ms, 0) / responses.length 
           : 0;
 
-        // Group by skill
-        const skillMap = new Map<string, { correct: number; total: number }>();
-        
-        for (const response of responses) {
-          const { data: question } = await supabase
+        const questionIds = Array.from(new Set(responses.map((r) => r.question_id))).filter(Boolean);
+        const questionSkillByQuestionId = new Map<string, string>();
+        if (questionIds.length > 0) {
+          const { data: questionsData, error: questionsError } = await supabase
             .from('questions')
-            .select('skill_id')
-            .eq('id', response.question_id)
-            .maybeSingle();
+            .select('id, skill_id')
+            .in('id', questionIds);
 
-          if (question?.skill_id) {
-            const existing = skillMap.get(question.skill_id) || { correct: 0, total: 0 };
-            existing.total++;
-            if (response.correct) existing.correct++;
-            skillMap.set(question.skill_id, existing);
-          }
+          if (questionsError) throw questionsError;
+          (questionsData ?? []).forEach((q) => {
+            if (q.skill_id) questionSkillByQuestionId.set(q.id, q.skill_id);
+          });
         }
 
-        // Convert to array and enrich with skill names
-        const perSkill = await Promise.all(
-          Array.from(skillMap.entries()).map(async ([skill_id, stats]) => {
-            const { data: skillData } = await supabase
-              .from('skills')
-              .select('name')
-              .eq('id', skill_id)
-              .maybeSingle();
+        // Group by skill (no N+1)
+        const skillMap = new Map<string, { correct: number; total: number }>();
+        for (const response of responses) {
+          const skillId = questionSkillByQuestionId.get(response.question_id);
+          if (!skillId) continue;
+          const existing = skillMap.get(skillId) || { correct: 0, total: 0 };
+          existing.total++;
+          if (response.correct) existing.correct++;
+          skillMap.set(skillId, existing);
+        }
 
-            return {
-              skill_id,
-              skill_name: skillData?.name || skill_id,
-              correct: stats.correct,
-              total: stats.total,
-              accuracy: (stats.correct / stats.total) * 100
-            };
-          })
-        );
+        const skillNameById = await fetchSkillNamesById(Array.from(skillMap.keys()));
+        const perSkill = Array.from(skillMap.entries()).map(([skill_id, stats]) => ({
+          skill_id,
+          skill_name: skillNameById.get(skill_id) ?? skill_id,
+          correct: stats.correct,
+          total: stats.total,
+          accuracy: (stats.correct / stats.total) * 100,
+        }));
 
         setSummary({
           sessionId: session.id,

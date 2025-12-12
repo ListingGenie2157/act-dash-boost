@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
+import { checkRateLimit, createRateLimitResponse, getClientIp } from "../_shared/rateLimit.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,7 +26,6 @@ interface SessionStartRequest {
 }
 
 serve(async (req) => {
-  console.log('[session-start] hit', { method: req.method, hasAuth: !!req.headers.get('authorization') });
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -39,6 +39,12 @@ serve(async (req) => {
   }
 
   try {
+    // Basic IP rate limit (before auth parsing)
+    const ip = getClientIp(req);
+    if (!checkRateLimit(`ip:${ip}`, 60, 60_000)) {
+      return createRateLimitResponse(corsHeaders);
+    }
+
     // Initialize Supabase client with anon key and auth header
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -59,11 +65,15 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
-      console.warn('[session-start] unauthorized', { authError: authError?.message, hasUser: !!user });
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Per-user rate limit (protect session creation churn)
+    if (!checkRateLimit(`user:${user.id}:session-start`, 10, 60_000)) {
+      return createRateLimitResponse(corsHeaders);
     }
 
     const body = await req.json();
