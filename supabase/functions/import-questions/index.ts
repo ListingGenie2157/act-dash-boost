@@ -266,22 +266,26 @@ serve(async (req) => {
         skillsToCreate.add(row.skill_code);
       }
 
-      for (const skillCode of skillsToCreate) {
+      // BATCH UPSERT: Create all skills in one operation
+      const skillsBatch = Array.from(skillsToCreate).map(skillCode => {
         const subject = getSubjectFromSection(validRows.find(r => r.skill_code === skillCode)?.section || '');
-        
-        const { error: skillError } = await supabase
-          .from('skills')
-          .upsert({
-            name: skillCode,
-            subject: subject,
-            cluster: 'General',
-            description: `Auto-created skill for ${skillCode}`,
-            order_index: 1
-          }, { onConflict: 'name' });
+        return {
+          name: skillCode,
+          subject: subject,
+          cluster: 'General',
+          description: `Auto-created skill for ${skillCode}`,
+          order_index: 1
+        };
+      });
 
-        if (!skillError) {
-          insertedSkills++;
-        }
+      const { error: skillBatchError } = await supabase
+        .from('skills')
+        .upsert(skillsBatch, { onConflict: 'name' });
+      
+      if (skillBatchError) {
+        report.errors.push(`Failed to batch insert skills: ${skillBatchError.message}`);
+      } else {
+        insertedSkills = skillsBatch.length;
       }
 
       // Get skill IDs
@@ -292,57 +296,87 @@ serve(async (req) => {
 
       const skillMap = new Map(skills?.map(s => [s.name, s.id]) || []);
 
-      // Insert questions and form_questions
-      for (const row of validRows) {
-        const skillId = skillMap.get(row.skill_code);
-        if (!skillId) {
-          report.errors.push(`Skill not found: ${row.skill_code}`);
-          continue;
-        }
+      // BATCH INSERT: Prepare all questions at once
+      const questionsBatch = validRows
+        .filter(row => skillMap.has(row.skill_code))
+        .map(row => ({
+          skill_id: skillMap.get(row.skill_code)!,
+          stem: row.question,
+          choice_a: row.choice_a,
+          choice_b: row.choice_b,
+          choice_c: row.choice_c,
+          choice_d: row.choice_d,
+          answer: row.answer.toUpperCase(),
+          explanation: row.explanation || null,
+          difficulty: mapDifficulty(row.difficulty),
+          time_limit_secs: 45,
+          image_url: row.image_url || null,
+          image_caption: row.image_caption || null,
+          image_position: row.image_position || 'above_question',
+          // Track original row data for form_questions linkage
+          _form_id: row.form_id,
+          _section: row.section,
+          _ord: row.ord,
+          _passage_id: row.passage_id
+        }));
 
-        // Insert question
-        const { data: question, error: questionError } = await supabase
+      // Report missing skills
+      validRows.filter(row => !skillMap.has(row.skill_code)).forEach(row => {
+        report.errors.push(`Skill not found: ${row.skill_code}`);
+      });
+
+      // Batch insert questions (chunk to avoid payload limits)
+      const BATCH_SIZE = 100;
+      const insertedQuestionIds: Array<{ id: string; _form_id: string; _section: string; _ord: number; _passage_id?: string }> = [];
+
+      for (let i = 0; i < questionsBatch.length; i += BATCH_SIZE) {
+        const chunk = questionsBatch.slice(i, i + BATCH_SIZE);
+        const insertData = chunk.map(({ _form_id, _section, _ord, _passage_id, ...q }) => q);
+        
+        const { data: insertedChunk, error: chunkError } = await supabase
           .from('questions')
-          .insert({
-            skill_id: skillId,
-            stem: row.question,
-            choice_a: row.choice_a,
-            choice_b: row.choice_b,
-            choice_c: row.choice_c,
-            choice_d: row.choice_d,
-            answer: row.answer.toUpperCase(),
-            explanation: row.explanation || null,
-            difficulty: mapDifficulty(row.difficulty),
-            time_limit_secs: 45,
-            image_url: row.image_url || null,
-            image_caption: row.image_caption || null,
-            image_position: row.image_position || 'above_question'
-          })
-          .select('id')
-          .single();
+          .insert(insertData)
+          .select('id');
 
-        if (questionError) {
-          report.errors.push(`Failed to insert question: ${questionError.message}`);
-          continue;
-        }
-
-        insertedQuestions++;
-
-        // Insert form_question
-        const { error: formQuestionError } = await supabase
-          .from('form_questions')
-          .insert({
-            form_id: row.form_id,
-            section: row.section,
-            ord: row.ord,
-            question_id: question.id,
-            passage_id: row.passage_id || null
+        if (chunkError) {
+          report.errors.push(`Failed to batch insert questions (chunk ${i / BATCH_SIZE}): ${chunkError.message}`);
+        } else if (insertedChunk) {
+          insertedQuestions += insertedChunk.length;
+          // Map back to original row metadata
+          insertedChunk.forEach((q, idx) => {
+            const original = chunk[idx];
+            insertedQuestionIds.push({
+              id: q.id,
+              _form_id: original._form_id,
+              _section: original._section,
+              _ord: original._ord,
+              _passage_id: original._passage_id
+            });
           });
+        }
+      }
 
-        if (formQuestionError) {
-          report.errors.push(`Failed to insert form question: ${formQuestionError.message}`);
-        } else {
-          insertedFormQuestions++;
+      // BATCH INSERT: form_questions
+      if (insertedQuestionIds.length > 0) {
+        const formQuestionsBatch = insertedQuestionIds.map(q => ({
+          form_id: q._form_id,
+          section: q._section,
+          ord: q._ord,
+          question_id: q.id,
+          passage_id: q._passage_id || null
+        }));
+
+        for (let i = 0; i < formQuestionsBatch.length; i += BATCH_SIZE) {
+          const chunk = formQuestionsBatch.slice(i, i + BATCH_SIZE);
+          const { error: formChunkError } = await supabase
+            .from('form_questions')
+            .insert(chunk);
+
+          if (formChunkError) {
+            report.errors.push(`Failed to batch insert form_questions (chunk ${i / BATCH_SIZE}): ${formChunkError.message}`);
+          } else {
+            insertedFormQuestions += chunk.length;
+          }
         }
       }
 

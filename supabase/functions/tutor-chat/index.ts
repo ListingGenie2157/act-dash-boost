@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -113,6 +114,12 @@ MODE: TEST
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Rate limiting: 30 requests per minute per IP (expensive AI endpoint)
+  const clientIp = getClientIp(req);
+  if (!checkRateLimit(clientIp, 30, 60000)) {
+    return createRateLimitResponse(corsHeaders);
   }
 
   try {
