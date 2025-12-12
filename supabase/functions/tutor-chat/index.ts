@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,6 +24,30 @@ interface TutorChatRequest {
   }>;
   session_id?: string;
 }
+
+const TutorChatRequestSchema = z.object({
+  subject: z.string().min(1).max(64),
+  topic: z.string().min(1).max(128),
+  mode: z.enum(['practice', 'quiz', 'test']),
+  problem: z.object({
+    id: z.string().min(1).max(128).nullable(),
+    text: z.string().min(1).max(8000),
+    choices: z.array(z.string().min(1).max(512)).max(8).optional(),
+    user_answer: z.string().min(1).max(16).optional(),
+    user_work: z.string().min(1).max(8000).optional(),
+  }),
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(['user', 'assistant', 'system']),
+        content: z.string().min(1).max(8000),
+        timestamp: z.string().optional(),
+      }),
+    )
+    .min(1)
+    .max(50),
+  session_id: z.string().uuid().optional(),
+});
 
 const BASE_SYSTEM_PROMPT = `You are a patient, strict homework tutor helping a high school student.
 
@@ -150,19 +175,19 @@ Deno.serve(async (req) => {
     // Parse body with error handling
     let body: TutorChatRequest;
     try {
-      body = await req.json();
+      const raw: unknown = await req.json();
+      const parsed = TutorChatRequestSchema.safeParse(raw);
+      if (!parsed.success) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid request data', details: parsed.error.errors }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      body = parsed.data;
     } catch (parseError) {
       console.error('Failed to parse request body:', parseError);
       return new Response(
         JSON.stringify({ error: 'Invalid request: body must be valid JSON' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Validate required fields
-    if (!body.subject || !body.topic || !body.mode || !body.messages) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -256,12 +281,42 @@ ${body.problem.user_work ? `- Student's Work: ${body.problem.user_work}` : ''}`;
           sessionId = newSession.id;
         }
       } else {
-        // Update existing session
-        await supabase
+        // Ensure the session belongs to the authenticated user (prevent IDOR)
+        const { data: existingSession, error: sessionLookupError } = await supabase
           .from('tutor_sessions')
-          .update({ last_used_at: new Date().toISOString() })
+          .select('id')
           .eq('id', sessionId)
-          .eq('user_id', userId); // Ensure user owns the session
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (sessionLookupError || !existingSession) {
+          sessionId = undefined;
+        } else {
+          // Update existing session
+          await supabase
+            .from('tutor_sessions')
+            .update({ last_used_at: new Date().toISOString() })
+            .eq('id', sessionId)
+            .eq('user_id', userId);
+        }
+
+        // If an invalid/foreign session_id was provided, create a new session instead
+        if (!sessionId) {
+          const { data: newSession, error: sessionError } = await supabase
+            .from('tutor_sessions')
+            .insert({
+              user_id: userId,
+              subject: body.subject,
+              topic: body.topic,
+              mode: body.mode,
+            })
+            .select()
+            .single();
+
+          if (!sessionError && newSession) {
+            sessionId = newSession.id;
+          }
+        }
       }
 
       // Log messages
@@ -293,24 +348,26 @@ ${body.problem.user_work ? `- Student's Work: ${body.problem.user_work}` : ''}`;
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in tutor-chat:', error);
 
     let statusCode = 500;
     let errorMessage = 'Internal server error';
 
-    if (error.message?.includes('LOVABLE_API_KEY not configured')) {
+    const errMsg = error instanceof Error ? error.message : '';
+
+    if (errMsg.includes('LOVABLE_API_KEY not configured')) {
       statusCode = 500;
       errorMessage = 'Tutor is not configured on the server (missing AI key). Please contact support.';
-    } else if (error.message?.includes('429')) {
+    } else if (errMsg.includes('429')) {
       statusCode = 429;
       errorMessage = 'Rate limit exceeded. Please try again later.';
-    } else if (error.message?.includes('402')) {
+    } else if (errMsg.includes('402')) {
       statusCode = 402;
       errorMessage = 'AI credits exhausted. Please contact support.';
-    } else if (error.message && error.message.length < 200) {
+    } else if (errMsg && errMsg.length < 200) {
       // If error message is reasonably short, include it for better debugging
-      errorMessage = error.message;
+      errorMessage = errMsg;
     }
 
     return new Response(
