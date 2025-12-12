@@ -253,15 +253,31 @@ export default function DiagnosticTest() {
       const existingAttempts: Record<string, Attempt> = {};
       const newAttempts: Attempt[] = [];
 
-      for (const question of mappedQuestions) {
-        const { data: existing } = await supabase
+      const questionIds = mappedQuestions.map((q) => q.question_id).filter((id) => id.length > 0);
+      const existingByQuestionId = new Map<string, {
+        question_id: string;
+        choice_order: number[];
+        correct_idx: number;
+        selected_idx: number | null;
+        question_ord: number;
+      }>();
+
+      if (questionIds.length > 0) {
+        const { data: existingRows, error: existingError } = await supabase
           .from('attempts')
-          .select('*')
+          .select('question_id, choice_order, correct_idx, selected_idx, question_ord')
           .eq('user_id', user.user.id)
           .eq('form_id', formId)
-          .eq('question_id', question.question_id)
-          .maybeSingle();
+          .in('question_id', questionIds);
 
+        if (existingError) throw existingError;
+        (existingRows ?? []).forEach((row) => {
+          existingByQuestionId.set(row.question_id, row);
+        });
+      }
+
+      for (const question of mappedQuestions) {
+        const existing = existingByQuestionId.get(question.question_id);
         if (existing) {
           existingAttempts[question.question_id] = {
             question_id: existing.question_id,
@@ -270,24 +286,25 @@ export default function DiagnosticTest() {
             selected_idx: existing.selected_idx ?? undefined,
             question_ord: existing.question_ord,
           };
-        } else {
-          // Create new attempt with shuffled choices using stable seed
-          const answerMap = { A: 0, B: 1, C: 2, D: 3 };
-          const baseIdx = answerMap[question.answer as keyof typeof answerMap] ?? 0;
-          const stableSeed = hashCode(`${user.user.id}-${formId}-${question.question_id}`);
-          const choiceOrder = shuffle([0, 1, 2, 3], stableSeed);
-          const correctIdx = choiceOrder.indexOf(baseIdx);
-
-          const attempt: Attempt = {
-            question_id: question.question_id,
-            choice_order: choiceOrder,
-            correct_idx: correctIdx,
-            question_ord: question.ord
-          };
-
-          existingAttempts[question.question_id] = attempt;
-          newAttempts.push(attempt);
+          continue;
         }
+
+        // Create new attempt with shuffled choices using stable seed
+        const answerMap = { A: 0, B: 1, C: 2, D: 3 };
+        const baseIdx = answerMap[question.answer as keyof typeof answerMap] ?? 0;
+        const stableSeed = hashCode(`${user.user.id}-${formId}-${question.question_id}`);
+        const choiceOrder = shuffle([0, 1, 2, 3], stableSeed);
+        const correctIdx = choiceOrder.indexOf(baseIdx);
+
+        const attempt: Attempt = {
+          question_id: question.question_id,
+          choice_order: choiceOrder,
+          correct_idx: correctIdx,
+          question_ord: question.ord
+        };
+
+        existingAttempts[question.question_id] = attempt;
+        newAttempts.push(attempt);
       }
 
       // Save new attempts to database

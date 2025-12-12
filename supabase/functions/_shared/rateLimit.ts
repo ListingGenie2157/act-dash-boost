@@ -9,6 +9,32 @@ interface RateLimitRecord {
 }
 
 const ipRequestCounts = new Map<string, RateLimitRecord>();
+let lastCleanupAt = 0;
+
+function cleanupExpired(now: number) {
+  // Avoid scanning on every request
+  if (now - lastCleanupAt < 10_000) return;
+  lastCleanupAt = now;
+
+  for (const [key, record] of ipRequestCounts.entries()) {
+    if (now > record.resetTime) {
+      ipRequestCounts.delete(key);
+    }
+  }
+
+  // Hard cap to prevent unbounded growth if attackers spray keys
+  const MAX_KEYS = 50_000;
+  if (ipRequestCounts.size > MAX_KEYS) {
+    // Delete oldest-ish entries by iteration order until under cap
+    const overBy = ipRequestCounts.size - MAX_KEYS;
+    let removed = 0;
+    for (const key of ipRequestCounts.keys()) {
+      ipRequestCounts.delete(key);
+      removed++;
+      if (removed >= overBy) break;
+    }
+  }
+}
 
 /**
  * Check if a request should be rate limited
@@ -23,6 +49,7 @@ export function checkRateLimit(
   windowMs = 60000
 ): boolean {
   const now = Date.now();
+  cleanupExpired(now);
   const record = ipRequestCounts.get(ip);
   
   // No record or window expired - allow and reset
@@ -49,6 +76,11 @@ export function checkRateLimit(
  * Checks various headers that may contain the real IP
  */
 export function getClientIp(req: Request): string {
+  const cfConnectingIp = req.headers.get('cf-connecting-ip');
+  if (cfConnectingIp) {
+    return cfConnectingIp.trim();
+  }
+
   const xForwardedFor = req.headers.get('x-forwarded-for');
   if (xForwardedFor) {
     return xForwardedFor.split(',')[0].trim();
@@ -73,7 +105,7 @@ export function createRateLimitResponse(corsHeaders: Record<string, string>): Re
     }),
     { 
       status: 429, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': '60' } 
     }
   );
 }

@@ -164,7 +164,7 @@ serve(async (req) => {
       // Read from staging_items table
       const { data: stagingData, error: stagingError } = await supabase
         .from('staging_items')
-        .select('*')
+        .select('form_id, section, ord, passage_id, passage_title, passage_text, skill_code, difficulty, question, choice_a, choice_b, choice_c, choice_d, answer, explanation, image_url, image_caption, image_position')
         .order('staging_id');
 
       if (stagingError) {
@@ -261,26 +261,34 @@ serve(async (req) => {
       }
 
       // Create skills on the fly
-      const skillsToCreate = new Set();
+      const skillsToCreate = new Set<string>();
       for (const row of validRows) {
         skillsToCreate.add(row.skill_code);
       }
+      const skillCodeToSection = new Map<string, string>();
+      for (const row of validRows) {
+        if (!skillCodeToSection.has(row.skill_code)) {
+          skillCodeToSection.set(row.skill_code, row.section);
+        }
+      }
 
-      for (const skillCode of skillsToCreate) {
-        const subject = getSubjectFromSection(validRows.find(r => r.skill_code === skillCode)?.section || '');
-        
-        const { error: skillError } = await supabase
+      const skillsUpsert = Array.from(skillsToCreate).map((skillCode) => ({
+        name: skillCode,
+        subject: getSubjectFromSection(skillCodeToSection.get(skillCode) || ''),
+        cluster: 'General',
+        description: `Auto-created skill for ${skillCode}`,
+        order_index: 1
+      }));
+
+      if (skillsUpsert.length > 0) {
+        const { error: skillsError } = await supabase
           .from('skills')
-          .upsert({
-            name: skillCode,
-            subject: subject,
-            cluster: 'General',
-            description: `Auto-created skill for ${skillCode}`,
-            order_index: 1
-          }, { onConflict: 'name' });
+          .upsert(skillsUpsert, { onConflict: 'name' });
 
-        if (!skillError) {
-          insertedSkills++;
+        if (skillsError) {
+          report.errors.push(`Failed to upsert skills: ${skillsError.message}`);
+        } else {
+          insertedSkills = skillsUpsert.length;
         }
       }
 

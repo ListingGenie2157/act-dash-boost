@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import { checkRateLimit, createRateLimitResponse, getClientIp } from "../_shared/rateLimit.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -46,14 +47,17 @@ function normalizeToCode(section: string): string {
 }
 
 serve(async (req) => {
-  console.log('[session-fetch] hit', { method: req.method, hasAuth: !!req.headers.get('authorization') });
-  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    const ip = getClientIp(req);
+    if (!checkRateLimit(`ip:${ip}`, 120, 60_000)) {
+      return createRateLimitResponse(corsHeaders);
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const authHeader = req.headers.get('authorization');
@@ -76,6 +80,10 @@ serve(async (req) => {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    if (!checkRateLimit(`user:${user.id}:session-fetch`, 60, 60_000)) {
+      return createRateLimitResponse(corsHeaders);
     }
 
     // Get session_id from query params (GET) or body (POST)
@@ -116,13 +124,6 @@ serve(async (req) => {
     const sectionVariants = getAllSectionVariants(session.section);
     const sectionCode = normalizeToCode(session.section);
     
-    console.log(`[session-fetch] Fetching from ${useStaging ? 'staging_items' : 'v_form_section'}`, {
-      form_id: session.form_id,
-      session_section: session.section,
-      sectionVariants,
-      sectionCode,
-    });
-    
     let questionsData: any[];
     let questionsError: any;
 
@@ -135,8 +136,6 @@ serve(async (req) => {
         .order('ord');
       questionsData = data || [];
       questionsError = error;
-      
-      console.log(`[session-fetch] staging_items query: ${questionsData.length} questions`);
     } else {
       const { data, error } = await supabase
         .from('v_form_section')
@@ -146,8 +145,6 @@ serve(async (req) => {
         .order('ord');
       questionsData = data || [];
       questionsError = error;
-      
-      console.log(`[session-fetch] v_form_section query: ${questionsData.length} questions`);
     }
 
     if (questionsError) {
@@ -213,15 +210,11 @@ serve(async (req) => {
         };
       });
       
-      console.log(`[session-fetch] Extracted ${Object.keys(passages).length} passages from questions`);
-
       // 2. Query the passages table for any missing passages
       const passageIds = [...new Set(questionsData.map(q => q.passage_id).filter(Boolean))];
       const missingPassageIds = passageIds.filter(id => !passages[id]);
       
       if (missingPassageIds.length > 0) {
-        console.log(`[session-fetch] Fetching ${missingPassageIds.length} passages from passages table:`, missingPassageIds);
-        
         const { data: passageData, error: passageError } = await supabase
           .from('passages')
           .select('*')
@@ -241,7 +234,6 @@ serve(async (req) => {
               chart_images: p.chart_images ?? null,
             };
           });
-          console.log(`[session-fetch] Added ${passageData.length} passages from passages table`);
         }
       }
 
@@ -269,7 +261,6 @@ serve(async (req) => {
         }
       });
 
-      console.log(`[session-fetch] Final passage count: ${Object.keys(passages).length}`);
     }
 
     return new Response(JSON.stringify({

@@ -46,7 +46,7 @@ export async function queueAttemptOffline(attempt: Omit<AttemptQueueItem, 'id' |
   };
   
   await database.add('attemptQueue', item);
-  logger.warn('Queued attempt offline:', item);
+  logger.debug('Queued attempt offline');
 }
 
 export async function flushOfflineQueue() {
@@ -55,48 +55,36 @@ export async function flushOfflineQueue() {
   
   if (items.length === 0) return;
   
-  logger.warn(`Flushing ${items.length} offline attempts`);
-  
-  let syncedCount = 0;
-  let failedCount = 0;
-  
-  for (const item of items) {
-    try {
-      const { error } = await supabase
-        .from('attempts')
-        .upsert({
-          user_id: item.userId,
-          question_id: item.questionId,
-          choice_order: item.choiceOrder,
-          correct_idx: item.correctIdx,
-          selected_idx: item.selectedIdx,
-          form_id: item.formId,
-          question_ord: item.questionOrd,
-        }, {
-          onConflict: 'user_id,question_id,form_id'
-        });
-      
-      if (error) throw error;
-      
-      // Remove successfully synced item
-      if (item.id) {
-        await database.delete('attemptQueue', item.id);
-        syncedCount++;
-      }
-      
-    } catch (error) {
-      logger.error('Failed to sync attempt:', error);
-      failedCount++;
-      // Keep item in queue for retry
-    }
-  }
-  
-  if (syncedCount > 0) {
-    logger.info(`✓ Synced ${syncedCount} offline attempts`);
-  }
-  
-  if (failedCount > 0) {
-    logger.warn(`⚠ Failed to sync ${failedCount} attempts - will retry later`);
+  logger.debug(`Flushing ${items.length} offline attempts`);
+
+  const payload = items.map((item) => ({
+    user_id: item.userId,
+    question_id: item.questionId,
+    choice_order: item.choiceOrder,
+    correct_idx: item.correctIdx,
+    selected_idx: item.selectedIdx,
+    form_id: item.formId,
+    question_ord: item.questionOrd,
+  }));
+
+  try {
+    const { error } = await supabase
+      .from('attempts')
+      .upsert(payload, { onConflict: 'user_id,question_id,form_id' });
+
+    if (error) throw error;
+
+    await Promise.all(
+      items
+        .map((i) => i.id)
+        .filter((id): id is number => typeof id === 'number')
+        .map((id) => database.delete('attemptQueue', id))
+    );
+
+    logger.debug(`✓ Synced ${items.length} offline attempts`);
+  } catch (error) {
+    logger.error('Failed to sync offline attempts batch:', error);
+    // Keep items in queue for retry
   }
 }
 
@@ -108,12 +96,12 @@ export async function getQueuedAttemptsCount(): Promise<number> {
 // Auto-flush when coming back online
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => {
-    logger.warn('Back online, flushing offline queue');
+    logger.debug('Back online, flushing offline queue');
     flushOfflineQueue().catch((error) => {
       logger.error('Failed to flush offline queue:', error);
       // Schedule retry after 5 seconds
       setTimeout(() => {
-        logger.warn('Retrying offline queue flush...');
+        logger.debug('Retrying offline queue flush...');
         flushOfflineQueue().catch((retryError) => {
           logger.error('Retry failed:', retryError);
         });
