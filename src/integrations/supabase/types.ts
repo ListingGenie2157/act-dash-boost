@@ -683,6 +683,24 @@ export type Database = {
           },
         ]
       }
+      rate_limits: {
+        Row: {
+          count: number | null
+          key: string
+          window_start: string | null
+        }
+        Insert: {
+          count?: number | null
+          key: string
+          window_start?: string | null
+        }
+        Update: {
+          count?: number | null
+          key?: string
+          window_start?: string | null
+        }
+        Relationships: []
+      }
       responses: {
         Row: {
           correct: boolean
@@ -1388,6 +1406,10 @@ export type Database = {
       }
     }
     Functions: {
+      check_rate_limit: {
+        Args: { p_key: string; p_limit: number; p_window_ms: number }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1395,7 +1417,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_admin: { Args: { user_email?: string }; Returns: boolean }
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

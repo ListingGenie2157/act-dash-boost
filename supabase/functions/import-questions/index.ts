@@ -155,6 +155,17 @@ serve(async (req) => {
       });
     }
 
+    // Check if user is admin
+    const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin');
+    
+    if (adminError || !isAdmin) {
+      console.warn('Non-admin user attempted to import questions:', user.id);
+      return new Response(JSON.stringify({ error: 'Admin access required' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const body = await req.json();
     const { dryRun = true, useStaging = false } = body;
 

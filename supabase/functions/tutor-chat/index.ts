@@ -167,6 +167,15 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Security: Reject any messages with 'system' role from client
+    if (body.messages.some(msg => msg.role === 'system')) {
+      console.warn('Client attempted to send system role message, user:', userId);
+      return new Response(
+        JSON.stringify({ error: 'Invalid message role: system role not allowed from client' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Build system prompt
     const subjectPrompt = SUBJECT_PROMPTS[body.subject] || SUBJECT_PROMPTS['MATH'];
     const modePrompt = MODE_RULES[body.mode] || MODE_RULES['practice'];
@@ -188,14 +197,17 @@ ${body.problem.choices ? `- Choices: ${body.problem.choices.map((c, i) => `${Str
 ${body.problem.user_answer ? `- Student's Answer: ${body.problem.user_answer}` : ''}
 ${body.problem.user_work ? `- Student's Work: ${body.problem.user_work}` : ''}`;
 
-    // Prepare messages for AI
+    // Prepare messages for AI (system role already rejected above)
     const aiMessages = [
       { role: 'system', content: systemPrompt },
       { role: 'assistant', content: contextMessage },
-      ...body.messages.slice(-10).map(msg => ({
-        role: msg.role === 'system' ? 'assistant' : msg.role,
-        content: msg.content,
-      })),
+      ...body.messages
+        .filter(msg => msg.role !== 'system') // Extra safety filter
+        .slice(-10)
+        .map(msg => ({
+          role: msg.role,
+          content: msg.content,
+        })),
     ];
 
     // Call Lovable AI Gateway
