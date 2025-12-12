@@ -1,28 +1,37 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
 };
 
-interface TutorChatRequest {
-  subject: string;
-  topic: string;
-  mode: 'practice' | 'quiz' | 'test';
-  problem: {
-    id: string | null;
-    text: string;
-    choices?: string[];
-    user_answer?: string;
-    user_work?: string;
-  };
-  messages: Array<{
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-    timestamp?: string;
-  }>;
-  session_id?: string;
-}
+// Zod schemas for strict input validation
+const MessageSchema = z.object({
+  role: z.enum(['user', 'assistant', 'system']),
+  content: z.string().min(1).max(10000), // Limit message length to prevent abuse
+  timestamp: z.string().optional(),
+});
+
+const ProblemSchema = z.object({
+  id: z.string().nullable(),
+  text: z.string().min(1).max(5000),
+  choices: z.array(z.string().max(500)).max(5).optional(),
+  user_answer: z.string().max(500).optional(),
+  user_work: z.string().max(2000).optional(),
+});
+
+const TutorChatRequestSchema = z.object({
+  subject: z.string().min(1).max(50),
+  topic: z.string().min(1).max(100),
+  mode: z.enum(['practice', 'quiz', 'test']),
+  problem: ProblemSchema,
+  messages: z.array(MessageSchema).min(1).max(50), // Limit conversation history
+  session_id: z.string().uuid().optional(),
+});
+
+type TutorChatRequest = z.infer<typeof TutorChatRequestSchema>;
 
 const BASE_SYSTEM_PROMPT = `You are a patient, strict homework tutor helping a high school student.
 
@@ -115,6 +124,13 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Rate limiting: 30 requests per minute per IP for tutor chat
+  const clientIp = getClientIp(req);
+  if (!checkRateLimit(clientIp, 30, 60000)) {
+    console.warn(`Rate limit exceeded for IP: ${clientIp}`);
+    return createRateLimitResponse(corsHeaders);
+  }
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -148,9 +164,9 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse body with error handling
-    let body: TutorChatRequest;
+    let rawBody: unknown;
     try {
-      body = await req.json();
+      rawBody = await req.json();
     } catch (parseError) {
       console.error('Failed to parse request body:', parseError);
       return new Response(
@@ -159,13 +175,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Validate required fields
-    if (!body.subject || !body.topic || !body.mode || !body.messages) {
+    // Validate request body with Zod schema
+    const validationResult = TutorChatRequestSchema.safeParse(rawBody);
+    if (!validationResult.success) {
+      const errorMessages = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+      console.warn('Validation failed:', errorMessages);
       return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
+        JSON.stringify({ error: `Invalid request data: ${errorMessages}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const body: TutorChatRequest = validationResult.data;
 
     // Build system prompt
     const subjectPrompt = SUBJECT_PROMPTS[body.subject] || SUBJECT_PROMPTS['MATH'];
