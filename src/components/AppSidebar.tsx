@@ -34,10 +34,12 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarFooter,
+  SidebarHeader,
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import preppitLogo from '@/assets/preppit-logo.png';
 
 const studyItems = [
   { title: 'Dashboard', url: '/', icon: Home, end: true },
@@ -104,6 +106,22 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
+      {/* Logo Header */}
+      <SidebarHeader className="border-b border-sidebar-border p-4">
+        <NavLink to="/" className="flex items-center gap-3">
+          <img 
+            src={preppitLogo} 
+            alt="Preppit" 
+            className={`${collapsed ? 'h-8 w-8' : 'h-10'} w-auto transition-all`} 
+          />
+          {!collapsed && (
+            <span className="font-bold text-lg bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Preppit
+            </span>
+          )}
+        </NavLink>
+      </SidebarHeader>
+
       <SidebarContent>
         {/* Study & Practice */}
         <SidebarGroup>

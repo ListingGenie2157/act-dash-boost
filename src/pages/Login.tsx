@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Calculator, Target, Brain, Check, AlertCircle, Loader2, Mail } from 'lucide-react';
+import { Calculator, Target, Brain, Check, AlertCircle, Loader2 } from 'lucide-react';
 import { isValidEmail, normalizeEmail } from '@/utils/validation';
 import { toast } from 'sonner';
+import preppitLogo from '@/assets/preppit-logo.png';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -174,21 +175,19 @@ export default function Login() {
 
   if (showForgotPassword) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-purple-500 via-pink-500 to-indigo-600 animate-gradient relative overflow-hidden">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-accent via-primary/80 to-secondary/60 animate-gradient relative overflow-hidden">
         {/* Animated background shapes */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-20 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-float" />
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-pink-300/20 rounded-full blur-3xl animate-float-delayed" />
+          <div className="absolute top-20 left-20 w-64 h-64 bg-primary/20 rounded-full blur-3xl animate-float" />
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-secondary/20 rounded-full blur-3xl animate-float-delayed" />
         </div>
 
-        <Card className="w-full max-w-md backdrop-blur-xl bg-white/95 dark:bg-gray-900/95 border-white/20 shadow-2xl relative z-10 animate-scale-in">
+        <Card className="w-full max-w-md backdrop-blur-xl bg-card/95 border-primary/20 shadow-2xl relative z-10 animate-scale-in">
           <CardHeader className="space-y-1 text-center pb-8">
             <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center">
-                <Mail className="w-8 h-8 text-white" />
-              </div>
+              <img src={preppitLogo} alt="Preppit" className="h-16 w-auto" />
             </div>
-            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               Reset Password
             </CardTitle>
             <CardDescription className="text-base">
@@ -207,12 +206,12 @@ export default function Login() {
                   onChange={(e) => setResetEmail(e.target.value)}
                   placeholder="your@email.com"
                   required
-                  className="transition-all focus:ring-2 focus:ring-purple-500"
+                  className="transition-all focus:ring-2 focus:ring-primary"
                 />
               </div>
 
               {error && (
-                <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 text-sm flex items-start gap-2">
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -220,7 +219,7 @@ export default function Login() {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                className="w-full bg-gradient-to-r from-primary to-accent hover:shadow-lg transition-all duration-300 hover:scale-[1.02]"
                 disabled={resetLoading}
               >
                 {resetLoading ? (
@@ -254,21 +253,21 @@ export default function Login() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-purple-500 via-pink-500 to-indigo-600 animate-gradient relative overflow-hidden">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-accent via-primary/80 to-secondary/60 animate-gradient relative overflow-hidden">
         {/* Floating shapes */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-20 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-float" />
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-pink-300/20 rounded-full blur-3xl animate-float-delayed" />
+          <div className="absolute top-20 left-20 w-64 h-64 bg-primary/20 rounded-full blur-3xl animate-float" />
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-secondary/20 rounded-full blur-3xl animate-float-delayed" />
         </div>
 
-        <Card className="w-full max-w-md backdrop-blur-xl bg-white/95 dark:bg-gray-900/95 border-white/20 shadow-2xl relative z-10 animate-scale-in">
+        <Card className="w-full max-w-md backdrop-blur-xl bg-card/95 border-primary/20 shadow-2xl relative z-10 animate-scale-in">
           <CardContent className="pt-8 pb-8 text-center space-y-6">
-            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-lg">
-              <Check className="w-10 h-10 text-white" />
+            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-success to-primary rounded-full flex items-center justify-center shadow-lg">
+              <Check className="w-10 h-10 text-success-foreground" />
             </div>
             
             <div className="space-y-2">
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                 Check Your Email!
               </h2>
               <p className="text-muted-foreground">
@@ -282,7 +281,7 @@ export default function Login() {
               <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
                 <li>Check your inbox (and spam folder)</li>
                 <li>Click the confirmation link</li>
-                <li>Start crushing your ACT goals! 🎯</li>
+                <li>Start crushing your ACT goals!</li>
               </ol>
             </div>
 
@@ -300,17 +299,20 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-purple-500 via-pink-500 to-indigo-600 animate-gradient relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-accent via-primary/80 to-secondary/60 animate-gradient relative overflow-hidden">
       {/* Animated background shapes */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-20 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-pink-300/20 rounded-full blur-3xl animate-float-delayed" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-400/10 rounded-full blur-3xl" />
+        <div className="absolute top-20 left-20 w-64 h-64 bg-primary/20 rounded-full blur-3xl animate-float" />
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-secondary/20 rounded-full blur-3xl animate-float-delayed" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-accent/10 rounded-full blur-3xl" />
       </div>
 
-      <Card className="w-full max-w-md backdrop-blur-xl bg-white/95 dark:bg-gray-900/95 border-white/20 shadow-2xl relative z-10 animate-scale-in">
+      <Card className="w-full max-w-md backdrop-blur-xl bg-card/95 border-primary/20 shadow-2xl relative z-10 animate-scale-in">
         <CardHeader className="space-y-1 text-center pb-8">
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <div className="flex justify-center mb-4">
+            <img src={preppitLogo} alt="Preppit" className="h-16 w-auto" />
+          </div>
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             {isSignUp ? 'Create Your Account' : 'Welcome Back'}
           </CardTitle>
           <CardDescription className="text-base">
@@ -348,7 +350,7 @@ export default function Login() {
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="John"
                     required={isSignUp}
-                    className="transition-all focus:ring-2 focus:ring-purple-500"
+                    className="transition-all focus:ring-2 focus:ring-primary"
                   />
                 </div>
                 <div className="space-y-2">
@@ -360,7 +362,7 @@ export default function Login() {
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="Doe"
                     required={isSignUp}
-                    className="transition-all focus:ring-2 focus:ring-purple-500"
+                    className="transition-all focus:ring-2 focus:ring-primary"
                   />
                 </div>
               </div>
@@ -375,7 +377,7 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
                 required
-                className="transition-all focus:ring-2 focus:ring-purple-500"
+                className="transition-all focus:ring-2 focus:ring-primary"
               />
             </div>
 
@@ -389,7 +391,7 @@ export default function Login() {
                 placeholder="••••••••"
                 required
                 minLength={8}
-                className="transition-all focus:ring-2 focus:ring-purple-500"
+                className="transition-all focus:ring-2 focus:ring-primary"
               />
               {isSignUp && password && (
                 <div className="flex items-center gap-2 text-xs">
@@ -397,20 +399,20 @@ export default function Login() {
                     <div
                       className={`h-full transition-all duration-300 ${
                         passwordStrength === 'weak'
-                          ? 'w-1/3 bg-red-500'
+                          ? 'w-1/3 bg-destructive'
                           : passwordStrength === 'medium'
-                          ? 'w-2/3 bg-yellow-500'
-                          : 'w-full bg-green-500'
+                          ? 'w-2/3 bg-warning'
+                          : 'w-full bg-success'
                       }`}
                     />
                   </div>
                   <span
                     className={
                       passwordStrength === 'weak'
-                        ? 'text-red-600'
+                        ? 'text-destructive'
                         : passwordStrength === 'medium'
-                        ? 'text-yellow-600'
-                        : 'text-green-600'
+                        ? 'text-warning'
+                        : 'text-success'
                     }
                   >
                     {passwordStrength}
@@ -429,10 +431,10 @@ export default function Login() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
                   required={isSignUp}
-                  className="transition-all focus:ring-2 focus:ring-purple-500"
+                  className="transition-all focus:ring-2 focus:ring-primary"
                 />
                 {confirmPassword && password !== confirmPassword && (
-                  <p className="text-xs text-red-600 flex items-center gap-1">
+                  <p className="text-xs text-destructive flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
                     Passwords do not match
                   </p>
@@ -441,7 +443,7 @@ export default function Login() {
             )}
 
             {error && (
-              <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 text-sm flex items-start gap-2">
+              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <span>{error}</span>
               </div>
@@ -449,7 +451,7 @@ export default function Login() {
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+              className="w-full bg-gradient-to-r from-primary to-accent hover:shadow-lg transition-all duration-300 hover:scale-[1.02]"
               disabled={loading}
             >
               {loading ? (
@@ -468,7 +470,7 @@ export default function Login() {
               <div className="w-full border-t border-muted" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
+              <span className="bg-card px-2 text-muted-foreground">
                 {isSignUp ? 'Already have an account?' : "Don't have an account?"}
               </span>
             </div>
@@ -493,7 +495,7 @@ export default function Login() {
             <p className="text-center text-xs text-muted-foreground">
               <button
                 type="button"
-                className="hover:underline text-purple-600 dark:text-purple-400 font-medium"
+                className="hover:underline text-primary font-medium"
                 onClick={() => setShowForgotPassword(true)}
               >
                 Forgot your password?
