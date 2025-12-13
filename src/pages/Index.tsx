@@ -18,6 +18,7 @@ import { AnimatedCounter } from '@/components/landing/AnimatedCounter';
 import { FeatureCard } from '@/components/landing/FeatureCard';
 import { Calculator, Target, Bot, TrendingUp, Shuffle, Calendar, Sparkles, ArrowRight, BookOpen, Clock, Zap, User } from 'lucide-react';
 import { logger } from '@/lib/logger';
+import preppitLogo from '@/assets/preppit-logo.png';
 
 const Index = () => {
   const queryClient = useQueryClient();
@@ -192,7 +193,7 @@ const Index = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground">Loading your ACT prep dashboard...</p>
+          <p className="text-muted-foreground">Loading your Preppit dashboard...</p>
         </div>
       </div>
     );
@@ -212,6 +213,11 @@ const Index = () => {
         <div className="relative container mx-auto px-4 py-16">
           {/* Hero Section */}
           <div className="max-w-5xl mx-auto text-center space-y-8 mb-20">
+            {/* Logo */}
+            <div className="flex justify-center mb-8 animate-fade-in">
+              <img src={preppitLogo} alt="Preppit" className="h-24 w-auto" />
+            </div>
+
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm animate-fade-in">
               <Sparkles className="w-4 h-4 text-primary" />
               <span className="text-sm font-medium text-primary">The Smart Way to Prep for ACT</span>
@@ -219,11 +225,11 @@ const Index = () => {
 
             <div className="space-y-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
               <h1 className="text-5xl md:text-7xl font-bold tracking-tight">
-                <span className="bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
-                  Ace Your ACT
+                <span className="bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent animate-gradient bg-[length:200%_auto]">
+                  Train Your Brain.
                 </span>
                 <br />
-                <span className="text-foreground">Like Never Before</span>
+                <span className="text-foreground">Crush The ACT.</span>
               </h1>
               <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
                 Master every skill with AI-powered prep that adapts to <span className="font-semibold text-foreground">your</span> needs. 
@@ -247,7 +253,7 @@ const Index = () => {
               </div>
               <div className="p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all hover:shadow-lg">
                 <div className="text-center space-y-1">
-                  <span className="font-bold text-3xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">AI</span>
+                  <span className="font-bold text-3xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">AI</span>
                   <p className="text-sm text-muted-foreground">Tutor Included</p>
                 </div>
               </div>
@@ -264,13 +270,13 @@ const Index = () => {
               <Button 
                 size="lg" 
                 onClick={() => navigate('/login')}
-                className="group relative overflow-hidden bg-gradient-to-r from-primary to-secondary hover:shadow-2xl hover:shadow-primary/50 transition-all duration-300 text-lg px-8 py-6 h-auto"
+                className="group relative overflow-hidden bg-gradient-to-r from-primary to-accent hover:shadow-2xl hover:shadow-primary/50 transition-all duration-300 text-lg px-8 py-6 h-auto"
               >
                 <span className="relative z-10 flex items-center gap-2">
                   Start Free Today
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-secondary to-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 bg-gradient-to-r from-accent to-primary opacity-0 group-hover:opacity-100 transition-opacity" />
               </Button>
               <Button 
                 size="lg" 
@@ -304,7 +310,7 @@ const Index = () => {
                 title="Calculator Lab"
                 description="Master TI-84 shortcuts that save 10-15 minutes on test day. Interactive practice modes teach you efficiency tricks other students don't know."
                 badge="UNIQUE"
-                gradient="from-purple-500/10 via-pink-500/10 to-purple-500/10"
+                gradient="from-primary/10 via-accent/10 to-primary/10"
                 delay={0}
               />
               
@@ -313,7 +319,7 @@ const Index = () => {
                 title="129-Skill Mastery"
                 description="Not just 'math' or 'reading' - track 129 specific skills with granular progress. Most competitors track only 20-40 skills."
                 badge="5x MORE"
-                gradient="from-blue-500/10 via-indigo-500/10 to-blue-500/10"
+                gradient="from-accent/10 via-primary/10 to-accent/10"
                 delay={100}
               />
               
@@ -322,7 +328,7 @@ const Index = () => {
                 title="AI Tutor"
                 description="Get instant, context-aware help without interrupting your practice. Explains concepts in your language, adapts to your learning style."
                 badge="AI POWERED"
-                gradient="from-green-500/10 via-teal-500/10 to-green-500/10"
+                gradient="from-success/10 via-primary/10 to-success/10"
                 delay={200}
               />
               
@@ -330,7 +336,7 @@ const Index = () => {
                 icon={TrendingUp}
                 title="Smart Weak Areas"
                 description="Automatically detects and focuses on what YOU need most. Adaptive difficulty ensures you're always challenged at the right level."
-                gradient="from-orange-500/10 via-red-500/10 to-orange-500/10"
+                gradient="from-secondary/10 via-accent/10 to-secondary/10"
                 delay={300}
               />
               
@@ -338,7 +344,7 @@ const Index = () => {
                 icon={Shuffle}
                 title="Answer Shuffling"
                 description="Can't memorize answer patterns - you actually learn. Every practice session shuffles choices so you understand concepts, not positions."
-                gradient="from-cyan-500/10 via-blue-500/10 to-cyan-500/10"
+                gradient="from-primary/10 via-secondary/10 to-primary/10"
                 delay={400}
               />
               
@@ -346,7 +352,7 @@ const Index = () => {
                 icon={Calendar}
                 title="Test-Date Driven"
                 description="Custom roadmap based on YOUR timeline. Daily tasks auto-generate to ensure you cover everything before test day."
-                gradient="from-violet-500/10 via-purple-500/10 to-violet-500/10"
+                gradient="from-accent/10 via-secondary/10 to-accent/10"
                 delay={500}
               />
             </div>
@@ -359,7 +365,7 @@ const Index = () => {
                 <div className="flex items-center justify-center gap-2">
                   <div className="flex -space-x-2">
                     {[...Array(5)].map((_, i) => (
-                      <div key={i} className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary border-2 border-background" />
+                      <div key={i} className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent border-2 border-background" />
                     ))}
                   </div>
                   <span className="text-sm font-medium ml-2">+1,000s of students</span>
@@ -376,7 +382,7 @@ const Index = () => {
               <Button 
                 size="lg"
                 onClick={() => navigate('/login')}
-                className="group bg-gradient-to-r from-primary to-secondary hover:shadow-2xl hover:shadow-primary/50 transition-all text-lg px-8 py-6 h-auto"
+                className="group bg-gradient-to-r from-primary to-accent hover:shadow-2xl hover:shadow-primary/50 transition-all text-lg px-8 py-6 h-auto"
               >
                 <span className="flex items-center gap-2">
                   Get Started Free
@@ -414,7 +420,7 @@ const Index = () => {
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20">
                     <User className="w-6 h-6 text-primary" />
                   </div>
                   <h1 className="text-3xl font-bold">
@@ -422,7 +428,7 @@ const Index = () => {
                   </h1>
                 </div>
                 <p className="text-muted-foreground ml-14">
-                  {hasStudyPlan ? 'Your personalized study plan for today' : 'Continue your ACT preparation'}
+                  {hasStudyPlan ? 'Your personalized study plan for today' : 'Continue your ACT preparation with Preppit'}
                 </p>
               </div>
               {hasStudyPlan && (
@@ -486,9 +492,9 @@ const Index = () => {
                     <Link to="/calculator-lab">
                       <Button 
                         variant="outline" 
-                        className="w-full justify-start gap-3 group bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/20 hover:from-purple-500/20 hover:to-pink-500/20 transition-all duration-300"
+                        className="w-full justify-start gap-3 group bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20 hover:from-primary/20 hover:to-accent/20 transition-all duration-300"
                       >
-                        <Calculator className="w-4 h-4 text-purple-500 group-hover:scale-110 transition-transform" />
+                        <Calculator className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
                         <span>Calculator Lab</span>
                       </Button>
                     </Link>
@@ -503,7 +509,7 @@ const Index = () => {
                 <Card className="bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 backdrop-blur-sm border-primary/20 shadow-lg hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 animate-fade-in">
                   <CardContent className="pt-6">
                     <div className="flex flex-col md:flex-row items-center gap-6">
-                      <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 group-hover:scale-110 transition-transform">
+                      <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 group-hover:scale-110 transition-transform">
                         <Target className="w-12 h-12 text-primary" />
                       </div>
                       <div className="flex-1 text-center md:text-left">
@@ -512,7 +518,7 @@ const Index = () => {
                           Take a quick diagnostic to identify your strengths and weaknesses across all ACT sections. 
                           This helps us personalize your study plan and focus on areas that need the most attention.
                         </p>
-                        <Button size="lg" asChild className="w-full md:w-auto group bg-gradient-to-r from-primary to-secondary hover:shadow-xl hover:shadow-primary/50 transition-all">
+                        <Button size="lg" asChild className="w-full md:w-auto group bg-gradient-to-r from-primary to-accent hover:shadow-xl hover:shadow-primary/50 transition-all">
                           <Link to="/diagnostic" className="flex items-center gap-2">
                             Take Diagnostic Exam
                             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -538,7 +544,7 @@ const Index = () => {
                   </div>
                   <h2 className="text-3xl font-bold">Ready to Start Learning?</h2>
                   <p className="text-muted-foreground text-lg">
-                    Browse lessons and drills at your own pace, or let us create a personalized study plan based on your test date and goals.
+                    Browse lessons and drills at your own pace, or let Preppit create a personalized study plan based on your test date and goals.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
                     <Link to="/lessons">
@@ -553,7 +559,7 @@ const Index = () => {
                     </Link>
                     <Button
                       size="lg"
-                      className="gap-3 bg-gradient-to-r from-primary to-secondary hover:shadow-xl hover:shadow-primary/50 transition-all group"
+                      className="gap-3 bg-gradient-to-r from-primary to-accent hover:shadow-xl hover:shadow-primary/50 transition-all group"
                       onClick={() => setWizardOpen(true)}
                     >
                       <Target className="w-5 h-5 group-hover:scale-110 transition-transform" />
@@ -568,7 +574,7 @@ const Index = () => {
                 <Link to="/lessons">
                   <Card className="group p-6 h-full bg-gradient-to-br from-background to-primary/5 backdrop-blur-sm border-primary/20 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 hover:-translate-y-2">
                     <CardContent className="p-0 space-y-4">
-                      <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20 w-fit group-hover:scale-110 transition-transform">
+                      <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 w-fit group-hover:scale-110 transition-transform">
                         <BookOpen className="w-6 h-6 text-primary" />
                       </div>
                       <div>
@@ -582,13 +588,13 @@ const Index = () => {
                 </Link>
                 
                 <Link to="/calculator-lab">
-                  <Card className="group p-6 h-full bg-gradient-to-br from-purple-500/5 to-pink-500/5 backdrop-blur-sm border-purple-500/20 hover:border-purple-500/50 hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 hover:-translate-y-2">
+                  <Card className="group p-6 h-full bg-gradient-to-br from-primary/5 to-accent/5 backdrop-blur-sm border-primary/20 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 hover:-translate-y-2">
                     <CardContent className="p-0 space-y-4">
-                      <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 w-fit group-hover:scale-110 transition-transform">
-                        <Calculator className="w-6 h-6 text-purple-500" />
+                      <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 w-fit group-hover:scale-110 transition-transform">
+                        <Calculator className="w-6 h-6 text-primary" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold mb-2 group-hover:text-purple-500 transition-colors">Calculator Lab</h3>
+                        <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">Calculator Lab</h3>
                         <p className="text-sm text-muted-foreground">
                           Master calculator shortcuts to save 10-15 minutes
                         </p>
@@ -617,10 +623,10 @@ const Index = () => {
                   <Card className="group p-6 h-full bg-gradient-to-br from-background to-accent/5 backdrop-blur-sm border-accent/20 hover:border-accent/50 hover:shadow-2xl hover:shadow-accent/20 transition-all duration-300 hover:-translate-y-2">
                     <CardContent className="p-0 space-y-4">
                       <div className="p-3 rounded-xl bg-gradient-to-br from-accent/20 to-primary/20 w-fit group-hover:scale-110 transition-transform">
-                        <Clock className="w-6 h-6 text-accent" />
+                        <Clock className="w-6 h-6 text-accent-foreground" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold mb-2 group-hover:text-accent transition-colors">Practice Simulations</h3>
+                        <h3 className="text-xl font-bold mb-2 group-hover:text-accent-foreground transition-colors">Practice Simulations</h3>
                         <p className="text-sm text-muted-foreground">
                           Take full-length section tests with real timing
                         </p>
@@ -643,7 +649,7 @@ const Index = () => {
                 <Card className="bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 backdrop-blur-sm border-primary/20 shadow-lg hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 animate-fade-in">
                   <CardContent className="pt-6">
                     <div className="flex flex-col md:flex-row items-center gap-6">
-                      <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 group-hover:scale-110 transition-transform">
+                      <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 group-hover:scale-110 transition-transform">
                         <Target className="w-12 h-12 text-primary" />
                       </div>
                       <div className="flex-1 text-center md:text-left">
@@ -652,7 +658,7 @@ const Index = () => {
                           Take a quick diagnostic to identify your strengths and weaknesses across all ACT sections. 
                           This helps us personalize your study plan and focus on areas that need the most attention.
                         </p>
-                        <Button size="lg" asChild className="w-full md:w-auto group bg-gradient-to-r from-primary to-secondary hover:shadow-xl hover:shadow-primary/50 transition-all">
+                        <Button size="lg" asChild className="w-full md:w-auto group bg-gradient-to-r from-primary to-accent hover:shadow-xl hover:shadow-primary/50 transition-all">
                           <Link to="/diagnostic" className="flex items-center gap-2">
                             Take Diagnostic Exam
                             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

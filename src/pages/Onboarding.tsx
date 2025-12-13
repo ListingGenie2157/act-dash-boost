@@ -5,6 +5,7 @@ import {
 } from '@/components/ui';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import preppitLogo from '@/assets/preppit-logo.png';
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -46,7 +47,7 @@ export default function Onboarding() {
         throw profileUpdateError;
       }
 
-      toast.success('Welcome to ACT Boost!');
+      toast.success('Welcome to Preppit!');
       navigate('/');
     } catch (error) {
       console.error('Error completing onboarding:', error);
@@ -57,11 +58,14 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/5 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <Card>
-          <CardHeader>
-            <CardTitle>Welcome to ACT Boost!</CardTitle>
+        <Card className="backdrop-blur-sm border-primary/20 shadow-xl">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <img src={preppitLogo} alt="Preppit" className="h-16 w-auto" />
+            </div>
+            <CardTitle className="text-2xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Welcome to Preppit!</CardTitle>
             <CardDescription>Let's get you started. Please accept the following to continue.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -74,6 +78,7 @@ export default function Onboarding() {
                   placeholder="Enter your first name"
                   value={form.firstName}
                   onChange={(e) => setForm(f => ({ ...f, firstName: e.target.value }))}
+                  className="focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div className="flex items-center space-x-2">
@@ -104,7 +109,7 @@ export default function Onboarding() {
             <Button
               onClick={handleSubmit}
               disabled={!canProceed || loading}
-              className="w-full"
+              className="w-full bg-gradient-to-r from-primary to-accent hover:shadow-lg transition-all"
             >
               {loading ? 'Setting up...' : 'Get Started'}
             </Button>
