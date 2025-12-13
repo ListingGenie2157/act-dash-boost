@@ -16,7 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Session } from '@supabase/supabase-js';
 import { AnimatedCounter } from '@/components/landing/AnimatedCounter';
 import { FeatureCard } from '@/components/landing/FeatureCard';
-import { Calculator, Target, Bot, TrendingUp, Shuffle, Calendar, Sparkles, ArrowRight, BookOpen, Clock, Zap, User } from 'lucide-react';
+import { Calculator, Target, Bot, TrendingUp, Users, Timer, Sparkles, ArrowRight, BookOpen, Clock, Zap, User, RotateCcw, MessageCircle, ClipboardCheck, Gift } from 'lucide-react';
 import { logger } from '@/lib/logger';
 import preppitLogo from '@/assets/preppit-logo.png';
 
@@ -232,8 +232,8 @@ const Index = () => {
                 <span className="text-foreground">Crush The ACT.</span>
               </h1>
               <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-                Master every skill with AI-powered prep that adapts to <span className="font-semibold text-foreground">your</span> needs. 
-                No more guessing what to study.
+                Full-length simulations. Coached practice tests. AI tutoring. Parent rewards. 
+                <span className="font-semibold text-foreground"> This isn't just a question bank</span> — it's a complete ACT training system.
               </p>
             </div>
 
@@ -247,8 +247,8 @@ const Index = () => {
               </div>
               <div className="p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all hover:shadow-lg">
                 <div className="text-center space-y-1">
-                  <AnimatedCounter end={15} suffix=" min" />
-                  <p className="text-sm text-muted-foreground">Time Saved</p>
+                  <ClipboardCheck className="w-8 h-8 mx-auto text-primary" />
+                  <p className="text-sm text-muted-foreground">Full Simulations</p>
                 </div>
               </div>
               <div className="p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all hover:shadow-lg">
@@ -259,8 +259,8 @@ const Index = () => {
               </div>
               <div className="p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all hover:shadow-lg">
                 <div className="text-center space-y-1">
-                  <span className="font-bold text-3xl text-success">100%</span>
-                  <p className="text-sm text-muted-foreground">Free to Start</p>
+                  <Users className="w-8 h-8 mx-auto text-accent" />
+                  <p className="text-sm text-muted-foreground">Parent Portal</p>
                 </div>
               </div>
             </div>
@@ -297,30 +297,66 @@ const Index = () => {
           <div className="max-w-6xl mx-auto space-y-12">
             <div className="text-center space-y-4 animate-fade-in">
               <h2 className="text-3xl md:text-4xl font-bold">
-                Features Other Prep Apps <span className="text-primary">Don't Have</span>
+                More Than a <span className="text-primary">Question Bank</span>
               </h2>
               <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-                We built features that actually make a difference in your score
+                Full simulations, real-time coaching, parent accountability, and science-backed review — all in one platform
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
               <FeatureCard
-                icon={Calculator}
-                title="Calculator Lab"
-                description="Master TI-84 shortcuts that save 10-15 minutes on test day. Interactive practice modes teach you efficiency tricks other students don't know."
-                badge="UNIQUE"
+                icon={MessageCircle}
+                title="Coached Test Mode"
+                description="Get real-time strategy tips like 'flag and move on' or 'eliminate two choices first' during practice tests. Learn how to think on test day."
+                badge="NEW"
                 gradient="from-primary/10 via-accent/10 to-primary/10"
                 delay={0}
               />
               
               <FeatureCard
-                icon={Target}
-                title="129-Skill Mastery"
-                description="Not just 'math' or 'reading' - track 129 specific skills with granular progress. Most competitors track only 20-40 skills."
-                badge="5x MORE"
+                icon={Timer}
+                title="Full ACT Simulations"
+                description="Not just a question bank. Take full-length timed section tests with authentic ACT-style questions, answer bubbling, and detailed results."
+                badge="AUTHENTIC"
                 gradient="from-accent/10 via-primary/10 to-accent/10"
                 delay={100}
+              />
+              
+              <FeatureCard
+                icon={Gift}
+                title="Parent Portal"
+                description="Parents can set rewards for streaks, drill scores, and simulation completions. Students earn, parents approve — motivation meets accountability."
+                badge="FAMILY"
+                gradient="from-success/10 via-primary/10 to-success/10"
+                delay={200}
+              />
+              
+              <FeatureCard
+                icon={RotateCcw}
+                title="Error Bank & Spaced Review"
+                description="Missed a question? It goes into your Error Bank for targeted review. Our spaced repetition algorithm brings questions back at the perfect time."
+                badge="SMART"
+                gradient="from-secondary/10 via-accent/10 to-secondary/10"
+                delay={300}
+              />
+
+              <FeatureCard
+                icon={Calculator}
+                title="Calculator Lab"
+                description="Master TI-84 shortcuts that save 10-15 minutes on test day. Interactive practice modes teach you efficiency tricks other students don't know."
+                badge="UNIQUE"
+                gradient="from-primary/10 via-secondary/10 to-primary/10"
+                delay={400}
+              />
+              
+              <FeatureCard
+                icon={Target}
+                title="129-Skill Mastery"
+                description="Not just 'math' or 'reading' — track 129 specific skills with granular progress. Most competitors track only 20-40 skills."
+                badge="5x MORE"
+                gradient="from-accent/10 via-secondary/10 to-accent/10"
+                delay={500}
               />
               
               <FeatureCard
@@ -328,52 +364,50 @@ const Index = () => {
                 title="AI Tutor"
                 description="Get instant, context-aware help without interrupting your practice. Explains concepts in your language, adapts to your learning style."
                 badge="AI POWERED"
-                gradient="from-success/10 via-primary/10 to-success/10"
-                delay={200}
+                gradient="from-success/10 via-accent/10 to-success/10"
+                delay={600}
               />
               
               <FeatureCard
                 icon={TrendingUp}
                 title="Smart Weak Areas"
                 description="Automatically detects and focuses on what YOU need most. Adaptive difficulty ensures you're always challenged at the right level."
-                gradient="from-secondary/10 via-accent/10 to-secondary/10"
-                delay={300}
-              />
-              
-              <FeatureCard
-                icon={Shuffle}
-                title="Answer Shuffling"
-                description="Can't memorize answer patterns - you actually learn. Every practice session shuffles choices so you understand concepts, not positions."
-                gradient="from-primary/10 via-secondary/10 to-primary/10"
-                delay={400}
-              />
-              
-              <FeatureCard
-                icon={Calendar}
-                title="Test-Date Driven"
-                description="Custom roadmap based on YOUR timeline. Daily tasks auto-generate to ensure you cover everything before test day."
-                gradient="from-accent/10 via-secondary/10 to-accent/10"
-                delay={500}
+                gradient="from-primary/10 via-accent/10 to-primary/10"
+                delay={700}
               />
             </div>
           </div>
 
           {/* Social Proof Section */}
-          <div className="max-w-4xl mx-auto mt-20 text-center space-y-8 animate-fade-in">
-            <div className="p-8 rounded-2xl bg-gradient-to-br from-success/10 to-primary/10 border border-success/20 backdrop-blur-sm">
-              <div className="space-y-4">
-                <div className="flex items-center justify-center gap-2">
-                  <div className="flex -space-x-2">
-                    {[...Array(5)].map((_, i) => (
-                      <div key={i} className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent border-2 border-background" />
-                    ))}
+          <div className="max-w-5xl mx-auto mt-20 text-center space-y-8 animate-fade-in">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="p-8 rounded-2xl bg-gradient-to-br from-success/10 to-primary/10 border border-success/20 backdrop-blur-sm">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="flex -space-x-2">
+                      {[...Array(5)].map((_, i) => (
+                        <div key={i} className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent border-2 border-background" />
+                      ))}
+                    </div>
+                    <span className="text-sm font-medium ml-2">+1,000s of students</span>
                   </div>
-                  <span className="text-sm font-medium ml-2">+1,000s of students</span>
+                  <p className="text-lg text-muted-foreground italic">
+                    "The Calculator Lab alone saved me 12 minutes on test day. That's like getting extra questions right just from efficiency!"
+                  </p>
+                  <p className="text-sm font-semibold">— Sarah K., scored 34 on ACT Math</p>
                 </div>
-                <p className="text-lg text-muted-foreground">
-                  "The Calculator Lab alone saved me 12 minutes on test day. That's like getting extra questions right just from efficiency!"
-                </p>
-                <p className="text-sm font-semibold">— Sarah K., scored 34 on ACT Math</p>
+              </div>
+
+              <div className="p-8 rounded-2xl bg-gradient-to-br from-accent/10 to-secondary/10 border border-accent/20 backdrop-blur-sm">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center">
+                    <Users className="w-8 h-8 text-accent" />
+                  </div>
+                  <p className="text-lg text-muted-foreground italic">
+                    "The Coached Mode taught my son how to approach questions, not just what the answers are. He went from running out of time to finishing with 5 minutes to spare."
+                  </p>
+                  <p className="text-sm font-semibold">— Maria T., parent of 33-scorer</p>
+                </div>
               </div>
             </div>
 
