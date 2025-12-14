@@ -3,11 +3,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { updateReviewQueueOnAnswer, type ReviewMode } from '../_shared/review.ts';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 
 // Zod schemas for input validation
 const AnswerSchema = z.object({
@@ -37,6 +34,8 @@ interface CompleteTaskRequest {
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -61,7 +60,6 @@ serve(async (req) => {
     // Get the authorization header
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
-      console.log('No authorization header provided');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -76,11 +74,17 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
-      console.log('Authentication failed:', authError?.message);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Rate limiting: 50 requests per minute
+    const clientIp = getClientIp(req);
+    const isAllowed = await checkRateLimit(user.id, clientIp, 'complete-task', 50, 60000);
+    if (!isAllowed) {
+      return createRateLimitResponse(corsHeaders);
     }
 
     // Parse and validate request body
@@ -209,30 +213,27 @@ serve(async (req) => {
       }
     }
 
-    // Add to error bank for incorrect answers
+    // Add to error bank for incorrect answers using atomic increment RPC
     if (answers) {
       const incorrectAnswers = answers.filter(a => !a.correct);
       if (incorrectAnswers.length > 0) {
         for (const incorrectAnswer of incorrectAnswers) {
           try {
-            await supabase
-              .from('error_bank')
-              .upsert({
-                user_id: user.id,
-                question_id: incorrectAnswer.question_id,
-                miss_count: 1,
-                last_missed_at: new Date().toISOString()
-              }, {
-                onConflict: 'user_id,question_id',
-                ignoreDuplicates: false
-              });
+            // Use the atomic increment RPC function
+            const { error } = await supabase.rpc('increment_error_bank', {
+              p_user_id: user.id,
+              p_question_id: incorrectAnswer.question_id
+            });
+            
+            if (error) {
+              console.error(`Error incrementing error bank for question ${incorrectAnswer.question_id}:`, error);
+            }
           } catch (error) {
             console.error(`Error adding to error bank for question ${incorrectAnswer.question_id}:`, error);
           }
         }
       }
     }
-
 
     const response = {
       ...updatedTask,
