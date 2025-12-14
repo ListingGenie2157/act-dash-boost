@@ -1,12 +1,16 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { Question } from '@/types';
 import { shuffleQuestionChoices } from '@/lib/shuffle';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, Timer } from 'lucide-react';
 import { drillRunnerSchema, safeValidateInput } from '@/lib/validation/edgeFunctionSchemas';
 import { LiveStreakCounter } from '@/components/LiveStreakCounter';
+import { BreakModal } from '@/components/BreakModal';
+import { getRunStyle, type RunStyle } from '@/lib/runStyles';
+import { toast } from 'sonner';
 
 export default function DrillRunner() {
   const navigate = useNavigate();
@@ -28,6 +32,54 @@ export default function DrillRunner() {
   const [currentStreak, setCurrentStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [streakEvent, setStreakEvent] = useState<'scored' | 'broke' | null>(null);
+  
+  // Run Style state
+  const [runStyle, setRunStyle] = useState<RunStyle | null>(null);
+  const [showBreakModal, setShowBreakModal] = useState(false);
+  const [isOnBreak, setIsOnBreak] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+  // Initialize run style from URL params
+  useEffect(() => {
+    const styleId = searchParams.get('runStyle');
+    const style = getRunStyle(styleId || 'sprint');
+    if (style) {
+      setRunStyle(style);
+    }
+    
+    // Initialize timer from URL params
+    const timeParam = searchParams.get('time');
+    if (timeParam) {
+      const time = parseInt(timeParam, 10);
+      if (!isNaN(time) && time > 0) {
+        setTimeLeft(time);
+      }
+    }
+  }, [searchParams]);
+
+  // Timer countdown
+  useEffect(() => {
+    if (timeLeft === null || timeLeft <= 0 || completed || isOnBreak) return;
+    
+    const interval = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev === null || prev <= 1) {
+          toast.warning("Time's up! Drill completed.");
+          setCompleted(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timeLeft, completed, isOnBreak]);
+
+  const formatTime = useCallback((seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -237,6 +289,14 @@ export default function DrillRunner() {
     // Move to next question or complete
     if (current + 1 < questions.length) {
       setCurrent(current + 1);
+      
+      // Check for Pomodoro break
+      if (runStyle?.id === 'pomodoro' && runStyle.breakAfter) {
+        const questionsAnswered = current + 1;
+        if (questionsAnswered === runStyle.breakAfter) {
+          setShowBreakModal(true);
+        }
+      }
     } else {
       // Drill complete - update study_task
       const newAnswerTimes = [...answerTimes, timeSpent];
@@ -258,6 +318,23 @@ export default function DrillRunner() {
       
       setCompleted(true);
     }
+  };
+
+  // Break modal handlers
+  const handleTakeBreak = () => {
+    setIsOnBreak(true);
+    setShowBreakModal(false);
+    toast.info('Break started! Timer paused for 2 minutes. ☕');
+    
+    // Auto-resume after 2 minutes
+    setTimeout(() => {
+      setIsOnBreak(false);
+      toast.success('Break over! Let\'s finish strong! 💪');
+    }, 120000); // 2 minutes
+  };
+
+  const handleContinueWithoutBreak = () => {
+    setShowBreakModal(false);
   };
 
   // Shuffle current question's choices
@@ -348,6 +425,14 @@ export default function DrillRunner() {
 
   return (
     <div className="container mx-auto p-4">
+      {/* Break Modal for Pomodoro Style */}
+      <BreakModal
+        open={showBreakModal}
+        questionsCompleted={current + 1}
+        onTakeBreak={handleTakeBreak}
+        onContinue={handleContinueWithoutBreak}
+      />
+
       <div className="flex items-center justify-between mb-4">
         <Button
           variant="outline"
@@ -356,11 +441,21 @@ export default function DrillRunner() {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Drills
         </Button>
-        <LiveStreakCounter
-          currentStreak={currentStreak}
-          bestStreak={bestStreak}
-          streakEvent={streakEvent}
-        />
+        <div className="flex items-center gap-3">
+          {/* Timer Display */}
+          {timeLeft !== null && timeLeft > 0 && (
+            <Badge variant={timeLeft < 60 ? 'destructive' : 'secondary'} className="font-mono flex items-center gap-1">
+              <Timer className="h-3 w-3" />
+              {formatTime(timeLeft)}
+              {isOnBreak && <span className="ml-1 text-xs">(Break)</span>}
+            </Badge>
+          )}
+          <LiveStreakCounter
+            currentStreak={currentStreak}
+            bestStreak={bestStreak}
+            streakEvent={streakEvent}
+          />
+        </div>
       </div>
       <h2 className="font-bold mb-4">Drill Question {current + 1} of {questions.length}</h2>
       <p className="mb-4">{shuffled.original.stem}</p>
@@ -370,7 +465,7 @@ export default function DrillRunner() {
             key={i}
             className="w-full border rounded-md p-2 text-left hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => handleShuffledAnswer(i)}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isOnBreak}
           >
             <span className="font-semibold mr-2">{['A', 'B', 'C', 'D'][i]})</span>
             {choice}
