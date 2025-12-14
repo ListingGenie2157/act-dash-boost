@@ -513,6 +513,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          administration: string | null
           age_verified: boolean | null
           created_at: string | null
           daily_time_cap_mins: number | null
@@ -525,12 +526,15 @@ export type Database = {
           onboarding_step: string | null
           plan_mode: string | null
           privacy_accepted: boolean | null
+          science_required: boolean | null
           sim_preferred_dow: number | null
           test_date: string | null
+          test_format: string | null
           tos_accepted: boolean | null
           updated_at: string | null
         }
         Insert: {
+          administration?: string | null
           age_verified?: boolean | null
           created_at?: string | null
           daily_time_cap_mins?: number | null
@@ -543,12 +547,15 @@ export type Database = {
           onboarding_step?: string | null
           plan_mode?: string | null
           privacy_accepted?: boolean | null
+          science_required?: boolean | null
           sim_preferred_dow?: number | null
           test_date?: string | null
+          test_format?: string | null
           tos_accepted?: boolean | null
           updated_at?: string | null
         }
         Update: {
+          administration?: string | null
           age_verified?: boolean | null
           created_at?: string | null
           daily_time_cap_mins?: number | null
@@ -561,8 +568,10 @@ export type Database = {
           onboarding_step?: string | null
           plan_mode?: string | null
           privacy_accepted?: boolean | null
+          science_required?: boolean | null
           sim_preferred_dow?: number | null
           test_date?: string | null
+          test_format?: string | null
           tos_accepted?: boolean | null
           updated_at?: string | null
         }

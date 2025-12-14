@@ -100,12 +100,12 @@ serve(async (req) => {
       });
     }
 
-    // Set time limits based on section (in seconds)
+    // Set time limits based on section (in seconds) - ACT Enhanced format (2024+)
     const timeLimits = {
-      'EN': 45 * 60,    // 45 minutes
-      'MATH': 60 * 60,  // 60 minutes
-      'RD': 35 * 60,    // 35 minutes
-      'SCI': 35 * 60,   // 35 minutes
+      'EN': 35 * 60,    // 35 minutes (was 45)
+      'MATH': 50 * 60,  // 50 minutes (was 60)
+      'RD': 40 * 60,    // 40 minutes (was 35)
+      'SCI': 40 * 60,   // 40 minutes (was 35)
     };
 
     const time_limit_sec = timeLimits[section as keyof typeof timeLimits];

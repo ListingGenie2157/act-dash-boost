@@ -11,12 +11,12 @@ type TipCategory = {
 const GENERAL_TIPS: TipCategory = {
   TIME_WARNING_60S: [
     "You've spent a minute on this one. Consider marking it and moving on if you're stuck.",
-    "Time check - if you're not sure, skip it and come back with fresh eyes.",
-    "Don't get anchored. You can always come back to this one.",
+    "Time check - if you're not sure, flag it and come back with fresh eyes.",
+    "Don't get anchored. Use 'Mark for Review' and keep moving.",
   ],
   TIME_WARNING_90S: [
     "90 seconds on one question. Time to move on and keep your pace.",
-    "This one's taking a while. Circle it and keep moving forward.",
+    "This one's taking a while. Flag it for review and keep moving forward.",
   ],
   PACE_WARNING: [
     "You're using time faster than questions. Pick up the pace a bit.",
@@ -33,6 +33,21 @@ const GENERAL_TIPS: TipCategory = {
   MIDPOINT_ENCOURAGEMENT: [
     "You're halfway there! Keep up the great work.",
     "Nice progress - you're at the midpoint. Stay focused.",
+  ],
+  // New digital navigation tips
+  MARK_FOR_REVIEW: [
+    "Not sure about this one? Flag it for review and come back later!",
+    "Use the 'Mark for Review' button - you can return to flagged questions before submitting.",
+    "Pro tip: Flag tricky questions and tackle them after finishing the easier ones.",
+  ],
+  REVIEW_FLAGGED: [
+    "Time to review! Check your flagged questions before submitting.",
+    "You have flagged questions - review them now while you still have time!",
+    "Don't forget to revisit your marked questions!",
+  ],
+  DIGITAL_NAVIGATION: [
+    "Use the question navigator to jump between questions efficiently.",
+    "On the digital ACT, you can navigate freely - use it to your advantage!",
   ],
 };
 
@@ -55,17 +70,21 @@ const ENGLISH_TIPS: TipCategory = {
 
 const MATH_TIPS: TipCategory = {
   SECTION_START: [
-    "Math tip: Plug in the answer choices when you're stuck - work backwards!",
+    "Math tip: The Enhanced ACT has 4 choices per question - no more 5th option!",
     "Remember to use your calculator strategically - it's a tool, not a crutch.",
     "Draw a diagram if you can visualize it - especially for geometry questions.",
   ],
   PLUG_IN_ANSWERS: [
-    "Stuck? Try plugging in the answer choices - start with C (the middle value).",
+    "Stuck? Try plugging in the answer choices - start with the middle value.",
     "When formulas fail, test the answers. The right one will work.",
   ],
   CALCULATOR_CHECK: [
     "Double-check that calculator entry - typos cost points.",
-    "Is the calculator allowed for this one? Sometimes mental math is faster.",
+    "Taking the digital ACT? Get comfortable with the built-in Desmos calculator.",
+  ],
+  DESMOS_TIP: [
+    "On digital ACT, use Desmos to graph intersections and find solutions visually.",
+    "The built-in calculator can solve systems of equations - learn to use it!",
   ],
 };
 
@@ -82,6 +101,10 @@ const READING_TIPS: TipCategory = {
   ELIMINATE_STRATEGY: [
     "Cross out answers you know are wrong. Process of elimination is powerful.",
     "Two answers close? Look for the one with more textual support.",
+  ],
+  DIGITAL_READING: [
+    "On digital, use the highlight tool sparingly - don't turn it into an art project.",
+    "Scroll discipline matters! Keep track of where key information is located.",
   ],
 };
 
@@ -142,6 +165,11 @@ export const TIP_KEYS = {
   SECTION_START: 'SECTION_START',
   MIDPOINT_ENCOURAGEMENT: 'MIDPOINT_ENCOURAGEMENT',
   
+  // Digital Navigation
+  MARK_FOR_REVIEW: 'MARK_FOR_REVIEW',
+  REVIEW_FLAGGED: 'REVIEW_FLAGGED',
+  DIGITAL_NAVIGATION: 'DIGITAL_NAVIGATION',
+  
   // English
   OMIT_STRATEGY: 'OMIT_STRATEGY',
   COMMA_SPLICE: 'COMMA_SPLICE',
@@ -149,10 +177,12 @@ export const TIP_KEYS = {
   // Math
   PLUG_IN_ANSWERS: 'PLUG_IN_ANSWERS',
   CALCULATOR_CHECK: 'CALCULATOR_CHECK',
+  DESMOS_TIP: 'DESMOS_TIP',
   
   // Reading
   FIND_EVIDENCE: 'FIND_EVIDENCE',
   ELIMINATE_STRATEGY: 'ELIMINATE_STRATEGY',
+  DIGITAL_READING: 'DIGITAL_READING',
   
   // Science
   READ_GRAPHS: 'READ_GRAPHS',
