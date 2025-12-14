@@ -59,21 +59,21 @@ export default function SimulationResults() {
       const stateData = location.state as SimulationSummary | undefined;
       
       if (stateData && stateData.sessionId) {
-        // Fetch skill names for each skill_id
-        const enrichedSkills = await Promise.all(
-          stateData.perSkill.map(async (skill) => {
-            const { data: skillData } = await supabase
-              .from('skills')
-              .select('name')
-              .eq('id', skill.skill_id)
-              .maybeSingle();
-            
-            return {
-              ...skill,
-              skill_name: skillData?.name || skill.skill_id
-            };
-          })
+        // Fetch skill names in one batch query (avoid N+1)
+        const uniqueSkillIds = Array.from(new Set(stateData.perSkill.map(s => s.skill_id)));
+        const { data: skillRows } = await supabase
+          .from('skills')
+          .select('id, name')
+          .in('id', uniqueSkillIds);
+        
+        const skillNameById = new Map<string, string>(
+          (skillRows || []).map((s) => [s.id, s.name])
         );
+
+        const enrichedSkills = stateData.perSkill.map((skill) => ({
+          ...skill,
+          skill_name: skillNameById.get(skill.skill_id) || skill.skill_id,
+        }));
 
         setSummary({
           ...stateData,

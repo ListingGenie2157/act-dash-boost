@@ -1429,6 +1429,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_error_bank: {
+        Args: { p_question_id: string; p_user_id: string }
+        Returns: undefined
+      }
       is_admin: { Args: never; Returns: boolean }
     }
     Enums: {

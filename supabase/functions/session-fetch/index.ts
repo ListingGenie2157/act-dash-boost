@@ -1,12 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 /**
  * Get all possible database variants for a section code.
@@ -45,19 +40,35 @@ function normalizeToCode(section: string): string {
   return section;
 }
 
+type PassagePayload = {
+  title: string;
+  passage_text: string;
+  marked_text: unknown;
+  passage_format: unknown;
+  passage_type: string | null;
+  has_charts: boolean;
+  chart_images: unknown;
+};
+
 serve(async (req) => {
-  console.log('[session-fetch] hit', { method: req.method, hasAuth: !!req.headers.get('authorization') });
+  const corsHeaders = getCorsHeaders(req);
   
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const authHeader = req.headers.get('authorization');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return new Response(JSON.stringify({ error: 'Server misconfigured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    const authHeader = req.headers.get('authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
         status: 401,
@@ -114,17 +125,10 @@ serve(async (req) => {
     // Determine data source
     const useStaging = session.form_id.startsWith('F') || session.form_id.startsWith('DR_') || session.form_id.startsWith('D2') || session.form_id.startsWith('ONB');
     const sectionVariants = getAllSectionVariants(session.section);
-    const sectionCode = normalizeToCode(session.section);
     
-    console.log(`[session-fetch] Fetching from ${useStaging ? 'staging_items' : 'v_form_section'}`, {
-      form_id: session.form_id,
-      session_section: session.section,
-      sectionVariants,
-      sectionCode,
-    });
-    
-    let questionsData: any[];
-    let questionsError: any;
+    type QuestionRow = Record<string, unknown>;
+    let questionsData: QuestionRow[] = [];
+    let questionsError: unknown = null;
 
     if (useStaging) {
       const { data, error } = await supabase
@@ -133,10 +137,8 @@ serve(async (req) => {
         .eq('form_id', session.form_id)
         .in('section', sectionVariants)
         .order('ord');
-      questionsData = data || [];
+      questionsData = (data as QuestionRow[]) || [];
       questionsError = error;
-      
-      console.log(`[session-fetch] staging_items query: ${questionsData.length} questions`);
     } else {
       const { data, error } = await supabase
         .from('v_form_section')
@@ -144,10 +146,8 @@ serve(async (req) => {
         .eq('form_id', session.form_id)
         .in('section', sectionVariants)
         .order('ord');
-      questionsData = data || [];
+      questionsData = (data as QuestionRow[]) || [];
       questionsError = error;
-      
-      console.log(`[session-fetch] v_form_section query: ${questionsData.length} questions`);
     }
 
     if (questionsError) {
@@ -159,48 +159,52 @@ serve(async (req) => {
     }
 
     // Format questions
-    const questions = questionsData.map(q => ({
-      id: q.question_id ?? q.id ?? q.staging_id?.toString() ?? `${session.form_id}_${session.section}_${q.ord}`,
-      ord: q.ord,
-      question: q.question ?? q.stem,
-      choice_a: q.choice_a,
-      choice_b: q.choice_b,
-      choice_c: q.choice_c,
-      choice_d: q.choice_d,
-      choice_e: q.choice_e ?? null,
-      passage_id: q.passage_id ?? null,
-      image_url: q.image_url ?? null,
-      image_caption: q.image_caption ?? null,
-      image_position: q.image_position ?? 'above_question',
-      underlined_text: q.underlined_text ?? null,
-      reference_number: q.reference_number ?? null,
-      position_in_passage: q.position_in_passage ?? null,
-      calculator_allowed: q.calculator_allowed ?? true,
-    }));
+    const questions = questionsData.map((q) => {
+      const questionId =
+        (typeof q['question_id'] === 'string' ? q['question_id'] : null) ??
+        (typeof q['id'] === 'string' ? q['id'] : null) ??
+        (typeof q['staging_id'] === 'number' ? String(q['staging_id']) : null) ??
+        `${session.form_id}_${session.section}_${q['ord'] ?? 0}`;
+
+      return {
+        id: questionId,
+        ord: typeof q['ord'] === 'number' ? q['ord'] : 0,
+        question: (q['question'] as string) ?? (q['stem'] as string) ?? '',
+        choice_a: (q['choice_a'] as string) ?? '',
+        choice_b: (q['choice_b'] as string) ?? '',
+        choice_c: (q['choice_c'] as string) ?? '',
+        choice_d: (q['choice_d'] as string) ?? '',
+        choice_e: (q['choice_e'] as string) ?? null,
+        passage_id: (q['passage_id'] as string) ?? null,
+        image_url: (q['image_url'] as string) ?? null,
+        image_caption: (q['image_caption'] as string) ?? null,
+        image_position: (q['image_position'] as string) ?? 'above_question',
+        underlined_text: (q['underlined_text'] as string) ?? null,
+        reference_number: typeof q['reference_number'] === 'number' ? q['reference_number'] : null,
+        position_in_passage: typeof q['position_in_passage'] === 'number' ? q['position_in_passage'] : null,
+        calculator_allowed: typeof q['calculator_allowed'] === 'boolean' ? q['calculator_allowed'] : true,
+      };
+    });
 
     // Collect passages from multiple sources
-    const passages: Record<string, any> = {};
+    const passages: Record<string, PassagePayload> = {};
     const sessionSectionUpper = session.section.toUpperCase();
     const isPassageSection = ['EN', 'ENGLISH', 'RD', 'READING', 'SCI', 'SC', 'SCIENCE'].includes(sessionSectionUpper);
     
     if (isPassageSection) {
-      // 1. First extract passages from staging_items rows
-      // For English, passage_text may only be on first question of each passage group
-      // So we collect all text we find and keep the first non-null value per passage_id
       const passageTextMap = new Map<string, { text: string; title: string }>();
       
       questionsData.forEach(q => {
-        const pid = q.passage_id;
-        const text = q.passage_text ?? q.passage;
+        const pid = q['passage_id'] as string | undefined;
+        const text = (q['passage_text'] as string) ?? (q['passage'] as string);
         if (pid && text && !passageTextMap.has(pid)) {
           passageTextMap.set(pid, {
             text: text,
-            title: q.passage_title || ''
+            title: (q['passage_title'] as string) || ''
           });
         }
       });
       
-      // Build passages from collected data
       passageTextMap.forEach((value, pid) => {
         passages[pid] = {
           title: value.title,
@@ -212,52 +216,44 @@ serve(async (req) => {
           chart_images: null,
         };
       });
-      
-      console.log(`[session-fetch] Extracted ${Object.keys(passages).length} passages from questions`);
 
-      // 2. Query the passages table for any missing passages
-      const passageIds = [...new Set(questionsData.map(q => q.passage_id).filter(Boolean))];
+      // Query the passages table for any missing passages
+      const passageIds = [...new Set(questionsData.map(q => q['passage_id'] as string).filter(Boolean))];
       const missingPassageIds = passageIds.filter(id => !passages[id]);
       
       if (missingPassageIds.length > 0) {
-        console.log(`[session-fetch] Fetching ${missingPassageIds.length} passages from passages table:`, missingPassageIds);
-        
         const { data: passageData, error: passageError } = await supabase
           .from('passages')
           .select('*')
           .in('id', missingPassageIds);
         
-        if (passageError) {
-          console.error('[session-fetch] Error fetching passages:', passageError);
-        } else if (passageData) {
-          passageData.forEach(p => {
-            passages[p.id] = {
-              title: p.title || '',
-              passage_text: p.passage_text,
-              marked_text: p.marked_text ?? null,
-              passage_format: p.passage_format ?? null,
-              passage_type: p.passage_type ?? null,
-              has_charts: p.has_charts ?? false,
-              chart_images: p.chart_images ?? null,
+        if (!passageError && passageData) {
+          passageData.forEach((p: Record<string, unknown>) => {
+            passages[p['id'] as string] = {
+              title: (p['title'] as string) || '',
+              passage_text: p['passage_text'] as string,
+              marked_text: p['marked_text'] ?? null,
+              passage_format: p['passage_format'] ?? null,
+              passage_type: (p['passage_type'] as string) ?? null,
+              has_charts: (p['has_charts'] as boolean) ?? false,
+              chart_images: p['chart_images'] ?? null,
             };
           });
-          console.log(`[session-fetch] Added ${passageData.length} passages from passages table`);
         }
       }
 
-      // 3. For questions without passage_id but with passage_text, create synthetic passage
+      // For questions without passage_id but with passage_text, create synthetic passage
       questionsData.forEach((q, idx) => {
-        const text = q.passage_text ?? q.passage;
-        if (!q.passage_id && text) {
+        const text = (q['passage_text'] as string) ?? (q['passage'] as string);
+        if (!q['passage_id'] && text) {
           const syntheticId = `inline_${idx}`;
-          // Assign this synthetic passage_id to the question
-          const questionToUpdate = questions.find(qn => qn.ord === q.ord);
+          const questionToUpdate = questions.find(qn => qn.ord === (q['ord'] as number));
           if (questionToUpdate) {
             questionToUpdate.passage_id = syntheticId;
           }
           if (!passages[syntheticId]) {
             passages[syntheticId] = {
-              title: q.passage_title || `Passage ${idx + 1}`,
+              title: (q['passage_title'] as string) || `Passage ${idx + 1}`,
               passage_text: text,
               marked_text: null,
               passage_format: null,
@@ -268,8 +264,6 @@ serve(async (req) => {
           }
         }
       });
-
-      console.log(`[session-fetch] Final passage count: ${Object.keys(passages).length}`);
     }
 
     return new Response(JSON.stringify({

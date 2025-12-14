@@ -1,30 +1,22 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 
 // Pure function for validating date input (testable)
 export function validateTestDate(testDateString: string): { isValid: boolean; error?: string; date?: Date } {
-  // Check if date string matches YYYY-MM-DD format
   const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
   if (!dateRegex.test(testDateString)) {
     return { isValid: false, error: 'Date must be in YYYY-MM-DD format' };
   }
 
-  // Parse the date
   const testDate = new Date(testDateString + 'T00:00:00');
   
-  // Check if date is valid
   if (isNaN(testDate.getTime())) {
     return { isValid: false, error: 'Invalid date provided' };
   }
 
-  // Check if date is in the future (compare with today in Chicago timezone)
   const now = new Date();
   const chicagoTime = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Chicago',
@@ -47,12 +39,12 @@ export function validateTestDate(testDateString: string): { isValid: boolean; er
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  const corsHeaders = getCorsHeaders(req);
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Only allow POST requests
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
@@ -61,12 +53,14 @@ serve(async (req) => {
   }
 
   try {
-    // Initialize Supabase client with proper env validation
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY');
 
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing required environment variables: SUPABASE_URL or SUPABASE_ANON_KEY');
+      return new Response(JSON.stringify({ error: 'Server misconfigured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const supabase = createClient(
@@ -75,29 +69,31 @@ serve(async (req) => {
       { global: { headers: { Authorization: req.headers.get('authorization') ?? '' } } }
     );
 
-    // Get the authorization header
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
-      console.warn('No authorization header provided');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Verify the JWT token
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
-      console.warn('Authentication failed:', authError?.message);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Parse request body
+    // Rate limiting: 10 requests per minute
+    const clientIp = getClientIp(req);
+    const isAllowed = await checkRateLimit(user.id, clientIp, 'set-test-date', 10, 60000);
+    if (!isAllowed) {
+      return createRateLimitResponse(corsHeaders);
+    }
+
     const body = await req.json();
     const { testDate } = body;
 
@@ -108,17 +104,14 @@ serve(async (req) => {
       });
     }
 
-    // Validate the test date
     const validation = validateTestDate(testDate);
     if (!validation.isValid) {
-      console.warn('Date validation failed:', validation.error);
       return new Response(JSON.stringify({ error: validation.error }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Check if profile exists, create if not
     const { data: existingProfile } = await supabase
       .from('profiles')
       .select('id')
@@ -126,7 +119,6 @@ serve(async (req) => {
       .single();
 
     if (!existingProfile) {
-      // Create profile with test_date
       const { data: newProfile, error: insertError } = await supabase
         .from('profiles')
         .insert({ 
@@ -144,12 +136,10 @@ serve(async (req) => {
         });
       }
 
-      console.warn('Profile created with test date:', testDate);
       return new Response(JSON.stringify({ test_date: newProfile.test_date }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } else {
-      // Update existing profile
       const { data: updatedProfile, error: updateError } = await supabase
         .from('profiles')
         .update({ test_date: testDate })
@@ -165,7 +155,6 @@ serve(async (req) => {
         });
       }
 
-      console.warn('Profile updated with test date:', testDate);
       return new Response(JSON.stringify({ test_date: updatedProfile.test_date }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

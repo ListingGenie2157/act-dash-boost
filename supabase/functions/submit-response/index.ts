@@ -1,11 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 
 // Zod schema for input validation
 const SubmitResponseSchema = z.object({
@@ -16,14 +13,30 @@ const SubmitResponseSchema = z.object({
 });
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const authHeader = req.headers.get('Authorization')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY');
+    
+    if (!supabaseUrl || !supabaseKey) {
+      return new Response(
+        JSON.stringify({ error: 'Server misconfigured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } },
@@ -32,11 +45,17 @@ serve(async (req) => {
     // Verify authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      console.error('Authentication failed:', authError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Rate limiting: 100 requests per minute (high volume for test submissions)
+    const clientIp = getClientIp(req);
+    const isAllowed = await checkRateLimit(user.id, clientIp, 'submit-response', 100, 60000);
+    if (!isAllowed) {
+      return createRateLimitResponse(corsHeaders);
     }
 
     const body = await req.json();
@@ -62,7 +81,6 @@ serve(async (req) => {
       .single();
 
     if (sessionError || !session) {
-      console.error('Session not found:', sessionError);
       return new Response(
         JSON.stringify({ error: 'Session not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -77,14 +95,12 @@ serve(async (req) => {
     }
 
     // Look up correct answer from staging_items using staging_id
-    // question_id can be either a staging_id (integer) or UUID
     const stagingId = parseInt(question_id);
     const isValidStagingId = !isNaN(stagingId);
     
     let questionData: { answer: string } | null = null;
     
     if (isValidStagingId) {
-      // Query staging_items by staging_id and form_id
       const { data, error } = await supabase
         .from('staging_items')
         .select('answer')
@@ -113,7 +129,6 @@ serve(async (req) => {
     }
 
     if (!questionData) {
-      console.error('Question not found for id:', question_id, 'form:', session.form_id);
       return new Response(
         JSON.stringify({ error: 'Question not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -130,10 +145,8 @@ serve(async (req) => {
       .eq('question_id', question_id)
       .maybeSingle();
 
-    let result;
     if (existingResponse) {
-      // Update existing response
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('responses')
         .update({
           selected,
@@ -145,10 +158,8 @@ serve(async (req) => {
         .eq('question_id', question_id);
 
       if (error) throw error;
-      result = data;
     } else {
-      // Insert new response
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('responses')
         .insert({
           session_id,
@@ -159,10 +170,7 @@ serve(async (req) => {
         });
 
       if (error) throw error;
-      result = data;
     }
-
-    console.log(`Response saved: session=${session_id}, question=${question_id}, selected=${selected}, correct=${correct}`);
 
     return new Response(
       JSON.stringify({ success: true, correct }),

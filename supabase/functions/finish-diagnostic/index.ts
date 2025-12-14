@@ -1,10 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
-}
+import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 
 // Zod schemas for input validation
 const QuestionSchema = z.object({
@@ -45,9 +42,7 @@ interface DiagnosticRequest {
   blocks: DiagnosticBlock[];
 }
 
-// Get skill ID directly from tags (now coming from skills table)
 function getSkillFromTags(tags: string[] = []): string | null {
-  // Tags now contain actual skill_ids from the skills table
   return tags.length > 0 ? tags[0] : null;
 }
 
@@ -67,7 +62,6 @@ function scoreDiagnostic(blocks: DiagnosticBlock[]): { score: number; skillAccur
           totalCorrect++;
         }
 
-        // Track skill-level accuracy
         const skill = getSkillFromTags(question.skill_tags);
         if (skill) {
           if (!skillAccuracy[skill]) {
@@ -87,9 +81,8 @@ function scoreDiagnostic(blocks: DiagnosticBlock[]): { score: number; skillAccur
 }
 
 Deno.serve(async (req) => {
-  console.log('🚀 finish-diagnostic function called');
+  const corsHeaders = getCorsHeaders(req);
 
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -99,12 +92,14 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing required environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+      return new Response(
+        JSON.stringify({ error: 'Server misconfigured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get user from auth
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
@@ -117,18 +112,23 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-      console.error('Auth error:', authError);
       return new Response(
         JSON.stringify({ error: 'Invalid token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    // Rate limiting: 10 diagnostics per minute
+    const clientIp = getClientIp(req);
+    const isAllowed = await checkRateLimit(user.id, clientIp, 'finish-diagnostic', 10, 60000);
+    if (!isAllowed) {
+      return createRateLimitResponse(corsHeaders);
+    }
+
     const requestBody = await req.json();
     const validationResult = DiagnosticRequestSchema.safeParse(requestBody);
     
     if (!validationResult.success) {
-      console.error('Validation error:', validationResult.error);
       return new Response(
         JSON.stringify({ 
           error: 'Invalid request data',
@@ -139,19 +139,15 @@ Deno.serve(async (req) => {
     }
 
     const body: DiagnosticRequest = validationResult.data;
-    console.log('Processing diagnostic for section:', body.section);
 
-    // Score the diagnostic
     const { score, skillAccuracy } = scoreDiagnostic(body.blocks);
-    console.log('Diagnostic score:', score, 'Skill accuracy:', skillAccuracy);
 
-    // Save diagnostic results
     const { data: diagnostic, error: insertError } = await supabase
       .from('diagnostics')
       .insert({
         user_id: user.id,
         section: body.section,
-        block: 1, // For now, treating as single combined result
+        block: 1,
         responses: body.blocks,
         score: score,
         completed_at: new Date().toISOString()
@@ -167,7 +163,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get missed questions for review queue seeding
     const missedQuestions: Array<{ questionId: string; skill: string | null }> = [];
     
     for (const block of body.blocks) {
@@ -185,8 +180,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Seed review queue with missed items (due now for immediate review)
-    // Only insert valid UUIDs (staging_items use bigint staging_id, not UUIDs)
     if (missedQuestions.length > 0) {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       
@@ -202,35 +195,23 @@ Deno.serve(async (req) => {
         }));
 
       if (validReviewItems.length > 0) {
-        const { error: reviewError } = await supabase
+        await supabase
           .from('review_queue')
           .insert(validReviewItems);
-
-        if (reviewError) {
-          console.error('Error seeding review queue:', reviewError);
-        } else {
-          console.log('Seeded review queue with', validReviewItems.length, 'missed questions');
-        }
-      } else {
-        console.log('No valid UUID question IDs found for review queue seeding');
       }
     }
 
-    // Calculate predicted section score (simplified)
     const predictedSectionScore = Math.round(score);
 
-    // Get top 5 weak skills
     const weakSkills = Object.entries(skillAccuracy)
       .map(([skill, data]) => ({
         skill,
         accuracy: data.total > 0 ? (data.correct / data.total) * 100 : 0,
         total: data.total
       }))
-      .filter(s => s.total >= 2) // Only include skills with at least 2 questions
+      .filter(s => s.total >= 2)
       .sort((a, b) => a.accuracy - b.accuracy)
       .slice(0, 5);
-
-    console.log('Top weak skills:', weakSkills);
 
     return new Response(
       JSON.stringify({

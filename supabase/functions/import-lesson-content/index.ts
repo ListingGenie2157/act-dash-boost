@@ -1,29 +1,23 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
-};
-
-// Checkpoint questions are stored as simple arrays in the database
-// Format: [question, optA, optB, optC, optD, answer_letter, explanation, difficulty]
+type SupabaseClientLike = ReturnType<typeof createClient>;
 
 // Normalize skill codes to handle formatting issues
 function normalizeSkillCode(code: string): string {
   return code
-    .replace(/[\u200B-\u200D\u2060\uFEFF]/g, '') // Remove zero-width characters
-    .replace(/\u00A0/g, '') // Remove non-breaking spaces
-    .replace(/[·•‧⋅・｡。．]/g, '.') // Replace dot-like chars with period
-    .replace(/\s*\.\s*/g, '.') // Collapse spaces around separators
+    .replace(/[\u200B-\u200D\u2060\uFEFF]/g, '')
+    .replace(/\u00A0/g, '')
+    .replace(/[·•‧⋅・｡。．]/g, '.')
+    .replace(/\s*\.\s*/g, '.')
     .trim()
     .toUpperCase();
 }
 
-// Resolve skill by code or id
-async function resolveSkill(supabaseAdmin: any, ref: string): Promise<{ id: string; name: string } | null> {
+async function resolveSkill(supabaseAdmin: SupabaseClientLike, ref: string): Promise<{ id: string; name: string } | null> {
   const normalized = normalizeSkillCode(ref);
   
-  // Try to find skill by id or code
   const { data: skill, error } = await supabaseAdmin
     .from('skills')
     .select('id, name, code')
@@ -63,9 +57,6 @@ interface LessonContentInput {
   difficulty?: 'easy' | 'medium' | 'hard';
 }
 
-// Parse checkpoint question from pipe-delimited string to array format
-// Input: "question || A) opt || B) opt || C) opt || D) opt || ANSWER: B || explanation || medium"
-// Output: [question, optA, optB, optC, optD, "B", explanation, difficulty]
 function parseCheckpointQuestion(raw: string, questionNumber: number): string[] | null {
   if (!raw || raw.trim() === '') return null;
   
@@ -96,46 +87,70 @@ function parseCheckpointQuestion(raw: string, questionNumber: number): string[] 
   const explanation = parts[6].replace(/^["']|["']$/g, '');
   const difficulty = parts[7] || 'medium';
   
-  // Return as simple array: [question, optA, optB, optC, optD, answer, explanation, difficulty]
   return [question, ...options, answerLetter, explanation, difficulty];
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Verify admin
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('No authorization header');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
+      return new Response(JSON.stringify({ success: false, error: 'Server misconfigured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ success: false, error: 'Missing authorization header' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
+    // Use authenticated (anon-key) client for auth verification
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
     if (authError || !user) {
-      throw new Error('Unauthorized');
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Check if user is admin
-    const { data: adminCheck, error: adminError } = await supabase.rpc('is_admin', {
-      user_email: user.email,
-    });
-
-    if (adminError || !adminCheck) {
-      throw new Error('Unauthorized: Admin access required');
+    const { data: isAdmin, error: adminError } = await supabaseAuth.rpc('is_admin');
+    if (adminError || !isAdmin) {
+      return new Response(JSON.stringify({ success: false, error: 'Admin access required' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
+
+    // Rate limiting: 5 imports per minute
+    const clientIp = getClientIp(req);
+    const isAllowed = await checkRateLimit(user.id, clientIp, 'import-lesson-content', 5, 60000);
+    if (!isAllowed) {
+      return createRateLimitResponse(corsHeaders);
+    }
+
+    // Service-role client for imports
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
     const lessons: LessonContentInput[] = Array.isArray(body) ? body : [body];
-
-    console.log(`📚 Processing ${lessons.length} lesson(s) for import`);
 
     const results = {
       success: [] as { skill_code: string }[],
@@ -146,13 +161,7 @@ Deno.serve(async (req) => {
       try {
         const originalSkillCode = lesson.skill_code;
         const normalizedSkillCode = normalizeSkillCode(originalSkillCode);
-        
-        // Log if normalization changed the code
-        if (originalSkillCode !== normalizedSkillCode) {
-          console.log(`Skill code normalized: "${originalSkillCode}" → "${normalizedSkillCode}"`);
-        }
 
-        // Resolve skill by id or code
         const skill = await resolveSkill(supabase, normalizedSkillCode);
 
         if (!skill) {
@@ -160,48 +169,46 @@ Deno.serve(async (req) => {
             skill_code: originalSkillCode,
             error: `Skill not found in database (original: "${originalSkillCode}", normalized: "${normalizedSkillCode}")`,
           });
-          console.error(`Skill resolution failed for: ${normalizedSkillCode}`);
           continue;
         }
 
-        // Parse objectives (array) and also prepare text version for DB
-        const objectives = lesson.objectives 
-          ? (typeof lesson.objectives === 'string' 
-              ? lesson.objectives.split('|').map((s: string) => s.trim()).filter(Boolean)
-              : lesson.objectives)
-          : [];
-        const objectivesText = Array.isArray(objectives) ? objectives.join('\n') : String((objectives as any) ?? '');
-        // Safely coerce estimated_minutes to a number
-        const estRaw = (lesson.estimated_minutes as any);
-        const estNum = Number(estRaw);
-        const estimatedMinutes = Number.isFinite(estNum) && estNum > 0 ? estNum : 15;
+        const objectivesArr: string[] = (() => {
+          const raw = lesson.objectives;
+          if (!raw) return [];
+          if (typeof raw === 'string') {
+            return raw.split('|').map((s) => s.trim()).filter(Boolean);
+          }
+          if (Array.isArray(raw)) {
+            return raw.map((s) => String(s).trim()).filter(Boolean);
+          }
+          return [];
+        })();
+        const objectivesText = objectivesArr.join('\n');
         
-        console.log(`📝 ${normalizedSkillCode}: skill_id=${skill.id}, estimated_minutes=${estimatedMinutes} (raw: ${estRaw})`);
+        const estRaw = lesson.estimated_minutes;
+        const estimatedMinutes =
+          typeof estRaw === 'number' && Number.isFinite(estRaw) && estRaw > 0 ? estRaw : 15;
 
-        // Parse checkpoint quiz questions into individual columns
         const quizData: Record<string, string[] | null> = {};
         for (let i = 1; i <= 10; i++) {
           const key = `checkpoint_quiz_q${i}` as keyof LessonContentInput;
           const rawQ = lesson[key];
           if (rawQ) {
             if (typeof rawQ === 'string') {
-              const parsed = parseCheckpointQuestion(rawQ, i);
-              quizData[`checkpoint_quiz_q${i}`] = parsed;
+              quizData[`checkpoint_quiz_q${i}`] = parseCheckpointQuestion(rawQ, i);
             } else if (Array.isArray(rawQ)) {
-              // Already an array, use as-is
-              quizData[`checkpoint_quiz_q${i}`] = rawQ;
+              quizData[`checkpoint_quiz_q${i}`] = rawQ as string[];
             }
           } else {
             quizData[`checkpoint_quiz_q${i}`] = null;
           }
         }
 
-        // Upsert lesson content using resolved skill_id and normalized skill_code
         const { error: upsertError } = await supabase
           .from('lesson_content')
           .upsert({
-            skill_code: normalizedSkillCode, // Human-readable code
-            skill_id: skill.id, // FK to skills.id (may be UUID or code)
+            skill_code: normalizedSkillCode,
+            skill_id: skill.id,
             overview_html: lesson.overview_html,
             objectives: objectivesText,
             concept_explanation: lesson.concept_explanation,
@@ -228,15 +235,12 @@ Deno.serve(async (req) => {
           });
 
         if (upsertError) {
-          console.error(`❌ FULL ERROR for ${lesson.skill_code}:`, JSON.stringify(upsertError, null, 2));
           results.errors.push({
             skill_code: lesson.skill_code,
             error: upsertError.message,
           });
         } else {
-          const quizCount = Object.values(quizData).filter(q => q !== null).length;
           results.success.push({ skill_code: normalizedSkillCode });
-          console.log(`✅ Imported: ${skill.name} (${quizCount} checkpoint questions)`);
         }
       } catch (err) {
         results.errors.push({
@@ -245,8 +249,6 @@ Deno.serve(async (req) => {
         });
       }
     }
-
-    console.log(`✅ Import complete: ${results.success.length} succeeded, ${results.errors.length} failed`);
 
     return new Response(
       JSON.stringify({
@@ -264,7 +266,7 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('❌ Import error:', error);
+    console.error('Import error:', error);
     return new Response(
       JSON.stringify({
         success: false,

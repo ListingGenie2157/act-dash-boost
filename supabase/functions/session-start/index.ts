@@ -2,12 +2,8 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 
 // Zod schema for input validation
 const SessionStartSchema = z.object({
@@ -17,16 +13,9 @@ const SessionStartSchema = z.object({
   coached: z.boolean().optional().default(false)
 });
 
-interface SessionStartRequest {
-  form_id: string;
-  section: string;
-  mode: 'simulation' | 'practice' | 'booster';
-  coached?: boolean;
-}
-
 serve(async (req) => {
-  console.log('[session-start] hit', { method: req.method, hasAuth: !!req.headers.get('authorization') });
-  // Handle CORS preflight requests
+  const corsHeaders = getCorsHeaders(req);
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -39,11 +28,17 @@ serve(async (req) => {
   }
 
   try {
-    // Initialize Supabase client with anon key and auth header
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const authHeader = req.headers.get('authorization');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return new Response(JSON.stringify({ error: 'Server misconfigured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    const authHeader = req.headers.get('authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
         status: 401,
@@ -55,15 +50,20 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } }
     });
 
-    // Get the user from the JWT token
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
-      console.warn('[session-start] unauthorized', { authError: authError?.message, hasUser: !!user });
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Rate limiting: 20 sessions per minute
+    const clientIp = getClientIp(req);
+    const isAllowed = await checkRateLimit(user.id, clientIp, 'session-start', 20, 60000);
+    if (!isAllowed) {
+      return createRateLimitResponse(corsHeaders);
     }
 
     const body = await req.json();
@@ -92,20 +92,12 @@ serve(async (req) => {
       });
     }
 
-    // Validate section
-    if (!['EN', 'MATH', 'RD', 'SCI'].includes(section)) {
-      return new Response(JSON.stringify({ error: 'Invalid section' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     // Set time limits based on section (in seconds) - ACT Enhanced format (2024+)
     const timeLimits = {
-      'EN': 35 * 60,    // 35 minutes (was 45)
-      'MATH': 50 * 60,  // 50 minutes (was 60)
-      'RD': 40 * 60,    // 40 minutes (was 35)
-      'SCI': 40 * 60,   // 40 minutes (was 35)
+      'EN': 35 * 60,
+      'MATH': 50 * 60,
+      'RD': 40 * 60,
+      'SCI': 40 * 60,
     };
 
     const time_limit_sec = timeLimits[section as keyof typeof timeLimits];

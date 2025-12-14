@@ -1,11 +1,8 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 
 interface ImportReport {
   totalRows: number;
@@ -38,31 +35,6 @@ interface StagingRow {
   image_url?: string;
   image_caption?: string;
   image_position?: string;
-}
-
-function parseTSV(tsvContent: string): StagingRow[] {
-  const lines = tsvContent.trim().split('\n');
-  if (lines.length === 0) return [];
-  
-  const headers = lines[0].split('\t').map(h => h.trim().replace(/"/g, ''));
-  const rows: StagingRow[] = [];
-  
-  for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split('\t').map(v => v.trim().replace(/"/g, ''));
-    if (values.length === headers.length) {
-      const row: Record<string, string> = {};
-      headers.forEach((header, index) => {
-        row[header] = values[index];
-      });
-      
-      // Convert numeric fields
-      (row as any).ord = parseInt(row.ord as string) || 0;
-      
-      rows.push(row as unknown as StagingRow);
-    }
-  }
-  
-  return rows;
 }
 
 function validateStagingRow(row: StagingRow): string[] {
@@ -112,7 +84,8 @@ function getSubjectFromSection(section: string): string {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  const corsHeaders = getCorsHeaders(req);
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -125,17 +98,17 @@ serve(async (req) => {
   }
 
   try {
-    // Initialize Supabase client with proper env validation
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing required environment variables: SUPABASE_URL or SUPABASE_ANON_KEY');
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
+      return new Response(JSON.stringify({ error: 'Server misconfigured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Get the authorization header
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -144,9 +117,12 @@ serve(async (req) => {
       });
     }
 
-    // Verify the JWT token
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    // Use anon key client for auth verification
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
     
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -155,16 +131,25 @@ serve(async (req) => {
       });
     }
 
-    // Check if user is admin
-    const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin');
+    // Check if user is admin using authenticated client
+    const { data: isAdmin, error: adminError } = await supabaseAuth.rpc('is_admin');
     
     if (adminError || !isAdmin) {
-      console.warn('Non-admin user attempted to import questions:', user.id);
       return new Response(JSON.stringify({ error: 'Admin access required' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Rate limiting: 5 imports per minute
+    const clientIp = getClientIp(req);
+    const isAllowed = await checkRateLimit(user.id, clientIp, 'import-questions', 5, 60000);
+    if (!isAllowed) {
+      return createRateLimitResponse(corsHeaders);
+    }
+
+    // Use service role client for privileged writes
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
     const { dryRun = true, useStaging = false } = body;
@@ -172,7 +157,6 @@ serve(async (req) => {
     let rows: StagingRow[] = [];
 
     if (useStaging) {
-      // Read from staging_items table
       const { data: stagingData, error: stagingError } = await supabase
         .from('staging_items')
         .select('*')
@@ -206,7 +190,7 @@ serve(async (req) => {
         image_position: item.image_position || 'above_question'
       })) || [];
     } else {
-      return new Response(JSON.stringify({ error: 'TSV file upload not implemented in this function. Use staging table.' }), {
+      return new Response(JSON.stringify({ error: 'TSV file upload not implemented. Use staging table.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -222,7 +206,6 @@ serve(async (req) => {
 
     const validRows: StagingRow[] = [];
 
-    // Validate each row
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const rowErrors = validateStagingRow(row);
@@ -242,7 +225,6 @@ serve(async (req) => {
       let insertedPassages = 0;
       let insertedFormQuestions = 0;
 
-      // Group by unique passages
       const passages = new Map();
       for (const row of validRows) {
         if (row.passage_id && row.passage_text) {
@@ -257,22 +239,19 @@ serve(async (req) => {
         }
       }
 
-      // Insert passages
       if (passages.size > 0) {
         const { error: passageError } = await supabase
           .from('passages')
           .upsert(Array.from(passages.values()), { onConflict: 'id' });
 
         if (passageError) {
-          console.error('Passage insert error:', passageError);
           report.errors.push(`Failed to insert passages: ${passageError.message}`);
         } else {
           insertedPassages = passages.size;
         }
       }
 
-      // Create skills on the fly
-      const skillsToCreate = new Set();
+      const skillsToCreate = new Set<string>();
       for (const row of validRows) {
         skillsToCreate.add(row.skill_code);
       }
@@ -295,7 +274,6 @@ serve(async (req) => {
         }
       }
 
-      // Get skill IDs
       const { data: skills } = await supabase
         .from('skills')
         .select('id, name')
@@ -303,7 +281,6 @@ serve(async (req) => {
 
       const skillMap = new Map(skills?.map(s => [s.name, s.id]) || []);
 
-      // Insert questions and form_questions
       for (const row of validRows) {
         const skillId = skillMap.get(row.skill_code);
         if (!skillId) {
@@ -311,7 +288,6 @@ serve(async (req) => {
           continue;
         }
 
-        // Insert question
         const { data: question, error: questionError } = await supabase
           .from('questions')
           .insert({
@@ -339,7 +315,6 @@ serve(async (req) => {
 
         insertedQuestions++;
 
-        // Insert form_question
         const { error: formQuestionError } = await supabase
           .from('form_questions')
           .insert({
