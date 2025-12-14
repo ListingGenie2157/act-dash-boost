@@ -713,6 +713,7 @@ export type Database = {
       responses: {
         Row: {
           correct: boolean
+          miss_reason: string | null
           question_id: string
           selected: string
           session_id: string
@@ -721,6 +722,7 @@ export type Database = {
         }
         Insert: {
           correct: boolean
+          miss_reason?: string | null
           question_id: string
           selected: string
           session_id: string
@@ -729,6 +731,7 @@ export type Database = {
         }
         Update: {
           correct?: boolean
+          miss_reason?: string | null
           question_id?: string
           selected?: string
           session_id?: string
