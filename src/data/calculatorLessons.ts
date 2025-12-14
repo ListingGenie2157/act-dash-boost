@@ -1,4 +1,4 @@
-export type CalculatorModel = 'TI-84' | 'TI-Nspire' | 'Casio';
+export type CalculatorModel = 'TI-84' | 'TI-Nspire' | 'Casio' | 'Desmos';
 
 export interface InteractiveStep {
   instruction: string;
@@ -651,6 +651,197 @@ export const calculatorLessons: CalculatorLesson[] = [
       expectedManualTime: 30,
       expectedCalcTime: 8
     }
+  },
+  // Desmos-specific lessons for Digital ACT
+  {
+    id: 'desmos-graphing-basics',
+    title: 'Desmos Graphing: Plot & Solve Visually',
+    model: ['Desmos'],
+    description: 'Master the Desmos graphing interface to solve equations visually on the Digital ACT',
+    timeSaved: '~90 seconds per problem',
+    difficulty: 'beginner',
+    whenToUse: 'Any problem involving graphing, finding intersections, or visualizing functions',
+    steps: [
+      'Click in the expression box on the left panel',
+      'Type your equation (e.g., y = 2x + 3)',
+      'Add a second equation in the next expression box',
+      'The graph updates automatically as you type',
+      'Click on intersection points to see exact coordinates',
+      'Use the wrench icon to adjust window settings if needed'
+    ],
+    practiceProblems: [
+      {
+        problem: 'Find where y = 2x + 1 and y = -x + 7 intersect',
+        hint: 'Enter both equations, then click the intersection point'
+      },
+      {
+        problem: 'Graph y = x² - 4 and find the x-intercepts',
+        hint: 'Click on the points where the parabola crosses the x-axis'
+      }
+    ]
+  },
+  {
+    id: 'desmos-systems-equations',
+    title: 'Desmos Systems: Solve by Graphing',
+    model: ['Desmos'],
+    description: 'Solve systems of equations instantly by graphing both lines and finding intersections',
+    timeSaved: '~2 minutes per problem',
+    difficulty: 'beginner',
+    whenToUse: 'Systems of 2 linear equations, break-even problems, finding where functions meet',
+    steps: [
+      'Enter the first equation in expression line 1',
+      'Enter the second equation in expression line 2',
+      'Look for the intersection point on the graph',
+      'Click directly on the intersection point',
+      'Desmos displays the exact (x, y) coordinates',
+      'For non-integer answers, Desmos gives decimals you can convert'
+    ],
+    practiceProblems: [
+      {
+        problem: 'Solve: 3x + 2y = 12 and x - y = 1',
+        hint: 'Rewrite in y= form or enter as-is—Desmos handles both!'
+      }
+    ],
+    challengeMode: {
+      manualProblem: 'Solve by substitution: 3x + 2y = 12, x - y = 1',
+      calculatorProblem: 'Graph both equations in Desmos and click the intersection',
+      expectedManualTime: 150,
+      expectedCalcTime: 30
+    }
+  },
+  {
+    id: 'desmos-quadratic-roots',
+    title: 'Desmos Quadratics: Find Roots Instantly',
+    model: ['Desmos'],
+    description: 'Graph any quadratic and click to find x-intercepts without factoring or using the formula',
+    timeSaved: '~1 minute per problem',
+    difficulty: 'beginner',
+    whenToUse: 'Finding roots/zeros, solving quadratic equations, factoring checks',
+    steps: [
+      'Type your quadratic in the expression box (e.g., y = x² - 5x + 6)',
+      'The parabola appears automatically',
+      'Click on each point where the curve crosses the x-axis',
+      'Desmos shows the exact x-value at each intercept',
+      'These x-values are your solutions to the equation = 0'
+    ],
+    practiceProblems: [
+      {
+        problem: 'Find the roots of x² - 7x + 12 = 0',
+        hint: 'Graph y = x² - 7x + 12 and click the x-intercepts'
+      },
+      {
+        problem: 'Solve 2x² + 3x - 5 = 0',
+        hint: 'Graph it and read where y = 0'
+      }
+    ],
+    challengeMode: {
+      manualProblem: 'Factor and solve x² - 7x + 12 = 0',
+      calculatorProblem: 'Graph in Desmos and click the x-intercepts',
+      expectedManualTime: 90,
+      expectedCalcTime: 20
+    }
+  },
+  {
+    id: 'desmos-regression',
+    title: 'Desmos Regression: Best-Fit Lines & Curves',
+    model: ['Desmos'],
+    description: 'Enter data points and let Desmos find the line or curve of best fit',
+    timeSaved: '~2 minutes per problem',
+    difficulty: 'intermediate',
+    whenToUse: 'Data analysis, trend predictions, finding equations from tables',
+    steps: [
+      'Create a table by typing "table" or clicking the + and selecting table',
+      'Enter your x-values in the first column, y-values in the second',
+      'In a new expression line, type: y₁ ~ mx₁ + b (for linear)',
+      'Desmos shows the best-fit equation with m and b values',
+      'For quadratic fit, use: y₁ ~ ax₁² + bx₁ + c',
+      'Use the equation for predictions'
+    ],
+    practiceProblems: [
+      {
+        problem: 'Find the line of best fit for: (1,3), (2,5), (3,8), (4,10)',
+        hint: 'Enter in table, then type y₁ ~ mx₁ + b'
+      }
+    ],
+    challengeMode: {
+      manualProblem: 'Calculate the line of best fit for (1,3), (2,5), (3,8), (4,10) by hand',
+      calculatorProblem: 'Use Desmos regression to find the best-fit line',
+      expectedManualTime: 300,
+      expectedCalcTime: 45
+    }
+  },
+  {
+    id: 'desmos-sliders',
+    title: 'Desmos Sliders: Explore Parameters',
+    model: ['Desmos'],
+    description: 'Use sliders to understand how changing values affects graphs',
+    timeSaved: '~1 minute per problem',
+    difficulty: 'intermediate',
+    whenToUse: 'Understanding transformations, testing values, "what if" scenarios',
+    steps: [
+      'Type an equation with a letter parameter (e.g., y = ax² + b)',
+      'Desmos auto-creates sliders for a and b',
+      'Drag sliders to see the graph change in real-time',
+      'Use this to match a given graph or understand transformations',
+      'Click the play button to animate the slider'
+    ],
+    practiceProblems: [
+      {
+        problem: 'What value of a makes y = a(x-2)² pass through (4, 8)?',
+        hint: 'Add a slider, adjust until the parabola hits (4, 8)'
+      }
+    ]
+  },
+  {
+    id: 'desmos-inequalities',
+    title: 'Desmos Inequalities: Shade Solution Regions',
+    model: ['Desmos'],
+    description: 'Graph inequalities and see shaded regions to identify solutions',
+    timeSaved: '~45 seconds per problem',
+    difficulty: 'beginner',
+    whenToUse: 'Graphing inequalities, finding feasible regions, constraint problems',
+    steps: [
+      'Type your inequality (e.g., y > 2x + 1)',
+      'Desmos automatically shades the solution region',
+      'Add more inequalities to find overlapping regions',
+      'Check if a point is in the solution by seeing if it\'s in the shaded area',
+      'Use ≤ and ≥ by typing <= or >='
+    ],
+    practiceProblems: [
+      {
+        problem: 'Graph y < x + 3 and y > -2x + 1. Where do they overlap?',
+        hint: 'Enter both inequalities—the overlap is the solution region'
+      }
+    ]
+  },
+  {
+    id: 'desmos-statistics',
+    title: 'Desmos Stats: Mean, Median & More',
+    model: ['Desmos'],
+    description: 'Calculate statistics directly in Desmos using built-in functions',
+    timeSaved: '~1 minute per problem',
+    difficulty: 'beginner',
+    whenToUse: 'Mean, median, standard deviation, quartiles from data sets',
+    steps: [
+      'Create a list: L = [85, 90, 78, 92, 88]',
+      'For mean: type mean(L)',
+      'For median: type median(L)',
+      'For standard deviation: type stdev(L)',
+      'For min/max: type min(L) or max(L)',
+      'Results appear instantly'
+    ],
+    practiceProblems: [
+      {
+        problem: 'Find the mean and median of: 72, 85, 91, 78, 88, 95',
+        hint: 'Create list L = [72, 85, 91, 78, 88, 95], then use mean(L) and median(L)'
+      }
+    ],
+    challengeMode: {
+      manualProblem: 'Calculate mean and median of: 72, 85, 91, 78, 88, 95',
+      calculatorProblem: 'Use Desmos list functions',
+      expectedManualTime: 120,
+      expectedCalcTime: 20
+    }
   }
 ];
 
@@ -675,5 +866,12 @@ export const calculatorModels = {
     description: 'Budget-friendly powerhouse',
     pros: ['Natural display', 'Matrix operations', 'Under $30'],
     price: '~$25'
+  },
+  'Desmos': {
+    name: 'Desmos (Digital ACT)',
+    image: '💻',
+    description: 'Built-in calculator for online ACT',
+    pros: ['Free & built-in', 'Powerful graphing', 'No device to bring'],
+    price: 'Free'
   }
 };
