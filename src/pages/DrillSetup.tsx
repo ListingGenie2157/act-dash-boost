@@ -280,19 +280,20 @@ export default function DrillSetup() {
             <CardDescription>Pick a rhythm that works for you</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Run style selection">
               {RUN_STYLES.map((style) => (
                 <button
                   key={style.id}
                   onClick={() => handleRunStyleChange(style.id)}
-                  className={`p-4 border rounded-lg text-left transition-all ${
+                  aria-pressed={runStyle.id === style.id}
+                  className={`p-4 border rounded-lg text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                     runStyle.id === style.id
                       ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
                       : 'hover:bg-accent'
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-2xl">{style.icon}</span>
+                    <span className="text-2xl" aria-hidden="true">{style.icon}</span>
                     <span className="font-semibold">{style.label}</span>
                   </div>
                   <p className="text-xs text-muted-foreground">{style.shortDescription}</p>
