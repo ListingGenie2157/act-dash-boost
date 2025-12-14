@@ -63,7 +63,8 @@ export default function ReviewSpaced() {
         `)
         .eq('user_id', user.id)
         .lte('due_at', today)
-        .order('due_at', { ascending: true });
+        .order('due_at', { ascending: true })
+        .limit(50);  // Pagination: limit to 50 cards per session
 
       if (error) throw error;
 

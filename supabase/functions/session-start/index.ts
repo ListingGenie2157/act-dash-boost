@@ -2,12 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 // Zod schema for input validation
 const SessionStartSchema = z.object({
@@ -25,6 +20,8 @@ interface SessionStartRequest {
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+  
   console.log('[session-start] hit', { method: req.method, hasAuth: !!req.headers.get('authorization') });
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {

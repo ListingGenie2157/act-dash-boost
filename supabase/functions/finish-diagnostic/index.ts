@@ -1,10 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
-}
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 // Zod schemas for input validation
 const QuestionSchema = z.object({
@@ -87,6 +83,7 @@ function scoreDiagnostic(blocks: DiagnosticBlock[]): { score: number; skillAccur
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
   console.log('🚀 finish-diagnostic function called');
 
   // Handle CORS preflight requests

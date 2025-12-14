@@ -3,11 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { updateReviewQueueOnAnswer, type ReviewMode } from '../_shared/review.ts';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 // Zod schemas for input validation
 const AnswerSchema = z.object({
@@ -37,6 +33,8 @@ interface CompleteTaskRequest {
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -209,25 +207,42 @@ serve(async (req) => {
       }
     }
 
-    // Add to error bank for incorrect answers
+    // Add to error bank for incorrect answers using atomic increment
     if (answers) {
       const incorrectAnswers = answers.filter(a => !a.correct);
       if (incorrectAnswers.length > 0) {
-        for (const incorrectAnswer of incorrectAnswers) {
-          try {
-            await supabase
-              .from('error_bank')
-              .upsert({
-                user_id: user.id,
-                question_id: incorrectAnswer.question_id,
-                miss_count: 1,
-                last_missed_at: new Date().toISOString()
-              }, {
-                onConflict: 'user_id,question_id',
-                ignoreDuplicates: false
+        // Use service role client for direct SQL to handle atomic increment
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+        
+        if (supabaseServiceKey) {
+          const adminClient = createClient(supabaseUrl, supabaseServiceKey);
+          
+          for (const incorrectAnswer of incorrectAnswers) {
+            try {
+              // Use raw SQL for atomic increment via RPC or direct insert with ON CONFLICT
+              const { error } = await adminClient.rpc('increment_error_bank', {
+                p_user_id: user.id,
+                p_question_id: incorrectAnswer.question_id
               });
-          } catch (error) {
-            console.error(`Error adding to error bank for question ${incorrectAnswer.question_id}:`, error);
+              
+              // Fallback to regular upsert if RPC doesn't exist
+              if (error?.code === 'PGRST202') {
+                await supabase
+                  .from('error_bank')
+                  .upsert({
+                    user_id: user.id,
+                    question_id: incorrectAnswer.question_id,
+                    miss_count: 1,
+                    last_missed_at: new Date().toISOString()
+                  }, {
+                    onConflict: 'user_id,question_id',
+                    ignoreDuplicates: false
+                  });
+              }
+            } catch (error) {
+              console.error(`Error adding to error bank for question ${incorrectAnswer.question_id}:`, error);
+            }
           }
         }
       }
