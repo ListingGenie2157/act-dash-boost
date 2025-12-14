@@ -30,6 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useTestCompanion } from '@/hooks/useTestCompanion';
 import { TestCompanion } from '@/components/TestCompanion';
 import { Loader2, Home, Flag } from 'lucide-react';
+import { BailBankButton } from '@/components/BailBankButton';
 
 interface Question {
   id: string;
@@ -479,6 +480,23 @@ export default function Simulation() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
+                {/* Bail + Bank Button - Coached Mode Only */}
+                {isCoachMode && (
+                  <BailBankButton
+                    questionId={currentQuestion.id}
+                    currentAnswer={answers[currentQuestion.id]}
+                    choices={['A', 'B', 'C', 'D']}
+                    isLastQuestion={currentQuestionIndex === sessionData.questions.length - 1}
+                    onAutoGuess={handleAnswerSelect}
+                    onFlag={(qId) => {
+                      if (!flaggedQuestions.has(qId)) {
+                        handleToggleFlag(qId);
+                      }
+                    }}
+                    onNext={handleNext}
+                    onSubmit={finishSession}
+                  />
+                )}
                 <div className="text-sm text-muted-foreground">
                   Question {currentQuestionIndex + 1} of {sessionData.questions.length}
                 </div>
