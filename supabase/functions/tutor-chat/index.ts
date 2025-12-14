@@ -1,9 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 
 interface TutorChatRequest {
   subject: string;
@@ -17,7 +14,7 @@ interface TutorChatRequest {
     user_work?: string;
   };
   messages: Array<{
-    role: 'user' | 'assistant' | 'system';
+    role: 'user' | 'assistant';
     content: string;
     timestamp?: string;
   }>;
@@ -110,18 +107,63 @@ MODE: TEST
 - Always remind: "I can't give you the answer during a test, but I can teach you the concept with a different example."`,
 };
 
+// Input validation helper
+function isValidString(value: unknown, maxLen: number): value is string {
+  return typeof value === 'string' && value.trim().length > 0 && value.length <= maxLen;
+}
+
+function validateRequest(body: unknown): { valid: true; data: TutorChatRequest } | { valid: false; error: string } {
+  if (!body || typeof body !== 'object') {
+    return { valid: false, error: 'Invalid request body' };
+  }
+
+  const b = body as Record<string, unknown>;
+
+  if (!isValidString(b.subject, 50)) return { valid: false, error: 'Invalid subject' };
+  if (!isValidString(b.topic, 200)) return { valid: false, error: 'Invalid topic' };
+  if (!['practice', 'quiz', 'test'].includes(b.mode as string)) return { valid: false, error: 'Invalid mode' };
+
+  if (!b.problem || typeof b.problem !== 'object') return { valid: false, error: 'Invalid problem' };
+  const problem = b.problem as Record<string, unknown>;
+  if (!isValidString(problem.text, 10000)) return { valid: false, error: 'Invalid problem text' };
+
+  if (!Array.isArray(b.messages)) return { valid: false, error: 'Invalid messages' };
+  if (b.messages.length < 1 || b.messages.length > 20) return { valid: false, error: 'Invalid messages length' };
+
+  for (const msg of b.messages) {
+    if (!msg || typeof msg !== 'object') return { valid: false, error: 'Invalid message' };
+    const m = msg as Record<string, unknown>;
+    // Only allow 'user' and 'assistant' roles from client
+    if (m.role !== 'user' && m.role !== 'assistant') {
+      return { valid: false, error: 'Invalid message role: only user and assistant allowed' };
+    }
+    if (!isValidString(m.content, 5000)) return { valid: false, error: 'Invalid message content' };
+  }
+
+  return { valid: true, data: b as unknown as TutorChatRequest };
+}
+
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    
+    if (!supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
+      return new Response(
+        JSON.stringify({ error: 'Server misconfigured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     // Authenticate user from JWT token
-    const authHeader = req.headers.get('Authorization');
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: 'Missing authorization header' }),
@@ -144,37 +186,37 @@ Deno.serve(async (req) => {
 
     const userId = user.id;
     
+    // Rate limiting: 20 requests per minute per user
+    const clientIp = getClientIp(req);
+    const isAllowed = await checkRateLimit(userId, clientIp, 'tutor-chat', 20, 60000);
+    if (!isAllowed) {
+      return createRateLimitResponse(corsHeaders);
+    }
+    
     // Create service role client for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse body with error handling
-    let body: TutorChatRequest;
+    let rawBody: unknown;
     try {
-      body = await req.json();
-    } catch (parseError) {
-      console.error('Failed to parse request body:', parseError);
+      rawBody = await req.json();
+    } catch {
       return new Response(
         JSON.stringify({ error: 'Invalid request: body must be valid JSON' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate required fields
-    if (!body.subject || !body.topic || !body.mode || !body.messages) {
+    // Validate request
+    const validation = validateRequest(rawBody);
+    if (!validation.valid) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
+        JSON.stringify({ error: validation.error }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Security: Reject any messages with 'system' role from client
-    if (body.messages.some(msg => msg.role === 'system')) {
-      console.warn('Client attempted to send system role message, user:', userId);
-      return new Response(
-        JSON.stringify({ error: 'Invalid message role: system role not allowed from client' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    
+    const body = validation.data;
 
     // Build system prompt
     const subjectPrompt = SUBJECT_PROMPTS[body.subject] || SUBJECT_PROMPTS['MATH'];
@@ -197,12 +239,11 @@ ${body.problem.choices ? `- Choices: ${body.problem.choices.map((c, i) => `${Str
 ${body.problem.user_answer ? `- Student's Answer: ${body.problem.user_answer}` : ''}
 ${body.problem.user_work ? `- Student's Work: ${body.problem.user_work}` : ''}`;
 
-    // Prepare messages for AI (system role already rejected above)
+    // Prepare messages for AI
     const aiMessages = [
       { role: 'system', content: systemPrompt },
       { role: 'assistant', content: contextMessage },
       ...body.messages
-        .filter(msg => msg.role !== 'system') // Extra safety filter
         .slice(-10)
         .map(msg => ({
           role: msg.role,
@@ -230,25 +271,14 @@ ${body.problem.user_work ? `- Student's Work: ${body.problem.user_work}` : ''}`;
     });
 
     if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('AI API Error:', aiResponse.status, errorText);
-      
-      // Try to parse error details
-      let errorDetail = errorText;
-      try {
-        const parsed = JSON.parse(errorText);
-        errorDetail = parsed.message || parsed.error || errorText;
-      } catch {
-        // Keep raw text if not JSON
-      }
-      
-      throw new Error(`AI API error ${aiResponse.status}: ${errorDetail}`);
+      // Don't log raw response body (may contain user content)
+      throw new Error(`AI API error ${aiResponse.status}`);
     }
 
     const aiData = await aiResponse.json();
     const assistantMessage = aiData.choices?.[0]?.message?.content || 'Sorry, I could not generate a response.';
 
-    // Log to database (non-blocking) - use authenticated userId
+    // Log to database (non-blocking)
     let sessionId = body.session_id;
     try {
       if (!sessionId) {
@@ -273,7 +303,7 @@ ${body.problem.user_work ? `- Student's Work: ${body.problem.user_work}` : ''}`;
           .from('tutor_sessions')
           .update({ last_used_at: new Date().toISOString() })
           .eq('id', sessionId)
-          .eq('user_id', userId); // Ensure user owns the session
+          .eq('user_id', userId);
       }
 
       // Log messages
@@ -292,8 +322,8 @@ ${body.problem.user_work ? `- Student's Work: ${body.problem.user_work}` : ''}`;
           },
         ]);
       }
-    } catch (loggingError) {
-      console.error('Logging error (non-fatal):', loggingError);
+    } catch {
+      // Non-fatal logging error
     }
 
     return new Response(
@@ -305,24 +335,23 @@ ${body.problem.user_work ? `- Student's Work: ${body.problem.user_work}` : ''}`;
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
-  } catch (error: any) {
-    console.error('Error in tutor-chat:', error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
 
     let statusCode = 500;
     let errorMessage = 'Internal server error';
 
-    if (error.message?.includes('LOVABLE_API_KEY not configured')) {
+    if (message.includes('LOVABLE_API_KEY not configured')) {
       statusCode = 500;
       errorMessage = 'Tutor is not configured on the server (missing AI key). Please contact support.';
-    } else if (error.message?.includes('429')) {
+    } else if (message.includes('429')) {
       statusCode = 429;
       errorMessage = 'Rate limit exceeded. Please try again later.';
-    } else if (error.message?.includes('402')) {
+    } else if (message.includes('402')) {
       statusCode = 402;
       errorMessage = 'AI credits exhausted. Please contact support.';
-    } else if (error.message && error.message.length < 200) {
-      // If error message is reasonably short, include it for better debugging
-      errorMessage = error.message;
+    } else if (message.length > 0 && message.length < 200) {
+      errorMessage = message;
     }
 
     return new Response(

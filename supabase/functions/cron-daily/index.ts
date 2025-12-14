@@ -127,32 +127,13 @@ serve(async (req) => {
         try {
           console.log(`Generating plan for user ${user.id}...`);
           
-          // Create a service role client that impersonates the user
-          // This is done by creating a JWT for the user
-          const { data: userData, error: userError } = await supabase.auth.admin.getUserById(user.id);
-          
-          if (userError || !userData?.user) {
-            console.error(`Error fetching user ${user.id}:`, userError);
-            throw new Error(`Could not find user: ${user.id}`);
-          }
-
-          // Generate a new session for this user
-          const { data: sessionData, error: sessionError } = await supabase.auth.admin.createUser({
-            email: userData.user.email || `temp-${user.id}@placeholder.com`,
-            email_confirm: true,
-            user_metadata: userData.user.user_metadata,
-          });
-
-          // Instead of creating new users, just use the service role to call the function
-          // with a user-scoped client
+          // Call generate-study-plan with service role key and userId parameter
           const response = await fetch(`${supabaseUrl}/functions/v1/generate-study-plan`, {
             method: 'POST',
             headers: {
-              // Use service role key with user impersonation
               'Authorization': `Bearer ${supabaseKey}`,
               'Content-Type': 'application/json',
               'apikey': supabaseKey,
-              'x-user-id': user.id, // Custom header to identify user
             },
             body: JSON.stringify({ force: true, userId: user.id })
           });
