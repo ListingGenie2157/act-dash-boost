@@ -54,12 +54,16 @@ export default function CalculatorLab() {
       {/* Header */}
       <div className="mb-8 text-center">
         <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-full mb-4">
-          <Calculator className="w-6 h-6" />
-          <h1 className="text-2xl font-bold">Calculator Lab</h1>
+          <Zap className="w-6 h-6" />
+          <h1 className="text-2xl font-bold">Calculator Hacks</h1>
         </div>
         <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-          Master calculator shortcuts to save <span className="text-primary font-bold">10-15 minutes</span> on test day. 
-          Practice interactively and track your progress!
+          Legal shortcuts that skip the busy work. Why factor when you can graph? 
+          Why solve when you can read the answer?
+        </p>
+        <p className="text-sm text-muted-foreground/70 mt-3 max-w-2xl mx-auto">
+          These aren't tricks—they're efficient techniques the ACT expects you to use. 
+          Every shortcut here is 100% allowed and tests calculator fluency, a real skill.
         </p>
       </div>
 
@@ -69,10 +73,10 @@ export default function CalculatorLab() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Lessons Completed</p>
+                <p className="text-sm text-muted-foreground">Hacks Mastered</p>
                 <p className="text-3xl font-bold">{lessonsCompleted}/{calculatorLessons.length}</p>
               </div>
-              <Calculator className="w-12 h-12 text-blue-500 opacity-50" />
+              <Zap className="w-12 h-12 text-blue-500 opacity-50" />
             </div>
           </CardContent>
         </Card>
@@ -81,7 +85,7 @@ export default function CalculatorLab() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Time Saved</p>
+                <p className="text-sm text-muted-foreground">Time Saved Per Test</p>
                 <p className="text-3xl font-bold">{(totalTimeSaved / 60000).toFixed(1)}m</p>
               </div>
               <Clock className="w-12 h-12 text-green-500 opacity-50" />
@@ -93,7 +97,7 @@ export default function CalculatorLab() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Available Lessons</p>
+                <p className="text-sm text-muted-foreground">Hacks Available</p>
                 <p className="text-3xl font-bold">{filteredLessons.length}</p>
               </div>
               <TrendingUp className="w-12 h-12 text-purple-500 opacity-50" />
@@ -160,11 +164,20 @@ export default function CalculatorLab() {
         </div>
       </div>
 
+      {/* Why Do Math Section Header */}
+      <div className="mb-6 p-4 bg-primary/5 rounded-lg border border-primary/10">
+        <h3 className="font-semibold text-lg mb-1">🧠 Why Do Math When Your Calculator Can?</h3>
+        <p className="text-sm text-muted-foreground">
+          These aren't tutorials on "how to use buttons." These are legal shortcuts that let you skip algebra, 
+          avoid arithmetic, and get answers without doing the work. Every technique is <strong>100% allowed on the ACT</strong>.
+        </p>
+      </div>
+
       {/* Lessons Grid */}
       <div className="space-y-4">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <PlayCircle className="w-5 h-5" />
-          Speed Skills ({filteredLessons.length} techniques)
+          <Zap className="w-5 h-5" />
+          Calculator Hacks ({filteredLessons.length} shortcuts)
         </h2>
         {filteredLessons.map((lesson) => (
           <Card 
@@ -336,13 +349,14 @@ export default function CalculatorLab() {
       {/* Footer CTA */}
       <Card className="mt-8 bg-gradient-to-r from-primary/10 to-purple-500/10 border-primary/20">
         <CardContent className="p-8 text-center">
-          <h2 className="text-2xl font-bold mb-2">Master These, Gain Minutes</h2>
+          <h2 className="text-2xl font-bold mb-2">Work Smarter, Not Harder</h2>
           <p className="text-muted-foreground mb-6">
-            The ACT is a race against time. These shortcuts can be the difference between finishing and guessing.
+            These aren't just shortcuts—they're efficient techniques that let you skip the busy work and focus on getting the right answer.
+            Every hack here is 100% allowed and builds real calculator fluency.
           </p>
           <Button size="lg" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <Zap className="w-4 h-4 mr-2" />
-            Start Practicing Now
+            Start Learning Hacks
           </Button>
         </CardContent>
       </Card>
