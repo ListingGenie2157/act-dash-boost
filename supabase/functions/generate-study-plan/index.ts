@@ -754,7 +754,7 @@ serve(async (req) => {
         const specialTasks = getTestWeekTasks(dayDaysLeft, userId, dateStr);
         if (specialTasks.length > 0) {
           allPlans.push({ the_date: dateStr, tasks: specialTasks });
-          specialTasks.forEach((task: any) => {
+          specialTasks.forEach((task: PlanTaskJson) => {
             const estimatedSeconds =
               typeof task.estimated_mins === "number" && task.estimated_mins > 0
                 ? Math.round(task.estimated_mins * 60)

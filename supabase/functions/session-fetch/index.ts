@@ -45,6 +45,26 @@ function normalizeToCode(section: string): string {
   return section;
 }
 
+type JsonRecord = Record<string, unknown>;
+
+interface PassagePayload {
+  title: string;
+  passage_text: string;
+  marked_text: null;
+  passage_format: null;
+  passage_type: string | null;
+  has_charts: boolean;
+  chart_images: unknown | null;
+}
+
+function asString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function asNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 serve(async (req) => {
   console.log('[session-fetch] hit', { method: req.method, hasAuth: !!req.headers.get('authorization') });
   
@@ -123,8 +143,8 @@ serve(async (req) => {
       sectionCode,
     });
     
-    let questionsData: any[];
-    let questionsError: any;
+    let questionsData: JsonRecord[] = [];
+    let questionsError: unknown = null;
 
     if (useStaging) {
       const { data, error } = await supabase
@@ -133,7 +153,7 @@ serve(async (req) => {
         .eq('form_id', session.form_id)
         .in('section', sectionVariants)
         .order('ord');
-      questionsData = data || [];
+      questionsData = (data as JsonRecord[]) || [];
       questionsError = error;
       
       console.log(`[session-fetch] staging_items query: ${questionsData.length} questions`);
@@ -144,7 +164,7 @@ serve(async (req) => {
         .eq('form_id', session.form_id)
         .in('section', sectionVariants)
         .order('ord');
-      questionsData = data || [];
+      questionsData = (data as JsonRecord[]) || [];
       questionsError = error;
       
       console.log(`[session-fetch] v_form_section query: ${questionsData.length} questions`);
@@ -159,27 +179,35 @@ serve(async (req) => {
     }
 
     // Format questions
-    const questions = questionsData.map(q => ({
-      id: q.question_id ?? q.id ?? q.staging_id?.toString() ?? `${session.form_id}_${session.section}_${q.ord}`,
-      ord: q.ord,
-      question: q.question ?? q.stem,
-      choice_a: q.choice_a,
-      choice_b: q.choice_b,
-      choice_c: q.choice_c,
-      choice_d: q.choice_d,
-      choice_e: q.choice_e ?? null,
-      passage_id: q.passage_id ?? null,
-      image_url: q.image_url ?? null,
-      image_caption: q.image_caption ?? null,
-      image_position: q.image_position ?? 'above_question',
-      underlined_text: q.underlined_text ?? null,
-      reference_number: q.reference_number ?? null,
-      position_in_passage: q.position_in_passage ?? null,
-      calculator_allowed: q.calculator_allowed ?? true,
-    }));
+    const questions = questionsData.map((q) => {
+      const questionId =
+        asString(q['question_id']) ??
+        asString(q['id']) ??
+        (typeof q['staging_id'] === 'number' ? String(q['staging_id']) : asString(q['staging_id'])) ??
+        `${session.form_id}_${session.section}_${asNumber(q['ord']) ?? 0}`;
+
+      return {
+        id: questionId,
+        ord: asNumber(q['ord']) ?? 0,
+        question: asString(q['question']) ?? asString(q['stem']) ?? '',
+        choice_a: asString(q['choice_a']) ?? '',
+        choice_b: asString(q['choice_b']) ?? '',
+        choice_c: asString(q['choice_c']) ?? '',
+        choice_d: asString(q['choice_d']) ?? '',
+        choice_e: asString(q['choice_e']) ?? null,
+        passage_id: asString(q['passage_id']) ?? null,
+        image_url: asString(q['image_url']) ?? null,
+        image_caption: asString(q['image_caption']) ?? null,
+        image_position: asString(q['image_position']) ?? 'above_question',
+        underlined_text: asString(q['underlined_text']) ?? null,
+        reference_number: asNumber(q['reference_number']) ?? null,
+        position_in_passage: asNumber(q['position_in_passage']) ?? null,
+        calculator_allowed: typeof q['calculator_allowed'] === 'boolean' ? q['calculator_allowed'] : true,
+      };
+    });
 
     // Collect passages from multiple sources
-    const passages: Record<string, any> = {};
+    const passages: Record<string, PassagePayload> = {};
     const sessionSectionUpper = session.section.toUpperCase();
     const isPassageSection = ['EN', 'ENGLISH', 'RD', 'READING', 'SCI', 'SC', 'SCIENCE'].includes(sessionSectionUpper);
     

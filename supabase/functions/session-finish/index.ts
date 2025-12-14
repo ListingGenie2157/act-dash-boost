@@ -121,7 +121,7 @@ serve(async (req) => {
     const questionIds = responses?.map(r => r.question_id) || [];
     const stagingIds = questionIds.map(id => parseInt(id)).filter(id => !isNaN(id));
     
-    let skillStats: Record<string, { correct: number; total: number; totalTime: number }> = {};
+    const skillStats: Record<string, { correct: number; total: number; totalTime: number }> = {};
     const missedQuestions: MissedQuestion[] = [];
     
     if (stagingIds.length > 0) {

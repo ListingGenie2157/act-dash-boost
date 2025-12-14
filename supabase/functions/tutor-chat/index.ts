@@ -1,9 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkRateLimit, createRateLimitResponse, getClientIp } from '../_shared/rateLimit.ts';
 
 interface TutorChatRequest {
   subject: string;
@@ -110,18 +107,45 @@ MODE: TEST
 - Always remind: "I can't give you the answer during a test, but I can teach you the concept with a different example."`,
 };
 
+function isNonEmptyString(value: unknown, maxLen: number): value is string {
+  return typeof value === 'string' && value.trim().length > 0 && value.length <= maxLen;
+}
+
+function validateTutorChatRequest(body: TutorChatRequest): string | null {
+  if (!isNonEmptyString(body.subject, 32)) return 'Invalid subject';
+  if (!isNonEmptyString(body.topic, 80)) return 'Invalid topic';
+  if (!['practice', 'quiz', 'test'].includes(body.mode)) return 'Invalid mode';
+  if (!body.problem || !isNonEmptyString(body.problem.text, 8000)) return 'Invalid problem';
+  if (!Array.isArray(body.messages)) return 'Invalid messages';
+  if (body.messages.length < 1 || body.messages.length > 20) return 'Invalid messages length';
+  for (const msg of body.messages) {
+    if (!msg || (msg.role !== 'user' && msg.role !== 'assistant' && msg.role !== 'system')) {
+      return 'Invalid message role';
+    }
+    if (!isNonEmptyString(msg.content, 4000)) return 'Invalid message content';
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    if (!supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
+      return new Response(
+        JSON.stringify({ error: 'Server misconfigured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     // Authenticate user from JWT token
-    const authHeader = req.headers.get('Authorization');
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: 'Missing authorization header' }),
@@ -143,6 +167,11 @@ Deno.serve(async (req) => {
     }
 
     const userId = user.id;
+
+    // Rate limit (durable; keyed by userId when available)
+    const ip = getClientIp(req);
+    const allowed = await checkRateLimit(userId, ip, 'tutor-chat', 30, 60_000);
+    if (!allowed) return createRateLimitResponse(corsHeaders);
     
     // Create service role client for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -152,24 +181,22 @@ Deno.serve(async (req) => {
     try {
       body = await req.json();
     } catch (parseError) {
-      console.error('Failed to parse request body:', parseError);
       return new Response(
         JSON.stringify({ error: 'Invalid request: body must be valid JSON' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate required fields
-    if (!body.subject || !body.topic || !body.mode || !body.messages) {
+    const validationError = validateTutorChatRequest(body);
+    if (validationError) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
+        JSON.stringify({ error: validationError }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Security: Reject any messages with 'system' role from client
     if (body.messages.some(msg => msg.role === 'system')) {
-      console.warn('Client attempted to send system role message, user:', userId);
       return new Response(
         JSON.stringify({ error: 'Invalid message role: system role not allowed from client' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -230,19 +257,8 @@ ${body.problem.user_work ? `- Student's Work: ${body.problem.user_work}` : ''}`;
     });
 
     if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('AI API Error:', aiResponse.status, errorText);
-      
-      // Try to parse error details
-      let errorDetail = errorText;
-      try {
-        const parsed = JSON.parse(errorText);
-        errorDetail = parsed.message || parsed.error || errorText;
-      } catch {
-        // Keep raw text if not JSON
-      }
-      
-      throw new Error(`AI API error ${aiResponse.status}: ${errorDetail}`);
+      // Avoid logging raw response bodies (may include user content).
+      throw new Error(`AI API error ${aiResponse.status}`);
     }
 
     const aiData = await aiResponse.json();
@@ -293,7 +309,7 @@ ${body.problem.user_work ? `- Student's Work: ${body.problem.user_work}` : ''}`;
         ]);
       }
     } catch (loggingError) {
-      console.error('Logging error (non-fatal):', loggingError);
+      // Non-fatal: do not fail the user request if logging fails.
     }
 
     return new Response(
@@ -305,24 +321,24 @@ ${body.problem.user_work ? `- Student's Work: ${body.problem.user_work}` : ''}`;
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
-  } catch (error: any) {
-    console.error('Error in tutor-chat:', error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
 
     let statusCode = 500;
     let errorMessage = 'Internal server error';
 
-    if (error.message?.includes('LOVABLE_API_KEY not configured')) {
+    if (message.includes('LOVABLE_API_KEY not configured')) {
       statusCode = 500;
       errorMessage = 'Tutor is not configured on the server (missing AI key). Please contact support.';
-    } else if (error.message?.includes('429')) {
+    } else if (message.includes('429')) {
       statusCode = 429;
       errorMessage = 'Rate limit exceeded. Please try again later.';
-    } else if (error.message?.includes('402')) {
+    } else if (message.includes('402')) {
       statusCode = 402;
       errorMessage = 'AI credits exhausted. Please contact support.';
-    } else if (error.message && error.message.length < 200) {
+    } else if (message.length > 0 && message.length < 200) {
       // If error message is reasonably short, include it for better debugging
-      errorMessage = error.message;
+      errorMessage = message;
     }
 
     return new Response(

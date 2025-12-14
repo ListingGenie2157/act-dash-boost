@@ -59,21 +59,21 @@ export default function SimulationResults() {
       const stateData = location.state as SimulationSummary | undefined;
       
       if (stateData && stateData.sessionId) {
-        // Fetch skill names for each skill_id
-        const enrichedSkills = await Promise.all(
-          stateData.perSkill.map(async (skill) => {
-            const { data: skillData } = await supabase
-              .from('skills')
-              .select('name')
-              .eq('id', skill.skill_id)
-              .maybeSingle();
-            
-            return {
-              ...skill,
-              skill_name: skillData?.name || skill.skill_id
-            };
-          })
+        // Fetch skill names in one query (avoid N+1)
+        const uniqueSkillIds = Array.from(new Set(stateData.perSkill.map(s => s.skill_id)));
+        const { data: skillRows } = await supabase
+          .from('skills')
+          .select('id, name')
+          .in('id', uniqueSkillIds);
+
+        const skillNameById = new Map<string, string>(
+          (skillRows || []).map((s) => [s.id, s.name])
         );
+
+        const enrichedSkills = stateData.perSkill.map((skill) => ({
+          ...skill,
+          skill_name: skillNameById.get(skill.skill_id) || skill.skill_id,
+        }));
 
         setSummary({
           ...stateData,
@@ -121,20 +121,37 @@ export default function SimulationResults() {
 
         // Group by skill
         const skillMap = new Map<string, { correct: number; total: number }>();
-        
-        for (const response of responses) {
-          const { data: question } = await supabase
-            .from('questions')
-            .select('skill_id')
-            .eq('id', response.question_id)
-            .maybeSingle();
 
-          if (question?.skill_id) {
-            const existing = skillMap.get(question.skill_id) || { correct: 0, total: 0 };
-            existing.total++;
-            if (response.correct) existing.correct++;
-            skillMap.set(question.skill_id, existing);
-          }
+        const uuidRegex =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        const uniqueQuestionIds = Array.from(
+          new Set(
+            responses
+              .map(r => r.question_id)
+              .filter((id): id is string => typeof id === 'string' && uuidRegex.test(id))
+          )
+        );
+
+        const { data: questionRows } = uniqueQuestionIds.length > 0
+          ? await supabase
+              .from('questions')
+              .select('id, skill_id')
+              .in('id', uniqueQuestionIds)
+          : { data: [] as Array<{ id: string; skill_id: string | null }> };
+
+        const skillIdByQuestionId = new Map<string, string>(
+          (questionRows || [])
+            .filter((q): q is { id: string; skill_id: string } => typeof q.skill_id === 'string' && q.skill_id.length > 0)
+            .map(q => [q.id, q.skill_id])
+        );
+
+        for (const response of responses) {
+          const skillId = skillIdByQuestionId.get(response.question_id);
+          if (!skillId) continue;
+          const existing = skillMap.get(skillId) || { correct: 0, total: 0 };
+          existing.total++;
+          if (response.correct) existing.correct++;
+          skillMap.set(skillId, existing);
         }
 
         // Convert to array and enrich with skill names

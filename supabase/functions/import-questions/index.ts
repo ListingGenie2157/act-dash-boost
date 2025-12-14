@@ -1,11 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 interface ImportReport {
   totalRows: number;
@@ -55,10 +51,11 @@ function parseTSV(tsvContent: string): StagingRow[] {
         row[header] = values[index];
       });
       
-      // Convert numeric fields
-      (row as any).ord = parseInt(row.ord as string) || 0;
-      
-      rows.push(row as unknown as StagingRow);
+      const ord = Number.parseInt(row.ord ?? '', 10);
+      rows.push({
+        ...(row as unknown as Omit<StagingRow, 'ord'>),
+        ord: Number.isFinite(ord) ? ord : 0,
+      });
     }
   }
   
@@ -112,6 +109,7 @@ function getSubjectFromSection(section: string): string {
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -127,13 +125,15 @@ serve(async (req) => {
   try {
     // Initialize Supabase client with proper env validation
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing required environment variables: SUPABASE_URL or SUPABASE_ANON_KEY');
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
+      return new Response(JSON.stringify({ error: 'Server misconfigured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get the authorization header
     const authHeader = req.headers.get('authorization');
@@ -144,9 +144,13 @@ serve(async (req) => {
       });
     }
 
+    // Use an authenticated (anon-key) client so auth.uid() is set for RPCs like is_admin().
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
     // Verify the JWT token
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
     
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -156,7 +160,7 @@ serve(async (req) => {
     }
 
     // Check if user is admin
-    const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin');
+    const { data: isAdmin, error: adminError } = await supabaseAuth.rpc('is_admin');
     
     if (adminError || !isAdmin) {
       console.warn('Non-admin user attempted to import questions:', user.id);
@@ -165,6 +169,9 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Service-role client for privileged writes/imports.
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
     const { dryRun = true, useStaging = false } = body;
