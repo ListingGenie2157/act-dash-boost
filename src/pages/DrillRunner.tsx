@@ -6,6 +6,7 @@ import { shuffleQuestionChoices } from '@/lib/shuffle';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { drillRunnerSchema, safeValidateInput } from '@/lib/validation/edgeFunctionSchemas';
+import { LiveStreakCounter } from '@/components/LiveStreakCounter';
 
 export default function DrillRunner() {
   const navigate = useNavigate();
@@ -22,6 +23,11 @@ export default function DrillRunner() {
   const [answerTimes, setAnswerTimes] = useState<number[]>([]);
   const [lastAnswerTime, setLastAnswerTime] = useState(Date.now());
   const [correctCount, setCorrectCount] = useState(0);
+  
+  // Streak tracking for ADHD dopamine feedback
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [bestStreak, setBestStreak] = useState(0);
+  const [streakEvent, setStreakEvent] = useState<'scored' | 'broke' | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -154,7 +160,24 @@ export default function DrillRunner() {
     // Track timing
     setAnswerTimes(prev => [...prev, timeSpent]);
     setLastAnswerTime(now);
-    if (isCorrect) setCorrectCount(prev => prev + 1);
+    if (isCorrect) {
+      setCorrectCount(prev => prev + 1);
+      // Update streak
+      setCurrentStreak(prev => {
+        const newStreak = prev + 1;
+        if (newStreak > bestStreak) setBestStreak(newStreak);
+        return newStreak;
+      });
+      setStreakEvent('scored');
+    } else {
+      // Break streak
+      if (currentStreak > 0) {
+        setStreakEvent('broke');
+      }
+      setCurrentStreak(0);
+    }
+    // Clear streak event after animation
+    setTimeout(() => setStreakEvent(null), 600);
     
     try {
       // Track attempt in database with task_id
@@ -283,7 +306,23 @@ export default function DrillRunner() {
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back to Drills
       </Button>
-      <div className="mt-4">Drill complete! Nice work.</div>
+      <div className="mt-8 max-w-md mx-auto text-center space-y-4">
+        <div className="text-5xl">🎉</div>
+        <h3 className="text-2xl font-bold">Drill Complete!</h3>
+        <div className="grid grid-cols-2 gap-4 mt-6">
+          <div className="p-4 rounded-lg bg-muted/50">
+            <div className="text-3xl font-bold text-primary">{correctCount}/{questions.length}</div>
+            <div className="text-sm text-muted-foreground">Correct</div>
+          </div>
+          <div className="p-4 rounded-lg bg-muted/50">
+            <div className="text-3xl font-bold text-orange-500">🔥 {bestStreak}</div>
+            <div className="text-sm text-muted-foreground">Best Streak</div>
+          </div>
+        </div>
+        <Button onClick={() => navigate('/drill-runner')} className="mt-6">
+          Back to Drills
+        </Button>
+      </div>
     </div>
   );
 
@@ -309,14 +348,20 @@ export default function DrillRunner() {
 
   return (
     <div className="container mx-auto p-4">
-      <Button
-        variant="outline"
-        onClick={() => navigate('/drill-runner')}
-        className="mb-4"
-      >
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        Back to Drills
-      </Button>
+      <div className="flex items-center justify-between mb-4">
+        <Button
+          variant="outline"
+          onClick={() => navigate('/drill-runner')}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Drills
+        </Button>
+        <LiveStreakCounter
+          currentStreak={currentStreak}
+          bestStreak={bestStreak}
+          streakEvent={streakEvent}
+        />
+      </div>
       <h2 className="font-bold mb-4">Drill Question {current + 1} of {questions.length}</h2>
       <p className="mb-4">{shuffled.original.stem}</p>
       <div className="space-y-2">
