@@ -9,6 +9,7 @@ const corsHeaders = {
 };
 
 // Helper function to select lessons for a specific day with subject balancing
+// Now uses round-robin subject selection to ensure variety across all 4 subjects
 function selectLessonsForDay(
   lessonsNeeded: number,
   dayOffset: number, // 0-6 for the 7 days
@@ -36,85 +37,54 @@ function selectLessonsForDay(
     }
   });
 
-  // Sort each subject's skills by order_index
+  // Sort each subject's skills by order_index (curriculum order)
   Object.values(skillsBySubject).forEach((skills) => {
     skills.sort((a, b) => a.order_index - b.order_index);
   });
 
-  // Identify weak subjects from diagnostics
-  const weakSubjects = new Set<string>();
-  const sectionToSubject: Record<string, string> = {
-    "Math": "Math",
-    "English": "English",
-    "Reading": "Reading",
-    "Science": "Science",
-  };
-
-  diagnosticResults.forEach((diag) => {
-    if (diag.score < 24) { // < 75% accuracy
-      const subject = sectionToSubject[diag.section];
-      if (subject) weakSubjects.add(subject);
-    }
-  });
-
-  // If no weak subjects identified, treat all as equal
-  if (weakSubjects.size === 0) {
-    ["Math", "English", "Reading", "Science"].forEach((s) =>
-      weakSubjects.add(s)
-    );
-  }
-
-  // Rotate primary subject based on day (ensures balance across 7 days)
+  // Round-robin subject order, rotated by day for variety
   const subjects = ["Math", "English", "Reading", "Science"];
-  const primarySubject = subjects[dayOffset % 4];
-
-  // Select lessons: 60% from weak subjects, 40% from others, prioritize primary subject
   const result: string[] = [];
-  const weakSubjectsList = Array.from(weakSubjects);
+  
+  // Track subjects used THIS day to ensure variety within the day
+  const subjectsUsedToday = new Set<string>();
+  const maxPerSubjectPerDay = 2; // Don't let any subject dominate a single day
+  const subjectCountToday: Record<string, number> = { Math: 0, English: 0, Reading: 0, Science: 0 };
 
-  // Start with primary subject if it's weak
-  if (weakSubjects.has(primarySubject)) {
-    const primarySkills = skillsBySubject[primarySubject].filter((s) =>
-      !completedSkillIds.has(s.id)
-    );
-    if (primarySkills.length > 0) {
-      result.push(primarySkills[0].id);
-      completedSkillIds.add(primarySkills[0].id);
+  // For each lesson slot, pick from rotating subjects
+  for (let i = 0; i < lessonsNeeded && result.length < lessonsNeeded; i++) {
+    // Rotate starting subject based on dayOffset + slot index for maximum variety
+    const startSubjectIdx = (dayOffset + i) % 4;
+    
+    // Try each subject in rotation order until we find one with available skills
+    let found = false;
+    for (let j = 0; j < 4 && !found; j++) {
+      const subjectIdx = (startSubjectIdx + j) % 4;
+      const subject = subjects[subjectIdx];
+      
+      // Skip if this subject already has too many lessons today
+      if (subjectCountToday[subject] >= maxPerSubjectPerDay) {
+        continue;
+      }
+      
+      // Find the next available skill in this subject (not already completed or selected)
+      const availableInSubject = skillsBySubject[subject].filter(
+        (s) => !completedSkillIds.has(s.id) && !result.includes(s.id)
+      );
+      
+      if (availableInSubject.length > 0) {
+        const selectedSkill = availableInSubject[0];
+        result.push(selectedSkill.id);
+        subjectCountToday[subject]++;
+        found = true;
+        console.log(`Day ${dayOffset}: Selected ${subject} skill: ${selectedSkill.name} (slot ${i + 1})`);
+      }
     }
-  }
-
-  // Fill remaining slots with balanced selection
-  let attempts = 0;
-  while (result.length < lessonsNeeded && attempts < 100) {
-    attempts++;
-
-    // Alternate between weak subjects
-    const subjectToUse =
-      weakSubjectsList[result.length % weakSubjectsList.length];
-    const availableSkills = skillsBySubject[subjectToUse]?.filter((s) =>
-      !completedSkillIds.has(s.id)
-    ) || [];
-
-    if (availableSkills.length > 0) {
-      result.push(availableSkills[0].id);
-      completedSkillIds.add(availableSkills[0].id);
-    } else {
-      // If no skills available in this subject, try others
-      let found = false;
-      for (const subject of subjects) {
-        const skills = skillsBySubject[subject]?.filter((s) =>
-          !completedSkillIds.has(s.id)
-        ) || [];
-        if (skills.length > 0) {
-          result.push(skills[0].id);
-          completedSkillIds.add(skills[0].id);
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        break;
-      }
+    
+    // If no subjects have available skills, break
+    if (!found) {
+      console.log(`Day ${dayOffset}: No more available skills for any subject at slot ${i + 1}`);
+      break;
     }
   }
 
@@ -426,46 +396,58 @@ serve(async (req) => {
       });
     }
 
-    // Initialize Supabase client with proper env validation and auth header
+    // Initialize Supabase client with proper env validation
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY") ||
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || (!supabaseAnonKey && !supabaseServiceKey)) {
       throw new Error(
         "Missing required environment variables: SUPABASE_URL or SUPABASE_ANON_KEY",
       );
     }
 
-    // Create client with Authorization header so RLS works properly
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: {
-        headers: {
-          Authorization: authHeader,
-        },
-      },
-    });
-
-    // Verify the JWT token
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      token,
-    );
-
-    if (authError || !user) {
-      console.warn("Authentication failed:", authError?.message);
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Parse request body for force flag
+    // Parse request body for force flag and optional userId (for cron job)
     const body = await req.json();
     const force = body?.force === true;
+    const cronUserId = body?.userId; // userId passed by cron job
+
+    // Determine if this is a service role call (cron job) or user auth call
+    const token = authHeader.replace("Bearer ", "");
+    const isServiceRole = token === supabaseServiceKey;
+    
+    let userId: string;
+    let supabase;
+
+    if (isServiceRole && cronUserId) {
+      // Cron job call - use service role key and specified userId
+      console.log(`Cron job call for user: ${cronUserId}`);
+      userId = cronUserId;
+      supabase = createClient(supabaseUrl, supabaseServiceKey!);
+    } else {
+      // Normal user call - verify JWT and use their ID
+      supabase = createClient(supabaseUrl, supabaseAnonKey || supabaseServiceKey!, {
+        global: {
+          headers: {
+            Authorization: authHeader,
+          },
+        },
+      });
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+      if (authError || !user) {
+        console.warn("Authentication failed:", authError?.message);
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      userId = user.id;
+    }
 
     console.log(
-      `Generate study plan called. Force: ${force}, User: ${user.id}`,
+      `Generate study plan called. Force: ${force}, User: ${userId}, ServiceRole: ${isServiceRole}`,
     );
 
     const today = getTodayInChicago();
@@ -483,7 +465,7 @@ serve(async (req) => {
       const { error: deleteDaysError } = await supabase
         .from("study_plan_days")
         .delete()
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .gte("the_date", todayStr);
 
       if (deleteDaysError) {
@@ -493,7 +475,7 @@ serve(async (req) => {
       const { error: deleteTasksError } = await supabase
         .from("study_tasks")
         .delete()
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .in("status", ["PENDING", "STARTED"])
         .gte("the_date", todayStr)
         .lte("the_date", weekEndStr);
@@ -508,22 +490,29 @@ serve(async (req) => {
     }
 
     // Check if plan already exists (skip if force=true)
+    // Plans need regeneration if:
+    // 1. Less than 7 future days exist (rolling window approach)
+    // 2. Force flag is set
     if (!force) {
       const { data: existingPlans } = await supabase
         .from("study_plan_days")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .gte("the_date", todayStr)
-        .lte("the_date", weekEndStr);
+        .lte("the_date", weekEndStr)
+        .order("the_date", { ascending: true });
 
-      if (existingPlans && existingPlans.length === 7) {
-        console.warn("7-day plan already exists for this week");
+      // Count how many FUTURE days (today onwards) have plans
+      const futurePlansCount = existingPlans?.length || 0;
+      
+      if (futurePlansCount >= 7) {
+        console.log(`User has ${futurePlansCount} future days planned, skipping regeneration`);
 
         // Set has_study_plan flag even for existing plans
         const { error: profileUpdateError } = await supabase
           .from("profiles")
           .update({ has_study_plan: true })
-          .eq("id", user.id);
+          .eq("id", userId);
 
         if (profileUpdateError) {
           console.error(
@@ -544,13 +533,40 @@ serve(async (req) => {
           },
         );
       }
+      
+      // If we have some but not all days, log and regenerate
+      if (futurePlansCount > 0) {
+        console.log(`User has only ${futurePlansCount}/7 future days, regenerating full week...`);
+        
+        // Delete existing future plans to regenerate cleanly
+        const { error: deleteDaysError } = await supabase
+          .from("study_plan_days")
+          .delete()
+          .eq("user_id", userId)
+          .gte("the_date", todayStr);
+
+        if (deleteDaysError) {
+          console.error("Error deleting stale study_plan_days:", deleteDaysError);
+        }
+
+        const { error: deleteTasksError } = await supabase
+          .from("study_tasks")
+          .delete()
+          .eq("user_id", userId)
+          .in("status", ["PENDING", "STARTED"])
+          .gte("the_date", todayStr);
+
+        if (deleteTasksError) {
+          console.error("Error deleting stale study_tasks:", deleteTasksError);
+        }
+      }
     }
 
     // Get user profile
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("test_date, daily_time_cap_mins, plan_mode, sim_preferred_dow")
-      .eq("id", user.id)
+      .eq("id", userId)
       .single();
 
     if (profileError) {
@@ -568,14 +584,14 @@ serve(async (req) => {
     const { data: userPreferences } = await supabase
       .from("user_preferences")
       .select("daily_minutes, preferred_start_hour, preferred_end_hour")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .single();
 
     // Get accommodations
     const { data: accommodations } = await supabase
       .from("accommodations")
       .select("time_multiplier")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .single();
 
     // Get all skills for lesson tracking
@@ -612,7 +628,7 @@ serve(async (req) => {
     const simDateSet = new Set(simDates);
 
     const simTasks: StudyTaskInsert[] = simDates.map((dateStr) => ({
-      user_id: user.id,
+      user_id: userId,
       the_date: dateStr,
       type: "SIM",
       skill_id: null,
@@ -639,7 +655,7 @@ serve(async (req) => {
     const { data: masteryData } = await supabase
       .from("mastery")
       .select("skill_id, correct, total")
-      .eq("user_id", user.id);
+      .eq("user_id", userId);
 
     const completedSkillIds = new Set<string>();
     masteryData?.forEach((m) => {
@@ -661,7 +677,7 @@ serve(async (req) => {
     const { data: dueReviews } = await supabase
       .from("review_queue")
       .select("question_id, due_at")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .lte("due_at", new Date().toISOString())
       .order("due_at", { ascending: true })
       .limit(50); // Fetch more for 7 days
@@ -669,7 +685,7 @@ serve(async (req) => {
     const { data: latestDiagnostics } = await supabase
       .from("diagnostics")
       .select("section, score, source")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .not("completed_at", "is", null)
       .order("completed_at", { ascending: false });
 
@@ -691,7 +707,7 @@ serve(async (req) => {
     const { data: weakestSkills } = await supabase
       .from("progress")
       .select("skill_id, mastery_level, correct, seen")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .gt("seen", 0)
       .order("mastery_level", { ascending: true })
       .limit(10); // More skills for 7 days
@@ -735,7 +751,7 @@ serve(async (req) => {
       // Check for test week special scheduling
       if (dayDaysLeft !== null && dayDaysLeft > 0 && dayDaysLeft <= 7) {
         console.warn(`Test week mode: ${dayDaysLeft} days until test`);
-        const specialTasks = getTestWeekTasks(dayDaysLeft, user.id, dateStr);
+        const specialTasks = getTestWeekTasks(dayDaysLeft, userId, dateStr);
         if (specialTasks.length > 0) {
           allPlans.push({ the_date: dateStr, tasks: specialTasks });
           specialTasks.forEach((task: any) => {
@@ -745,7 +761,7 @@ serve(async (req) => {
                 : null;
 
             allStudyTasks.push({
-              user_id: user.id,
+              user_id: userId,
               the_date: dateStr,
               type: task.type,
               skill_id: task.skill_id ?? null,
@@ -903,7 +919,7 @@ serve(async (req) => {
             : null;
 
         allStudyTasks.push({
-          user_id: user.id,
+          user_id: userId,
           the_date: dateStr,
           type: task.type,
           skill_id: task.skillId || null,
@@ -923,7 +939,7 @@ serve(async (req) => {
 
     // Save all plans to database
     const planRecords = allPlans.map((plan) => ({
-      user_id: user.id,
+      user_id: userId,
       the_date: plan.the_date,
       tasks_json: plan.tasks,
       generated_at: new Date().toISOString(),
@@ -948,7 +964,7 @@ serve(async (req) => {
     const { error: profileUpdateError } = await supabase
       .from("profiles")
       .update({ has_study_plan: true })
-      .eq("id", user.id);
+      .eq("id", userId);
 
     if (profileUpdateError) {
       console.error("❌ Error updating has_study_plan:", profileUpdateError);
@@ -973,7 +989,7 @@ serve(async (req) => {
       await supabase
         .from("study_tasks")
         .delete()
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .neq("type", "SIM")
         .gte("the_date", todayStr)
         .lte("the_date", weekEndStr);
