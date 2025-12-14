@@ -1,15 +1,42 @@
 /**
  * Supabase Configuration
  * 
- * These values are hardcoded because:
- * 1. They are PUBLIC/PUBLISHABLE values - safe to expose in client code
- * 2. Lovable's build system doesn't support VITE_* env vars the same way local Vite does
- * 3. Only SECRET keys (like SERVICE_ROLE_KEY) should be in Supabase secrets
- * 
- * This is the official pattern for Lovable projects with Supabase.
+ * PUBLIC values (Supabase URL + anon key) MUST come from environment variables.
+ * Never hardcode keys into the client bundle.
  */
-const SUPABASE_URL = 'https://hhbkmxrzxcswwokmbtbz.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhoYmtteHJ6eGNzd3dva21idGJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyNTI5MzcsImV4cCI6MjA3MTgyODkzN30.SWsosSuVDjtaAvlIdEyAwUx9zOY_uViTJWw_5UbgIGE';
+
+type EnvMap = Record<string, string | undefined>;
+
+function getViteEnv(): EnvMap | null {
+  try {
+    // Vite injects env vars onto import.meta.env at build/runtime.
+    const meta = import.meta as unknown as { env?: EnvMap };
+    return meta.env ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function getProcessEnv(): EnvMap | null {
+  const globalProcess = (globalThis as unknown as { process?: { env?: EnvMap } }).process;
+  return globalProcess?.env ?? null;
+}
+
+function readEnv(key: string): string | undefined {
+  return getViteEnv()?.[key] ?? getProcessEnv()?.[key];
+}
+
+function requireEnv(primaryKey: string, fallbackKey?: string): string {
+  const value = readEnv(primaryKey) ?? (fallbackKey ? readEnv(fallbackKey) : undefined);
+  if (!value) {
+    const keys = [primaryKey, fallbackKey].filter(Boolean).join(' or ');
+    throw new Error(`[env] Missing required environment variable: ${keys}`);
+  }
+  return value;
+}
+
+const SUPABASE_URL = requireEnv('VITE_SUPABASE_URL', 'SUPABASE_URL');
+const SUPABASE_ANON_KEY = requireEnv('VITE_SUPABASE_ANON_KEY', 'SUPABASE_ANON_KEY');
 
 export const isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
 
@@ -24,5 +51,5 @@ export const getSupabaseConfigStatus = () => ({
 
 export const logSupabaseConfigStatus = (): void => {
   if (!isBrowser) return;
-  console.info('[env] Supabase config: ✓ URL and anon key configured');
+  // Intentionally no console logging in production.
 };

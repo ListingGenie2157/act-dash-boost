@@ -1,9 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 // Checkpoint questions are stored as simple arrays in the database
 // Format: [question, optA, optB, optC, optD, answer_letter, explanation, difficulty]
@@ -20,7 +16,9 @@ function normalizeSkillCode(code: string): string {
 }
 
 // Resolve skill by code or id
-async function resolveSkill(supabaseAdmin: any, ref: string): Promise<{ id: string; name: string } | null> {
+type SupabaseClientLike = ReturnType<typeof createClient>;
+
+async function resolveSkill(supabaseAdmin: SupabaseClientLike, ref: string): Promise<{ id: string; name: string } | null> {
   const normalized = normalizeSkillCode(ref);
   
   // Try to find skill by id or code
@@ -101,36 +99,54 @@ function parseCheckpointQuestion(raw: string, questionNumber: number): string[] 
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
+      return new Response(JSON.stringify({ success: false, error: 'Server misconfigured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Verify admin
-    const authHeader = req.headers.get('Authorization');
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
     if (!authHeader) {
-      throw new Error('No authorization header');
+      return new Response(JSON.stringify({ success: false, error: 'Missing authorization header' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !user) {
-      throw new Error('Unauthorized');
-    }
-
-    // Check if user is admin
-    const { data: adminCheck, error: adminError } = await supabase.rpc('is_admin', {
-      user_email: user.email,
+    // Use an authenticated (anon-key) client so auth.uid() is set for RPCs like is_admin().
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
     });
 
-    if (adminError || !adminCheck) {
-      throw new Error('Unauthorized: Admin access required');
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
+
+    const { data: isAdmin, error: adminError } = await supabaseAuth.rpc('is_admin');
+    if (adminError || !isAdmin) {
+      return new Response(JSON.stringify({ success: false, error: 'Admin access required' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Service-role client for imports (bypasses RLS and supports privileged writes).
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
     const lessons: LessonContentInput[] = Array.isArray(body) ? body : [body];
@@ -165,16 +181,22 @@ Deno.serve(async (req) => {
         }
 
         // Parse objectives (array) and also prepare text version for DB
-        const objectives = lesson.objectives 
-          ? (typeof lesson.objectives === 'string' 
-              ? lesson.objectives.split('|').map((s: string) => s.trim()).filter(Boolean)
-              : lesson.objectives)
-          : [];
-        const objectivesText = Array.isArray(objectives) ? objectives.join('\n') : String((objectives as any) ?? '');
+        const objectivesArr: string[] = (() => {
+          const raw = lesson.objectives;
+          if (!raw) return [];
+          if (typeof raw === 'string') {
+            return raw.split('|').map((s) => s.trim()).filter(Boolean);
+          }
+          if (Array.isArray(raw)) {
+            return raw.map((s) => String(s).trim()).filter(Boolean);
+          }
+          return [];
+        })();
+        const objectivesText = objectivesArr.join('\n');
         // Safely coerce estimated_minutes to a number
-        const estRaw = (lesson.estimated_minutes as any);
-        const estNum = Number(estRaw);
-        const estimatedMinutes = Number.isFinite(estNum) && estNum > 0 ? estNum : 15;
+        const estRaw = lesson.estimated_minutes;
+        const estimatedMinutes =
+          typeof estRaw === 'number' && Number.isFinite(estRaw) && estRaw > 0 ? estRaw : 15;
         
         console.log(`📝 ${normalizedSkillCode}: skill_id=${skill.id}, estimated_minutes=${estimatedMinutes} (raw: ${estRaw})`);
 

@@ -8,6 +8,16 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/tests/setup.ts'],
+    // Keep unit tests in Vitest; exclude Playwright + Deno edge-function tests.
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    exclude: [
+      'e2e/**',
+      'supabase/**',
+      // Integration tests require a real Supabase project/keys.
+      'src/tests/rls.test.ts',
+      'src/tests/smoke.test.tsx',
+      'src/lib/mastery.test.ts',
+    ],
   },
   resolve: {
     alias: {

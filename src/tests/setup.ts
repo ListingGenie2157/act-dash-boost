@@ -28,3 +28,8 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
   unobserve: vi.fn(),
   disconnect: vi.fn(),
 }));
+
+// Provide safe defaults so importing the Supabase client does not throw during unit tests.
+// Integration tests that require real Supabase connectivity are excluded from Vitest by config.
+process.env.VITE_SUPABASE_URL ??= 'http://localhost:54321';
+process.env.VITE_SUPABASE_ANON_KEY ??= 'test-anon-key';
