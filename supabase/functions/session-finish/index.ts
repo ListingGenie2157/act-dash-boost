@@ -12,6 +12,18 @@ interface SessionFinishRequest {
   session_id: string;
 }
 
+interface MissedQuestion {
+  question_id: string;
+  staging_id: number;
+  question_text: string;
+  selected: string;
+  correct_answer: string;
+  explanation: string | null;
+  skill_code: string;
+  time_ms: number;
+  miss_reason: string | null;
+}
+
 serve(async (req) => {
   console.log('[session-finish] hit', { method: req.method, hasAuth: !!req.headers.get('authorization') });
   // Handle CORS preflight requests
@@ -84,7 +96,7 @@ serve(async (req) => {
       });
     }
 
-    // Get all responses for the session (no join - questions table may not have staging_items data)
+    // Get all responses for the session
     const { data: responses, error: responsesError } = await supabase
       .from('responses')
       .select('*')
@@ -105,28 +117,32 @@ serve(async (req) => {
     const accuracy = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
     const avgTimeMs = totalQuestions > 0 ? responses.reduce((sum, r) => sum + (r.time_ms || 0), 0) / totalQuestions : 0;
 
-    // For per-skill stats, try to get skill_code from staging_items
-    // question_id in responses may be staging_id (integer as string)
+    // Get staging_items data for skill codes and missed question details
     const questionIds = responses?.map(r => r.question_id) || [];
     const stagingIds = questionIds.map(id => parseInt(id)).filter(id => !isNaN(id));
     
     let skillStats: Record<string, { correct: number; total: number; totalTime: number }> = {};
+    const missedQuestions: MissedQuestion[] = [];
     
     if (stagingIds.length > 0) {
       const { data: stagingItems } = await supabase
         .from('staging_items')
-        .select('staging_id, skill_code')
+        .select('staging_id, skill_code, question, answer, explanation, choice_a, choice_b, choice_c, choice_d')
         .in('staging_id', stagingIds);
       
-      const stagingSkillMap = new Map<number, string>();
+      const stagingItemMap = new Map<number, typeof stagingItems[0]>();
       stagingItems?.forEach(item => {
-        stagingSkillMap.set(item.staging_id, item.skill_code);
+        stagingItemMap.set(item.staging_id, item);
       });
       
       responses?.forEach(response => {
         const stagingId = parseInt(response.question_id);
-        const skillCode = stagingSkillMap.get(stagingId);
-        if (skillCode) {
+        const stagingItem = stagingItemMap.get(stagingId);
+        
+        if (stagingItem) {
+          const skillCode = stagingItem.skill_code;
+          
+          // Update skill stats
           if (!skillStats[skillCode]) {
             skillStats[skillCode] = { correct: 0, total: 0, totalTime: 0 };
           }
@@ -134,6 +150,19 @@ serve(async (req) => {
           skillStats[skillCode].totalTime += response.time_ms || 0;
           if (response.correct) {
             skillStats[skillCode].correct++;
+          } else {
+            // Add to missed questions array
+            missedQuestions.push({
+              question_id: response.question_id,
+              staging_id: stagingId,
+              question_text: stagingItem.question,
+              selected: response.selected,
+              correct_answer: stagingItem.answer,
+              explanation: stagingItem.explanation,
+              skill_code: skillCode,
+              time_ms: response.time_ms,
+              miss_reason: response.miss_reason || null,
+            });
           }
         }
       });
@@ -155,9 +184,16 @@ serve(async (req) => {
       avg_time_ms: avgTimeMs,
     };
 
+    console.log('[session-finish] returning', { 
+      totalQuestions, 
+      correctAnswers, 
+      missedCount: missedQuestions.length 
+    });
+
     return new Response(JSON.stringify({
       summary,
       per_skill: perSkill,
+      missed_questions: missedQuestions,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

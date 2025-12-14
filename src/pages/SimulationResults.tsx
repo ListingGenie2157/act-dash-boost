@@ -3,9 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Brain, TrendingUp, Target, Clock } from 'lucide-react';
+import { Brain, TrendingUp, Target, Clock, XCircle, CheckCircle, ChevronDown } from 'lucide-react';
+import { MissReasonTagger, type MissReason } from '@/components/MissReasonTagger';
 
 interface SkillResult {
   skill_id: string;
@@ -15,6 +18,18 @@ interface SkillResult {
   accuracy: number;
 }
 
+interface MissedQuestion {
+  question_id: string;
+  staging_id: number;
+  question_text: string;
+  selected: string;
+  correct_answer: string;
+  explanation: string | null;
+  skill_code: string;
+  time_ms: number;
+  miss_reason: string | null;
+}
+
 interface SimulationSummary {
   sessionId: string;
   totalQuestions: number;
@@ -22,6 +37,7 @@ interface SimulationSummary {
   accuracy: number;
   avgTimeMs: number;
   perSkill: SkillResult[];
+  missedQuestions?: MissedQuestion[];
 }
 
 export default function SimulationResults() {
@@ -29,6 +45,7 @@ export default function SimulationResults() {
   const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<SimulationSummary | null>(null);
+  const [taggedCount, setTaggedCount] = useState(0);
 
   const loadResults = useCallback(async () => {
     try {
@@ -62,6 +79,10 @@ export default function SimulationResults() {
           ...stateData,
           perSkill: enrichedSkills
         });
+
+        // Count already tagged questions
+        const alreadyTagged = stateData.missedQuestions?.filter(q => q.miss_reason).length || 0;
+        setTaggedCount(alreadyTagged);
       } else {
         // Fallback: Try to fetch the most recent simulation session
         const { data: sessions, error: sessionError } = await supabase
@@ -83,7 +104,7 @@ export default function SimulationResults() {
         // Fetch responses for this session
         const { data: responses, error: responsesError } = await supabase
           .from('responses')
-          .select('*, question_id')
+          .select('*')
           .eq('session_id', session.id);
 
         if (responsesError || !responses) {
@@ -141,7 +162,8 @@ export default function SimulationResults() {
           correctAnswers,
           accuracy,
           avgTimeMs,
-          perSkill
+          perSkill,
+          missedQuestions: []
         });
       }
     } catch (error) {
@@ -156,6 +178,20 @@ export default function SimulationResults() {
   useEffect(() => {
     loadResults();
   }, [loadResults]);
+
+  const handleReasonTagged = (questionId: string, reason: MissReason) => {
+    // Update local state to show the tag
+    setSummary(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        missedQuestions: prev.missedQuestions?.map(q => 
+          q.question_id === questionId ? { ...q, miss_reason: reason } : q
+        )
+      };
+    });
+    setTaggedCount(prev => prev + 1);
+  };
 
   const generateStudyPlan = async () => {
     try {
@@ -232,6 +268,8 @@ export default function SimulationResults() {
   }
 
   const recommendation = getRecommendation(summary.accuracy);
+  const missedQuestions = summary.missedQuestions || [];
+  const allTagged = missedQuestions.length > 0 && taggedCount >= missedQuestions.length;
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -312,6 +350,85 @@ export default function SimulationResults() {
                     </div>
                   ))}
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Missed Questions Review */}
+        {missedQuestions.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <XCircle className="w-5 h-5 text-destructive" />
+                Review Missed Questions ({missedQuestions.length})
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Tag why you missed each question to unlock targeted practice
+              </p>
+              
+              {/* Progress indicator */}
+              <div className="flex items-center gap-3 mt-3">
+                <Progress 
+                  value={(taggedCount / missedQuestions.length) * 100} 
+                  className="h-2 flex-1" 
+                />
+                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                  {taggedCount}/{missedQuestions.length} tagged
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* All tagged celebration */}
+              {allTagged && (
+                <div className="text-center p-4 bg-success/10 rounded-lg border border-success/20 mb-4">
+                  <CheckCircle className="w-8 h-8 text-success mx-auto mb-2" />
+                  <p className="font-medium text-success">All questions tagged!</p>
+                  <p className="text-sm text-muted-foreground">
+                    Practice by miss reason coming soon in Weak Areas
+                  </p>
+                </div>
+              )}
+
+              {missedQuestions.map((q, i) => (
+                <div key={q.question_id} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <Badge variant="outline">Q{i + 1}</Badge>
+                    <Badge variant="secondary" className="text-xs">{q.skill_code}</Badge>
+                  </div>
+                  
+                  <p className="font-medium mb-3 text-sm">{q.question_text}</p>
+                  
+                  <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Your answer: </span>
+                      <span className="text-destructive font-medium">{q.selected}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Correct: </span>
+                      <span className="text-success font-medium">{q.correct_answer}</span>
+                    </div>
+                  </div>
+                  
+                  {q.explanation && (
+                    <Collapsible>
+                      <CollapsibleTrigger className="flex items-center gap-1 text-sm text-primary hover:underline">
+                        <ChevronDown className="w-4 h-4" />
+                        Show Explanation
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-2 p-3 bg-muted/50 rounded text-sm">
+                        {q.explanation}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  )}
+                  
+                  <MissReasonTagger 
+                    questionId={q.question_id}
+                    sessionId={summary.sessionId}
+                    currentReason={q.miss_reason as MissReason | null}
+                    onTagged={(reason) => handleReasonTagged(q.question_id, reason)}
+                  />
+                </div>
+              ))}
             </CardContent>
           </Card>
         )}
