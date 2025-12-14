@@ -1,0 +1,46 @@
+project_id = "hhbkmxrzxcswwokmbtbz"
+
+[functions.health]
+verify_jwt = false
+
+[functions.tutor-chat]
+verify_jwt = true
+
+[functions.generate-study-plan]
+verify_jwt = true
+
+[functions.complete-task]
+verify_jwt = true
+
+[functions.finish-diagnostic]
+verify_jwt = true
+
+[functions.cron-daily]
+verify_jwt = false
+
+[functions.days-left]
+verify_jwt = true
+
+[functions.set-test-date]
+verify_jwt = true
+
+[functions.set-baseline]
+verify_jwt = true
+
+[functions.import-questions]
+verify_jwt = true
+
+[functions.import-lesson-content]
+verify_jwt = true
+
+[functions.session-start]
+verify_jwt = false
+
+[functions.session-fetch]
+verify_jwt = false
+
+[functions.session-finish]
+verify_jwt = false
+
+[functions.submit-response]
+verify_jwt = true

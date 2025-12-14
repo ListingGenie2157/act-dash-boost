@@ -1,0 +1,289 @@
+import { useEffect, useState, useMemo } from 'react';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import type { Question } from '@/types';
+import { shuffleQuestionChoices } from '@/lib/shuffle';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
+import { drillRunnerSchema, safeValidateInput } from '@/lib/validation/edgeFunctionSchemas';
+
+export default function DrillRunner() {
+  const navigate = useNavigate();
+  const { subject } = useParams<{ subject?: string }>();
+  const [searchParams] = useSearchParams();
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [current, setCurrent] = useState(0);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [completed, setCompleted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+          setError('Not authenticated');
+          setLoading(false);
+          return;
+        }
+        setUserId(user.id);
+
+        // Validate parameters
+        const nParam = searchParams.get('n');
+        const validation = safeValidateInput(drillRunnerSchema, {
+          subject: subject,
+          n: nParam ? parseInt(nParam, 10) : undefined
+        });
+
+        if (!validation.success) {
+          setError(validation.error);
+          setLoading(false);
+          return;
+        }
+
+        const { subject: validSubject, n } = validation.data;
+
+        // Map subject to drill form ID (accepts full subject names)
+        const formIdMap: Record<string, string> = {
+          'Reading': 'DR_RD',
+          'RD': 'DR_RD',
+          'Math': 'DR_MA',
+          'MA': 'DR_MA',
+          'English': 'DR_EN',
+          'EN': 'DR_EN',
+          'Science': 'DR_SC',
+          'SC': 'DR_SC',
+        };
+        const drillFormId = formIdMap[validSubject];
+
+        if (!drillFormId) {
+          setError('Invalid drill subject');
+          setLoading(false);
+          return;
+        }
+
+        // Fetch questions from staging_items using drill form ID
+        const { data, error: qError } = await supabase
+          .from('staging_items')
+          .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, answer, explanation, skill_code, form_id')
+          .eq('form_id', drillFormId)
+          .limit(n ?? 10); // Use default of 10 if undefined
+
+        if (qError) {
+          setError(qError.message);
+        } else if (!data || data.length === 0) {
+          setError('No questions found for this section');
+        } else {
+          // Map staging_items to Question type
+          const mappedQuestions: Question[] = data.map((q) => ({
+            id: String(q.staging_id || ''),
+            stem: q.question || '',
+            choice_a: q.choice_a || '',
+            choice_b: q.choice_b || '',
+            choice_c: q.choice_c || '',
+            choice_d: q.choice_d || '',
+            answer: (q.answer.toUpperCase() as 'A' | 'B' | 'C' | 'D') || 'A',
+            explanation: q.explanation ?? undefined,
+            skill_code: q.skill_code ?? undefined,
+            form_id: q.form_id ?? undefined,
+          }));
+          
+          // Filter out questions with invalid answers
+          const validQuestions = mappedQuestions.filter(q => {
+            const isValid = q.answer && ['A', 'B', 'C', 'D'].includes(q.answer);
+            if (!isValid) {
+              console.warn(`Skipping question ${q.id} with invalid answer: "${q.answer}"`);
+            }
+            return isValid;
+          });
+          
+          if (validQuestions.length === 0) {
+            setError('No valid questions found for this section');
+          } else {
+            setQuestions(validQuestions);
+            if (validQuestions.length < mappedQuestions.length) {
+              console.warn(`Filtered out ${mappedQuestions.length - validQuestions.length} questions with invalid answers`);
+            }
+          }
+        }
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Failed to load questions');
+      } finally {
+        setLoading(false);
+      }
+    };
+    void fetchData();
+  }, [subject, searchParams]);
+
+  const handleAnswer = async (selectedIdx: number) => {
+    if (!userId || isSubmitting) return;
+    const q = questions[current];
+    if (!q) return;
+    
+    setIsSubmitting(true);
+    const correctIdx = ['A', 'B', 'C', 'D'].indexOf(q.answer);
+    
+    try {
+      // Track attempt in database
+      await supabase.from('attempts').insert({
+        user_id: userId,
+        question_id: q.id,
+        form_id: q.form_id ?? 'drill',
+        question_ord: current + 1,
+        choice_order: [0, 1, 2, 3],
+        correct_idx: correctIdx,
+        selected_idx: selectedIdx,
+      });
+      
+      // Add to review queue if incorrect (spaced repetition)
+      if (selectedIdx !== correctIdx) {
+        const dueDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+        await supabase.from('review_queue').insert({
+          user_id: userId,
+          question_id: q.id,
+          due_at: dueDate.toISOString(),
+          interval_days: 2,
+        });
+        
+        // Also record in error_bank for missed questions page
+        const { data: existingError } = await supabase
+          .from('error_bank')
+          .select('miss_count')
+          .eq('user_id', userId)
+          .eq('question_id', q.id)
+          .single();
+        
+        if (existingError) {
+          // Update existing record
+          await supabase
+            .from('error_bank')
+            .update({
+              miss_count: (existingError.miss_count || 0) + 1,
+              last_missed_at: new Date().toISOString(),
+            })
+            .eq('user_id', userId)
+            .eq('question_id', q.id);
+        } else {
+          // Insert new record
+          await supabase.from('error_bank').insert({
+            user_id: userId,
+            question_id: q.id,
+            last_missed_at: new Date().toISOString(),
+            miss_count: 1,
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Error tracking drill answer:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
+    
+    // Move to next question
+    if (current + 1 < questions.length) {
+      setCurrent(current + 1);
+    } else {
+      setCompleted(true);
+    }
+  };
+
+  // Shuffle current question's choices
+  const shuffled = useMemo(() => {
+    if (!questions[current]) return null;
+    const seed = userId ? `${userId}-${questions[current].id}` : undefined;
+    return shuffleQuestionChoices(questions[current], seed);
+  }, [current, questions, userId]);
+
+  if (loading) return (
+    <div className="container mx-auto p-4">
+      <Button variant="outline" onClick={() => navigate('/drill-runner')}>
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back to Drills
+      </Button>
+      <div className="mt-4">Loading questions...</div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="container mx-auto p-4">
+      <Button variant="outline" onClick={() => navigate('/drill-runner')}>
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back to Drills
+      </Button>
+      <div className="mt-8 max-w-md mx-auto">
+        <div className="p-6 border rounded-lg bg-muted/30 text-center space-y-4">
+          <div className="text-5xl">📚</div>
+          <h3 className="text-xl font-semibold">Content Coming Soon</h3>
+          <p className="text-muted-foreground">
+            {error === 'No questions found for this section' || error === 'No valid questions found for this section'
+              ? 'We\'re working on adding questions for this section. Check back soon!'
+              : error}
+          </p>
+          <Button onClick={() => navigate('/drill-runner')} className="mt-4">
+            Browse Other Drills
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (completed) return (
+    <div className="container mx-auto p-4">
+      <Button variant="outline" onClick={() => navigate('/drill-runner')}>
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back to Drills
+      </Button>
+      <div className="mt-4">Drill complete! Nice work.</div>
+    </div>
+  );
+
+  if (questions.length === 0) return (
+    <div className="container mx-auto p-4">
+      <Button variant="outline" onClick={() => navigate('/drill-runner')}>
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back to Drills
+      </Button>
+      <div className="mt-4">No questions found.</div>
+    </div>
+  );
+
+  if (!shuffled) return <div className="p-4">Loading question...</div>;
+
+  const handleShuffledAnswer = async (shuffledIndex: number) => {
+    if (!shuffled) return;
+    
+    // Map shuffled index back to original index
+    const originalIndex = shuffled.choiceOrder[shuffledIndex];
+    await handleAnswer(originalIndex);
+  };
+
+  return (
+    <div className="container mx-auto p-4">
+      <Button
+        variant="outline"
+        onClick={() => navigate('/drill-runner')}
+        className="mb-4"
+      >
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back to Drills
+      </Button>
+      <h2 className="font-bold mb-4">Drill Question {current + 1} of {questions.length}</h2>
+      <p className="mb-4">{shuffled.original.stem}</p>
+      <div className="space-y-2">
+        {shuffled.choices.map((choice, i) => (
+          <button
+            key={i}
+            className="w-full border rounded-md p-2 text-left hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => handleShuffledAnswer(i)}
+            disabled={isSubmitting}
+          >
+            <span className="font-semibold mr-2">{['A', 'B', 'C', 'D'][i]})</span>
+            {choice}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}

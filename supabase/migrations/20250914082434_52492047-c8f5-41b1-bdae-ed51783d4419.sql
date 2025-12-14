@@ -1,0 +1,27 @@
+-- Create D3 mastery check forms for skill-specific micro-diagnostics
+INSERT INTO public.forms (id, label) VALUES 
+  ('MC_EN_E1_V1','English: Subject-Verb Agreement V1'),
+  ('MC_EN_E1_V2','English: Subject-Verb Agreement V2'),
+  ('MC_EN_E2_V1','English: Pronoun Issues V1'),
+  ('MC_EN_E2_V2','English: Pronoun Issues V2'),
+  ('MC_EN_E5_V1','English: Punctuation V1'),
+  ('MC_EN_E5_V2','English: Punctuation V2'),
+  ('MC_EN_E8_V1','English: Style/Concision V1'),
+  ('MC_EN_E8_V2','English: Style/Concision V2'),
+  ('MC_MA_M2_V1','Math: Linear Equations V1'),
+  ('MC_MA_M2_V2','Math: Linear Equations V2'),
+  ('MC_MA_M3_V1','Math: Quadratics V1'),
+  ('MC_MA_M3_V2','Math: Quadratics V2'),
+  ('MC_MA_M6_V1','Math: Geometry V1'),
+  ('MC_MA_M6_V2','Math: Geometry V2'),
+  ('MC_MA_M10_V1','Math: Applied Math V1'),
+  ('MC_MA_M10_V2','Math: Applied Math V2'),
+  ('MC_RD_R1_V1','Reading: Literary Analysis V1'),
+  ('MC_RD_R1_V2','Reading: Literary Analysis V2'),
+  ('MC_RD_R2_V1','Reading: Social Science V1'),
+  ('MC_RD_R2_V2','Reading: Social Science V2'),
+  ('MC_SCI_S1_V1','Science: Data Representation V1'),
+  ('MC_SCI_S1_V2','Science: Data Representation V2'),
+  ('MC_SCI_S2_V1','Science: Research Summaries V1'),
+  ('MC_SCI_S2_V2','Science: Research Summaries V2')
+ON CONFLICT (id) DO NOTHING;
