@@ -49,6 +49,16 @@ const GENERAL_TIPS: TipCategory = {
     "Use the question navigator to jump between questions efficiently.",
     "On the digital ACT, you can navigate freely - use it to your advantage!",
   ],
+  // Two-Pass Strategy Tips
+  QUICK_PASS_REMINDER: [
+    "Quick Pass tip: If you're stuck after 60 seconds, flag it and move on!",
+    "Stay in Quick Pass mode - answer what you know, flag what you don't.",
+  ],
+  DEEP_DIVE_START: [
+    "Deep Dive mode! Take your time on these flagged questions now.",
+    "You've seen everything once. Now let's tackle those tricky ones!",
+    "Second pass - no surprises left. You've got this!",
+  ],
 };
 
 // Section-specific strategic tips
@@ -169,6 +179,10 @@ export const TIP_KEYS = {
   MARK_FOR_REVIEW: 'MARK_FOR_REVIEW',
   REVIEW_FLAGGED: 'REVIEW_FLAGGED',
   DIGITAL_NAVIGATION: 'DIGITAL_NAVIGATION',
+  
+  // Two-Pass Strategy
+  QUICK_PASS_REMINDER: 'QUICK_PASS_REMINDER',
+  DEEP_DIVE_START: 'DEEP_DIVE_START',
   
   // English
   OMIT_STRATEGY: 'OMIT_STRATEGY',

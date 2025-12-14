@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { FormPicker } from '@/components/FormPicker';
 import { SectionPicker } from '@/components/SectionPicker';
 import { TimerBar } from '@/components/TimerBar';
+import { ChunkTimerBar } from '@/components/ChunkTimerBar';
+import { TwoPassIndicator, PassMode, shouldTransitionToDeepDive } from '@/components/TwoPassIndicator';
 import { QuestionCard } from '@/components/QuestionCard';
 import { PassageLayout } from '@/components/PassageLayout';
 import { EnglishPassageLayout } from '@/components/EnglishPassageLayout';
@@ -31,6 +33,7 @@ import { useTestCompanion } from '@/hooks/useTestCompanion';
 import { TestCompanion } from '@/components/TestCompanion';
 import { Loader2, Home, Flag } from 'lucide-react';
 import { BailBankButton } from '@/components/BailBankButton';
+import { toast as sonnerToast } from 'sonner';
 
 interface Question {
   id: string;
@@ -95,6 +98,10 @@ export default function Simulation() {
   const [loading, setLoading] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
+  
+  // Two-Pass Strategy State (Coached Mode)
+  const [currentPass, setCurrentPass] = useState<PassMode>('quick');
+  const [hasTransitionedToDeep, setHasTransitionedToDeep] = useState(false);
 
   const handleToggleFlag = useCallback((questionId: string) => {
     setFlaggedQuestions(prev => {
@@ -108,6 +115,10 @@ export default function Simulation() {
     });
   }, []);
 
+  // Flagged count for Two-Pass and companion
+  const flaggedCount = flaggedQuestions.size;
+  const answeredCount = Object.keys(answers).length;
+
   // Test Companion for coached mode
   const companion = useTestCompanion({
     enabled: isCoachMode,
@@ -117,8 +128,43 @@ export default function Simulation() {
     totalTimeLeftSec: timeLeft,
     totalTimeSec: sessionData?.time_limit_sec || 0,
     hasAnswer: sessionData ? !!answers[sessionData.questions[currentQuestionIndex]?.id] : false,
-    answeredCount: Object.keys(answers).length,
+    answeredCount,
+    flaggedCount,
+    currentPass,
   });
+
+  // Two-Pass transition detection (Coached Mode)
+  useEffect(() => {
+    if (!isCoachMode || hasTransitionedToDeep || !sessionData) return;
+    
+    const shouldTransition = shouldTransitionToDeepDive(
+      currentPass,
+      currentQuestionIndex,
+      sessionData.questions.length,
+      flaggedCount,
+      timeLeft,
+      sessionData.time_limit_sec
+    );
+
+    if (shouldTransition) {
+      setCurrentPass('deep');
+      setHasTransitionedToDeep(true);
+      
+      // Find first flagged question to navigate to
+      const firstFlaggedIndex = sessionData.questions.findIndex(q => flaggedQuestions.has(q.id));
+      
+      if (firstFlaggedIndex !== -1) {
+        sonnerToast.info('🔍 Deep Dive Mode activated! Review your flagged questions.', {
+          duration: 5000,
+        });
+        navigateToQuestion(firstFlaggedIndex);
+      } else {
+        sonnerToast.info('🔍 Deep Dive Mode - Review any questions you want to revisit.', {
+          duration: 4000,
+        });
+      }
+    }
+  }, [isCoachMode, currentPass, currentQuestionIndex, sessionData, flaggedCount, timeLeft, hasTransitionedToDeep, flaggedQuestions]);
 
   // Explicit auth header helper (temporary until we confirm automatic header attach works reliably on all browsers)
   const getAuthHeaders = async (): Promise<Record<string, string>> => {
@@ -497,17 +543,38 @@ export default function Simulation() {
                     onSubmit={finishSession}
                   />
                 )}
+                {/* Two-Pass Indicator - Coached Mode Only */}
+                {isCoachMode && (
+                  <TwoPassIndicator
+                    currentPass={currentPass}
+                    flaggedCount={flaggedCount}
+                    totalQuestions={sessionData.questions.length}
+                    answeredCount={answeredCount}
+                  />
+                )}
                 <div className="text-sm text-muted-foreground">
                   Question {currentQuestionIndex + 1} of {sessionData.questions.length}
                 </div>
               </div>
             </div>
-            <TimerBar
-              timeLeftSec={timeLeft}
-              totalTimeSec={sessionData.time_limit_sec}
-              onTimeEnd={handleTimeEnd}
-              isActive={true}
-            />
+            {/* Chunk Timer for Coached Mode, Standard Timer otherwise */}
+            {isCoachMode ? (
+              <ChunkTimerBar
+                timeLeftSec={timeLeft}
+                totalTimeSec={sessionData.time_limit_sec}
+                currentQuestionIndex={currentQuestionIndex}
+                totalQuestions={sessionData.questions.length}
+                onTimeEnd={handleTimeEnd}
+                isActive={true}
+              />
+            ) : (
+              <TimerBar
+                timeLeftSec={timeLeft}
+                totalTimeSec={sessionData.time_limit_sec}
+                onTimeEnd={handleTimeEnd}
+                isActive={true}
+              />
+            )}
           </div>
         </div>
 

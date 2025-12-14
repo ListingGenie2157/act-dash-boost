@@ -19,6 +19,7 @@ interface UseTestCompanionParams {
   hasAnswer: boolean;
   answeredCount: number;
   flaggedCount?: number; // Number of flagged questions
+  currentPass?: 'quick' | 'deep'; // Two-Pass mode
 }
 
 const TIP_COOLDOWN_MS = 45000; // 45 seconds minimum between tips
@@ -34,6 +35,7 @@ export function useTestCompanion({
   hasAnswer,
   answeredCount,
   flaggedCount = 0,
+  currentPass = 'quick',
 }: UseTestCompanionParams) {
   const [state, setState] = useState<CompanionState>({
     enabled,
@@ -137,6 +139,21 @@ export function useTestCompanion({
       fireTip('REVIEW_FLAGGED');
     }
   }, [enabled, flaggedCount, totalTimeLeftSec, fireTip]);
+
+  // Two-Pass specific coaching
+  useEffect(() => {
+    if (!enabled) return;
+
+    // Quick pass tips
+    if (currentPass === 'quick' && currentQuestionIndex === 5) {
+      fireTip('QUICK_PASS_REMINDER');
+    }
+
+    // Deep dive tips
+    if (currentPass === 'deep' && flaggedCount > 0) {
+      fireTip('DEEP_DIVE_START');
+    }
+  }, [enabled, currentPass, currentQuestionIndex, flaggedCount, fireTip]);
 
   // Section-specific triggers
   useEffect(() => {

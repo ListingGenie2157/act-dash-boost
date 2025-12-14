@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useWeakAreasDb } from '@/hooks/useWeakAreasDb';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { toast } from 'sonner';
+import { RUN_STYLES, type RunStyle, calculateRunTime } from '@/lib/runStyles';
 
 type DrillMode = 'weak' | 'skill' | 'mixed' | 'learned' | 'missed';
 
@@ -29,6 +30,7 @@ export default function DrillSetup() {
   const [selectedSkill, setSelectedSkill] = useState<string>('');
   const [questionCount, setQuestionCount] = useState<number>(10);
   const [timeLimit, setTimeLimit] = useState<number>(450); // 7.5 minutes default
+  const [runStyle, setRunStyle] = useState<RunStyle>(RUN_STYLES[0]);
   const [skills, setSkills] = useState<SkillOption[]>([]);
   const [loading, setLoading] = useState(true);
   const { data: weakAreas } = useWeakAreasDb(5);
@@ -97,6 +99,16 @@ export default function DrillSetup() {
     void fetchSkills();
   }, [subject, navigate]);
 
+  // Update question count and time when run style changes
+  const handleRunStyleChange = (styleId: string) => {
+    const style = RUN_STYLES.find(s => s.id === styleId);
+    if (style) {
+      setRunStyle(style);
+      setQuestionCount(style.questionCount);
+      setTimeLimit(calculateRunTime(style));
+    }
+  };
+
   const handleStartDrill = () => {
     if (mode === 'skill' && !selectedSkill) {
       toast.error('Please select a skill');
@@ -107,6 +119,7 @@ export default function DrillSetup() {
       mode,
       questions: questionCount.toString(),
       time: timeLimit.toString(),
+      runStyle: runStyle.id,
       ...(mode === 'skill' && { skill: selectedSkill }),
     });
 
@@ -257,11 +270,48 @@ export default function DrillSetup() {
           </Card>
         )}
 
+        {/* Run Style Selection - ADHD Feature */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-primary" />
+              Choose Your Style
+            </CardTitle>
+            <CardDescription>Pick a rhythm that works for you</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3">
+              {RUN_STYLES.map((style) => (
+                <button
+                  key={style.id}
+                  onClick={() => handleRunStyleChange(style.id)}
+                  className={`p-4 border rounded-lg text-left transition-all ${
+                    runStyle.id === style.id
+                      ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                      : 'hover:bg-accent'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-2xl">{style.icon}</span>
+                    <span className="font-semibold">{style.label}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{style.shortDescription}</p>
+                </button>
+              ))}
+            </div>
+            {runStyle && (
+              <p className="text-sm text-muted-foreground mt-4 p-3 bg-muted/50 rounded-lg">
+                {runStyle.description}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Drill Settings */}
         <Card>
           <CardHeader>
             <CardTitle>Drill Settings</CardTitle>
-            <CardDescription>Customize your practice session</CardDescription>
+            <CardDescription>Fine-tune your practice session</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -287,6 +337,7 @@ export default function DrillSetup() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="0">No Time Limit</SelectItem>
+                  <SelectItem value="150">2.5 minutes (Sprint)</SelectItem>
                   <SelectItem value="300">5 minutes</SelectItem>
                   <SelectItem value="450">7.5 minutes</SelectItem>
                   <SelectItem value="600">10 minutes</SelectItem>
@@ -304,7 +355,8 @@ export default function DrillSetup() {
 
         {/* Start Button */}
         <Button onClick={handleStartDrill} size="lg" className="w-full">
-          Start {questionCount} Question Drill
+          <span className="mr-2">{runStyle.icon}</span>
+          Start {runStyle.label} Drill ({questionCount} Questions)
         </Button>
       </div>
     </div>
