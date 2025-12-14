@@ -49,7 +49,7 @@ export default function ReviewMissed() {
         errorQuery = errorQuery.order('miss_count', { ascending: false });
       }
 
-      const { data: errorData, error: errorError } = await errorQuery;
+      const { data: errorData, error: errorError } = await errorQuery.limit(100);
 
       if (errorError) throw errorError;
       if (!errorData || errorData.length === 0) {

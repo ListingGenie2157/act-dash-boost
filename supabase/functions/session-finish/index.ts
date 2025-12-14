@@ -1,12 +1,8 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 
 interface SessionFinishRequest {
   session_id: string;
@@ -25,8 +21,8 @@ interface MissedQuestion {
 }
 
 serve(async (req) => {
-  console.log('[session-finish] hit', { method: req.method, hasAuth: !!req.headers.get('authorization') });
-  // Handle CORS preflight requests
+  const corsHeaders = getCorsHeaders(req);
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -39,11 +35,17 @@ serve(async (req) => {
   }
 
   try {
-    // Initialize Supabase client with anon key and auth header
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const authHeader = req.headers.get('authorization');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return new Response(JSON.stringify({ error: 'Server misconfigured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    const authHeader = req.headers.get('authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
         status: 401,
@@ -55,7 +57,6 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } }
     });
 
-    // Get the user from the JWT token
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
@@ -63,6 +64,13 @@ serve(async (req) => {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Rate limiting: 20 finishes per minute
+    const clientIp = getClientIp(req);
+    const isAllowed = await checkRateLimit(user.id, clientIp, 'session-finish', 20, 60000);
+    if (!isAllowed) {
+      return createRateLimitResponse(corsHeaders);
     }
 
     const { session_id }: SessionFinishRequest = await req.json();
@@ -121,7 +129,7 @@ serve(async (req) => {
     const questionIds = responses?.map(r => r.question_id) || [];
     const stagingIds = questionIds.map(id => parseInt(id)).filter(id => !isNaN(id));
     
-    let skillStats: Record<string, { correct: number; total: number; totalTime: number }> = {};
+    const skillStats: Record<string, { correct: number; total: number; totalTime: number }> = {};
     const missedQuestions: MissedQuestion[] = [];
     
     if (stagingIds.length > 0) {
@@ -142,7 +150,6 @@ serve(async (req) => {
         if (stagingItem) {
           const skillCode = stagingItem.skill_code;
           
-          // Update skill stats
           if (!skillStats[skillCode]) {
             skillStats[skillCode] = { correct: 0, total: 0, totalTime: 0 };
           }
@@ -151,7 +158,6 @@ serve(async (req) => {
           if (response.correct) {
             skillStats[skillCode].correct++;
           } else {
-            // Add to missed questions array
             missedQuestions.push({
               question_id: response.question_id,
               staging_id: stagingId,
@@ -183,12 +189,6 @@ serve(async (req) => {
       accuracy,
       avg_time_ms: avgTimeMs,
     };
-
-    console.log('[session-finish] returning', { 
-      totalQuestions, 
-      correctAnswers, 
-      missedCount: missedQuestions.length 
-    });
 
     return new Response(JSON.stringify({
       summary,

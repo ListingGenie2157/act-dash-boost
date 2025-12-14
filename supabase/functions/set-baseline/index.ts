@@ -1,9 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 
 interface SetBaselineRequest {
   scores: {
@@ -16,13 +13,13 @@ interface SetBaselineRequest {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
+  const corsHeaders = getCorsHeaders(req);
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Verify JWT and get user first
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
@@ -31,9 +28,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Initialize Supabase client with anon key and auth header for RLS
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return new Response(
+        JSON.stringify({ error: 'Server misconfigured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
@@ -47,14 +50,19 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-      console.error('Auth error:', authError);
       return new Response(
         JSON.stringify({ error: 'Invalid or expired token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Parse request body
+    // Rate limiting: 10 requests per minute
+    const clientIp = getClientIp(req);
+    const isAllowed = await checkRateLimit(user.id, clientIp, 'set-baseline', 10, 60000);
+    if (!isAllowed) {
+      return createRateLimitResponse(corsHeaders);
+    }
+
     const body: SetBaselineRequest = await req.json();
     
     if (!body.scores || Object.keys(body.scores).length === 0) {
@@ -64,7 +72,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Validate score values
     const validSections = ['English', 'Math', 'Reading', 'Science'];
     for (const [section, score] of Object.entries(body.scores)) {
       if (!validSections.includes(section)) {
@@ -81,11 +88,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Delete existing baselines and insert new ones for each provided section
     const savedBaselines = [];
 
     for (const [section, score] of Object.entries(body.scores)) {
-      // Delete existing baseline for this section first
       await supabase
         .from('diagnostics')
         .delete()
@@ -93,7 +98,6 @@ Deno.serve(async (req) => {
         .eq('section', section)
         .eq('source', 'self');
 
-      // Insert new baseline
       const { data, error } = await supabase
         .from('diagnostics')
         .insert({
@@ -103,7 +107,7 @@ Deno.serve(async (req) => {
           score: score,
           completed_at: new Date().toISOString(),
           notes: body.notes || null,
-          block: 1, // Default block for self-reported baselines (must be >= 1)
+          block: 1,
           responses: null,
         })
         .select()
@@ -119,8 +123,6 @@ Deno.serve(async (req) => {
 
       savedBaselines.push(data);
     }
-
-    console.warn(`Successfully saved ${savedBaselines.length} baseline entries for user ${user.id}`);
 
     return new Response(
       JSON.stringify({ 
