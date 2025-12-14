@@ -49,12 +49,18 @@ serve(async (req) => {
     // Get today in Chicago timezone
     const today = getTodayInChicago();
     const todayStr = today.toISOString().split('T')[0];
+    
+    // Calculate the date 7 days from today
+    const sevenDaysFromNow = new Date(today);
+    sevenDaysFromNow.setDate(today.getDate() + 6);
+    const sevenDaysStr = sevenDaysFromNow.toISOString().split('T')[0];
 
-    // Get all users who don't have a study plan for today
-    // We'll use profiles table to get active users (those with test dates)
+    console.log(`Checking plans for period: ${todayStr} to ${sevenDaysStr}`);
+
+    // Get all users with test dates (active users)
     const { data: activeUsers, error: usersError } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id, test_date')
       .not('test_date', 'is', null);
 
     if (usersError) {
@@ -74,20 +80,37 @@ serve(async (req) => {
 
     console.log(`Found ${activeUsers.length} active users`);
 
-    // Get users who already have plans for today
+    // Get study plan days for all users for the next 7 days
     const { data: existingPlans } = await supabase
       .from('study_plan_days')
-      .select('user_id, generated_at')
-      .eq('the_date', todayStr);
+      .select('user_id, the_date')
+      .gte('the_date', todayStr)
+      .lte('the_date', sevenDaysStr);
 
-    const usersWithPlans = new Set(existingPlans?.map(p => p.user_id) || []);
+    // Count plans per user
+    const planCountByUser: Record<string, number> = {};
+    existingPlans?.forEach(plan => {
+      planCountByUser[plan.user_id] = (planCountByUser[plan.user_id] || 0) + 1;
+    });
 
-    // Filter users who need plan refresh (plans older than 7 days)
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    // Filter users who need plan refresh (less than 7 future days planned)
     const usersNeedingPlans = activeUsers.filter(user => {
-      const existingPlan = existingPlans?.find(p => p.user_id === user.id);
-      // Only refresh if plan is older than 7 days or doesn't exist
-      return !existingPlan || new Date(existingPlan.generated_at) < sevenDaysAgo;
+      const futurePlansCount = planCountByUser[user.id] || 0;
+      // Also skip users whose test date has already passed
+      const testDate = new Date(user.test_date + 'T00:00:00');
+      const testPassed = testDate < today;
+      
+      if (testPassed) {
+        console.log(`User ${user.id}: Test date passed, skipping`);
+        return false;
+      }
+      
+      if (futurePlansCount < 7) {
+        console.log(`User ${user.id}: Only ${futurePlansCount}/7 future days, needs regeneration`);
+        return true;
+      }
+      
+      return false;
     });
 
     console.log(`${usersNeedingPlans.length} users need plan generation`);
@@ -96,42 +119,42 @@ serve(async (req) => {
     let errorCount = 0;
     const batchSize = 5; // Process in batches to avoid overwhelming the system
 
-    // Process users in batches
+    // Process users in batches using service role
     for (let i = 0; i < usersNeedingPlans.length; i += batchSize) {
       const batch = usersNeedingPlans.slice(i, i + batchSize);
       
       const batchPromises = batch.map(async (user) => {
         try {
-          // Create a JWT token for the user to call the generate-study-plan function
-          const { data: tokenData, error: tokenError } = await supabase.auth.admin.generateLink({
-            type: 'magiclink',
-            email: `user-${user.id}@temp.com`, // Placeholder email for token generation
-            options: {
-              redirectTo: 'http://localhost:3000' // Placeholder redirect
-            }
+          console.log(`Generating plan for user ${user.id}...`);
+          
+          // Create a service role client that impersonates the user
+          // This is done by creating a JWT for the user
+          const { data: userData, error: userError } = await supabase.auth.admin.getUserById(user.id);
+          
+          if (userError || !userData?.user) {
+            console.error(`Error fetching user ${user.id}:`, userError);
+            throw new Error(`Could not find user: ${user.id}`);
+          }
+
+          // Generate a new session for this user
+          const { data: sessionData, error: sessionError } = await supabase.auth.admin.createUser({
+            email: userData.user.email || `temp-${user.id}@placeholder.com`,
+            email_confirm: true,
+            user_metadata: userData.user.user_metadata,
           });
 
-          if (tokenError) {
-            console.error(`Error generating token for user ${user.id}:`, tokenError);
-            throw tokenError;
-          }
-
-          // Extract the access token from the response
-          const accessToken = (tokenData as any)?.properties?.access_token;
-          
-          if (!accessToken) {
-            throw new Error('No access token generated');
-          }
-
-          // Call the generate-study-plan function for this user
-          const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/generate-study-plan`, {
+          // Instead of creating new users, just use the service role to call the function
+          // with a user-scoped client
+          const response = await fetch(`${supabaseUrl}/functions/v1/generate-study-plan`, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${accessToken}`,
+              // Use service role key with user impersonation
+              'Authorization': `Bearer ${supabaseKey}`,
               'Content-Type': 'application/json',
-              'apikey': Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+              'apikey': supabaseKey,
+              'x-user-id': user.id, // Custom header to identify user
             },
-            body: JSON.stringify({})
+            body: JSON.stringify({ force: true, userId: user.id })
           });
 
           if (!response.ok) {
@@ -141,7 +164,7 @@ serve(async (req) => {
           }
 
           const result = await response.json();
-          console.log(`Successfully generated plan for user ${user.id}:`, result.tasks?.length || 0, 'tasks');
+          console.log(`Successfully generated plan for user ${user.id}:`, result.days?.length || 0, 'days');
           return { userId: user.id, success: true };
 
         } catch (error) {
