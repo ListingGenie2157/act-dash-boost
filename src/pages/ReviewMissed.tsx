@@ -37,7 +37,7 @@ export default function ReviewMissed() {
         return;
       }
 
-      // First, get error_bank entries for this user
+      // First, get error_bank entries for this user (limited to 100 for performance)
       let errorQuery = supabase
         .from('error_bank')
         .select('question_id, miss_count, last_missed_at')
@@ -49,7 +49,7 @@ export default function ReviewMissed() {
         errorQuery = errorQuery.order('miss_count', { ascending: false });
       }
 
-      const { data: errorData, error: errorError } = await errorQuery;
+      const { data: errorData, error: errorError } = await errorQuery.limit(100);
 
       if (errorError) throw errorError;
       if (!errorData || errorData.length === 0) {

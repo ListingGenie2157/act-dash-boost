@@ -1,9 +1,27 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
-};
+// Zod schema for input validation with length limits
+const TutorChatSchema = z.object({
+  subject: z.string().min(1).max(50),
+  topic: z.string().min(1).max(200),
+  mode: z.enum(['practice', 'quiz', 'test']),
+  problem: z.object({
+    id: z.string().nullable(),
+    text: z.string().max(10000),
+    choices: z.array(z.string().max(1000)).optional(),
+    user_answer: z.string().max(100).optional(),
+    user_work: z.string().max(5000).optional(),
+  }),
+  messages: z.array(z.object({
+    role: z.enum(['user', 'assistant', 'system']),
+    content: z.string().max(5000),
+    timestamp: z.string().optional(),
+  })).max(20),
+  session_id: z.string().uuid().optional(),
+});
 
 interface TutorChatRequest {
   subject: string;
@@ -111,6 +129,8 @@ MODE: TEST
 };
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -144,13 +164,20 @@ Deno.serve(async (req) => {
 
     const userId = user.id;
     
+    // Rate limiting: 20 requests per minute per user
+    const clientIp = getClientIp(req);
+    const isAllowed = await checkRateLimit(userId, clientIp, 'tutor-chat', 20, 60000);
+    if (!isAllowed) {
+      return createRateLimitResponse(corsHeaders);
+    }
+    
     // Create service role client for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse body with error handling
-    let body: TutorChatRequest;
+    let rawBody: unknown;
     try {
-      body = await req.json();
+      rawBody = await req.json();
     } catch (parseError) {
       console.error('Failed to parse request body:', parseError);
       return new Response(
@@ -159,13 +186,19 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Validate required fields
-    if (!body.subject || !body.topic || !body.mode || !body.messages) {
+    // Validate with zod schema
+    const validationResult = TutorChatSchema.safeParse(rawBody);
+    if (!validationResult.success) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
+        JSON.stringify({ 
+          error: 'Invalid request data',
+          details: validationResult.error.errors 
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    const body = validationResult.data as TutorChatRequest;
 
     // Security: Reject any messages with 'system' role from client
     if (body.messages.some(msg => msg.role === 'system')) {

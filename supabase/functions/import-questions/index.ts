@@ -1,11 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 interface ImportReport {
   totalRows: number;
@@ -112,6 +108,8 @@ function getSubjectFromSection(section: string): string {
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -125,15 +123,20 @@ serve(async (req) => {
   }
 
   try {
-    // Initialize Supabase client with proper env validation
+    // Initialize Supabase clients with proper env validation
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing required environment variables: SUPABASE_URL or SUPABASE_ANON_KEY');
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
+      throw new Error('Missing required environment variables: SUPABASE_URL, SUPABASE_ANON_KEY, or SUPABASE_SERVICE_ROLE_KEY');
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Use anon key client for auth verification
+    const authClient = createClient(supabaseUrl, supabaseAnonKey);
+    
+    // Use service role client for admin operations
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get the authorization header
     const authHeader = req.headers.get('authorization');
@@ -144,9 +147,9 @@ serve(async (req) => {
       });
     }
 
-    // Verify the JWT token
+    // Verify the JWT token using anon client
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await authClient.auth.getUser(token);
     
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -155,7 +158,7 @@ serve(async (req) => {
       });
     }
 
-    // Check if user is admin
+    // Check if user is admin using service role client
     const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin');
     
     if (adminError || !isAdmin) {
