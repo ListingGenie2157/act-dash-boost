@@ -1,6 +1,8 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
+import { getOrFetch, CacheKeys, CacheTTL } from '../_shared/cache.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -51,6 +53,12 @@ serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Rate limiting: 100 requests per minute per IP
+  const clientIp = getClientIp(req);
+  if (!checkRateLimit(clientIp, 100, 60000)) {
+    return createRateLimitResponse(corsHeaders);
   }
 
   try {
@@ -126,28 +134,43 @@ serve(async (req) => {
     let questionsData: any[];
     let questionsError: any;
 
+    // CACHED: Form questions are static data - cache for 1 hour
+    const cacheKey = CacheKeys.FORM_QUESTIONS(session.form_id, session.section);
+    
     if (useStaging) {
-      const { data, error } = await supabase
-        .from('staging_items')
-        .select('*')
-        .eq('form_id', session.form_id)
-        .in('section', sectionVariants)
-        .order('ord');
-      questionsData = data || [];
-      questionsError = error;
-      
-      console.log(`[session-fetch] staging_items query: ${questionsData.length} questions`);
+      questionsData = await getOrFetch(
+        `${cacheKey}:staging`,
+        async () => {
+          const { data, error } = await supabase
+            .from('staging_items')
+            .select('*')
+            .eq('form_id', session.form_id)
+            .in('section', sectionVariants)
+            .order('ord');
+          if (error) throw error;
+          return data || [];
+        },
+        CacheTTL.FORMS
+      );
+      questionsError = null;
+      console.log(`[session-fetch] staging_items query (cached): ${questionsData.length} questions`);
     } else {
-      const { data, error } = await supabase
-        .from('v_form_section')
-        .select('*')
-        .eq('form_id', session.form_id)
-        .in('section', sectionVariants)
-        .order('ord');
-      questionsData = data || [];
-      questionsError = error;
-      
-      console.log(`[session-fetch] v_form_section query: ${questionsData.length} questions`);
+      questionsData = await getOrFetch(
+        cacheKey,
+        async () => {
+          const { data, error } = await supabase
+            .from('v_form_section')
+            .select('*')
+            .eq('form_id', session.form_id)
+            .in('section', sectionVariants)
+            .order('ord');
+          if (error) throw error;
+          return data || [];
+        },
+        CacheTTL.FORMS
+      );
+      questionsError = null;
+      console.log(`[session-fetch] v_form_section query (cached): ${questionsData.length} questions`);
     }
 
     if (questionsError) {

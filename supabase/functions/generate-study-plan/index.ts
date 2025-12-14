@@ -1,6 +1,8 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.56.0";
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
+import { getOrFetch, CacheKeys, CacheTTL } from '../_shared/cache.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -408,6 +410,12 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Rate limiting: 10 requests per minute per IP (heavy computation)
+  const clientIp = getClientIp(req);
+  if (!checkRateLimit(clientIp, 10, 60000)) {
+    return createRateLimitResponse(corsHeaders);
+  }
+
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
@@ -578,11 +586,18 @@ serve(async (req) => {
       .eq("user_id", user.id)
       .single();
 
-    // Get all skills for lesson tracking
-    const { data: allSkills } = await supabase
-      .from("skills")
-      .select("id, name, subject, cluster, order_index")
-      .order("order_index", { ascending: true });
+    // Get all skills for lesson tracking (CACHED - skills rarely change)
+    const allSkills = await getOrFetch(
+      CacheKeys.ALL_SKILLS,
+      async () => {
+        const { data } = await supabase
+          .from("skills")
+          .select("id, name, subject, cluster, order_index")
+          .order("order_index", { ascending: true });
+        return data || [];
+      },
+      CacheTTL.SKILLS
+    );
 
     // Create skill name lookup map
     const skillNameMap = new Map<string, string>();

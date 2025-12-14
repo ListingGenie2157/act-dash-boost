@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { updateReviewQueueOnAnswer, type ReviewMode } from '../_shared/review.ts';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,6 +41,12 @@ serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Rate limiting: 60 requests per minute per IP
+  const clientIp = getClientIp(req);
+  if (!checkRateLimit(clientIp, 60, 60000)) {
+    return createRateLimitResponse(corsHeaders);
   }
 
   if (req.method !== 'POST') {
@@ -189,46 +196,87 @@ serve(async (req) => {
       }
     }
 
-    // Process individual answers for review queue updates
+    // Process individual answers for review queue updates - BATCH OPERATION
     if (answers && answers.length > 0) {
-      console.log(`Processing ${answers.length} answers for review queue`);
+      console.log(`Processing ${answers.length} answers for review queue (batched)`);
       
-      for (const answer of answers) {
-        try {
-          await updateReviewQueueOnAnswer(
-            supabase,
-            user.id,
-            answer.question_id,
-            answer.correct,
-            studyMode as ReviewMode
-          );
-        } catch (error) {
-          console.error(`Error updating review queue for question ${answer.question_id}:`, error);
-          // Continue with other answers even if one fails
+      // Fetch existing review queue entries in one query
+      const questionIds = answers.map(a => a.question_id);
+      const { data: existingEntries } = await supabase
+        .from('review_queue')
+        .select('question_id, interval_days, ease, lapses')
+        .eq('user_id', user.id)
+        .in('question_id', questionIds);
+      
+      const existingMap = new Map(
+        existingEntries?.map(e => [e.question_id, e]) || []
+      );
+      
+      // Build batch upsert data
+      const now = new Date();
+      const reviewQueueBatch = answers.map(answer => {
+        const existing = existingMap.get(answer.question_id);
+        const currentInterval = existing?.interval_days || 0;
+        const currentEase = existing?.ease || 250;
+        const currentLapses = existing?.lapses || 0;
+        
+        // Calculate next interval based on study mode
+        const intervals = studyMode === 'CRASH' ? [0, 1, 3] : [1, 4, 10, 21];
+        let nextIntervalDays: number;
+        
+        if (!answer.correct) {
+          nextIntervalDays = intervals[0];
+        } else {
+          const idx = intervals.indexOf(currentInterval);
+          nextIntervalDays = idx >= 0 && idx < intervals.length - 1 
+            ? intervals[idx + 1] 
+            : intervals[intervals.length - 1];
         }
+        
+        const dueAt = new Date(now);
+        dueAt.setDate(dueAt.getDate() + nextIntervalDays);
+        
+        return {
+          user_id: user.id,
+          question_id: answer.question_id,
+          due_at: dueAt.toISOString(),
+          interval_days: nextIntervalDays,
+          ease: answer.correct ? Math.min(300, currentEase + 10) : Math.max(130, currentEase - 20),
+          lapses: answer.correct ? currentLapses : currentLapses + 1
+        };
+      });
+      
+      // Single batch upsert for all review queue entries
+      const { error: reviewBatchError } = await supabase
+        .from('review_queue')
+        .upsert(reviewQueueBatch, { onConflict: 'user_id,question_id' });
+      
+      if (reviewBatchError) {
+        console.error('Batch review queue update error:', reviewBatchError);
       }
     }
 
-    // Add to error bank for incorrect answers
+    // Add to error bank for incorrect answers - BATCH OPERATION
     if (answers) {
       const incorrectAnswers = answers.filter(a => !a.correct);
       if (incorrectAnswers.length > 0) {
-        for (const incorrectAnswer of incorrectAnswers) {
-          try {
-            await supabase
-              .from('error_bank')
-              .upsert({
-                user_id: user.id,
-                question_id: incorrectAnswer.question_id,
-                miss_count: 1,
-                last_missed_at: new Date().toISOString()
-              }, {
-                onConflict: 'user_id,question_id',
-                ignoreDuplicates: false
-              });
-          } catch (error) {
-            console.error(`Error adding to error bank for question ${incorrectAnswer.question_id}:`, error);
-          }
+        const errorBankBatch = incorrectAnswers.map(answer => ({
+          user_id: user.id,
+          question_id: answer.question_id,
+          miss_count: 1,
+          last_missed_at: new Date().toISOString()
+        }));
+        
+        // Single batch upsert for all error bank entries
+        const { error: errorBankError } = await supabase
+          .from('error_bank')
+          .upsert(errorBankBatch, {
+            onConflict: 'user_id,question_id',
+            ignoreDuplicates: false
+          });
+        
+        if (errorBankError) {
+          console.error('Batch error bank update error:', errorBankError);
         }
       }
     }
