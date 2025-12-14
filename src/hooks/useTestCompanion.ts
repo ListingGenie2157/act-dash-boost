@@ -18,10 +18,11 @@ interface UseTestCompanionParams {
   totalTimeSec: number;
   hasAnswer: boolean;
   answeredCount: number;
+  flaggedCount?: number; // Number of flagged questions
 }
 
 const TIP_COOLDOWN_MS = 45000; // 45 seconds minimum between tips
-const MAX_TIPS_PER_SESSION = 12; // Don't overwhelm the student
+const MAX_TIPS_PER_SESSION = 15; // Increased for more coaching opportunities
 
 export function useTestCompanion({
   enabled,
@@ -32,6 +33,7 @@ export function useTestCompanion({
   totalTimeSec,
   hasAnswer,
   answeredCount,
+  flaggedCount = 0,
 }: UseTestCompanionParams) {
   const [state, setState] = useState<CompanionState>({
     enabled,
@@ -90,13 +92,13 @@ export function useTestCompanion({
     }));
   }, [canShowTip, section]);
 
-  // Time-based triggers
+  // Time-based triggers - suggest marking for review when stuck
   useEffect(() => {
     if (!enabled) return;
 
-    // Spending too long on one question
+    // Spending too long on one question - suggest flagging
     if (internalTimeOnQuestion > 60000 && !hasAnswer) {
-      fireTip('TIME_WARNING_60S');
+      fireTip('MARK_FOR_REVIEW');
     } else if (internalTimeOnQuestion > 90000 && !hasAnswer) {
       fireTip('TIME_WARNING_90S');
     }
@@ -126,6 +128,16 @@ export function useTestCompanion({
     }
   }, [enabled, totalTimeLeftSec, totalTimeSec, answeredCount, totalQuestions, fireTip]);
 
+  // Review flagged questions reminder
+  useEffect(() => {
+    if (!enabled) return;
+
+    // Remind to review flagged questions when time is running low
+    if (flaggedCount > 0 && totalTimeLeftSec < 300 && totalTimeLeftSec > 240) {
+      fireTip('REVIEW_FLAGGED');
+    }
+  }, [enabled, flaggedCount, totalTimeLeftSec, fireTip]);
+
   // Section-specific triggers
   useEffect(() => {
     if (!enabled) return;
@@ -140,6 +152,11 @@ export function useTestCompanion({
     // Mid-section encouragement
     if (currentQuestionIndex === Math.floor(totalQuestions / 2)) {
       fireTip('MIDPOINT_ENCOURAGEMENT');
+    }
+
+    // Digital navigation tip early in the test
+    if (currentQuestionIndex === 3) {
+      fireTip('DIGITAL_NAVIGATION');
     }
   }, [enabled, currentQuestionIndex, totalQuestions, fireTip]);
 

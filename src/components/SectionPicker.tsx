@@ -10,13 +10,14 @@ interface SectionPickerProps {
 }
 
 export function SectionPicker({ formId, onSectionSelect, onBack }: SectionPickerProps) {
+  // ACT Enhanced format (2024+) - updated question counts and time limits
   const sections = [
     {
       id: 'EN',
       name: 'English',
       icon: FileText,
-      timeLimit: 45,
-      questionCount: 75,
+      timeLimit: 35,      // Was 45 min - now 35 min
+      questionCount: 50,  // Was 75 - now 50
       description: 'Usage, mechanics, and rhetorical skills',
       color: 'bg-blue-100 text-blue-700',
     },
@@ -24,8 +25,8 @@ export function SectionPicker({ formId, onSectionSelect, onBack }: SectionPicker
       id: 'MATH',
       name: 'Math',
       icon: Calculator,
-      timeLimit: 60,
-      questionCount: 60,
+      timeLimit: 50,      // Was 60 min - now 50 min
+      questionCount: 45,  // Was 60 - now 45 (4 choices each)
       description: 'Algebra, geometry, and trigonometry',
       color: 'bg-green-100 text-green-700',
     },
@@ -33,8 +34,8 @@ export function SectionPicker({ formId, onSectionSelect, onBack }: SectionPicker
       id: 'RD',
       name: 'Reading',
       icon: BookOpen,
-      timeLimit: 35,
-      questionCount: 40,
+      timeLimit: 40,      // Was 35 min - now 40 min
+      questionCount: 36,  // Was 40 - now 36
       description: 'Comprehension and analysis',
       color: 'bg-purple-100 text-purple-700',
     },
@@ -42,8 +43,8 @@ export function SectionPicker({ formId, onSectionSelect, onBack }: SectionPicker
       id: 'SCI',
       name: 'Science',
       icon: Microscope,
-      timeLimit: 35,
-      questionCount: 40,
+      timeLimit: 40,      // Was 35 min - now 40 min
+      questionCount: 40,  // Still 40 (optional section)
       description: 'Scientific reasoning and data analysis',
       color: 'bg-orange-100 text-orange-700',
     },
