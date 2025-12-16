@@ -103,8 +103,6 @@ serve(async (req) => {
 
     const { task_id, accuracy, time_ms, answers } = validationResult.data;
 
-    console.log(`Completing task ${task_id} for user ${user.id}`);
-
     // Get the task to verify ownership and get details
     const { data: task, error: taskError } = await supabase
       .from('study_tasks')
@@ -195,8 +193,6 @@ serve(async (req) => {
 
     // Process individual answers for review queue updates
     if (answers && answers.length > 0) {
-      console.log(`Processing ${answers.length} answers for review queue`);
-      
       for (const answer of answers) {
         try {
           await updateReviewQueueOnAnswer(
@@ -240,8 +236,6 @@ serve(async (req) => {
       message: 'Task completed successfully',
       answers_processed: answers?.length || 0
     };
-
-    console.log('Task completion successful:', response);
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

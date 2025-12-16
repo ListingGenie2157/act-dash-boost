@@ -1,13 +1,11 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -34,8 +32,6 @@ serve(async (req) => {
       });
     }
 
-    console.log('Starting daily cron job...');
-
     // Initialize Supabase client with service role key for admin operations
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -55,8 +51,6 @@ serve(async (req) => {
     sevenDaysFromNow.setDate(today.getDate() + 6);
     const sevenDaysStr = sevenDaysFromNow.toISOString().split('T')[0];
 
-    console.log(`Checking plans for period: ${todayStr} to ${sevenDaysStr}`);
-
     // Get all users with test dates (active users)
     const { data: activeUsers, error: usersError } = await supabase
       .from('profiles')
@@ -69,7 +63,6 @@ serve(async (req) => {
     }
 
     if (!activeUsers || activeUsers.length === 0) {
-      console.log('No active users found');
       return new Response(JSON.stringify({ 
         message: 'No active users found',
         processed: 0 
@@ -77,8 +70,6 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    console.log(`Found ${activeUsers.length} active users`);
 
     // Get study plan days for all users for the next 7 days
     const { data: existingPlans } = await supabase
@@ -96,24 +87,13 @@ serve(async (req) => {
     // Filter users who need plan refresh (less than 7 future days planned)
     const usersNeedingPlans = activeUsers.filter(user => {
       const futurePlansCount = planCountByUser[user.id] || 0;
-      // Also skip users whose test date has already passed
+      // Skip users whose test date has already passed
       const testDate = new Date(user.test_date + 'T00:00:00');
       const testPassed = testDate < today;
       
-      if (testPassed) {
-        console.log(`User ${user.id}: Test date passed, skipping`);
-        return false;
-      }
-      
-      if (futurePlansCount < 7) {
-        console.log(`User ${user.id}: Only ${futurePlansCount}/7 future days, needs regeneration`);
-        return true;
-      }
-      
-      return false;
+      if (testPassed) return false;
+      return futurePlansCount < 7;
     });
-
-    console.log(`${usersNeedingPlans.length} users need plan generation`);
 
     let successCount = 0;
     let errorCount = 0;
@@ -125,8 +105,6 @@ serve(async (req) => {
       
       const batchPromises = batch.map(async (user) => {
         try {
-          console.log(`Generating plan for user ${user.id}...`);
-          
           // Call generate-study-plan with service role key and userId parameter
           const response = await fetch(`${supabaseUrl}/functions/v1/generate-study-plan`, {
             method: 'POST',
@@ -140,16 +118,15 @@ serve(async (req) => {
 
           if (!response.ok) {
             const errorText = await response.text();
-            console.error(`Error generating plan for user ${user.id}:`, errorText);
+            console.error(`Plan generation failed for user: HTTP ${response.status}`);
             throw new Error(`HTTP ${response.status}: ${errorText}`);
           }
 
-          const result = await response.json();
-          console.log(`Successfully generated plan for user ${user.id}:`, result.days?.length || 0, 'days');
+          await response.json();
           return { userId: user.id, success: true };
 
         } catch (error) {
-          console.error(`Failed to generate plan for user ${user.id}:`, error);
+          console.error('Plan generation failed:', error instanceof Error ? error.message : 'Unknown error');
           return { userId: user.id, success: false, error: error instanceof Error ? error.message : 'Unknown error' };
         }
       });
@@ -184,8 +161,6 @@ serve(async (req) => {
       failed_generations: errorCount,
       execution_date: todayStr
     };
-
-    console.log('Cron job summary:', summary);
 
     return new Response(JSON.stringify(summary), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

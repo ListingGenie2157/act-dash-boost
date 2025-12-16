@@ -73,13 +73,11 @@ function selectLessonsForDay(
         result.push(selectedSkill.id);
         subjectCountToday[subject]++;
         found = true;
-        console.log(`Day ${dayOffset}: Selected ${subject} skill: ${selectedSkill.name} (slot ${i + 1})`);
       }
     }
     
     // If no subjects have available skills, break
     if (!found) {
-      console.log(`Day ${dayOffset}: No more available skills for any subject at slot ${i + 1}`);
       break;
     }
   }
@@ -419,12 +417,18 @@ serve(async (req) => {
 
     if (isServiceRole && cronUserId) {
       // Cron job call - use service role key and specified userId
-      console.log(`Cron job call for user: ${cronUserId}`);
       userId = cronUserId;
-      supabase = createClient(supabaseUrl, supabaseServiceKey!);
+      if (!supabaseServiceKey) {
+        throw new Error('Service role key required for cron job calls');
+      }
+      supabase = createClient(supabaseUrl, supabaseServiceKey);
     } else {
       // Normal user call - verify JWT and use their ID
-      supabase = createClient(supabaseUrl, supabaseAnonKey || supabaseServiceKey!, {
+      const clientKey = supabaseAnonKey || supabaseServiceKey;
+      if (!clientKey) {
+        throw new Error('No valid Supabase key available');
+      }
+      supabase = createClient(supabaseUrl, clientKey, {
         global: {
           headers: {
             Authorization: authHeader,
@@ -435,7 +439,7 @@ serve(async (req) => {
       const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
       if (authError || !user) {
-        console.warn("Authentication failed:", authError?.message);
+        console.warn("Authentication failed");
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -443,10 +447,6 @@ serve(async (req) => {
       }
       userId = user.id;
     }
-
-    console.log(
-      `Generate study plan called. Force: ${force}, User: ${userId}, ServiceRole: ${isServiceRole}`,
-    );
 
     const today = getTodayInChicago();
     const todayStr = today.toISOString().split("T")[0];
@@ -458,8 +458,6 @@ serve(async (req) => {
 
     // If force=true, delete existing pending tasks
     if (force) {
-      console.log("Force regeneration: Deleting existing plans...");
-
       const { error: deleteDaysError } = await supabase
         .from("study_plan_days")
         .delete()
@@ -481,10 +479,6 @@ serve(async (req) => {
       if (deleteTasksError) {
         console.error("Error deleting study_tasks:", deleteTasksError);
       }
-
-      console.log(
-        "Existing plans deleted. Proceeding with fresh generation...",
-      );
     }
 
     // Check if plan already exists (skip if force=true)
@@ -504,7 +498,6 @@ serve(async (req) => {
       const futurePlansCount = existingPlans?.length || 0;
       
       if (futurePlansCount >= 7) {
-        console.log(`User has ${futurePlansCount} future days planned, skipping regeneration`);
 
         // Set has_study_plan flag even for existing plans
         const { error: profileUpdateError } = await supabase
@@ -532,9 +525,8 @@ serve(async (req) => {
         );
       }
       
-      // If we have some but not all days, log and regenerate
+      // If we have some but not all days, regenerate
       if (futurePlansCount > 0) {
-        console.log(`User has only ${futurePlansCount}/7 future days, regenerating full week...`);
         
         // Delete existing future plans to regenerate cleanly
         const { error: deleteDaysError } = await supabase
@@ -638,9 +630,7 @@ serve(async (req) => {
       is_critical: true,
     }));
 
-    console.warn(
-      `Study mode: ${mode.name}, Days left: ${daysLeft}, Time cap: ${dailyTimeCap}mins, Time multiplier: ${timeMultiplier}, SIM dates: ${simDates.length}`,
-    );
+    // Study mode computed based on days left
 
     // Calculate lesson metrics for time-adaptive planning
     const { data: lessonsWithContent } = await supabase
@@ -667,9 +657,7 @@ serve(async (req) => {
       ? Math.min(Math.ceil(lessonsRemaining / daysLeft), 3)
       : Math.min(lessonsRemaining, 3);
 
-    console.log(
-      `📚 Lessons: ${lessonsRemaining} remaining, ${lessonsPerDay} per day needed (${daysLeft} days left)`,
-    );
+    // Calculate lessons per day based on remaining content
 
     // Fetch review and weakness data once for all days
     const { data: dueReviews } = await supabase
@@ -723,12 +711,11 @@ serve(async (req) => {
       const dayDaysLeft = daysLeft !== null ? daysLeft - dayOffset : null;
       const dayMode = getStudyMode(dayDaysLeft);
 
-      console.log(`\n📅 Generating plan for ${dateStr} (${dayOffset + 1}/7)`);
+      // Generate plan for this day
 
       // Skip normal tasks on SIM days
       const isSimDay = simDateSet.has(dateStr);
       if (isSimDay) {
-        console.log(`🎯 SIM day ${dateStr} – skipping normal tasks`);
 
         // Reflect SIM in study_plan_days
         allPlans.push({
@@ -748,7 +735,6 @@ serve(async (req) => {
 
       // Check for test week special scheduling
       if (dayDaysLeft !== null && dayDaysLeft > 0 && dayDaysLeft <= 7) {
-        console.warn(`Test week mode: ${dayDaysLeft} days until test`);
         const specialTasks = getTestWeekTasks(dayDaysLeft, userId, dateStr);
         if (specialTasks.length > 0) {
           allPlans.push({ the_date: dateStr, tasks: specialTasks });
