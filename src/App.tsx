@@ -11,7 +11,8 @@ import { TutorPanel } from './components/tutor/TutorPanel';
 import { AppLayout } from './components/AppLayout';
 import { RequireAuth } from './components/RequireAuth';
 import { ProtectedAdminRoute } from './components/ProtectedAdminRoute';
-import Index from "./pages/Index";
+import LandingPage from "./pages/LandingPage";
+import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import SimpleLogin from "./pages/SimpleLogin";
 import Onboarding from "./pages/Onboarding";
@@ -57,14 +58,14 @@ import { HealthCheck } from "./pages/HealthCheck";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 3, // Retry failed queries 3 times
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
-      staleTime: 5 * 60 * 1000, // Data is fresh for 5 minutes
-      refetchOnWindowFocus: false, // Prevent excessive refetches
-      refetchOnReconnect: true, // Refetch when network reconnects
+      retry: 3,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      staleTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
     },
     mutations: {
-      retry: 1, // Retry mutations once on failure
+      retry: 1,
     },
   },
 });
@@ -78,122 +79,139 @@ const App = () => (
           <Sonner />
           <TutorPanel />
           <BrowserRouter>
-          <Suspense fallback={<PageLoadingSpinner />}>
-            <Routes>
-          {/* Public routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/simple-login" element={<SimpleLogin />} />
-          <Route path="/update-password" element={<UpdatePassword />} />
-          
-          {/* Protected routes with sidebar layout */}
-          <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
-            <Route path="/" element={<Index />} />
-            <Route path="/dashboard" element={<Index />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-          {/* Diagnostic assessment route */}
-          <Route path="/diagnostic" element={
-            <LazyLoader>
-              <LazyDiagnostic />
-            </LazyLoader>
-          } />
-          {/* Diagnostic test routes */}
-          <Route path="/diagnostic-test/:formId" element={<DiagnosticTest />} />
-          <Route path="/diagnostic-results/:formId" element={<DiagnosticResults />} />
-          <Route path="/diagnostic-results-complete" element={<DiagnosticResultsComplete />} />
-          {/* New simulation system */}
-          <Route path="/simulation" element={<Simulation />} />
-          <Route path="/simulation-results" element={<SimulationResults />} />
-          {/* Cheatsheet routes */}
-          <Route path="/cheatsheets/english" element={
-            <LazyLoader>
-              <LazyEnglishCheatsheet />
-            </LazyLoader>
-          } />
-          <Route path="/cheatsheets/math" element={
-            <LazyLoader>
-              <LazyMathCheatsheet />
-            </LazyLoader>
-          } />
-          <Route path="/cheatsheets/reading" element={
-            <LazyLoader>
-              <LazyReadingCheatsheet />
-            </LazyLoader>
-          } />
-          <Route path="/cheatsheets/science" element={
-            <LazyLoader>
-              <LazyScienceCheatsheet />
-            </LazyLoader>
-          } />
-          {/* Analytics route */}
-          <Route path="/analytics" element={
-            <LazyLoader>
-              <LazyAnalytics />
-            </LazyLoader>
-          } />
-          {/* Admin routes */}
-          <Route path="/admin-import" element={
-            <ProtectedAdminRoute>
-              <LazyLoader>
-                <LazyAdminImport />
-              </LazyLoader>
-            </ProtectedAdminRoute>
-          } />
-          <Route path="/admin-lesson-import" element={
-            <ProtectedAdminRoute>
-              <LazyLoader>
-                <LazyAdminLessonImport />
-              </LazyLoader>
-            </ProtectedAdminRoute>
-          } />
-          <Route path="/admin/skill-codes" element={
-            <ProtectedAdminRoute>
-              <AdminSkillCodes />
-            </ProtectedAdminRoute>
-          } />
-          {/* Parent portal route */}
-          <Route path="/parent-portal" element={
-            <LazyLoader>
-              <LazyParentPortal />
-            </LazyLoader>
-          } />
-        <Route path="/plan" element={<Plan />} />
-  <Route path="/task/:date/:idx" element={<TaskLauncher />} />
-  <Route path="/lesson/:topic" element={<EnhancedLessonViewer />} />
-  <Route path="/lessons" element={<LessonsLibrary />} />
-  <Route path="/drills" element={<TimedDrills />} />
-  <Route path="/drill-runner" element={<TimedDrills />} />
-  <Route path="/drill/:subject/setup" element={<DrillSetup />} />
-  <Route path="/drill/:subject/play" element={<DrillPlayer />} />
-  <Route path="/drill-history" element={<DrillHistory />} />
-  <Route path="/drill-detail/:taskId" element={<DrillDetail />} />
-  <Route path="/drill/:subject" element={<DrillRunner />} />
-            <Route path="/quiz/:section" element={<QuizRunner />} />
-            <Route path="/weak-areas" element={<WeakAreas />} />
-            <Route path="/calculator-lab" element={<CalculatorLab />} />
-            <Route path="/review/missed" element={
-              <LazyLoader>
-                <ReviewMissed />
-              </LazyLoader>
-            } />
-            <Route path="/review/spaced" element={
-              <LazyLoader>
-                <ReviewSpaced />
-              </LazyLoader>
-            } />
-          </Route>
-          
-          {/* Health check route */}
-          <Route path="/health" element={<HealthCheck />} />
-          
-          {/* Catch-all route */}
-          <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </TooltipProvider>
-    </TutorProvider>
-  </QueryClientProvider>
-</ErrorBoundary>
+            <Suspense fallback={<PageLoadingSpinner />}>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/simple-login" element={<SimpleLogin />} />
+                <Route path="/update-password" element={<UpdatePassword />} />
+                
+                {/* Protected routes with sidebar layout */}
+                <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/onboarding" element={<Onboarding />} />
+                  
+                  {/* Diagnostic assessment route */}
+                  <Route path="/diagnostic" element={
+                    <LazyLoader>
+                      <LazyDiagnostic />
+                    </LazyLoader>
+                  } />
+                  
+                  {/* Diagnostic test routes */}
+                  <Route path="/diagnostic-test/:formId" element={<DiagnosticTest />} />
+                  <Route path="/diagnostic-results/:formId" element={<DiagnosticResults />} />
+                  <Route path="/diagnostic-results-complete" element={<DiagnosticResultsComplete />} />
+                  
+                  {/* Simulation system */}
+                  <Route path="/simulation" element={<Simulation />} />
+                  <Route path="/simulation-results" element={<SimulationResults />} />
+                  
+                  {/* Cheatsheet routes */}
+                  <Route path="/cheatsheets/english" element={
+                    <LazyLoader>
+                      <LazyEnglishCheatsheet />
+                    </LazyLoader>
+                  } />
+                  <Route path="/cheatsheets/math" element={
+                    <LazyLoader>
+                      <LazyMathCheatsheet />
+                    </LazyLoader>
+                  } />
+                  <Route path="/cheatsheets/reading" element={
+                    <LazyLoader>
+                      <LazyReadingCheatsheet />
+                    </LazyLoader>
+                  } />
+                  <Route path="/cheatsheets/science" element={
+                    <LazyLoader>
+                      <LazyScienceCheatsheet />
+                    </LazyLoader>
+                  } />
+                  
+                  {/* Analytics route */}
+                  <Route path="/analytics" element={
+                    <LazyLoader>
+                      <LazyAnalytics />
+                    </LazyLoader>
+                  } />
+                  
+                  {/* Admin routes */}
+                  <Route path="/admin-import" element={
+                    <ProtectedAdminRoute>
+                      <LazyLoader>
+                        <LazyAdminImport />
+                      </LazyLoader>
+                    </ProtectedAdminRoute>
+                  } />
+                  <Route path="/admin-lesson-import" element={
+                    <ProtectedAdminRoute>
+                      <LazyLoader>
+                        <LazyAdminLessonImport />
+                      </LazyLoader>
+                    </ProtectedAdminRoute>
+                  } />
+                  <Route path="/admin/skill-codes" element={
+                    <ProtectedAdminRoute>
+                      <AdminSkillCodes />
+                    </ProtectedAdminRoute>
+                  } />
+                  
+                  {/* Parent portal route */}
+                  <Route path="/parent-portal" element={
+                    <LazyLoader>
+                      <LazyParentPortal />
+                    </LazyLoader>
+                  } />
+                  
+                  {/* Study plan and tasks */}
+                  <Route path="/plan" element={<Plan />} />
+                  <Route path="/task/:date/:idx" element={<TaskLauncher />} />
+                  
+                  {/* Lessons */}
+                  <Route path="/lesson/:topic" element={<EnhancedLessonViewer />} />
+                  <Route path="/lessons" element={<LessonsLibrary />} />
+                  
+                  {/* Drills */}
+                  <Route path="/drills" element={<TimedDrills />} />
+                  <Route path="/drill-runner" element={<TimedDrills />} />
+                  <Route path="/drill/:subject/setup" element={<DrillSetup />} />
+                  <Route path="/drill/:subject/play" element={<DrillPlayer />} />
+                  <Route path="/drill-history" element={<DrillHistory />} />
+                  <Route path="/drill-detail/:taskId" element={<DrillDetail />} />
+                  <Route path="/drill/:subject" element={<DrillRunner />} />
+                  
+                  {/* Quiz and practice */}
+                  <Route path="/quiz/:section" element={<QuizRunner />} />
+                  <Route path="/weak-areas" element={<WeakAreas />} />
+                  <Route path="/calculator-lab" element={<CalculatorLab />} />
+                  
+                  {/* Review */}
+                  <Route path="/review/missed" element={
+                    <LazyLoader>
+                      <ReviewMissed />
+                    </LazyLoader>
+                  } />
+                  <Route path="/review/spaced" element={
+                    <LazyLoader>
+                      <ReviewSpaced />
+                    </LazyLoader>
+                  } />
+                </Route>
+                
+                {/* Health check route */}
+                <Route path="/health" element={<HealthCheck />} />
+                
+                {/* Catch-all route */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </TooltipProvider>
+      </TutorProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

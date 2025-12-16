@@ -4,7 +4,7 @@ import '@testing-library/jest-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import Index from '../pages/Index';
+import LandingPage from '../pages/LandingPage';
 
 function TestWrapper({ children }: { children: React.ReactNode }) {
   const queryClient = new QueryClient({
@@ -26,10 +26,10 @@ function TestWrapper({ children }: { children: React.ReactNode }) {
 }
 
 describe('Smoke Tests', () => {
-  it('renders index page without crashing', () => {
+  it('renders landing page without crashing', () => {
     render(
       <TestWrapper>
-        <Index />
+        <LandingPage />
       </TestWrapper>
     );
     
@@ -37,10 +37,10 @@ describe('Smoke Tests', () => {
     expect(document.body).toBeDefined();
   });
 
-  it('shows loading states properly', () => {
+  it('shows landing page content', () => {
     render(
       <TestWrapper>
-        <Index />
+        <LandingPage />
       </TestWrapper>
     );
     
