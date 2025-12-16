@@ -118,6 +118,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "attempts_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "v_questions_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "attempts_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
@@ -261,6 +268,13 @@ export type Database = {
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_questions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "v_questions_public"
             referencedColumns: ["id"]
           },
         ]
@@ -782,6 +796,13 @@ export type Database = {
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_queue_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "v_questions_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1378,6 +1399,167 @@ export type Database = {
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_questions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "v_questions_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_questions_public: {
+        Row: {
+          calculator_allowed: boolean | null
+          choice_a: string | null
+          choice_b: string | null
+          choice_c: string | null
+          choice_d: string | null
+          choice_e: string | null
+          created_at: string | null
+          difficulty: number | null
+          id: string | null
+          image_caption: string | null
+          image_position: string | null
+          image_url: string | null
+          position_in_passage: number | null
+          reference_number: number | null
+          skill_id: string | null
+          stem: string | null
+          time_limit_secs: number | null
+          underlined_text: string | null
+        }
+        Insert: {
+          calculator_allowed?: boolean | null
+          choice_a?: string | null
+          choice_b?: string | null
+          choice_c?: string | null
+          choice_d?: string | null
+          choice_e?: string | null
+          created_at?: string | null
+          difficulty?: number | null
+          id?: string | null
+          image_caption?: string | null
+          image_position?: string | null
+          image_url?: string | null
+          position_in_passage?: number | null
+          reference_number?: number | null
+          skill_id?: string | null
+          stem?: string | null
+          time_limit_secs?: number | null
+          underlined_text?: string | null
+        }
+        Update: {
+          calculator_allowed?: boolean | null
+          choice_a?: string | null
+          choice_b?: string | null
+          choice_c?: string | null
+          choice_d?: string | null
+          choice_e?: string | null
+          created_at?: string | null
+          difficulty?: number | null
+          id?: string | null
+          image_caption?: string | null
+          image_position?: string | null
+          image_url?: string | null
+          position_in_passage?: number | null
+          reference_number?: number | null
+          skill_id?: string | null
+          stem?: string | null
+          time_limit_secs?: number | null
+          underlined_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questions_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_staging_items_public: {
+        Row: {
+          calculator_allowed: boolean | null
+          choice_a: string | null
+          choice_b: string | null
+          choice_c: string | null
+          choice_d: string | null
+          difficulty: string | null
+          form_id: string | null
+          image_caption: string | null
+          image_position: string | null
+          image_url: string | null
+          lesson_code: string | null
+          ord: number | null
+          passage_id: string | null
+          passage_text: string | null
+          passage_title: string | null
+          position_in_passage: number | null
+          question: string | null
+          reference_number: number | null
+          section: string | null
+          skill_code: string | null
+          staging_id: number | null
+          underlined_text: string | null
+        }
+        Insert: {
+          calculator_allowed?: boolean | null
+          choice_a?: string | null
+          choice_b?: string | null
+          choice_c?: string | null
+          choice_d?: string | null
+          difficulty?: string | null
+          form_id?: string | null
+          image_caption?: string | null
+          image_position?: string | null
+          image_url?: string | null
+          lesson_code?: string | null
+          ord?: number | null
+          passage_id?: string | null
+          passage_text?: string | null
+          passage_title?: string | null
+          position_in_passage?: number | null
+          question?: string | null
+          reference_number?: number | null
+          section?: string | null
+          skill_code?: string | null
+          staging_id?: number | null
+          underlined_text?: string | null
+        }
+        Update: {
+          calculator_allowed?: boolean | null
+          choice_a?: string | null
+          choice_b?: string | null
+          choice_c?: string | null
+          choice_d?: string | null
+          difficulty?: string | null
+          form_id?: string | null
+          image_caption?: string | null
+          image_position?: string | null
+          image_url?: string | null
+          lesson_code?: string | null
+          ord?: number | null
+          passage_id?: string | null
+          passage_text?: string | null
+          passage_title?: string | null
+          position_in_passage?: number | null
+          question?: string | null
+          reference_number?: number | null
+          section?: string | null
+          skill_code?: string | null
+          staging_id?: number | null
+          underlined_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staging_items_lesson_code_fkey"
+            columns: ["lesson_code"]
+            isOneToOne: false
+            referencedRelation: "skills"
             referencedColumns: ["id"]
           },
         ]
