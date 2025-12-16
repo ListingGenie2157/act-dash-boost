@@ -127,7 +127,7 @@ export default function Login() {
             .single();
 
           if (profile?.onboarding_complete) {
-            navigate('/');
+            navigate('/dashboard');
           } else {
             navigate('/onboarding');
           }
