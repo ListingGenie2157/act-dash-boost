@@ -5,9 +5,10 @@
 const ALLOWED_ORIGINS = [
   'https://f00c702a-a021-4c8d-8fea-70469fe2ed7c.lovableproject.com',
   'https://id-preview--f00c702a-a021-4c8d-8fea-70469fe2ed7c.lovable.app',
+  'https://getpreppit.com',
+  'https://www.getpreppit.com',
   'http://localhost:5173',
   'http://localhost:8080',
-  // Add your custom domain here when you have one
 ];
 
 /**
