@@ -55,7 +55,7 @@ export default function Onboarding() {
         throw profileUpdateError;
       }
 
-      toast.success('Welcome to Preppit!');
+      toast.success('Welcome to Preppit Pacing!');
       navigate('/');
     } catch (error) {
       console.error('Error completing onboarding:', error);
@@ -71,9 +71,9 @@ export default function Onboarding() {
         <Card className="backdrop-blur-sm border-primary/20 shadow-xl">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <img src={preppitLogo} alt="Preppit" className="h-16 w-auto" />
+              <img src={preppitLogo} alt="Preppit Pacing" className="h-16 w-auto" />
             </div>
-            <CardTitle className="text-2xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Welcome to Preppit!</CardTitle>
+            <CardTitle className="text-2xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Welcome to Preppit Pacing!</CardTitle>
             <CardDescription>Let's personalize your ACT prep experience.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">

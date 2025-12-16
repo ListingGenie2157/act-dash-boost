@@ -133,7 +133,7 @@ const Dashboard = () => {
                   </h1>
                 </div>
                 <p className="text-muted-foreground ml-14">
-                  {hasStudyPlan ? 'Your personalized study plan for today' : 'Continue your ACT preparation with Preppit'}
+                  {hasStudyPlan ? 'Your personalized study plan for today' : 'Continue your ACT preparation with Preppit Pacing'}
                 </p>
               </div>
               {hasStudyPlan && (
@@ -246,7 +246,7 @@ const Dashboard = () => {
                   </div>
                   <h2 className="text-3xl font-bold">Ready to Start Learning?</h2>
                   <p className="text-muted-foreground text-lg">
-                    Browse lessons and drills at your own pace, or let Preppit create a personalized study plan based on your test date and goals.
+                    Browse lessons and drills at your own pace, or let Preppit Pacing create a personalized study plan based on your test date and goals.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
                     <Link to="/lessons">

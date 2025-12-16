@@ -50,6 +50,7 @@ import TimedDrills from "./pages/TimedDrills";
 import QuizRunner from "./pages/QuizRunner";
 import WeakAreas from "./pages/WeakAreas";
 import CalculatorLab from "./pages/CalculatorLab";
+import PacingLab from "./pages/PacingLab";
 import AdminSkillCodes from "./pages/AdminSkillCodes";
 import { HealthCheck } from "./pages/HealthCheck";
 
@@ -186,6 +187,7 @@ const App = () => (
                   <Route path="/quiz/:section" element={<QuizRunner />} />
                   <Route path="/weak-areas" element={<WeakAreas />} />
                   <Route path="/calculator-lab" element={<CalculatorLab />} />
+                  <Route path="/pacing-lab" element={<PacingLab />} />
                   
                   {/* Review */}
                   <Route path="/review/missed" element={

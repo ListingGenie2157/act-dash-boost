@@ -185,7 +185,7 @@ export default function Login() {
         <Card className="w-full max-w-md backdrop-blur-xl bg-card/95 border-primary/20 shadow-2xl relative z-10 animate-scale-in">
           <CardHeader className="space-y-1 text-center pb-8">
             <div className="flex justify-center mb-4">
-              <img src={preppitLogo} alt="Preppit" className="h-16 w-auto" />
+              <img src={preppitLogo} alt="Preppit Pacing" className="h-16 w-auto" />
             </div>
             <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               Reset Password
@@ -310,7 +310,7 @@ export default function Login() {
       <Card className="w-full max-w-md backdrop-blur-xl bg-card/95 border-primary/20 shadow-2xl relative z-10 animate-scale-in">
         <CardHeader className="space-y-1 text-center pb-8">
           <div className="flex justify-center mb-4">
-            <img src={preppitLogo} alt="Preppit" className="h-16 w-auto" />
+            <img src={preppitLogo} alt="Preppit Pacing" className="h-16 w-auto" />
           </div>
           <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             {isSignUp ? 'Create Your Account' : 'Welcome Back'}
