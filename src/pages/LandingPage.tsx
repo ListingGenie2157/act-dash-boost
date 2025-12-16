@@ -33,7 +33,7 @@ const LandingPage = () => {
         <div className="max-w-5xl mx-auto text-center space-y-8 mb-20">
           {/* Logo */}
           <div className="flex justify-center mb-8 animate-fade-in">
-            <img src={preppitLogo} alt="Preppit" className="h-24 w-auto" />
+            <img src={preppitLogo} alt="Preppit Pacing" className="h-24 w-auto" />
           </div>
 
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm animate-fade-in">
@@ -134,11 +134,20 @@ const LandingPage = () => {
             
             <FeatureCard
               icon={Timer}
+              title="Pacing Lab"
+              description="Master time management with targeted pacing drills, chunk timers, and two-pass strategy training. Worth 3-5 extra points."
+              badge="UNIQUE"
+              gradient="from-accent/10 via-primary/10 to-accent/10"
+              delay={100}
+            />
+            
+            <FeatureCard
+              icon={ClipboardCheck}
               title="Full ACT Simulations"
               description="Not just a question bank. Take full-length timed section tests with authentic ACT-style questions, answer bubbling, and detailed results."
               badge="AUTHENTIC"
-              gradient="from-accent/10 via-primary/10 to-accent/10"
-              delay={100}
+              gradient="from-secondary/10 via-accent/10 to-secondary/10"
+              delay={200}
             />
             
             <FeatureCard
@@ -147,7 +156,7 @@ const LandingPage = () => {
               description="Parents can set rewards for streaks, drill scores, and simulation completions. Students earn, parents approve — motivation meets accountability."
               badge="FAMILY"
               gradient="from-success/10 via-primary/10 to-success/10"
-              delay={200}
+              delay={300}
             />
             
             <FeatureCard
@@ -155,17 +164,17 @@ const LandingPage = () => {
               title="Error Bank & Spaced Review"
               description="Missed a question? It goes into your Error Bank for targeted review. Our spaced repetition algorithm brings questions back at the perfect time."
               badge="SMART"
-              gradient="from-secondary/10 via-accent/10 to-secondary/10"
-              delay={300}
+              gradient="from-primary/10 via-secondary/10 to-primary/10"
+              delay={400}
             />
 
             <FeatureCard
               icon={Calculator}
               title="Calculator Lab"
               description="Master TI-84 shortcuts that save 10-15 minutes on test day. Interactive practice modes teach you efficiency tricks other students don't know."
-              badge="UNIQUE"
-              gradient="from-primary/10 via-secondary/10 to-primary/10"
-              delay={400}
+              badge="HACKS"
+              gradient="from-accent/10 via-secondary/10 to-accent/10"
+              delay={500}
             />
             
             <FeatureCard
@@ -173,8 +182,8 @@ const LandingPage = () => {
               title="129-Skill Mastery"
               description="Not just 'math' or 'reading' — track 129 specific skills with granular progress. Most competitors track only 20-40 skills."
               badge="5x MORE"
-              gradient="from-accent/10 via-secondary/10 to-accent/10"
-              delay={500}
+              gradient="from-secondary/10 via-primary/10 to-secondary/10"
+              delay={600}
             />
             
             <FeatureCard
@@ -183,7 +192,7 @@ const LandingPage = () => {
               description="Get instant, context-aware help without interrupting your practice. Explains concepts in your language, adapts to your learning style."
               badge="AI POWERED"
               gradient="from-success/10 via-accent/10 to-success/10"
-              delay={600}
+              delay={700}
             />
             
             <FeatureCard
@@ -191,7 +200,7 @@ const LandingPage = () => {
               title="Smart Weak Areas"
               description="Automatically detects and focuses on what YOU need most. Adaptive difficulty ensures you're always challenged at the right level."
               gradient="from-primary/10 via-accent/10 to-primary/10"
-              delay={700}
+              delay={800}
             />
           </div>
         </div>

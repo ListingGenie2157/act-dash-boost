@@ -2,37 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system - Preppit Brand Colors
-   Midnight Blue: #0D1B2A → hsl(210, 55%, 11%)
-   Mint Green/Teal: #4ECDC4 → hsl(175, 60%, 55%)
-   Coral: #FF6B6B → hsl(0, 100%, 70%)
-   Off-White/Cream: #F5F5DC → hsl(60, 55%, 91%)
+/* Definition of the design system - Preppit Pacing Brand Colors
+   Deep Navy Background (dark): #071B2D → hsl(207, 76%, 10%)
+   Light Background (off-white): #F7FAFC → hsl(204, 45%, 98%)
+   Teal Gradient Start: #35E0D1 → hsl(173, 72%, 54%)
+   Teal Gradient End: #11A9A3 → hsl(177, 84%, 37%)
+   Navy/Teal Shadow: #0B3A5B → hsl(204, 82%, 20%)
+   Cool Coral: #FF4D6D → hsl(349, 100%, 65%)
+   White Text (dark mode): #F6F2EA → hsl(38, 38%, 94%)
+   Dark Text (light mode): #0B1B2B → hsl(210, 66%, 11%)
 */
 
 @layer base {
   :root {
-    /* Off-white background */
-    --background: 60 35% 97%;
-    --foreground: 210 55% 11%;
+    /* Light mode - cool off-white background */
+    --background: 204 45% 98%;
+    --foreground: 210 66% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 210 55% 11%;
+    --card-foreground: 210 66% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 210 55% 11%;
+    --popover-foreground: 210 66% 11%;
 
-    /* Preppit brand: Mint Green/Teal as primary */
-    --primary: 175 60% 45%;
-    --primary-foreground: 210 55% 11%;
-    --primary-glow: 175 60% 55%;
+    /* Teal primary */
+    --primary: 173 72% 54%;
+    --primary-foreground: 210 66% 11%;
+    --primary-glow: 177 84% 37%;
 
-    /* Coral as secondary */
-    --secondary: 0 100% 70%;
+    /* Cool coral secondary */
+    --secondary: 349 100% 65%;
     --secondary-foreground: 0 0% 100%;
 
-    /* Midnight Blue as accent */
-    --accent: 210 55% 20%;
-    --accent-foreground: 60 35% 97%;
+    /* Navy shadow as accent */
+    --accent: 204 82% 20%;
+    --accent-foreground: 204 45% 98%;
 
     --success: 145 60% 42%;
     --success-foreground: 0 0% 100%;
@@ -43,18 +47,18 @@
     --muted: 210 20% 92%;
     --muted-foreground: 210 25% 40%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 349 100% 55%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 210 25% 88%;
     --input: 210 25% 88%;
-    --ring: 175 60% 45%;
+    --ring: 173 72% 54%;
 
     --radius: 0.75rem;
     
-    /* Preppit gradients */
+    /* Preppit Pacing gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
-    --gradient-secondary: linear-gradient(135deg, hsl(var(--secondary)), hsl(0 90% 75%));
+    --gradient-secondary: linear-gradient(135deg, hsl(var(--secondary)), hsl(349 90% 70%));
     --gradient-success: linear-gradient(135deg, hsl(var(--success)), hsl(142 71% 60%));
     --gradient-hero: linear-gradient(135deg, hsl(var(--accent)), hsl(var(--primary)));
     
@@ -76,66 +80,66 @@
     --font-mono: 'Fira Code', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
     
     /* Example styling */
-    --example-bg: 210 55% 15%;
-    --example-text: 175 60% 80%;
-    --example-border: 210 55% 25%;
+    --example-bg: 204 82% 15%;
+    --example-text: 173 72% 80%;
+    --example-border: 204 82% 25%;
 
-    --sidebar-background: 60 35% 97%;
-    --sidebar-foreground: 210 55% 20%;
-    --sidebar-primary: 175 60% 45%;
-    --sidebar-primary-foreground: 210 55% 11%;
+    --sidebar-background: 204 45% 98%;
+    --sidebar-foreground: 204 82% 20%;
+    --sidebar-primary: 173 72% 54%;
+    --sidebar-primary-foreground: 210 66% 11%;
     --sidebar-accent: 210 20% 94%;
-    --sidebar-accent-foreground: 210 55% 15%;
+    --sidebar-accent-foreground: 204 82% 15%;
     --sidebar-border: 210 25% 88%;
-    --sidebar-ring: 175 60% 45%;
+    --sidebar-ring: 173 72% 54%;
   }
 
   .dark {
-    /* Midnight Blue background */
-    --background: 210 55% 8%;
-    --foreground: 60 35% 95%;
+    /* Deep navy background */
+    --background: 207 76% 10%;
+    --foreground: 38 38% 94%;
 
-    --card: 210 55% 12%;
-    --card-foreground: 60 35% 95%;
+    --card: 207 70% 14%;
+    --card-foreground: 38 38% 94%;
 
-    --popover: 210 55% 12%;
-    --popover-foreground: 60 35% 95%;
+    --popover: 207 70% 14%;
+    --popover-foreground: 38 38% 94%;
 
-    /* Mint Green/Teal - brighter in dark mode */
-    --primary: 175 65% 55%;
-    --primary-foreground: 210 55% 11%;
+    /* Teal - brighter in dark mode */
+    --primary: 173 72% 54%;
+    --primary-foreground: 210 66% 11%;
 
-    /* Coral */
-    --secondary: 0 100% 72%;
-    --secondary-foreground: 210 55% 11%;
+    /* Cool coral */
+    --secondary: 349 100% 65%;
+    --secondary-foreground: 210 66% 11%;
 
-    --muted: 210 40% 18%;
+    --muted: 207 50% 18%;
     --muted-foreground: 210 20% 65%;
 
     /* Lighter accent for dark mode */
-    --accent: 175 50% 65%;
-    --accent-foreground: 210 55% 11%;
+    --accent: 173 60% 60%;
+    --accent-foreground: 210 66% 11%;
 
-    --destructive: 0 70% 45%;
-    --destructive-foreground: 60 35% 95%;
+    --destructive: 349 80% 50%;
+    --destructive-foreground: 38 38% 94%;
 
-    --border: 210 40% 20%;
-    --input: 210 40% 20%;
-    --ring: 175 65% 55%;
+    --border: 207 50% 20%;
+    --input: 207 50% 20%;
+    --ring: 173 72% 54%;
     
-    --sidebar-background: 210 55% 10%;
-    --sidebar-foreground: 60 35% 95%;
-    --sidebar-primary: 175 65% 55%;
-    --sidebar-primary-foreground: 210 55% 11%;
-    --sidebar-accent: 210 40% 18%;
-    --sidebar-accent-foreground: 60 35% 95%;
-    --sidebar-border: 210 40% 20%;
-    --sidebar-ring: 175 65% 55%;
+    --sidebar-background: 207 76% 12%;
+    --sidebar-foreground: 38 38% 94%;
+    --sidebar-primary: 173 72% 54%;
+    --sidebar-primary-foreground: 210 66% 11%;
+    --sidebar-accent: 207 50% 18%;
+    --sidebar-accent-foreground: 38 38% 94%;
+    --sidebar-border: 207 50% 20%;
+    --sidebar-ring: 173 72% 54%;
     
     /* Dark mode example styling */
-    --example-bg: 210 55% 6%;
-    --example-text: 175 60% 70%;
-    --example-border: 210 55% 15%;
+    --example-bg: 207 76% 6%;
+    --example-text: 173 60% 70%;
+    --example-border: 207 70% 15%;
   }
 }
 
