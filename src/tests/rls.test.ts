@@ -35,7 +35,7 @@ describe('Row Level Security Tests', () => {
   });
 
   describe('Anonymous user permissions', () => {
-    it('should allow reading public data', async () => {
+    it('should allow reading public data from forms', async () => {
       const { data: forms, error: formsError } = await anonClient
         .from('forms')
         .select('*')
@@ -45,14 +45,28 @@ describe('Row Level Security Tests', () => {
       expect(forms).toBeDefined();
     });
 
-    it('should allow reading questions', async () => {
-      const { data: questions, error: questionsError } = await anonClient
+    it('should allow reading public staging_items for drills', async () => {
+      // staging_items with DR_* or FA_* form_ids are accessible to authenticated users
+      const { data: stagingItems, error: stagingError } = await authClient
+        .from('staging_items')
+        .select('staging_id, question, form_id')
+        .like('form_id', 'DR_%')
+        .limit(1);
+      
+      // This should work for authenticated users
+      expect(stagingError).toBeNull();
+      expect(stagingItems).toBeDefined();
+    });
+
+    it('should block anonymous access to questions table (admin only)', async () => {
+      const { data: questions } = await anonClient
         .from('questions')
         .select('*')
         .limit(1);
       
-      expect(questionsError).toBeNull();
-      expect(questions).toBeDefined();
+      // questions table is now admin-only, so anonymous should get empty result or error
+      // With restrictive RLS, it returns empty array rather than error
+      expect(questions).toEqual([]);
     });
 
     it('should not allow writing to user-specific tables', async () => {
@@ -120,6 +134,16 @@ describe('Row Level Security Tests', () => {
       progress?.forEach((record) => {
         expect(record.user_id).toBe(testUserId);
       });
+    });
+
+    it('should block authenticated non-admin access to questions table', async () => {
+      const { data: questions } = await authClient
+        .from('questions')
+        .select('*')
+        .limit(1);
+      
+      // questions table is admin-only, so regular users get empty result
+      expect(questions).toEqual([]);
     });
   });
 });

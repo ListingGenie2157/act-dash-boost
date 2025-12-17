@@ -48,12 +48,35 @@ export async function getQuestionsBySkill(skill_code: string, n: number) {
     return { data: null, error: new Error(`Skill not found: ${skill_code}`) };
   }
   
+  // Query staging_items for drill questions (DR_* forms)
   const { data, error } = await supabase
-    .from('questions')
-    .select('id, stem, choice_a, choice_b, choice_c, choice_d, answer, explanation, skill_id, difficulty, time_limit_secs')
-    .eq('skill_id', skillId)
+    .from('staging_items')
+    .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, answer, explanation, skill_code, difficulty, form_id')
+    .eq('skill_code', skillId)
+    .like('form_id', 'DR_%')
+    .in('answer', ['A', 'B', 'C', 'D'])
     .limit(n);
-  return { data, error };
+
+  if (error) {
+    return { data: null, error };
+  }
+
+  // Map staging_items format to expected question format
+  const mappedData = (data || []).map(item => ({
+    id: item.staging_id.toString(),
+    stem: item.question,
+    choice_a: item.choice_a,
+    choice_b: item.choice_b,
+    choice_c: item.choice_c,
+    choice_d: item.choice_d,
+    answer: item.answer,
+    explanation: item.explanation,
+    skill_id: item.skill_code,
+    difficulty: item.difficulty === 'easy' ? 1 : item.difficulty === 'hard' ? 3 : 2,
+    time_limit_secs: 45,
+  }));
+
+  return { data: mappedData, error: null };
 }
 
 export async function getFullTestPackage(id = 'act') {

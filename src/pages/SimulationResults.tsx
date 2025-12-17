@@ -119,42 +119,53 @@ export default function SimulationResults() {
           ? responses.reduce((sum, r) => sum + r.time_ms, 0) / responses.length 
           : 0;
 
+        // Batch fetch skill codes from staging_items (question_id is UUID but we store staging_id references)
+        // For simulations using staging_items, question_id may be stored as UUID or staging_id
+        // Try staging_items first for skill_code lookup
+        const { data: stagingItems } = await supabase
+          .from('staging_items')
+          .select('staging_id, skill_code')
+          .limit(1000);
+
+        // Create map of staging_id to skill_code
+        const stagingSkillMap = new Map<string, string>(
+          (stagingItems || []).map(item => [item.staging_id.toString(), item.skill_code])
+        );
+
         // Group by skill
         const skillMap = new Map<string, { correct: number; total: number }>();
         
         for (const response of responses) {
-          const { data: question } = await supabase
-            .from('questions')
-            .select('skill_id')
-            .eq('id', response.question_id)
-            .maybeSingle();
-
-          if (question?.skill_id) {
-            const existing = skillMap.get(question.skill_id) || { correct: 0, total: 0 };
+          // Try to find skill_code from staging map
+          const skillCode = stagingSkillMap.get(response.question_id);
+          
+          if (skillCode) {
+            const existing = skillMap.get(skillCode) || { correct: 0, total: 0 };
             existing.total++;
             if (response.correct) existing.correct++;
-            skillMap.set(question.skill_id, existing);
+            skillMap.set(skillCode, existing);
           }
         }
 
-        // Convert to array and enrich with skill names
-        const perSkill = await Promise.all(
-          Array.from(skillMap.entries()).map(async ([skill_id, stats]) => {
-            const { data: skillData } = await supabase
-              .from('skills')
-              .select('name')
-              .eq('id', skill_id)
-              .maybeSingle();
-
-            return {
-              skill_id,
-              skill_name: skillData?.name || skill_id,
-              correct: stats.correct,
-              total: stats.total,
-              accuracy: (stats.correct / stats.total) * 100
-            };
-          })
+        // Batch fetch skill names
+        const skillIds = Array.from(skillMap.keys());
+        const { data: skillRows } = await supabase
+          .from('skills')
+          .select('id, name')
+          .in('id', skillIds);
+        
+        const skillNameById = new Map<string, string>(
+          (skillRows || []).map(s => [s.id, s.name])
         );
+
+        // Convert to array with enriched names
+        const perSkill = Array.from(skillMap.entries()).map(([skill_id, stats]) => ({
+          skill_id,
+          skill_name: skillNameById.get(skill_id) || skill_id,
+          correct: stats.correct,
+          total: stats.total,
+          accuracy: (stats.correct / stats.total) * 100
+        }));
 
         setSummary({
           sessionId: session.id,
