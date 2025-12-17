@@ -102,42 +102,61 @@ export default function DrillPlayer() {
           }
         } else if (mode === 'missed') {
           // Get questions from error_bank for this subject
-          const { data: missedQuestions } = await supabase
+          // question_id in error_bank stores staging_id as text
+          const { data: missedEntries } = await supabase
             .from('error_bank')
-            .select(`
-              question_id,
-              questions!inner(skill_id, skills!inner(subject))
-            `)
+            .select('question_id, miss_count')
             .eq('user_id', user.id)
-            .eq('questions.skills.subject', subject)
             .order('miss_count', { ascending: false })
-            .limit(50);
+            .limit(100);
 
-          if (missedQuestions && missedQuestions.length > 0) {
-            const questionIds = missedQuestions
-              .map(m => m.question_id)
-              .filter((id): id is string => id !== null);
+          if (missedEntries && missedEntries.length > 0) {
+            // Parse staging_ids from question_id field
+            const stagingIds = missedEntries
+              .map(m => parseInt(m.question_id, 10))
+              .filter(id => !isNaN(id));
             
-            // For missed questions, we need to query questions table directly
-            const { data: questionsData } = await supabase
-              .from('questions')
-              .select('*')
-              .in('id', questionIds);
-
-            if (!questionsData || questionsData.length === 0) {
+            if (stagingIds.length === 0) {
               toast.error('No missed questions available');
               navigate(`/drill/${subject}/setup`);
               return;
             }
 
-            // Convert to drill format and skip staging_items query
-            const questions: LegacyQuestion[] = questionsData.slice(0, questionCount).map(q => ({
-              id: q.id,
-              question: q.stem,
+            // Map subject to section for filtering
+            const sectionMap: Record<string, string> = {
+              'Reading': 'Reading',
+              'RD': 'Reading',
+              'Math': 'Math',
+              'MA': 'Math',
+              'English': 'English',
+              'EN': 'English',
+              'Science': 'Science',
+              'SC': 'Science',
+            };
+            const targetSection = sectionMap[subject];
+
+            // Fetch staging items for missed questions, filtered by subject
+            const { data: stagingData } = await supabase
+              .from('staging_items')
+              .select('*')
+              .in('staging_id', stagingIds)
+              .eq('section', targetSection)
+              .in('answer', ['A', 'B', 'C', 'D']);
+
+            if (!stagingData || stagingData.length === 0) {
+              toast.error('No missed questions available for this subject');
+              navigate(`/drill/${subject}/setup`);
+              return;
+            }
+
+            // Convert to drill format
+            const questions: LegacyQuestion[] = stagingData.slice(0, questionCount).map(q => ({
+              id: q.staging_id.toString(),
+              question: q.question,
               options: [q.choice_a, q.choice_b, q.choice_c, q.choice_d],
               correctAnswer: ['A', 'B', 'C', 'D'].indexOf(q.answer),
               explanation: q.explanation || 'No explanation available',
-              difficulty: 'medium',
+              difficulty: q.difficulty === 'easy' ? 'easy' : q.difficulty === 'hard' ? 'hard' : 'medium',
             }));
 
             const drillSession: DrillSession = {

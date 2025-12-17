@@ -11,9 +11,9 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { toast } from 'sonner';
 import { calculateNextReview, ReviewGrade, type ReviewCard } from '@/lib/spacedRepetition';
 
-interface Question {
-  id: string;
-  stem: string;
+interface StagingQuestion {
+  staging_id: number;
+  question: string;
   choice_a: string;
   choice_b: string;
   choice_c: string;
@@ -23,7 +23,7 @@ interface Question {
 }
 
 interface ReviewCardWithQuestion extends ReviewCard {
-  questions: Question;
+  staging_question: StagingQuestion | null;
 }
 
 export default function ReviewSpaced() {
@@ -46,29 +46,54 @@ export default function ReviewSpaced() {
 
       const today = new Date().toISOString();
 
-      const { data, error } = await supabase
+      // Fetch review queue items
+      const { data: reviewItems, error: reviewError } = await supabase
         .from('review_queue')
-        .select(`
-          *,
-          questions!inner (
-            id,
-            stem,
-            choice_a,
-            choice_b,
-            choice_c,
-            choice_d,
-            answer,
-            explanation
-          )
-        `)
+        .select('*')
         .eq('user_id', user.id)
         .lte('due_at', today)
         .order('due_at', { ascending: true })
         .limit(50);
 
-      if (error) throw error;
+      if (reviewError) throw reviewError;
 
-      const cards = (data || []) as unknown as ReviewCardWithQuestion[];
+      if (!reviewItems || reviewItems.length === 0) {
+        setDueCards([]);
+        setLoading(false);
+        return;
+      }
+
+      // question_id in review_queue stores staging_id as text
+      const stagingIds = reviewItems
+        .map(item => parseInt(item.question_id as unknown as string, 10))
+        .filter(id => !isNaN(id));
+
+      // Fetch staging items for these questions
+      const { data: stagingItems, error: stagingError } = await supabase
+        .from('staging_items')
+        .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, answer, explanation')
+        .in('staging_id', stagingIds);
+
+      if (stagingError) throw stagingError;
+
+      // Create a map for quick lookup
+      const stagingMap = new Map<number, StagingQuestion>(
+        (stagingItems || []).map(item => [item.staging_id, item])
+      );
+
+      // Merge review items with staging questions
+      const allCards = reviewItems.map(item => ({
+        question_id: item.question_id,
+        user_id: item.user_id,
+        due_at: item.due_at,
+        interval_days: item.interval_days,
+        ease: item.ease ?? 250,
+        lapses: item.lapses ?? 0,
+        staging_question: stagingMap.get(parseInt(item.question_id as unknown as string, 10)) || null,
+      }));
+
+      const cards = allCards.filter(card => card.staging_question !== null) as ReviewCardWithQuestion[];
+
       setDueCards(cards);
       if (cards.length > 0) {
         setCurrentCard(cards[0]);
@@ -161,7 +186,7 @@ export default function ReviewSpaced() {
         )}
       </div>
 
-      {currentCard ? (
+      {currentCard && currentCard.staging_question ? (
         <Card className="shadow-lg">
           <CardHeader>
             <div className="flex items-center justify-between mb-2">
@@ -177,13 +202,13 @@ export default function ReviewSpaced() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="prose prose-sm max-w-none">
-              <p className="text-lg">{currentCard.questions.stem}</p>
+              <p className="text-lg">{currentCard.staging_question.question}</p>
             </div>
 
             {!showAnswer ? (
               <div className="space-y-3">
                 {['A', 'B', 'C', 'D'].map((letter) => {
-                  const choiceKey = `choice_${letter.toLowerCase()}` as keyof Question;
+                  const choiceKey = `choice_${letter.toLowerCase()}` as keyof StagingQuestion;
                   return (
                     <Button
                       key={letter}
@@ -192,7 +217,7 @@ export default function ReviewSpaced() {
                       onClick={() => handleAnswerSelect(letter)}
                     >
                       <span className="font-semibold mr-3">{letter}.</span>
-                      <span>{currentCard.questions[choiceKey]}</span>
+                      <span>{currentCard.staging_question![choiceKey] as string}</span>
                     </Button>
                   );
                 })}
@@ -200,26 +225,26 @@ export default function ReviewSpaced() {
             ) : (
               <>
                 <div className={`p-4 rounded-lg border-2 ${
-                  selectedAnswer === currentCard.questions.answer
+                  selectedAnswer === currentCard.staging_question.answer
                     ? 'bg-success/10 border-success'
                     : 'bg-destructive/10 border-destructive'
                 }`}>
                   <div className="flex items-center gap-2 mb-2">
-                    {selectedAnswer === currentCard.questions.answer ? (
+                    {selectedAnswer === currentCard.staging_question.answer ? (
                       <CheckCircle2 className="h-5 w-5 text-success" />
                     ) : (
                       <XCircle className="h-5 w-5 text-destructive" />
                     )}
                     <span className="font-semibold">
-                      {selectedAnswer === currentCard.questions.answer ? 'Correct!' : 'Incorrect'}
+                      {selectedAnswer === currentCard.staging_question.answer ? 'Correct!' : 'Incorrect'}
                     </span>
                   </div>
                   <p className="text-sm mb-2">
-                    Correct Answer: <span className="font-semibold">{currentCard.questions.answer}</span>
+                    Correct Answer: <span className="font-semibold">{currentCard.staging_question.answer}</span>
                   </p>
-                  {currentCard.questions.explanation && (
+                  {currentCard.staging_question.explanation && (
                     <p className="text-sm text-muted-foreground">
-                      {currentCard.questions.explanation}
+                      {currentCard.staging_question.explanation}
                     </p>
                   )}
                 </div>
