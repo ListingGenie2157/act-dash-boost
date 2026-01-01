@@ -157,6 +157,11 @@ export default function DrillPlayer() {
               correctAnswer: ['A', 'B', 'C', 'D'].indexOf(q.answer),
               explanation: q.explanation || 'No explanation available',
               difficulty: q.difficulty === 'easy' ? 'easy' : q.difficulty === 'hard' ? 'hard' : 'medium',
+              passageText: q.passage_text || undefined,
+              passageTitle: q.passage_title || undefined,
+              passageId: q.passage_id || undefined,
+              underlinedText: q.underlined_text || undefined,
+              referenceNumber: q.reference_number || undefined,
             }));
 
             const drillSession: DrillSession = {
@@ -201,6 +206,11 @@ export default function DrillPlayer() {
           correctAnswer: ['A', 'B', 'C', 'D'].indexOf(q.answer),
           explanation: q.explanation || 'No explanation available',
           difficulty: q.difficulty === 'easy' ? 'easy' : q.difficulty === 'hard' ? 'hard' : 'medium',
+          passageText: q.passage_text || undefined,
+          passageTitle: q.passage_title || undefined,
+          passageId: q.passage_id || undefined,
+          underlinedText: q.underlined_text || undefined,
+          referenceNumber: q.reference_number || undefined,
         }));
 
         const drillSession: DrillSession = {
