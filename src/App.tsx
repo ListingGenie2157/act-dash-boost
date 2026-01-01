@@ -52,6 +52,7 @@ import WeakAreas from "./pages/WeakAreas";
 import CalculatorLab from "./pages/CalculatorLab";
 import PacingLab from "./pages/PacingLab";
 import AdminSkillCodes from "./pages/AdminSkillCodes";
+import AdminQuestionGenerator from "./pages/AdminQuestionGenerator";
 import { HealthCheck } from "./pages/HealthCheck";
 
 
@@ -156,6 +157,11 @@ const App = () => (
                   <Route path="/admin/skill-codes" element={
                     <ProtectedAdminRoute>
                       <AdminSkillCodes />
+                    </ProtectedAdminRoute>
+                  } />
+                  <Route path="/admin/generate-questions" element={
+                    <ProtectedAdminRoute>
+                      <AdminQuestionGenerator />
                     </ProtectedAdminRoute>
                   } />
                   
