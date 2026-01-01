@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Timer, Play, Pause, RotateCcw, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Timer, Play, Pause, RotateCcw, ArrowLeft, CheckCircle, XCircle, BookOpen } from 'lucide-react';
 import type { DrillSession } from '@/types';
 import { useTimer } from '@/hooks/useTimer';
 import { useToast } from '@/hooks/use-toast';
@@ -236,8 +237,11 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
     );
   }
 
+  // Check if current question has a passage
+  const hasPassage = Boolean(currentQ.passageText);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header with Timer */}
       <div className="flex items-center justify-between">
         <div>
@@ -255,39 +259,77 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
       {/* Question Progress */}
       <Progress value={progress} className="h-2" />
 
-      {/* Question */}
-      <Card className="p-6 shadow-medium">
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-1 bg-primary/10 text-primary text-xs font-medium rounded">
-                Q{currentQuestion + 1}
-              </span>
-              <span className="px-2 py-1 bg-warning/10 text-warning text-xs font-medium rounded">
-                RAPID FIRE
+      {/* Main Content - Split layout if passage exists */}
+      <div className={hasPassage ? "grid grid-cols-1 lg:grid-cols-2 gap-4" : ""}>
+        {/* Passage Panel - Only show if passage exists */}
+        {hasPassage && (
+          <Card className="p-4 shadow-medium lg:max-h-[70vh] flex flex-col">
+            <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+              <BookOpen className="w-4 h-4 text-primary" />
+              <span className="font-semibold text-sm">
+                {currentQ.passageTitle || 'Passage'}
               </span>
             </div>
-            <h3 className="text-lg font-semibold">{currentQ.question}</h3>
-          </div>
+            <ScrollArea className="flex-1 pr-3">
+              <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                {currentQ.passageText}
+              </div>
+              {currentQ.underlinedText && (
+                <div className="mt-4 p-3 bg-warning/10 border border-warning/30 rounded-md">
+                  <div className="text-xs font-medium text-warning mb-1">Underlined Portion:</div>
+                  <div className="text-sm italic">{currentQ.underlinedText}</div>
+                </div>
+              )}
+            </ScrollArea>
+          </Card>
+        )}
 
-          {/* Answer Options */}
-          <div className="grid gap-3">
-            {currentQ.options.map((option, index) => (
-              <Button
-                key={index}
-                variant="quiz"
-                className="w-full justify-start hover:border-primary hover:bg-primary/5 transition-fast"
-                onClick={() => handleAnswerSelect(index)}
-              >
-                <span className="mr-3 flex-shrink-0 w-6 h-6 rounded-full border border-current flex items-center justify-center text-xs font-bold">
-                  {String.fromCharCode(65 + index)}
+        {/* Question Panel */}
+        <Card className="p-6 shadow-medium">
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-1 bg-primary/10 text-primary text-xs font-medium rounded">
+                  Q{currentQuestion + 1}
                 </span>
-                {option}
-              </Button>
-            ))}
+                <span className="px-2 py-1 bg-warning/10 text-warning text-xs font-medium rounded">
+                  RAPID FIRE
+                </span>
+                {currentQ.referenceNumber && (
+                  <span className="px-2 py-1 bg-accent/20 text-accent-foreground text-xs font-medium rounded">
+                    Ref: [{currentQ.referenceNumber}]
+                  </span>
+                )}
+              </div>
+              {/* Show underlined text inline if no full passage */}
+              {!hasPassage && currentQ.underlinedText && (
+                <div className="p-3 bg-muted/50 border border-border rounded-md mb-2">
+                  <div className="text-xs font-medium text-muted-foreground mb-1">Underlined Portion:</div>
+                  <div className="text-sm italic">{currentQ.underlinedText}</div>
+                </div>
+              )}
+              <h3 className="text-lg font-semibold">{currentQ.question}</h3>
+            </div>
+
+            {/* Answer Options */}
+            <div className="grid gap-3">
+              {currentQ.options.map((option, index) => (
+                <Button
+                  key={index}
+                  variant="quiz"
+                  className="w-full justify-start hover:border-primary hover:bg-primary/5 transition-fast"
+                  onClick={() => handleAnswerSelect(index)}
+                >
+                  <span className="mr-3 flex-shrink-0 w-6 h-6 rounded-full border border-current flex items-center justify-center text-xs font-bold">
+                    {String.fromCharCode(65 + index)}
+                  </span>
+                  {option}
+                </Button>
+              ))}
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
 
       {/* Controls */}
       <div className="flex items-center justify-between">

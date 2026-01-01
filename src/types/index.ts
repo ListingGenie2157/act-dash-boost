@@ -28,6 +28,12 @@ export interface LegacyQuestion {
   correctAnswer: number;
   explanation: string;
   difficulty: 'easy' | 'medium' | 'hard';
+  // Passage-related fields for Reading/English/Science drills
+  passageText?: string;
+  passageTitle?: string;
+  passageId?: string;
+  underlinedText?: string;
+  referenceNumber?: number;
 }
 
 export interface Lesson {
