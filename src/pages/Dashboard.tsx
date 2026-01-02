@@ -121,18 +121,18 @@ const Dashboard = () => {
       <div className="relative container max-w-7xl mx-auto px-4 py-8">
         <div className="space-y-8">
           {/* Welcome Section */}
-          <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 backdrop-blur-sm border border-primary/20 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
+          <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/25 via-secondary/20 to-accent/25 backdrop-blur-sm border border-primary/30 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-primary/30 to-accent/30 flex-shrink-0">
                     <User className="w-6 h-6 text-primary" />
                   </div>
-                  <h1 className="text-3xl font-bold">
+                  <h1 className="text-2xl sm:text-3xl font-bold break-words">
                     Welcome back{profile?.first_name ? `, ${profile.first_name}` : ''}!
                   </h1>
                 </div>
-                <p className="text-muted-foreground ml-14">
+                <p className="text-muted-foreground sm:ml-14 break-words">
                   {hasStudyPlan ? 'Your personalized study plan for today' : 'Continue your ACT preparation with Preppit Pacing'}
                 </p>
               </div>
@@ -140,7 +140,7 @@ const Dashboard = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="bg-background/50 backdrop-blur-sm hover:bg-background/80"
+                  className="bg-background/50 backdrop-blur-sm hover:bg-background/80 flex-shrink-0 w-full sm:w-auto"
                   onClick={async () => {
                     if (!session?.user?.id) return;
                     
