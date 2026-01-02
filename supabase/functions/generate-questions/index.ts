@@ -190,8 +190,103 @@ serve(async (req) => {
       });
     }
 
-    const { section, skill_codes, count = 5, difficulty_distribution } = await req.json();
-    
+    const body = await req.json();
+    const { action = "generate", section, skill_codes, count = 5, difficulty_distribution, questions: questionsToInsert } = body;
+
+    // Handle insert action - uses service role to bypass RLS
+    if (action === "insert") {
+      if (!section || !questionsToInsert || questionsToInsert.length === 0) {
+        return new Response(JSON.stringify({ error: "section and questions are required for insert" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const formIds: Record<string, string> = {
+        math: "D2MA",
+        science: "D2SC",
+        reading: "D2RD",
+        english: "D2EN",
+      };
+      
+      const sectionMap: Record<string, string> = {
+        math: "Math",
+        science: "Science",
+        reading: "Reading",
+        english: "English",
+      };
+
+      const formId = formIds[section.toLowerCase()];
+      if (!formId) {
+        return new Response(JSON.stringify({ error: `Invalid section: ${section}` }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Get the current max ord for this form
+      const { data: existingItems, error: fetchError } = await supabase
+        .from("staging_items")
+        .select("ord")
+        .eq("form_id", formId)
+        .order("ord", { ascending: false })
+        .limit(1);
+
+      if (fetchError) {
+        console.error("Error fetching existing items:", fetchError);
+        return new Response(JSON.stringify({ error: "Failed to fetch existing items" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const startOrd = existingItems && existingItems.length > 0 
+        ? existingItems[0].ord + 1 
+        : 1;
+
+      // Prepare items for insertion
+      const items = questionsToInsert.map((q: GeneratedQuestion, idx: number) => ({
+        form_id: formId,
+        section: sectionMap[section.toLowerCase()],
+        ord: startOrd + idx,
+        question: q.question,
+        choice_a: q.choice_a,
+        choice_b: q.choice_b,
+        choice_c: q.choice_c,
+        choice_d: q.choice_d,
+        answer: q.answer,
+        explanation: q.explanation,
+        skill_code: q.skill_code,
+        difficulty: q.difficulty,
+        passage_text: q.passage_text || null,
+        passage_title: q.passage_title || null,
+      }));
+
+      console.log(`Inserting ${items.length} questions into ${formId} starting at ord ${startOrd}`);
+
+      const { error: insertError } = await supabase
+        .from("staging_items")
+        .insert(items);
+
+      if (insertError) {
+        console.error("Insert error:", insertError);
+        return new Response(JSON.stringify({ error: insertError.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      console.log(`Successfully inserted ${items.length} questions`);
+      return new Response(JSON.stringify({ 
+        success: true, 
+        inserted: items.length,
+        form_id: formId 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Generate action (default)
     if (!section || !skill_codes || skill_codes.length === 0) {
       return new Response(JSON.stringify({ error: "section and skill_codes are required" }), {
         status: 400,
