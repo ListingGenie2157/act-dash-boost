@@ -5,10 +5,10 @@
 /* Definition of the design system - Preppit Pacing Brand Colors
    Deep Navy Background (dark): #071B2D → hsl(207, 76%, 10%)
    Light Background (off-white): #F7FAFC → hsl(204, 45%, 98%)
-   Ocean Teal: #1A9B94 → hsl(177, 72%, 35%)
-   Teal Glow: #0D7A74 → hsl(177, 80%, 27%)
+   Teal Gradient Start: #35E0D1 → hsl(173, 72%, 54%)
+   Teal Gradient End: #11A9A3 → hsl(173, 80%, 36%)
    Navy Shadow: #0B3A5B → hsl(204, 82%, 20%)
-   Warm Coral: #E85A4F → hsl(4, 76%, 61%)
+   Cool Coral: #FF4D6D → hsl(349, 100%, 65%)
    White Text (dark mode): #F6F2EA → hsl(38, 38%, 94%)
    Dark Text (light mode): #0B1B2B → hsl(210, 66%, 11%)
 */
@@ -25,13 +25,13 @@
     --popover: 0 0% 100%;
     --popover-foreground: 210 66% 11%;
 
-    /* Ocean Teal primary - deeper, more sophisticated */
-    --primary: 177 72% 35%;
-    --primary-foreground: 0 0% 100%;
-    --primary-glow: 177 80% 27%;
+    /* Teal primary - bright mint from logo */
+    --primary: 173 72% 54%;
+    --primary-foreground: 210 66% 11%;
+    --primary-glow: 173 80% 36%;
 
-    /* Warm Coral secondary - true coral, not pink */
-    --secondary: 4 76% 61%;
+    /* Cool Coral secondary - pinkish coral from logo */
+    --secondary: 349 100% 65%;
     --secondary-foreground: 0 0% 100%;
 
     /* Navy shadow as accent */
@@ -105,12 +105,12 @@
     --popover: 207 70% 14%;
     --popover-foreground: 38 38% 94%;
 
-    /* Ocean Teal - brighter in dark mode */
-    --primary: 177 65% 45%;
+    /* Teal - brighter mint in dark mode */
+    --primary: 173 72% 54%;
     --primary-foreground: 210 66% 11%;
 
-    /* Warm Coral */
-    --secondary: 4 76% 61%;
+    /* Cool Coral */
+    --secondary: 349 100% 65%;
     --secondary-foreground: 210 66% 11%;
 
     --muted: 207 50% 18%;
