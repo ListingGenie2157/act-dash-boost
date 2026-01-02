@@ -82,13 +82,6 @@ const SECTION_SKILLS: Record<string, { code: string; name: string }[]> = {
   ],
 };
 
-const FORM_IDS: Record<string, string> = {
-  math: "D2MA",
-  science: "D2SC",
-  reading: "D2RD",
-  english: "D2EN",
-};
-
 export default function AdminQuestionGenerator() {
   const navigate = useNavigate();
   const [section, setSection] = useState<string>("");
@@ -183,56 +176,39 @@ export default function AdminQuestionGenerator() {
     }
 
     setIsInserting(true);
+    console.log(`Inserting ${approvedQuestions.length} questions via edge function...`);
 
     try {
-      // Get the current max ord for this form
-      const formId = FORM_IDS[section];
-      const { data: existingItems, error: fetchError } = await supabase
-        .from("staging_items")
-        .select("ord")
-        .eq("form_id", formId)
-        .order("ord", { ascending: false })
-        .limit(1);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Not authenticated");
+        return;
+      }
 
-      if (fetchError) throw fetchError;
+      const response = await fetch(
+        `https://hhbkmxrzxcswwokmbtbz.supabase.co/functions/v1/generate-questions`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            action: "insert",
+            section,
+            questions: approvedQuestions,
+          }),
+        }
+      );
 
-      const startOrd = existingItems && existingItems.length > 0 
-        ? existingItems[0].ord + 1 
-        : 1;
+      const data = await response.json();
+      console.log("Insert response:", data);
 
-      // Map section to database format
-      const sectionMap: Record<string, string> = {
-        math: "Math",
-        science: "Science",
-        reading: "Reading",
-        english: "English",
-      };
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to insert questions");
+      }
 
-      // Prepare items for insertion
-      const items = approvedQuestions.map((q, idx) => ({
-        form_id: formId,
-        section: sectionMap[section],
-        ord: startOrd + idx,
-        question: q.question,
-        choice_a: q.choice_a,
-        choice_b: q.choice_b,
-        choice_c: q.choice_c,
-        choice_d: q.choice_d,
-        answer: q.answer,
-        explanation: q.explanation,
-        skill_code: q.skill_code,
-        difficulty: q.difficulty,
-        passage_text: q.passage_text || null,
-        passage_title: q.passage_title || null,
-      }));
-
-      const { error: insertError } = await supabase
-        .from("staging_items")
-        .insert(items);
-
-      if (insertError) throw insertError;
-
-      toast.success(`Inserted ${items.length} questions into ${formId}`);
+      toast.success(`Inserted ${data.inserted} questions into ${data.form_id}`);
       setGeneratedQuestions([]);
     } catch (error) {
       console.error("Insert error:", error);
