@@ -29,7 +29,7 @@ export function IndependentPracticeCard({ number, question, answer }: Independen
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-base">{question}</p>
+        <p className="text-base break-words">{question}</p>
         
         {answer && (
           <>
@@ -57,7 +57,7 @@ export function IndependentPracticeCard({ number, question, answer }: Independen
                 <p className="font-semibold text-green-800 dark:text-green-300 mb-1">
                   Answer:
                 </p>
-                <p className="text-green-700 dark:text-green-400">{answer}</p>
+                <p className="text-green-700 dark:text-green-400 break-words">{answer}</p>
               </div>
             )}
           </>

@@ -111,8 +111,8 @@ export function WeakAreasCard({ limit = 5, showActions = true }: WeakAreasCardPr
             >
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className={`font-semibold ${colors.text}`}>
+                  <div className="flex items-center gap-2 mb-1 min-w-0">
+                    <h4 className={`font-semibold ${colors.text} truncate`}>
                       {area.skill_name}
                     </h4>
                     <Badge variant="outline" className={colors.badge}>

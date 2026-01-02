@@ -37,7 +37,7 @@ export function RuleCard({ number, title, content }: RuleCardProps) {
       </CardHeader>
       <CardContent>
         <div 
-          className="prose prose-sm max-w-none dark:prose-invert"
+          className="prose prose-sm max-w-none dark:prose-invert break-words overflow-hidden"
           dangerouslySetInnerHTML={{ __html: sanitizeHTML(content) }}
         />
       </CardContent>

@@ -193,6 +193,12 @@
   .animate-scale-in {
     animation: scaleIn 0.3s ease-out;
   }
+
+  /* Global prose overflow handling */
+  .prose {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
   
   @keyframes fadeIn {
     to {
