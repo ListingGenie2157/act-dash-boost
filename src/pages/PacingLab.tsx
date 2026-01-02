@@ -122,7 +122,7 @@ const PacingLab = () => {
                 <CardTitle className="text-xl group-hover:text-primary transition-colors">
                   {mode.title}
                 </CardTitle>
-                <CardDescription className="text-sm">
+                <CardDescription className="text-sm line-clamp-2">
                   {mode.description}
                 </CardDescription>
               </CardHeader>

@@ -160,7 +160,7 @@ export function QuestionCard({
         <CardContent className="space-y-6">
           {question.image_position === 'above_question' && renderImage('above_question')}
 
-          <div className="prose prose-sm max-w-none">
+          <div className="prose prose-sm max-w-none break-words overflow-hidden">
             {question.reference_number && (
               <div className="mb-2 text-sm font-semibold text-muted-foreground">
                 Question {question.reference_number}
@@ -168,16 +168,16 @@ export function QuestionCard({
             )}
             
             {question.underlined_text ? (
-              <div className="text-base leading-relaxed">
-                <p className="mb-2">{question.question}</p>
-                <p className="border-l-4 border-primary pl-4 py-2 bg-muted/30 rounded">
+              <div className="text-base leading-relaxed break-words">
+                <p className="mb-2 break-words">{question.question}</p>
+                <p className="border-l-4 border-primary pl-4 py-2 bg-muted/30 rounded break-words">
                   <span className="underline decoration-2 decoration-primary/60">
                     {question.underlined_text}
                   </span>
                 </p>
               </div>
             ) : (
-              <p className="text-base leading-relaxed whitespace-pre-wrap">
+              <p className="text-base leading-relaxed whitespace-pre-wrap break-words">
                 {question.question}
               </p>
             )}
@@ -201,7 +201,7 @@ export function QuestionCard({
                 />
                 <Label 
                   htmlFor={`${question.id}-${choice.value}`}
-                  className="flex-1 text-base leading-relaxed cursor-pointer"
+                  className="flex-1 text-base leading-relaxed cursor-pointer break-words"
                 >
                   <span className="font-medium mr-2">{choice.value}.</span>
                   {choice.label}

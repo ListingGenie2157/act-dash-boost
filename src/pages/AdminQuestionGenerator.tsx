@@ -425,7 +425,7 @@ export default function AdminQuestionGenerator() {
                         </div>
                       )}
 
-                      <p className="font-medium mb-2">{q.question}</p>
+                      <p className="font-medium mb-2 break-words">{q.question}</p>
 
                       <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
                         {["A", "B", "C", "D"].map((letter) => {
@@ -434,7 +434,7 @@ export default function AdminQuestionGenerator() {
                           return (
                             <div
                               key={letter}
-                              className={`p-2 rounded ${
+                              className={`p-2 rounded break-words ${
                                 isCorrect
                                   ? "bg-green-100 dark:bg-green-900/30 border border-green-500"
                                   : "bg-muted"
@@ -451,7 +451,7 @@ export default function AdminQuestionGenerator() {
 
                       <div className="text-sm text-muted-foreground">
                         <p className="font-medium text-foreground mb-1">Explanation:</p>
-                        <p>{q.explanation}</p>
+                        <p className="break-words">{q.explanation}</p>
                       </div>
                     </div>
                   ))}

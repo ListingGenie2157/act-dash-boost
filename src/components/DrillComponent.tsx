@@ -131,7 +131,7 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
                       <XCircle className="w-5 h-5 text-destructive mt-1 flex-shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">{question.question}</p>
+                      <p className="font-medium text-sm break-words">{question.question}</p>
                       {wasAnswered && (
                         <p className="text-xs text-muted-foreground mt-1">
                           Your answer: {question.options[userAnswer]}
@@ -308,23 +308,23 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
                   <div className="text-sm italic">{currentQ.underlinedText}</div>
                 </div>
               )}
-              <h3 className="text-lg font-semibold">{currentQ.question}</h3>
+              <h3 className="text-lg font-semibold break-words">{currentQ.question}</h3>
             </div>
 
             {/* Answer Options */}
             <div className="grid gap-3">
               {currentQ.options.map((option, index) => (
-                <Button
-                  key={index}
-                  variant="quiz"
-                  className="w-full justify-start hover:border-primary hover:bg-primary/5 transition-fast"
-                  onClick={() => handleAnswerSelect(index)}
-                >
-                  <span className="mr-3 flex-shrink-0 w-6 h-6 rounded-full border border-current flex items-center justify-center text-xs font-bold">
-                    {String.fromCharCode(65 + index)}
-                  </span>
-                  {option}
-                </Button>
+                  <Button
+                    key={index}
+                    variant="quiz"
+                    className="w-full justify-start hover:border-primary hover:bg-primary/5 transition-fast text-left"
+                    onClick={() => handleAnswerSelect(index)}
+                  >
+                    <span className="mr-3 flex-shrink-0 w-6 h-6 rounded-full border border-current flex items-center justify-center text-xs font-bold">
+                      {String.fromCharCode(65 + index)}
+                    </span>
+                    <span className="break-words whitespace-normal">{option}</span>
+                  </Button>
               ))}
             </div>
           </div>

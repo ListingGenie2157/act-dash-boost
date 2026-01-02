@@ -77,9 +77,9 @@ export function AchievementBadges() {
                     className={`h-7 w-7 ${achievement.unlocked ? 'text-primary' : 'text-muted-foreground'}`}
                   />
                 </div>
-                <div>
-                  <p className="font-semibold text-sm tracking-tight">{achievement.title}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{achievement.description}</p>
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm tracking-tight truncate">{achievement.title}</p>
+                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{achievement.description}</p>
                 </div>
                 
                 {!achievement.unlocked && achievement.progress !== undefined && achievement.target && (
