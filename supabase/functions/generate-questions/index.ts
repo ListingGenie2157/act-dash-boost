@@ -169,8 +169,20 @@ serve(async (req) => {
       });
     }
 
-    // Check admin role
-    const { data: isAdmin } = await supabase.rpc("is_admin");
+    // Check admin role using has_role with the verified user's ID
+    const { data: isAdmin, error: roleError } = await supabase.rpc("has_role", {
+      _user_id: user.id,
+      _role: "admin"
+    });
+    
+    if (roleError) {
+      console.error("Role check error:", roleError);
+      return new Response(JSON.stringify({ error: "Failed to verify admin status" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: "Admin access required" }), {
         status: 403,
