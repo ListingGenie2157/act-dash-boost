@@ -320,6 +320,13 @@ ${skillDescriptions}
 
 ${difficultyInstructions}
 
+CRITICAL - ANSWER DISTRIBUTION:
+- Distribute correct answers EVENLY across A, B, C, and D
+- For ${count} questions, aim for approximately ${Math.ceil(count/4)} correct answers per letter
+- Do NOT cluster correct answers on A or B - this is a common AI bias you must avoid
+- Real ACT tests have roughly 25% of answers for each letter
+- Randomize where you place the correct answer for each question
+
 IMPORTANT:
 - Each question must have exactly 4 answer choices (A, B, C, D)
 - Each question must have a clear correct answer with a detailed explanation
