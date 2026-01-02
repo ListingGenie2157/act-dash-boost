@@ -53,11 +53,11 @@ export default function UpdatePassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-purple-500 via-pink-500 to-indigo-600 animate-gradient relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-accent via-primary to-secondary animate-gradient relative overflow-hidden">
       {/* Animated background shapes */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-20 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-pink-300/20 rounded-full blur-3xl animate-float-delayed" />
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-secondary/20 rounded-full blur-3xl animate-float-delayed" />
       </div>
 
       <Card className="w-full max-w-md backdrop-blur-xl bg-white/95 dark:bg-gray-900/95 border-white/20 shadow-2xl relative z-10 animate-scale-in">
