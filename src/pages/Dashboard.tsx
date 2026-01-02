@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import type { Session } from '@supabase/supabase-js';
-import { Calculator, Target, Sparkles, ArrowRight, BookOpen, Clock, Zap, User } from 'lucide-react';
+import { Calculator, Target, Sparkles, ArrowRight, BookOpen, PlayCircle, Zap, User } from 'lucide-react';
 import { logger } from '@/lib/logger';
 
 interface Profile {
@@ -325,7 +325,7 @@ const Dashboard = () => {
                   <Card className="group p-6 h-full bg-gradient-to-br from-background to-accent/5 backdrop-blur-sm border-accent/20 hover:border-accent/50 hover:shadow-2xl hover:shadow-accent/20 transition-all duration-300 hover:-translate-y-2">
                     <CardContent className="p-0 space-y-4">
                       <div className="p-3 rounded-xl bg-gradient-to-br from-accent/20 to-primary/20 w-fit group-hover:scale-110 transition-transform">
-                        <Clock className="w-6 h-6 text-accent-foreground" />
+                        <PlayCircle className="w-6 h-6 text-accent-foreground" />
                       </div>
                       <div>
                         <h3 className="text-xl font-bold mb-2 group-hover:text-accent-foreground transition-colors">Practice Simulations</h3>
