@@ -18,6 +18,7 @@ interface GeneratedQuestion {
   difficulty: "Easy" | "Medium" | "Hard";
   passage_text?: string;
   passage_title?: string;
+  passage_id?: string;
 }
 
 const SECTION_PROMPTS: Record<string, string> = {
@@ -86,6 +87,76 @@ For each question:
 - Test: reading data, identifying trends, understanding experimental design, drawing conclusions`
 };
 
+// Simulation-specific prompts for passage generation
+const SIMULATION_PASSAGE_PROMPTS: Record<string, Record<string, string>> = {
+  reading: {
+    "Literary Fiction": `Generate a literary fiction passage (700-900 words) for ACT Reading. The passage should:
+- Feature compelling characters and narrative tension
+- Include descriptive language and literary devices
+- Have a clear beginning, development, and conclusion
+- Be from a novel, short story, or memoir`,
+    "Social Science": `Generate a social science passage (700-900 words) for ACT Reading. The passage should:
+- Discuss sociology, psychology, economics, or political science topics
+- Present data, studies, or expert opinions
+- Have a clear thesis and supporting arguments
+- Include specific examples and evidence`,
+    "Humanities": `Generate a humanities passage (700-900 words) for ACT Reading. The passage should:
+- Cover art, music, literature, philosophy, or cultural studies
+- Analyze a work, movement, or historical period
+- Include specific references and examples
+- Present an argument or interpretation`,
+    "Natural Science": `Generate a natural science passage (700-900 words) for ACT Reading. The passage should:
+- Explain a scientific concept, discovery, or phenomenon
+- Include technical vocabulary with context clues
+- Present research findings or scientific debates
+- Be accessible to non-specialists`
+  },
+  science: {
+    "Data Representation": `Generate a Data Representation passage for ACT Science. The passage should:
+- Present a scientific phenomenon with data in tables or graphs
+- Describe the experimental setup clearly
+- Include 2-3 data tables/graphs (describe them in detail as text)
+- Variables and units should be clearly labeled`,
+    "Research Summary": `Generate a Research Summary passage for ACT Science. The passage should:
+- Describe 2-3 related experiments by scientists
+- Explain the hypothesis, methods, and results of each experiment
+- Show how experiments build on or relate to each other
+- Include specific numerical data and observations`,
+    "Conflicting Viewpoints": `Generate a Conflicting Viewpoints passage for ACT Science. The passage should:
+- Present 2-3 scientists or students with different hypotheses about the same phenomenon
+- Each viewpoint should have supporting evidence and reasoning
+- The viewpoints should be clearly distinguishable
+- Do not indicate which viewpoint is correct`
+  },
+  english: {
+    "Narrative Essay": `Generate a narrative essay passage (300-400 words) for ACT English. The passage should:
+- Tell a personal story with a clear narrative arc
+- Use first-person perspective
+- Include dialogue and descriptive details
+- Have 15 numbered sentence portions that can be tested for grammar/style`,
+    "Argumentative Essay": `Generate an argumentative essay passage (300-400 words) for ACT English. The passage should:
+- Present a clear argument with thesis and supporting points
+- Use persuasive language and rhetorical devices
+- Include counterarguments and rebuttals
+- Have 15 numbered sentence portions that can be tested for grammar/style`,
+    "Informative Essay": `Generate an informative essay passage (300-400 words) for ACT English. The passage should:
+- Explain a topic, process, or concept clearly
+- Use transitions and organized structure
+- Include specific facts and examples
+- Have 15 numbered sentence portions that can be tested for grammar/style`,
+    "Expository Essay": `Generate an expository essay passage (300-400 words) for ACT English. The passage should:
+- Investigate and explain an idea or theme
+- Present balanced information and analysis
+- Use cause-and-effect or compare-contrast structures
+- Have 15 numbered sentence portions that can be tested for grammar/style`,
+    "Personal Essay": `Generate a personal reflection essay passage (300-400 words) for ACT English. The passage should:
+- Reflect on an experience, idea, or cultural topic
+- Balance personal voice with broader significance
+- Use descriptive and reflective language
+- Have 15 numbered sentence portions that can be tested for grammar/style`
+  }
+};
+
 const SKILL_DESCRIPTIONS: Record<string, string> = {
   // Math skills
   "M1.A": "Pre-Algebra: Basic operations and number properties",
@@ -102,6 +173,8 @@ const SKILL_DESCRIPTIONS: Record<string, string> = {
   "M4.B": "Functions: Graphs of functions",
   "M5.A": "Statistics: Mean, median, mode",
   "M5.B": "Statistics: Probability",
+  "M6.A": "Trigonometry: Basic trig ratios",
+  "M6.B": "Trigonometry: Trig identities and equations",
   // Science skills
   "S1.A": "Data Representation: Reading graphs and tables",
   "S1.B": "Data Representation: Identifying trends and patterns",
@@ -134,6 +207,12 @@ const SKILL_DESCRIPTIONS: Record<string, string> = {
   "E2.B": "Production: Organization and cohesion",
   "E3.A": "Knowledge: Word choice and style",
 };
+
+// Get skill codes for a section
+function getSkillsForSection(section: string): string[] {
+  const prefix = section.charAt(0).toUpperCase();
+  return Object.keys(SKILL_DESCRIPTIONS).filter(k => k.startsWith(prefix));
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -193,7 +272,7 @@ serve(async (req) => {
     const body = await req.json();
     const { action = "generate", section, skill_codes, count = 5, difficulty_distribution, questions: questionsToInsert } = body;
 
-    // Handle insert action - uses service role to bypass RLS
+    // Handle diagnostic insert action
     if (action === "insert") {
       if (!section || !questionsToInsert || questionsToInsert.length === 0) {
         return new Response(JSON.stringify({ error: "section and questions are required for insert" }), {
@@ -286,7 +365,365 @@ serve(async (req) => {
       });
     }
 
-    // Generate action (default)
+    // Handle simulation insert action
+    if (action === "insert-simulation") {
+      const { form_id, questions: questionsToInsert } = body;
+      
+      if (!form_id || !questionsToInsert || questionsToInsert.length === 0) {
+        return new Response(JSON.stringify({ error: "form_id and questions are required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const sectionMap: Record<string, string> = {
+        math: "Math",
+        science: "Science",
+        reading: "Reading",
+        english: "English",
+      };
+
+      // Get the current max ord for this form
+      const { data: existingItems, error: fetchError } = await supabase
+        .from("staging_items")
+        .select("ord")
+        .eq("form_id", form_id)
+        .order("ord", { ascending: false })
+        .limit(1);
+
+      if (fetchError) {
+        console.error("Error fetching existing items:", fetchError);
+        return new Response(JSON.stringify({ error: "Failed to fetch existing items" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const startOrd = existingItems && existingItems.length > 0 
+        ? existingItems[0].ord + 1 
+        : 1;
+
+      // Prepare items for insertion
+      const items = questionsToInsert.map((q: GeneratedQuestion, idx: number) => ({
+        form_id: form_id,
+        section: sectionMap[section.toLowerCase()] || section,
+        ord: startOrd + idx,
+        question: q.question,
+        choice_a: q.choice_a,
+        choice_b: q.choice_b,
+        choice_c: q.choice_c,
+        choice_d: q.choice_d,
+        answer: q.answer,
+        explanation: q.explanation,
+        skill_code: q.skill_code,
+        difficulty: q.difficulty,
+        passage_text: q.passage_text || null,
+        passage_title: q.passage_title || null,
+        passage_id: q.passage_id || null,
+      }));
+
+      console.log(`Inserting ${items.length} simulation questions into ${form_id} starting at ord ${startOrd}`);
+
+      const { error: insertError } = await supabase
+        .from("staging_items")
+        .insert(items);
+
+      if (insertError) {
+        console.error("Insert error:", insertError);
+        return new Response(JSON.stringify({ error: insertError.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      console.log(`Successfully inserted ${items.length} simulation questions`);
+      return new Response(JSON.stringify({ 
+        success: true, 
+        inserted: items.length,
+        form_id: form_id 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Handle simulation generation action
+    if (action === "generate-simulation") {
+      const { form_id, passage_index, passage_type, questions_per_passage, batch_index, count: batchCount } = body;
+      const sectionLower = section.toLowerCase();
+      
+      // For passage-based sections
+      if (passage_type && questions_per_passage) {
+        const passagePrompt = SIMULATION_PASSAGE_PROMPTS[sectionLower]?.[passage_type];
+        if (!passagePrompt) {
+          return new Response(JSON.stringify({ error: `Invalid passage type: ${passage_type}` }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const skills = getSkillsForSection(sectionLower);
+        const skillDescriptions = skills.map(code => {
+          const desc = SKILL_DESCRIPTIONS[code] || code;
+          return `- ${code}: ${desc}`;
+        }).join("\n");
+
+        const systemPrompt = SECTION_PROMPTS[sectionLower];
+        const userPrompt = `${passagePrompt}
+
+After generating the passage, create exactly ${questions_per_passage} questions based on this passage.
+
+Skills to distribute across questions:
+${skillDescriptions}
+
+CRITICAL - ANSWER DISTRIBUTION:
+- Distribute correct answers EVENLY across A, B, C, and D
+- Randomize where you place the correct answer for each question
+- Real ACT tests have roughly 25% of answers for each letter
+
+Difficulty distribution:
+- 30% Easy, 50% Medium, 20% Hard
+
+Each question must:
+- Be directly answerable from the passage
+- Have exactly 4 answer choices
+- Include a detailed explanation
+- Be tagged with an appropriate skill code`;
+
+        console.log(`Generating ${passage_type} passage with ${questions_per_passage} questions for ${form_id}`);
+
+        const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt }
+            ],
+            tools: [
+              {
+                type: "function",
+                function: {
+                  name: "generate_passage_with_questions",
+                  description: "Generate a passage with associated questions",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      passage_title: { 
+                        type: "string", 
+                        description: "Title of the passage" 
+                      },
+                      passage_text: { 
+                        type: "string", 
+                        description: "The full passage text" 
+                      },
+                      questions: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            question: { type: "string" },
+                            choice_a: { type: "string" },
+                            choice_b: { type: "string" },
+                            choice_c: { type: "string" },
+                            choice_d: { type: "string" },
+                            answer: { type: "string", enum: ["A", "B", "C", "D"] },
+                            explanation: { type: "string" },
+                            skill_code: { type: "string" },
+                            difficulty: { type: "string", enum: ["Easy", "Medium", "Hard"] }
+                          },
+                          required: ["question", "choice_a", "choice_b", "choice_c", "choice_d", "answer", "explanation", "skill_code", "difficulty"]
+                        }
+                      }
+                    },
+                    required: ["passage_title", "passage_text", "questions"]
+                  }
+                }
+              }
+            ],
+            tool_choice: { type: "function", function: { name: "generate_passage_with_questions" } }
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("AI Gateway error:", response.status, errorText);
+          
+          if (response.status === 429) {
+            return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
+              status: 429,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          if (response.status === 402) {
+            return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds." }), {
+              status: 402,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          
+          return new Response(JSON.stringify({ error: "AI generation failed" }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const data = await response.json();
+        const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+        
+        if (!toolCall || toolCall.function.name !== "generate_passage_with_questions") {
+          console.error("No valid tool call in response");
+          return new Response(JSON.stringify({ error: "AI did not return structured passage" }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const args = JSON.parse(toolCall.function.arguments);
+        
+        console.log(`Generated passage "${args.passage_title}" with ${args.questions.length} questions`);
+        
+        return new Response(JSON.stringify({
+          passage_title: args.passage_title,
+          passage_text: args.passage_text,
+          questions: args.questions,
+          count: args.questions.length
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // For non-passage sections (Math)
+      const skills = getSkillsForSection(sectionLower);
+      const skillDescriptions = skills.map(code => {
+        const desc = SKILL_DESCRIPTIONS[code] || code;
+        return `- ${code}: ${desc}`;
+      }).join("\n");
+
+      const questionCount = batchCount || 10;
+      const systemPrompt = SECTION_PROMPTS[sectionLower];
+      const userPrompt = `Generate exactly ${questionCount} ACT ${section} questions for a full simulation test.
+
+Skills to distribute across:
+${skillDescriptions}
+
+CRITICAL - ANSWER DISTRIBUTION:
+- Distribute correct answers EVENLY across A, B, C, and D
+- For ${questionCount} questions, aim for approximately ${Math.ceil(questionCount/4)} correct answers per letter
+- Randomize where you place the correct answer for each question
+
+Difficulty distribution:
+- 30% Easy (questions 1-18 typically)
+- 50% Medium (questions 19-45 typically)
+- 20% Hard (questions 46-60 typically)
+
+Each question must have:
+- Clear, unambiguous problem statement
+- Exactly 4 answer choices
+- Detailed explanation
+- Appropriate skill code tag`;
+
+      console.log(`Generating ${questionCount} ${section} questions for simulation batch ${batch_index}`);
+
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "generate_act_questions",
+                description: "Generate structured ACT test questions",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    questions: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          question: { type: "string" },
+                          choice_a: { type: "string" },
+                          choice_b: { type: "string" },
+                          choice_c: { type: "string" },
+                          choice_d: { type: "string" },
+                          answer: { type: "string", enum: ["A", "B", "C", "D"] },
+                          explanation: { type: "string" },
+                          skill_code: { type: "string" },
+                          difficulty: { type: "string", enum: ["Easy", "Medium", "Hard"] }
+                        },
+                        required: ["question", "choice_a", "choice_b", "choice_c", "choice_d", "answer", "explanation", "skill_code", "difficulty"]
+                      }
+                    }
+                  },
+                  required: ["questions"]
+                }
+              }
+            }
+          ],
+          tool_choice: { type: "function", function: { name: "generate_act_questions" } }
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("AI Gateway error:", response.status, errorText);
+        
+        if (response.status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (response.status === 402) {
+          return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds." }), {
+            status: 402,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        
+        return new Response(JSON.stringify({ error: "AI generation failed" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const data = await response.json();
+      const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+      
+      if (!toolCall || toolCall.function.name !== "generate_act_questions") {
+        console.error("No valid tool call in response");
+        return new Response(JSON.stringify({ error: "AI did not return structured questions" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const args = JSON.parse(toolCall.function.arguments);
+      
+      console.log(`Generated ${args.questions.length} questions for simulation`);
+      
+      return new Response(JSON.stringify({
+        questions: args.questions,
+        count: args.questions.length
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Generate action (default - for diagnostic questions)
     if (!section || !skill_codes || skill_codes.length === 0) {
       return new Response(JSON.stringify({ error: "section and skill_codes are required" }), {
         status: 400,
@@ -452,9 +889,8 @@ IMPORTANT:
     console.log(`Generated ${questions.length} questions`);
 
     return new Response(JSON.stringify({ 
-      success: true, 
       questions,
-      count: questions.length
+      count: questions.length 
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

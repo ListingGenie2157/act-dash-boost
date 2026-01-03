@@ -53,6 +53,7 @@ import CalculatorLab from "./pages/CalculatorLab";
 import PacingLab from "./pages/PacingLab";
 import AdminSkillCodes from "./pages/AdminSkillCodes";
 import AdminQuestionGenerator from "./pages/AdminQuestionGenerator";
+import AdminSimulationGenerator from "./pages/AdminSimulationGenerator";
 import { HealthCheck } from "./pages/HealthCheck";
 
 
@@ -162,6 +163,11 @@ const App = () => (
                   <Route path="/admin/generate-questions" element={
                     <ProtectedAdminRoute>
                       <AdminQuestionGenerator />
+                    </ProtectedAdminRoute>
+                  } />
+                  <Route path="/admin/generate-simulation" element={
+                    <ProtectedAdminRoute>
+                      <AdminSimulationGenerator />
                     </ProtectedAdminRoute>
                   } />
                   
