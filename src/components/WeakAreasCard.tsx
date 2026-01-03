@@ -79,21 +79,21 @@ export function WeakAreasCard({ limit = 5, showActions = true }: WeakAreasCardPr
   const highCount = weakAreas.filter(a => a.priority === 'high').length;
 
   return (
-    <Card className="border-secondary/20">
+    <Card className="border-primary/20">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <AlertTriangle className="h-5 w-5 text-secondary" />
+          <AlertTriangle className="h-5 w-5 text-primary" />
           Areas Needing Focus
         </CardTitle>
         <CardDescription>
           {criticalCount > 0 && (
-            <span className="text-secondary font-medium">
+            <span className="text-destructive font-medium">
               {criticalCount} critical
             </span>
           )}
           {criticalCount > 0 && highCount > 0 && ' • '}
           {highCount > 0 && (
-            <span className="text-secondary/80 font-medium">
+            <span className="text-primary font-medium">
               {highCount} high priority
             </span>
           )}
@@ -177,7 +177,7 @@ export function WeakAreasCard({ limit = 5, showActions = true }: WeakAreasCardPr
         {/* Summary Message */}
         <div className="mt-4 p-3 bg-muted rounded-lg">
           <div className="flex items-start gap-2">
-            <TrendingDown className="h-4 w-4 text-secondary mt-0.5" />
+            <TrendingDown className="h-4 w-4 text-primary mt-0.5" />
             <p className="text-sm text-muted-foreground">
               {criticalCount > 0 ? (
                 <>Focus on <strong>{criticalCount} critical skill{criticalCount > 1 ? 's' : ''}</strong> first for maximum impact</>

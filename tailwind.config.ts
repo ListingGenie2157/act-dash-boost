@@ -33,6 +33,10 @@ export default {
           DEFAULT: 'hsl(var(--warning))',
           foreground: 'hsl(var(--warning-foreground))'
         },
+        coral: {
+          DEFAULT: 'hsl(var(--coral))',
+          foreground: 'hsl(var(--coral-foreground))'
+        },
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))'

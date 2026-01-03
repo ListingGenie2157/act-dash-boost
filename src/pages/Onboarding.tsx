@@ -66,7 +66,7 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/5 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/5 flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         <Card className="backdrop-blur-sm border-primary/20 shadow-xl">
           <CardHeader className="text-center">

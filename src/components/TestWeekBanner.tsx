@@ -92,7 +92,7 @@ export const TestWeekBanner = () => {
   if (!schedule) return null;
 
   return (
-    <Card className="mb-6 border-primary/20 bg-gradient-to-r from-primary/5 to-secondary/5">
+    <Card className="mb-6 border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5">
       <div className="p-4">
         <div className="flex items-center gap-2 mb-3">
           <Calendar className="w-5 h-5 text-primary" />
