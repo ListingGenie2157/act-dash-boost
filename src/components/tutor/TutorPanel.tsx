@@ -53,7 +53,7 @@ export function TutorPanel() {
 
   const modeColors = {
     practice: 'default',
-    quiz: 'secondary',
+    quiz: 'outline',
     test: 'destructive',
   } as const;
 

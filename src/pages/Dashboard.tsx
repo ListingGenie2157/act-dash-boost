@@ -106,11 +106,11 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/5 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/5 relative overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-secondary/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
       </div>
 
       <div className="relative container mx-auto px-4 pt-4">
@@ -121,7 +121,7 @@ const Dashboard = () => {
       <div className="relative container max-w-7xl mx-auto px-4 py-8">
         <div className="space-y-8">
           {/* Welcome Section */}
-          <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/25 via-secondary/20 to-accent/25 backdrop-blur-sm border border-primary/30 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in overflow-hidden">
+          <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/20 via-accent/15 to-primary/10 backdrop-blur-sm border border-primary/30 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in overflow-hidden">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-2">
@@ -178,7 +178,7 @@ const Dashboard = () => {
               </div>
               
               {/* Quick Access Resources */}
-              <Card className="bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5 backdrop-blur-sm border-primary/20 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in">
+              <Card className="bg-gradient-to-br from-primary/5 via-accent/5 to-muted/20 backdrop-blur-sm border-primary/20 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-2 mb-4">
                     <Zap className="w-5 h-5 text-primary" />
@@ -208,7 +208,7 @@ const Dashboard = () => {
               
               {/* Diagnostic CTA - Only show if not completed */}
               {!hasDiagnostic && (
-                <Card className="bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 backdrop-blur-sm border-primary/20 shadow-lg hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 animate-fade-in">
+                <Card className="bg-gradient-to-br from-primary/10 via-accent/10 to-muted/20 backdrop-blur-sm border-primary/20 shadow-lg hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 animate-fade-in">
                   <CardContent className="pt-6">
                     <div className="flex flex-col md:flex-row items-center gap-6">
                       <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 group-hover:scale-110 transition-transform">
@@ -238,7 +238,7 @@ const Dashboard = () => {
             // Self-Directed Learning Dashboard
             <div className="space-y-8">
               {/* Choose Your Path Section */}
-              <div className="bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 backdrop-blur-sm border border-primary/20 rounded-2xl p-8 shadow-lg hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 animate-fade-in">
+              <div className="bg-gradient-to-br from-primary/10 via-accent/10 to-muted/20 backdrop-blur-sm border border-primary/20 rounded-2xl p-8 shadow-lg hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 animate-fade-in">
                 <div className="max-w-3xl mx-auto text-center space-y-4">
                   <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm mb-4">
                     <Sparkles className="w-4 h-4 text-primary" />
@@ -306,13 +306,13 @@ const Dashboard = () => {
                 </Link>
                 
                 <Link to="/drill-runner">
-                  <Card className="group p-6 h-full bg-gradient-to-br from-background to-secondary/5 backdrop-blur-sm border-secondary/20 hover:border-secondary/50 hover:shadow-2xl hover:shadow-secondary/20 transition-all duration-300 hover:-translate-y-2">
+                  <Card className="group p-6 h-full bg-gradient-to-br from-background to-accent/5 backdrop-blur-sm border-accent/20 hover:border-accent/50 hover:shadow-2xl hover:shadow-accent/20 transition-all duration-300 hover:-translate-y-2">
                     <CardContent className="p-0 space-y-4">
-                      <div className="p-3 rounded-xl bg-gradient-to-br from-secondary/20 to-accent/20 w-fit group-hover:scale-110 transition-transform">
-                        <Target className="w-6 h-6 text-secondary" />
+                      <div className="p-3 rounded-xl bg-gradient-to-br from-accent/20 to-primary/20 w-fit group-hover:scale-110 transition-transform">
+                        <Target className="w-6 h-6 text-accent-foreground" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold mb-2 group-hover:text-secondary transition-colors">Timed Drills</h3>
+                        <h3 className="text-xl font-bold mb-2 group-hover:text-accent-foreground transition-colors">Timed Drills</h3>
                         <p className="text-sm text-muted-foreground">
                           Practice specific skills with timed questions
                         </p>
@@ -348,7 +348,7 @@ const Dashboard = () => {
               
               {/* Diagnostic CTA - Only show if not completed */}
               {!hasDiagnostic && (
-                <Card className="bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 backdrop-blur-sm border-primary/20 shadow-lg hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 animate-fade-in">
+                <Card className="bg-gradient-to-br from-primary/10 via-accent/10 to-muted/20 backdrop-blur-sm border-primary/20 shadow-lg hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 animate-fade-in">
                   <CardContent className="pt-6">
                     <div className="flex flex-col md:flex-row items-center gap-6">
                       <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 group-hover:scale-110 transition-transform">

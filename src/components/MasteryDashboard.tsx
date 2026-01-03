@@ -105,13 +105,13 @@ export function MasteryDashboard() {
           </div>
 
           {/* Beginner */}
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary/10 border border-secondary/20">
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-muted border border-border">
             <div className="text-2xl">🌱</div>
             <div>
-              <div className="text-2xl font-bold text-secondary">
+              <div className="text-2xl font-bold text-muted-foreground">
                 {summary.beginner}
               </div>
-              <div className="text-xs text-secondary/80">Beginner</div>
+              <div className="text-xs text-muted-foreground">Beginner</div>
             </div>
           </div>
         </div>
@@ -130,7 +130,7 @@ export function MasteryDashboard() {
 
         {summary.beginner > 0 && (
           <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-            <Target className="h-4 w-4 text-secondary" />
+            <Target className="h-4 w-4 text-primary" />
             <p className="text-sm text-muted-foreground">
               Focus on {summary.beginner} skill{summary.beginner > 1 ? 's' : ''} that need more practice
             </p>

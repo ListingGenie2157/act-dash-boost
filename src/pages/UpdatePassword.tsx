@@ -53,21 +53,21 @@ export default function UpdatePassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-accent via-primary to-secondary animate-gradient relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-accent via-primary to-accent animate-gradient relative overflow-hidden">
       {/* Animated background shapes */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-20 w-64 h-64 bg-white/10 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-secondary/20 rounded-full blur-3xl animate-float-delayed" />
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-float-delayed" />
       </div>
 
-      <Card className="w-full max-w-md backdrop-blur-xl bg-white/95 dark:bg-gray-900/95 border-white/20 shadow-2xl relative z-10 animate-scale-in">
+      <Card className="w-full max-w-md backdrop-blur-xl bg-white/95 dark:bg-card/95 border-white/20 shadow-2xl relative z-10 animate-scale-in">
         <CardHeader className="space-y-1 text-center pb-8">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center">
-              <KeyRound className="w-8 h-8 text-white" />
+            <div className="w-16 h-16 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center">
+              <KeyRound className="w-8 h-8 text-primary-foreground" />
             </div>
           </div>
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             Update Your Password
           </CardTitle>
           <CardDescription className="text-base">
@@ -87,7 +87,7 @@ export default function UpdatePassword() {
                 placeholder="••••••••"
                 required
                 minLength={8}
-                className="transition-all focus:ring-2 focus:ring-purple-500"
+                className="transition-all focus:ring-2 focus:ring-primary"
               />
               <p className="text-xs text-muted-foreground">
                 Must be at least 8 characters
@@ -103,16 +103,16 @@ export default function UpdatePassword() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="transition-all focus:ring-2 focus:ring-purple-500"
+                className="transition-all focus:ring-2 focus:ring-primary"
               />
               {confirmPassword && password !== confirmPassword && (
-                <p className="text-xs text-red-600 flex items-center gap-1">
+                <p className="text-xs text-destructive flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
                   Passwords do not match
                 </p>
               )}
               {confirmPassword && password === confirmPassword && password.length >= 8 && (
-                <p className="text-xs text-green-600 flex items-center gap-1">
+                <p className="text-xs text-success flex items-center gap-1">
                   <Check className="w-3 h-3" />
                   Passwords match
                 </p>
@@ -120,7 +120,7 @@ export default function UpdatePassword() {
             </div>
 
             {error && (
-              <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 text-sm flex items-start gap-2">
+              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <span>{error}</span>
               </div>
@@ -128,7 +128,7 @@ export default function UpdatePassword() {
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+              className="w-full bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
               disabled={loading || password !== confirmPassword || password.length < 8}
             >
               {loading ? (
