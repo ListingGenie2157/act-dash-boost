@@ -179,11 +179,11 @@ export default function DrillDetail() {
         <CardContent>
           <div className="grid grid-cols-3 gap-4 text-center">
             <div className="p-3 bg-muted/50 rounded-lg">
-              <p className="text-2xl font-bold text-green-600">{correctCount}</p>
+              <p className="text-2xl font-bold text-success">{correctCount}</p>
               <p className="text-sm text-muted-foreground">Correct</p>
             </div>
             <div className="p-3 bg-muted/50 rounded-lg">
-              <p className="text-2xl font-bold text-red-600">{incorrectCount}</p>
+              <p className="text-2xl font-bold text-destructive">{incorrectCount}</p>
               <p className="text-sm text-muted-foreground">Incorrect</p>
             </div>
             <div className="p-3 bg-muted/50 rounded-lg">
@@ -218,9 +218,9 @@ export default function DrillDetail() {
                     <div className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-accent transition-colors">
                       <div className="flex items-center gap-3">
                         {isCorrect ? (
-                          <CheckCircle2 className="h-5 w-5 text-green-600" />
+                          <CheckCircle2 className="h-5 w-5 text-success" />
                         ) : (
-                          <XCircle className="h-5 w-5 text-red-600" />
+                          <XCircle className="h-5 w-5 text-destructive" />
                         )}
                         <span className="font-medium">Question {index + 1}</span>
                         {attempt.skill_code && (
@@ -232,13 +232,13 @@ export default function DrillDetail() {
                       <div className="flex items-center gap-3">
                         <div className="text-sm">
                           <span className="text-muted-foreground">Your answer: </span>
-                          <span className={isCorrect ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                          <span className={isCorrect ? 'text-success font-medium' : 'text-destructive font-medium'}>
                             {selectedLetter}
                           </span>
                           {!isCorrect && (
                             <>
                               <span className="text-muted-foreground"> • Correct: </span>
-                              <span className="text-green-600 font-medium">{correctLetter}</span>
+                              <span className="text-success font-medium">{correctLetter}</span>
                             </>
                           )}
                         </div>
@@ -263,9 +263,9 @@ export default function DrillDetail() {
                                 key={i}
                                 className={`p-2 rounded text-sm ${
                                   i === attempt.correct_idx
-                                    ? 'bg-green-100 dark:bg-green-900/30 border border-green-300'
+                                    ? 'bg-success/10 border border-success/30'
                                     : i === attempt.selected_idx
-                                    ? 'bg-red-100 dark:bg-red-900/30 border border-red-300'
+                                    ? 'bg-destructive/10 border border-destructive/30'
                                     : 'bg-background border'
                                 }`}
                               >

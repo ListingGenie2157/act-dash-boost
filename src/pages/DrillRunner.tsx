@@ -392,7 +392,7 @@ export default function DrillRunner() {
             <div className="text-sm text-muted-foreground">Correct</div>
           </div>
           <div className="p-4 rounded-lg bg-muted/50">
-            <div className="text-3xl font-bold text-orange-500">🔥 {bestStreak}</div>
+            <div className="text-3xl font-bold text-primary">🔥 {bestStreak}</div>
             <div className="text-sm text-muted-foreground">Best Streak</div>
           </div>
         </div>
