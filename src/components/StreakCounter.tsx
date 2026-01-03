@@ -27,8 +27,8 @@ export function StreakCounter() {
   return (
     <Card className="border-primary/20">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Flame className={`h-5 w-5 ${streak.currentStreak > 0 ? 'text-orange-500' : 'text-muted-foreground'}`} />
+      <CardTitle className="flex items-center gap-2">
+          <Flame className={`h-5 w-5 ${streak.currentStreak > 0 ? 'text-primary' : 'text-muted-foreground'}`} />
           Study Streak
         </CardTitle>
         <CardDescription>
@@ -56,8 +56,8 @@ export function StreakCounter() {
         {streak.currentStreak > 0 && (
           <div className="pt-4 border-t">
             <div className="flex items-center gap-2 text-sm">
-              {streak.currentStreak >= 7 && <span className="text-orange-500">🔥 On fire!</span>}
-              {streak.currentStreak >= 30 && <span className="text-orange-500">🔥 Unstoppable!</span>}
+              {streak.currentStreak >= 7 && <span className="text-primary">🔥 On fire!</span>}
+              {streak.currentStreak >= 30 && <span className="text-primary">🔥 Unstoppable!</span>}
               {streak.currentStreak < 7 && <span className="text-muted-foreground">Keep going!</span>}
             </div>
           </div>

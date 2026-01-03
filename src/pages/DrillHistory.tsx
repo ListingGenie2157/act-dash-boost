@@ -153,7 +153,7 @@ export default function DrillHistory() {
                   {stats.recentImprovement.toFixed(1)}%
                 </p>
               </div>
-              <TrendingUp className={`h-8 w-8 opacity-50 ${stats.recentImprovement >= 0 ? 'text-green-500' : 'text-red-500'}`} />
+              <TrendingUp className={`h-8 w-8 opacity-50 ${stats.recentImprovement >= 0 ? 'text-success' : 'text-destructive'}`} />
             </div>
           </CardContent>
         </Card>

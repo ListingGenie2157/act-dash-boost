@@ -79,21 +79,21 @@ export function WeakAreasCard({ limit = 5, showActions = true }: WeakAreasCardPr
   const highCount = weakAreas.filter(a => a.priority === 'high').length;
 
   return (
-    <Card className="border-orange-200 dark:border-orange-800">
+    <Card className="border-secondary/20">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <AlertTriangle className="h-5 w-5 text-orange-500" />
+          <AlertTriangle className="h-5 w-5 text-secondary" />
           Areas Needing Focus
         </CardTitle>
         <CardDescription>
           {criticalCount > 0 && (
-            <span className="text-red-600 dark:text-red-400 font-medium">
+            <span className="text-secondary font-medium">
               {criticalCount} critical
             </span>
           )}
           {criticalCount > 0 && highCount > 0 && ' • '}
           {highCount > 0 && (
-            <span className="text-orange-600 dark:text-orange-400 font-medium">
+            <span className="text-secondary/80 font-medium">
               {highCount} high priority
             </span>
           )}
@@ -107,10 +107,10 @@ export function WeakAreasCard({ limit = 5, showActions = true }: WeakAreasCardPr
           return (
             <div
               key={area.skill_id}
-              className={`p-4 rounded-lg border transition-colors ${colors.bg} ${colors.border}`}
+              className={`p-4 rounded-lg border transition-colors overflow-hidden ${colors.bg} ${colors.border}`}
             >
               <div className="flex items-start justify-between gap-3 mb-2">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 min-w-0">
                     <h4 className={`font-semibold ${colors.text} truncate`}>
                       {area.skill_name}
@@ -177,7 +177,7 @@ export function WeakAreasCard({ limit = 5, showActions = true }: WeakAreasCardPr
         {/* Summary Message */}
         <div className="mt-4 p-3 bg-muted rounded-lg">
           <div className="flex items-start gap-2">
-            <TrendingDown className="h-4 w-4 text-orange-600 mt-0.5" />
+            <TrendingDown className="h-4 w-4 text-secondary mt-0.5" />
             <p className="text-sm text-muted-foreground">
               {criticalCount > 0 ? (
                 <>Focus on <strong>{criticalCount} critical skill{criticalCount > 1 ? 's' : ''}</strong> first for maximum impact</>

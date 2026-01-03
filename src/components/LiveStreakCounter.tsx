@@ -51,10 +51,10 @@ export function LiveStreakCounter({ currentStreak, bestStreak, streakEvent }: Li
   // Determine visual intensity based on streak
   const getFlameColor = () => {
     if (currentStreak === 0) return 'text-muted-foreground';
-    if (currentStreak < 3) return 'text-orange-400';
-    if (currentStreak < 5) return 'text-orange-500';
-    if (currentStreak < 10) return 'text-red-500';
-    return 'text-amber-400'; // Golden for 10+
+    if (currentStreak < 3) return 'text-primary/70';
+    if (currentStreak < 5) return 'text-primary';
+    if (currentStreak < 10) return 'text-secondary';
+    return 'text-primary'; // Golden for 10+
   };
 
   const getFlameSize = () => {
@@ -66,10 +66,10 @@ export function LiveStreakCounter({ currentStreak, bestStreak, streakEvent }: Li
 
   const getBackgroundGlow = () => {
     if (currentStreak === 0) return '';
-    if (currentStreak < 3) return 'bg-orange-500/10';
-    if (currentStreak < 5) return 'bg-orange-500/20';
-    if (currentStreak < 10) return 'bg-red-500/20';
-    return 'bg-amber-500/30 ring-2 ring-amber-400/50'; // Golden glow for 10+
+    if (currentStreak < 3) return 'bg-primary/10';
+    if (currentStreak < 5) return 'bg-primary/20';
+    if (currentStreak < 10) return 'bg-secondary/20';
+    return 'bg-primary/30 ring-2 ring-primary/50'; // Golden glow for 10+
   };
 
   const getStatusText = () => {
@@ -110,7 +110,7 @@ export function LiveStreakCounter({ currentStreak, bestStreak, streakEvent }: Li
             {getStatusText() && (
               <span className={cn(
                 'text-xs font-semibold',
-                currentStreak >= 10 ? 'text-amber-400' : 'text-orange-500'
+                currentStreak >= 10 ? 'text-primary' : 'text-secondary'
               )}>
                 {getStatusText()}
               </span>

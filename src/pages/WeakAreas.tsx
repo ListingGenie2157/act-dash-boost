@@ -60,7 +60,7 @@ export default function WeakAreas() {
         </Button>
 
         <div className="flex items-center gap-3 mb-2">
-          <AlertTriangle className="h-8 w-8 text-orange-500" />
+          <AlertTriangle className="h-8 w-8 text-secondary" />
           <h1 className="text-3xl font-bold">Areas Needing Focus</h1>
         </div>
         <p className="text-muted-foreground">
@@ -91,14 +91,14 @@ export default function WeakAreas() {
         <>
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <Card className="border-red-200 dark:border-red-800">
+            <Card className="border-secondary/30">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Critical Priority
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-red-600 dark:text-red-400">
+                <div className="text-3xl font-bold text-secondary">
                   {criticalCount}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -107,14 +107,14 @@ export default function WeakAreas() {
               </CardContent>
             </Card>
 
-            <Card className="border-orange-200 dark:border-orange-800">
+            <Card className="border-secondary/20">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   High Priority
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
+                <div className="text-3xl font-bold text-secondary/80">
                   {highCount}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -123,14 +123,14 @@ export default function WeakAreas() {
               </CardContent>
             </Card>
 
-            <Card className="border-yellow-200 dark:border-yellow-800">
+            <Card className="border-border">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Medium Priority
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
+                <div className="text-3xl font-bold text-muted-foreground">
                   {mediumCount}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -232,7 +232,7 @@ export default function WeakAreas() {
 
           {/* Study Plan Recommendation */}
           {criticalCount > 0 && (
-            <Card className="border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20">
+            <Card className="border-secondary/30 bg-secondary/5">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5" />

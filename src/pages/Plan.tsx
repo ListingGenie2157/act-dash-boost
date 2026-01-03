@@ -201,10 +201,10 @@ export default function Plan() {
                     {Object.entries(subjectCounts).map(([subject, count]) => {
                       const percentage = total > 0 ? (count / total) * 100 : 0;
                       const colors: Record<string, string> = {
-                        Math: 'bg-blue-500',
-                        English: 'bg-green-500',
-                        Reading: 'bg-orange-500',
-                        Science: 'bg-purple-500'
+                        Math: 'bg-primary',
+                        English: 'bg-success',
+                        Reading: 'bg-secondary',
+                        Science: 'bg-accent'
                       };
                       
                       return (
