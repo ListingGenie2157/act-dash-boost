@@ -13,7 +13,7 @@ interface Form {
 }
 
 interface FormPickerProps {
-  onFormSelect: (formId: string) => void;
+  onFormSelect: (formId: string, section: string, questionCount: number) => void;
 }
 
 export function FormPicker({ onFormSelect }: FormPickerProps) {
@@ -94,10 +94,12 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
     },
   ];
 
-  const handleFormClick = (formId: string, isAvailable: boolean) => {
-    if (!isAvailable) return;
-    setSelectedForm(formId);
-    onFormSelect(formId);
+  const handleFormClick = (form: Form) => {
+    if (!form.isAvailable) return;
+    // Extract section from formId (e.g., 'FA_EN' -> 'EN')
+    const section = form.id.split('_')[1];
+    setSelectedForm(form.id);
+    onFormSelect(form.id, section, form.questionCount);
   };
 
   if (loading) {
@@ -163,7 +165,7 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
                         key={form.id}
                         variant={selectedForm === form.id ? 'default' : 'outline'}
                         className="h-auto p-4 flex flex-col items-start text-left"
-                        onClick={() => handleFormClick(form.id, form.isAvailable)}
+                        onClick={() => handleFormClick(form)}
                         disabled={!form.isAvailable}
                       >
                         <div className="font-semibold text-sm">
