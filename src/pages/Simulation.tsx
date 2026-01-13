@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { FormPicker } from '@/components/FormPicker';
-import { SectionPicker } from '@/components/SectionPicker';
+import { SimulationStartDialog } from '@/components/SimulationStartDialog';
 import { TimerBar } from '@/components/TimerBar';
 import { ChunkTimerBar } from '@/components/ChunkTimerBar';
 import { TwoPassIndicator, PassMode, shouldTransitionToDeepDive } from '@/components/TwoPassIndicator';
@@ -80,7 +80,7 @@ interface SessionData {
   passages: Record<string, Passage>;
 }
 
-type SimulationState = 'form-picker' | 'section-picker' | 'loading' | 'active' | 'finished';
+type SimulationState = 'form-picker' | 'start-dialog' | 'loading' | 'active' | 'finished';
 
 export default function Simulation() {
   const navigate = useNavigate();
@@ -89,6 +89,7 @@ export default function Simulation() {
   const [state, setState] = useState<SimulationState>('form-picker');
   const [selectedForm, setSelectedForm] = useState<string>('');
   const [selectedSection, setSelectedSection] = useState<string>('');
+  const [selectedQuestionCount, setSelectedQuestionCount] = useState<number>(0);
   const [isCoachMode, setIsCoachMode] = useState(false);
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -315,7 +316,7 @@ export default function Simulation() {
         description: error instanceof Error ? error.message : "Failed to start session. Please try again.",
         variant: "destructive",
       });
-      setState('section-picker'); // Reset to section picker on error
+      setState('start-dialog'); // Reset to start dialog on error
     } finally {
       setLoading(false);
     }
@@ -428,21 +429,24 @@ export default function Simulation() {
     finishSession();
   };
 
-  const handleFormSelect = (formId: string) => {
+  const handleFormSelect = (formId: string, section: string, questionCount: number) => {
     setSelectedForm(formId);
-    setState('section-picker');
+    setSelectedSection(section);
+    setSelectedQuestionCount(questionCount);
+    setState('start-dialog');
   };
 
-  const handleSectionSelect = (section: string, coached: boolean = false) => {
-    setSelectedSection(section);
+  const handleStartTest = (coached: boolean) => {
     setIsCoachMode(coached);
     setState('loading');
-    startSession(selectedForm, section, coached);
+    startSession(selectedForm, selectedSection, coached);
   };
 
   const handleBackToForms = () => {
     setState('form-picker');
     setSelectedForm('');
+    setSelectedSection('');
+    setSelectedQuestionCount(0);
   };
 
   // Show loading while checking authentication
@@ -469,11 +473,13 @@ export default function Simulation() {
     return <FormPicker onFormSelect={handleFormSelect} />;
   }
 
-  if (state === 'section-picker') {
+  if (state === 'start-dialog') {
     return (
-      <SectionPicker
+      <SimulationStartDialog
         formId={selectedForm}
-        onSectionSelect={handleSectionSelect}
+        section={selectedSection}
+        questionCount={selectedQuestionCount}
+        onStart={handleStartTest}
         onBack={handleBackToForms}
       />
     );
@@ -490,8 +496,8 @@ export default function Simulation() {
               No questions were found for this form and section combination. 
               Please try a different section or contact support.
             </p>
-            <Button onClick={() => setState('section-picker')}>
-              Choose Another Section
+            <Button onClick={() => setState('form-picker')}>
+              Choose Another Test
             </Button>
           </Card>
         </div>
