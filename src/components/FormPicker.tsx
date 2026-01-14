@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
+import { getCodeFromFormId } from '@/lib/sectionMapping';
 
 interface Form {
   id: string;
@@ -96,8 +97,8 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
 
   const handleFormClick = (form: Form) => {
     if (!form.isAvailable) return;
-    // Extract section from formId (e.g., 'FA_EN' -> 'EN')
-    const section = form.id.split('_')[1];
+    // Extract section from formId and normalize to standard code (e.g., 'FA_MA' -> 'MATH')
+    const section = getCodeFromFormId(form.id) || form.id.split('_')[1];
     setSelectedForm(form.id);
     onFormSelect(form.id, section, form.questionCount);
   };
