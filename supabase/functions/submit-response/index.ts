@@ -94,13 +94,15 @@ serve(async (req) => {
       );
     }
 
-    // Look up correct answer from staging_items using staging_id
-    const stagingId = parseInt(question_id);
-    const isValidStagingId = !isNaN(stagingId);
+    // Check if this is a staging_id (numeric) or a real UUID
+    const isNumericId = /^\d+$/.test(question_id);
     
     let questionData: { answer: string } | null = null;
+    let realQuestionId: string | null = null;
     
-    if (isValidStagingId) {
+    if (isNumericId) {
+      // Look up from staging_items using staging_id
+      const stagingId = parseInt(question_id);
       const { data, error } = await supabase
         .from('staging_items')
         .select('answer')
@@ -110,14 +112,21 @@ serve(async (req) => {
       
       if (!error && data) {
         questionData = data;
+        // For staging items, we can't store in responses table (requires UUID)
+        // Just validate and return correctness without persisting
+        const correct = selected === questionData.answer;
+        return new Response(
+          JSON.stringify({ success: true, correct, persisted: false }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
     }
     
-    // Fallback: try v_form_section for UUID-based question IDs
+    // Try v_form_section for UUID-based question IDs
     if (!questionData) {
       const { data, error } = await supabase
         .from('v_form_section')
-        .select('answer')
+        .select('answer, question_id')
         .eq('form_id', session.form_id)
         .eq('section', session.section)
         .eq('question_id', question_id)
@@ -125,6 +134,7 @@ serve(async (req) => {
       
       if (!error && data) {
         questionData = data;
+        realQuestionId = data.question_id;
       }
     }
 
@@ -136,13 +146,14 @@ serve(async (req) => {
     }
 
     const correct = selected === questionData.answer;
+    const questionIdToStore = realQuestionId || question_id;
 
     // Check if response already exists (update instead of insert)
     const { data: existingResponse } = await supabase
       .from('responses')
       .select('session_id, question_id')
       .eq('session_id', session_id)
-      .eq('question_id', question_id)
+      .eq('question_id', questionIdToStore)
       .maybeSingle();
 
     if (existingResponse) {
@@ -155,7 +166,7 @@ serve(async (req) => {
           submitted_at: new Date().toISOString()
         })
         .eq('session_id', session_id)
-        .eq('question_id', question_id);
+        .eq('question_id', questionIdToStore);
 
       if (error) throw error;
     } else {
@@ -163,7 +174,7 @@ serve(async (req) => {
         .from('responses')
         .insert({
           session_id,
-          question_id,
+          question_id: questionIdToStore,
           selected,
           correct,
           time_ms: time_ms || 30000
