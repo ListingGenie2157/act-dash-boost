@@ -54,6 +54,8 @@ import PacingLab from "./pages/PacingLab";
 import AdminSkillCodes from "./pages/AdminSkillCodes";
 import AdminQuestionGenerator from "./pages/AdminQuestionGenerator";
 import AdminSimulationGenerator from "./pages/AdminSimulationGenerator";
+import Pricing from "./pages/Pricing";
+import SubscriptionSuccess from "./pages/SubscriptionSuccess";
 import { HealthCheck } from "./pages/HealthCheck";
 
 
@@ -89,6 +91,8 @@ const App = () => (
                 <Route path="/login" element={<Login />} />
                 <Route path="/simple-login" element={<SimpleLogin />} />
                 <Route path="/update-password" element={<UpdatePassword />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/subscription-success" element={<SubscriptionSuccess />} />
                 
                 {/* Protected routes with sidebar layout */}
                 <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
