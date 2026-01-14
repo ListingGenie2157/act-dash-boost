@@ -15,10 +15,10 @@ interface SimulationStartDialogProps {
 }
 
 const SECTION_CONFIG: Record<string, { name: string; timeMinutes: number; icon: string }> = {
-  'EN': { name: 'English', timeMinutes: 45, icon: '📝' },
-  'MA': { name: 'Math', timeMinutes: 60, icon: '🔢' },
-  'RD': { name: 'Reading', timeMinutes: 35, icon: '📖' },
-  'SC': { name: 'Science', timeMinutes: 35, icon: '🔬' },
+  'EN': { name: 'English', timeMinutes: 35, icon: '📝' },
+  'MATH': { name: 'Math', timeMinutes: 50, icon: '🔢' },
+  'RD': { name: 'Reading', timeMinutes: 40, icon: '📖' },
+  'SCI': { name: 'Science', timeMinutes: 40, icon: '🔬' },
 };
 
 export function SimulationStartDialog({ 
