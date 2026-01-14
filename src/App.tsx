@@ -50,6 +50,9 @@ import WeakAreas from "./pages/WeakAreas";
 import CalculatorLab from "./pages/CalculatorLab";
 import AdminSkillCodes from "./pages/AdminSkillCodes";
 import { HealthCheck } from "./pages/HealthCheck";
+import CheckoutPreview from "./pages/CheckoutPreview";
+import CheckoutSuccess from "./pages/CheckoutSuccess";
+import CheckoutCancel from "./pages/CheckoutCancel";
 
 
 // Configure QueryClient with production-ready defaults
@@ -83,6 +86,9 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/simple-login" element={<SimpleLogin />} />
           <Route path="/update-password" element={<UpdatePassword />} />
+          <Route path="/checkout" element={<CheckoutPreview />} />
+          <Route path="/checkout-success" element={<CheckoutSuccess />} />
+          <Route path="/checkout-cancel" element={<CheckoutCancel />} />
           
           {/* Protected routes with sidebar layout */}
           <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
