@@ -7,6 +7,8 @@ export interface SubscriptionStatus {
   plan_type?: 'monthly' | '90_day' | '12_month';
   subscription_end?: string;
   cancel_at_period_end?: boolean;
+  is_trialing?: boolean;
+  trial_end?: string;
   error?: string;
 }
 
@@ -80,6 +82,8 @@ export function useSubscription() {
     planType: data?.plan_type,
     subscriptionEnd: data?.subscription_end,
     cancelAtPeriodEnd: data?.cancel_at_period_end,
+    isTrialing: data?.is_trialing ?? false,
+    trialEnd: data?.trial_end,
     isLoading,
     error,
     refetch,

@@ -93,14 +93,16 @@ serve(async (req) => {
           },
         },
       }),
-      // For subscriptions, store metadata on subscription
+      // For subscriptions, add 7-day trial with payment method required
       ...(isSubscription ? {
         subscription_data: {
+          trial_period_days: 7,
           metadata: {
             user_id: user.id,
             plan_type: planType,
           },
         },
+        payment_method_collection: 'always',
       } : {}),
     };
 

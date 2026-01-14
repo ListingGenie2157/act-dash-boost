@@ -55,17 +55,19 @@ serve(async (req) => {
       .eq("user_id", user.id)
       .single();
 
-    if (localSub && localSub.status === "active") {
+    if (localSub && (localSub.status === "active" || localSub.status === "trialing")) {
       const now = new Date();
       const periodEnd = new Date(localSub.current_period_end);
       
       if (periodEnd > now) {
-        logStep("Found active local subscription", { planType: localSub.plan_type, endsAt: localSub.current_period_end });
+        logStep("Found active/trialing local subscription", { planType: localSub.plan_type, status: localSub.status, endsAt: localSub.current_period_end });
         return new Response(JSON.stringify({
           subscribed: true,
           plan_type: localSub.plan_type,
           subscription_end: localSub.current_period_end,
           cancel_at_period_end: localSub.cancel_at_period_end,
+          is_trialing: localSub.status === "trialing",
+          trial_end: localSub.status === "trialing" ? localSub.current_period_end : null,
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 200,
@@ -95,18 +97,25 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
-    // Check for active subscriptions (monthly plan)
+    // Check for active or trialing subscriptions
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
-      status: "active",
-      limit: 1,
+      limit: 10,
     });
 
-    if (subscriptions.data.length > 0) {
-      const subscription = subscriptions.data[0];
+    // Find active or trialing subscription
+    const activeSub = subscriptions.data.find(
+      sub => sub.status === 'active' || sub.status === 'trialing'
+    );
+
+    if (activeSub) {
+      const subscription = activeSub;
       const productId = subscription.items.data[0].price.product as string;
       const planType = PRODUCT_TO_PLAN[productId] || "monthly";
-      const subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      const isTrialing = subscription.status === 'trialing';
+      const subscriptionEnd = isTrialing && subscription.trial_end
+        ? new Date(subscription.trial_end * 1000).toISOString()
+        : new Date(subscription.current_period_end * 1000).toISOString();
       
       // Upsert to local table
       await supabaseClient
@@ -116,26 +125,28 @@ serve(async (req) => {
           stripe_customer_id: customerId,
           stripe_subscription_id: subscription.id,
           plan_type: planType,
-          status: "active",
+          status: isTrialing ? "trialing" : "active",
           current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
           current_period_end: subscriptionEnd,
           cancel_at_period_end: subscription.cancel_at_period_end,
         }, { onConflict: "user_id" });
 
-      logStep("Active subscription found", { subscriptionId: subscription.id, planType, endDate: subscriptionEnd });
+      logStep("Subscription found", { subscriptionId: subscription.id, planType, status: subscription.status, endDate: subscriptionEnd });
       
       return new Response(JSON.stringify({
         subscribed: true,
         plan_type: planType,
         subscription_end: subscriptionEnd,
         cancel_at_period_end: subscription.cancel_at_period_end,
+        is_trialing: isTrialing,
+        trial_end: isTrialing && subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
     }
 
-    logStep("No active subscription found");
+    logStep("No active or trialing subscription found");
     return new Response(JSON.stringify({ subscribed: false }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
