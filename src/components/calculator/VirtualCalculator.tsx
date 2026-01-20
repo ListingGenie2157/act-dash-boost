@@ -40,11 +40,13 @@ export const VirtualCalculator = ({
       <button
         key={button.id}
         onClick={() => handleButtonClick(button.id)}
+        aria-label={`Calculator button ${button.label}${button.secondaryLabel ? `, secondary: ${button.secondaryLabel}` : ''}`}
         className={cn(
           'rounded-md font-semibold transition-all duration-150',
           'flex flex-col items-center justify-center',
           'shadow-md active:shadow-sm active:translate-y-0.5',
           'min-h-[2.5rem] px-2 py-1',
+          'focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800',
           button.width === 'wide' ? 'col-span-2' : '',
           isPressed && 'scale-95',
           isHighlighted && 'animate-pulse ring-4 ring-success ring-offset-2'

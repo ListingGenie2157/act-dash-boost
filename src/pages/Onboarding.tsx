@@ -213,7 +213,17 @@ export default function Onboarding() {
                   checked={form.tosAccepted}
                   onCheckedChange={(checked) => setForm(f => ({ ...f, tosAccepted: !!checked }))}
                 />
-                <Label htmlFor="tos" className="text-sm">I agree to the Terms of Service</Label>
+                <Label htmlFor="tos" className="text-sm">
+                  I agree to the{' '}
+                  <a 
+                    href="/terms" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-primary underline hover:text-primary/80"
+                  >
+                    Terms of Service
+                  </a>
+                </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -221,7 +231,17 @@ export default function Onboarding() {
                   checked={form.privacyAccepted}
                   onCheckedChange={(checked) => setForm(f => ({ ...f, privacyAccepted: !!checked }))}
                 />
-                <Label htmlFor="privacy" className="text-sm">I agree to the Privacy Policy</Label>
+                <Label htmlFor="privacy" className="text-sm">
+                  I agree to the{' '}
+                  <a 
+                    href="/privacy" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-primary underline hover:text-primary/80"
+                  >
+                    Privacy Policy
+                  </a>
+                </Label>
               </div>
             </div>
 

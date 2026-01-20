@@ -459,13 +459,14 @@ export default function DrillRunner() {
       </div>
       <h2 className="font-bold mb-4">Drill Question {current + 1} of {questions.length}</h2>
       <p className="mb-4">{shuffled.original.stem}</p>
-      <div className="space-y-2">
+      <div className="space-y-2" role="radiogroup" aria-label="Answer choices">
         {shuffled.choices.map((choice, i) => (
           <button
             key={i}
-            className="w-full border rounded-md p-2 text-left hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full border rounded-md p-3 text-left hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             onClick={() => handleShuffledAnswer(i)}
             disabled={isSubmitting || isOnBreak}
+            aria-label={`Answer ${['A', 'B', 'C', 'D'][i]}: ${choice}`}
           >
             <span className="font-semibold mr-2">{['A', 'B', 'C', 'D'][i]})</span>
             {choice}
