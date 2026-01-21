@@ -107,7 +107,7 @@ const LandingPage = () => {
           </div>
 
           <p className="text-sm text-muted-foreground animate-fade-in" style={{ animationDelay: '400ms' }}>
-            No credit card required • Start immediately • Join thousands of students
+            7-day free trial • Cancel anytime • Join thousands of students
           </p>
         </div>
 
