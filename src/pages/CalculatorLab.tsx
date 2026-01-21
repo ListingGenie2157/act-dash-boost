@@ -9,10 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Calculator, ChevronDown, PlayCircle, Clock, TrendingUp, Zap, Target, Timer, CheckCircle2 } from 'lucide-react';
+import { Calculator, ChevronDown, PlayCircle, Clock, TrendingUp, Zap, Target, Timer, CheckCircle2, ExternalLink, FileText, Monitor } from 'lucide-react';
+
+type TestFormat = 'paper' | 'digital';
 
 export default function CalculatorLab() {
-  const [selectedModel, setSelectedModel] = useState<CalculatorModel>('TI-84');
+  const [testFormat, setTestFormat] = useState<TestFormat>('paper');
+  const selectedModel: CalculatorModel = testFormat === 'paper' ? 'TI-84' : 'Desmos';
+  
   const [expandedLesson, setExpandedLesson] = useState<string | null>(null);
   const [calcDisplay, setCalcDisplay] = useState('0');
   const [showDemo, setShowDemo] = useState(false);
@@ -67,6 +71,60 @@ export default function CalculatorLab() {
         </p>
       </div>
 
+      {/* Test Format Selector */}
+      <Card className="mb-8 border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-secondary/5">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-xl flex items-center gap-2">
+            <Calculator className="w-5 h-5" />
+            Which ACT are you taking?
+          </CardTitle>
+          <CardDescription>
+            Select your test format to see the right calculator hacks
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Button
+              variant={testFormat === 'paper' ? 'default' : 'outline'}
+              onClick={() => setTestFormat('paper')}
+              className="h-auto py-6 flex-col gap-3 text-left"
+            >
+              <div className="flex items-center gap-3 w-full">
+                <span className="text-3xl">{calculatorModels['TI-84'].image}</span>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    <span className="font-semibold">Paper ACT</span>
+                  </div>
+                  <p className="text-sm opacity-70 mt-1">TI-84 Plus CE hacks</p>
+                </div>
+              </div>
+            </Button>
+            
+            <Button
+              variant={testFormat === 'digital' ? 'default' : 'outline'}
+              onClick={() => setTestFormat('digital')}
+              className="h-auto py-6 flex-col gap-3 text-left"
+            >
+              <div className="flex items-center gap-3 w-full">
+                <span className="text-3xl">{calculatorModels['Desmos'].image}</span>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Monitor className="w-4 h-4" />
+                    <span className="font-semibold">Digital ACT</span>
+                  </div>
+                  <p className="text-sm opacity-70 mt-1">Desmos graphing calculator</p>
+                </div>
+              </div>
+            </Button>
+          </div>
+          
+          <p className="text-xs text-muted-foreground mt-4 text-center">
+            💡 Using a different calculator? Most TI-84 techniques work on TI-Nspire and Casio too.
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Stats Banner */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10">
@@ -97,7 +155,7 @@ export default function CalculatorLab() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Hacks Available</p>
+                <p className="text-sm text-muted-foreground">{selectedModel} Hacks</p>
                 <p className="text-3xl font-bold">{filteredLessons.length}</p>
               </div>
               <TrendingUp className="w-12 h-12 text-purple-500 opacity-50" />
@@ -106,63 +164,70 @@ export default function CalculatorLab() {
         </Card>
       </div>
 
-      {/* Interactive Demo Section */}
-      <Card className="mb-8 overflow-hidden bg-gradient-to-br from-primary/5 to-secondary/5">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-2xl">🎮 Try the Virtual Calculator</CardTitle>
-              <CardDescription>
-                Click buttons to see how it works before diving into lessons
-              </CardDescription>
+      {/* Interactive Demo Section - Only for TI-84 */}
+      {selectedModel === 'TI-84' && (
+        <Card className="mb-8 overflow-hidden bg-gradient-to-br from-primary/5 to-secondary/5">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-2xl">🎮 Try the Virtual Calculator</CardTitle>
+                <CardDescription>
+                  Click buttons to see how it works before diving into lessons
+                </CardDescription>
+              </div>
+              <Button
+                variant={showDemo ? 'secondary' : 'default'}
+                onClick={() => setShowDemo(!showDemo)}
+              >
+                {showDemo ? 'Hide Demo' : 'Show Demo'}
+              </Button>
             </div>
-            <Button
-              variant={showDemo ? 'secondary' : 'default'}
-              onClick={() => setShowDemo(!showDemo)}
-            >
-              {showDemo ? 'Hide Demo' : 'Show Demo'}
-            </Button>
-          </div>
-        </CardHeader>
-        {showDemo && (
-          <CardContent>
-            <VirtualCalculator
-              mode="free"
-              display={calcDisplay}
-              onButtonPress={(buttonId) => {
-                setCalcDisplay(prev => {
-                  if (buttonId === 'clear') return '';
-                  if (buttonId === 'del') return prev.slice(0, -1);
-                  if (buttonId === 'enter') return prev + '\n';
-                  return prev + (buttonId.length === 1 ? buttonId : ` [${buttonId}] `);
-                });
-              }}
-            />
-          </CardContent>
-        )}
-      </Card>
+          </CardHeader>
+          {showDemo && (
+            <CardContent>
+              <VirtualCalculator
+                mode="free"
+                display={calcDisplay}
+                onButtonPress={(buttonId) => {
+                  setCalcDisplay(prev => {
+                    if (buttonId === 'clear') return '';
+                    if (buttonId === 'del') return prev.slice(0, -1);
+                    if (buttonId === 'enter') return prev + '\n';
+                    return prev + (buttonId.length === 1 ? buttonId : ` [${buttonId}] `);
+                  });
+                }}
+              />
+            </CardContent>
+          )}
+        </Card>
+      )}
 
-      {/* Calculator Model Selector */}
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <Calculator className="w-5 h-5" />
-          Choose Your Calculator
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {(Object.keys(calculatorModels) as CalculatorModel[]).map((model) => (
-            <Button
-              key={model}
-              variant={selectedModel === model ? 'default' : 'outline'}
-              onClick={() => setSelectedModel(model)}
-              className="h-auto py-4 flex-col gap-2"
-            >
-              <span className="text-2xl">{calculatorModels[model].image}</span>
-              <span className="font-semibold">{calculatorModels[model].name}</span>
-              <span className="text-xs opacity-70">{calculatorModels[model].price}</span>
-            </Button>
-          ))}
-        </div>
-      </div>
+      {/* Desmos Quick Access */}
+      {selectedModel === 'Desmos' && (
+        <Card className="mb-8 overflow-hidden bg-gradient-to-br from-blue-500/5 to-purple-500/5">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-2xl">🌐 Practice with Desmos</CardTitle>
+                <CardDescription>
+                  Open the actual Desmos calculator to follow along with the lessons
+                </CardDescription>
+              </div>
+              <Button asChild>
+                <a 
+                  href="https://www.desmos.com/calculator" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="gap-2"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Open Desmos
+                </a>
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
+      )}
 
       {/* Why Do Math Section Header */}
       <div className="mb-6 p-4 bg-primary/5 rounded-lg border border-primary/10">
@@ -177,7 +242,7 @@ export default function CalculatorLab() {
       <div className="space-y-4">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <Zap className="w-5 h-5" />
-          Calculator Hacks ({filteredLessons.length} shortcuts)
+          {calculatorModels[selectedModel].name} Hacks ({filteredLessons.length} shortcuts)
         </h2>
         {filteredLessons.map((lesson) => (
           <Card 

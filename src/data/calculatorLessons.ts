@@ -1,4 +1,4 @@
-export type CalculatorModel = 'TI-84' | 'TI-Nspire' | 'Casio' | 'Desmos';
+export type CalculatorModel = 'TI-84' | 'Desmos';
 
 export interface InteractiveStep {
   instruction: string;
@@ -36,7 +36,7 @@ export const calculatorLessons: CalculatorLesson[] = [
   {
     id: 'matrices-systems',
     title: 'Skip the Algebra: Solve Systems Without Substitution',
-    model: ['TI-84', 'TI-Nspire'],
+    model: ['TI-84'],
     description: 'Got 2 equations with 2 variables? Don\'t solve them. Let rref() do it in 10 seconds.',
     timeSaved: '~2 minutes per problem',
     difficulty: 'intermediate',
@@ -134,7 +134,7 @@ export const calculatorLessons: CalculatorLesson[] = [
   {
     id: 'polynomial-solver',
     title: 'Skip the Factoring: Find Roots Instantly',
-    model: ['TI-84', 'TI-Nspire', 'Casio'],
+    model: ['TI-84'],
     description: 'Why spend 2 minutes factoring when your calculator finds roots in seconds?',
     timeSaved: '~90 seconds per problem',
     difficulty: 'beginner',
@@ -190,7 +190,7 @@ export const calculatorLessons: CalculatorLesson[] = [
   {
     id: 'graph-intersect',
     title: 'Graph Both Sides: Skip Solving Equations',
-    model: ['TI-84', 'TI-Nspire'],
+    model: ['TI-84'],
     description: 'Graph the left side. Graph the right side. Read the intersection. Done.',
     timeSaved: '~2 minutes per problem',
     difficulty: 'beginner',
@@ -281,7 +281,7 @@ export const calculatorLessons: CalculatorLesson[] = [
   {
     id: 'frac-conversion',
     title: 'Match the Answers: Decimal ↔ Fraction in 1 Click',
-    model: ['TI-84', 'TI-Nspire', 'Casio'],
+    model: ['TI-84'],
     description: 'Your answer is 0.625 but the choices are fractions? One button fixes that.',
     timeSaved: '~30 seconds per conversion',
     difficulty: 'beginner',
@@ -330,7 +330,7 @@ export const calculatorLessons: CalculatorLesson[] = [
   {
     id: 'stats-lists',
     title: 'Skip the Arithmetic: Stats Without Adding',
-    model: ['TI-84', 'TI-Nspire', 'Casio'],
+    model: ['TI-84'],
     description: 'Enter the numbers, press a button, read the mean. No adding. No dividing.',
     timeSaved: '~1 minute per problem',
     difficulty: 'beginner',
@@ -497,7 +497,7 @@ export const calculatorLessons: CalculatorLesson[] = [
   {
     id: 'table-mode',
     title: 'Guess & Check on Steroids',
-    model: ['TI-84', 'TI-Nspire'],
+    model: ['TI-84'],
     description: 'Not sure which answer is right? Table all 4 choices in seconds.',
     timeSaved: '~1 minute when testing multiple values',
     difficulty: 'beginner',
@@ -580,7 +580,7 @@ export const calculatorLessons: CalculatorLesson[] = [
   {
     id: 'degree-mode',
     title: 'Degree vs. Radian Mode (CRITICAL)',
-    model: ['TI-84', 'TI-Nspire', 'Casio'],
+    model: ['TI-84'],
     description: 'Avoid catastrophic errors by setting correct angle mode',
     timeSaved: 'Prevents wrong answers',
     difficulty: 'beginner',
@@ -845,33 +845,28 @@ export const calculatorLessons: CalculatorLesson[] = [
   }
 ];
 
-export const calculatorModels = {
+export const calculatorModels: Record<CalculatorModel, {
+  name: string;
+  image: string;
+  description: string;
+  subtitle: string;
+  pros: string[];
+  price: string;
+}> = {
   'TI-84': {
     name: 'TI-84 Plus CE',
     image: '🔢',
-    description: 'Most common calculator for ACT',
-    pros: ['Widely used', 'Tons of online resources', 'Affordable'],
+    description: 'The standard calculator for paper ACT tests',
+    subtitle: 'For Paper ACT',
+    pros: ['Widely used', 'Tons of online resources', 'Full simulator included'],
     price: '~$100'
   },
-  'TI-Nspire': {
-    name: 'TI-Nspire CX II',
-    image: '🧮',
-    description: 'Most powerful allowed calculator',
-    pros: ['Computer algebra system', 'Advanced graphing', 'Solve equations symbolically'],
-    price: '~$150'
-  },
-  'Casio': {
-    name: 'Casio fx-991EX / 115ES',
-    image: '⚡',
-    description: 'Budget-friendly powerhouse',
-    pros: ['Natural display', 'Matrix operations', 'Under $30'],
-    price: '~$25'
-  },
   'Desmos': {
-    name: 'Desmos (Digital ACT)',
+    name: 'Desmos',
     image: '💻',
-    description: 'Built-in calculator for online ACT',
-    pros: ['Free & built-in', 'Powerful graphing', 'No device to bring'],
+    description: 'Built-in graphing calculator for digital ACT',
+    subtitle: 'For Digital ACT',
+    pros: ['Free & built-in', 'Powerful graphing', 'No device needed'],
     price: 'Free'
   }
 };
