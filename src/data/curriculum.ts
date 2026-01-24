@@ -54,7 +54,7 @@ export const mathDrills: DrillSession[] = [
         id: 'mb6',
         question: 'Solve for x: 3x - 7 = 2',
         options: ['1', '3', '2', '5'],
-        correctAnswer: 2,
+        correctAnswer: 1,
         explanation: '3x - 7 = 2 → 3x = 9 → x = 3',
         difficulty: 'medium'
       },
@@ -895,8 +895,8 @@ export const curriculum: Day[] = [
           id: 'p4m2',
           question: 'What is the circumference of a circle with radius 4?',
           options: ['8π', '12π', '16π', '20π'],
-          correctAnswer: 2,
-          explanation: 'C = 2πr = 2π×4 = 8π; note 16π is the area (πr² × 4)',
+          correctAnswer: 0,
+          explanation: 'C = 2πr = 2π×4 = 8π',
           difficulty: 'medium'
         },
         {
@@ -1260,7 +1260,7 @@ export const curriculum: Day[] = [
         {
           id: 'p6m3',
           question: 'Add the matrices: [1 2; 3 4] + [4 3; 2 1].',
-          options: ['[5 5; 5 5]', '[5 5; 5 4]', '[5 5; 5 5]', '[5 5; 5 5]'],
+          options: ['[5 5; 5 5]', '[5 5; 5 4]', '[5 4; 5 5]', '[4 5; 5 5]'],
           correctAnswer: 0,
           explanation: 'Add corresponding elements: [1+4 2+3; 3+2 4+1] = [5 5; 5 5]',
           difficulty: 'easy'
@@ -1442,7 +1442,7 @@ export const curriculum: Day[] = [
           id: 'q7m3',
           question: 'Solve for x: 3(x − 2) = 15.',
           options: ['7', '6', '5', '8'],
-          correctAnswer: 2,
+          correctAnswer: 0,
           explanation: '3(x − 2) = 15 → x − 2 = 5 → x = 7',
           difficulty: 'easy'
         },
