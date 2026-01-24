@@ -284,7 +284,7 @@ export function parseCommonTraps(html: string): string[] {
   if (!text) return [];
   
   // Support both "1. text" and "1 – text" formats using regex
-  const re = /(?:^|\s)(\d+)[\.\-–]\s*(.+?)(?=\s+\d+[\.\-–]\s+|$)/g;
+  const re = /(?:^|\s)(\d+)[.\-–]\s*(.+?)(?=\s+\d+[.\-–]\s+|$)/g;
   const traps: string[] = [];
   let match;
   

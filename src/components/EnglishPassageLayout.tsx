@@ -20,10 +20,17 @@ interface Question {
   position_in_passage?: number | null;
 }
 
+interface MarkedTextEntry {
+  start: number;
+  end: number;
+  type: 'underline' | 'highlight' | 'reference';
+  refNumber?: number;
+}
+
 interface Passage {
   title: string;
   passage_text: string;
-  marked_text?: Record<string, any> | null;
+  marked_text?: MarkedTextEntry[] | Record<string, unknown> | null;
 }
 
 interface EnglishPassageLayoutProps {
