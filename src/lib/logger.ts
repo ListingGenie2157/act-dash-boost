@@ -15,8 +15,8 @@ export const logger = {
   },
   
   warn: (...args: unknown[]) => {
-    // Warnings are logged in both dev and production
-    console.warn(...args);
+    // Only log warnings in development to prevent sensitive data exposure
+    if (isDev) console.warn(...args);
   },
   
   error: (...args: unknown[]) => {
