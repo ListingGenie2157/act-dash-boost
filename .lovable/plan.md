@@ -1,145 +1,124 @@
 
 
-# Production Readiness Plan
+# Fix Question Correctness Audit
 
-## Current Status Assessment
+## Issue Summary
 
-Based on my analysis of the codebase, security scans, and previous audit fixes, here's where we stand:
-
-### Already Completed (Previous Fixes)
-- React Hooks violations in DiagnosticTest.tsx
-- Global error handlers in main.tsx
-- Health check endpoint at /health
-- Answer key protection (using v_staging_items_public view)
-- N+1 query fixes in multiple components
-- CORS hardening (getCorsHeaders implementation)
-- Logger sanitization for production
-- Dead code removal (unused components/hooks)
-- Type safety improvements in edge functions
-
-### Remaining Issues Organized by Priority
+I've verified all the issues from your audit. Here's what needs to be fixed:
 
 ---
 
-## PHASE 1: Security & Stability (Critical - Do Before Launch)
+## CONFIRMED ISSUES
 
-### 1.1 Configure Sentry Error Tracking
-**Why**: Errors in production are currently only going to console.error with no alerting
-**What**: Add SENTRY_DSN secret to enable real error tracking
+### 1. curriculum.ts - Wrong Answer Keys (3 issues)
 
-| Action | Details |
-|--------|---------|
-| Add secret | `SENTRY_DSN` to Supabase Edge Function secrets |
-| Verify | Error tracking integration already exists in main.tsx |
+| ID | Question | Options | Current | Correct | Evidence |
+|----|----------|---------|---------|---------|----------|
+| **mb6** | Solve for x: 3x - 7 = 2 | ['1', '3', '2', '5'] | correctAnswer: 2 (points to '2') | correctAnswer: 1 (x=3) | Explanation confirms: "3x = 9 → x = 3" |
+| **q7m3** | Solve for x: 3(x − 2) = 15 | ['7', '6', '5', '8'] | correctAnswer: 2 (points to '5') | correctAnswer: 0 (x=7) | Explanation confirms: "x − 2 = 5 → x = 7" |
+| **p4m2** | Circumference with radius 4 | ['8π', '12π', '16π', '20π'] | correctAnswer: 2 (points to '16π') | correctAnswer: 0 (8π) | Explanation confirms: "C = 2πr = 8π; note 16π is the area" |
 
-### 1.2 Database Security Hardening
-**Why**: Supabase linter found 5 issues
+### 2. curriculum.ts - Duplicate Options (1 issue)
 
-| Issue | Fix |
-|-------|-----|
-| RLS Enabled No Policy | Review tables with RLS but no policies - add appropriate policies |
-| Extension in Public | Move extensions to dedicated `extensions` schema |
-| Auth OTP Long Expiry | Reduce OTP expiry in Supabase Auth settings |
-| Leaked Password Protection | Enable in Supabase Auth settings |
-| Postgres Version | Apply available security patches via Supabase dashboard |
+| ID | Question | Options | Issue |
+|----|----------|---------|-------|
+| **p6m3** | Add matrices [1 2; 3 4] + [4 3; 2 1] | ['[5 5; 5 5]', '[5 5; 5 4]', '[5 5; 5 5]', '[5 5; 5 5]'] | Options A, C, D are identical |
 
-### 1.3 Edge Function Input Validation
-**Why**: Security scan found missing validation in some functions
+**Note:** The correct answer IS `[5 5; 5 5]` per the explanation. The issue is that options need variation. I'll fix option D to be a plausible distractor.
 
-| Function | Fix |
-|----------|-----|
-| `tutor-chat` | Add Zod schema for subject, topic, mode, messages array |
-| `cron-daily` | Add basic request validation (manual trigger flag) |
-| `session-fetch` | Add UUID regex validation for session_id |
+### 3. form_a_reading.tsv - Data Issues (2 issues)
 
-### 1.4 Remove Debug Login Page
-**Why**: SimpleLogin.tsx is labeled "for debugging" and shouldn't be in production
+| ID | Line | Issue | Details |
+|----|------|-------|---------|
+| **FA_RD_021** | Line 22 | Duplicate columns | Row has answer/explanation duplicated inline (columns 18-21 are repeated) |
+| **FA_RD_030** | Line 31 | Missing question | Row has answer choices but empty question column |
+| Lines 42-75 | Lines 42-75 | Empty/partial rows | 35+ rows with only partial IDs (FA_EN_016, etc.) or completely empty |
 
-| Option | Action |
-|--------|--------|
-| Remove | Delete src/pages/SimpleLogin.tsx and remove from router |
-| Or Gate | Add admin-only access check |
+### 4. form_a_science.tsv - Conflicting Explanations (2 issues)
+
+| ID | Line | Issue | Details |
+|----|------|-------|---------|
+| **FA_SCI_013** | Line 14 | Conflicting answer | Answer marked as "C" (18) but inline correction shows "B" (29). Math: 47 − 18 = 29 |
+| **FA_SCI_027** | Line 28 | Conflicting answer | Answer marked as "C" (1.7) but inline correction shows "B" (2.4). Math: 7.2 − 4.8 = 2.4 |
 
 ---
 
-## PHASE 2: Code Quality (High Priority - Should Fix)
+## Fixes to Implement
 
-### 2.1 Fix Remaining TypeScript `any` Types (~15 instances)
+### File: src/data/curriculum.ts
 
-| File | Line | Current | Fix |
-|------|------|---------|-----|
-| `AdminLessonImport.tsx` | 101 | `Partial<ExtractedContent>` loop | Type the accumulator properly |
-| `AdminLessonImport.tsx` | 240, 333 | Multiple `any` | Define proper interfaces |
-| `DiagnosticResultsComplete.tsx` | 61 | `Map<string, any>` | `Map<string, SkillResult>` |
-| `Simulation.tsx` | 55 | `Record<string, any>` | `Record<string, unknown>` |
-| `ReviewMissed.tsx` | 85 | `any` in map | Type the staging data properly |
-| `companionTips.ts` | 114 | `any` | `Record<string, string[]>` |
-| `useTestCompanion.ts` | 72 | `any` | `Record<string, unknown>` |
-
-### 2.2 Replace Ungated Console Statements
-
-| File | Lines | Action |
-|------|-------|--------|
-| `offline-queue.ts` | 94 | Replace `console.log` with `logger.debug` |
-| `AdminLessonImport.tsx` | 171, 196 | Replace with `logger.info` / `logger.warn` |
-| `DrillRunner.tsx` | 159, 169 | Replace `console.warn` with `logger.warn` |
-| `AdminImport.tsx` | 273 | Replace with `logger.warn` |
-| `AdminCronButton.tsx` | 27, 29 | Replace with `logger.warn` / `logger.error` |
-
-### 2.3 Clean Up Unused Dependencies
-
-| Package | Action |
-|---------|--------|
-| `@hookform/resolvers` | Remove - not imported anywhere |
-| `@radix-ui/react-switch` | Remove - custom Switch implementation used |
-| `@testsprite/testsprite-mcp` | Remove - not imported |
-| `vite-plugin-pwa` | Remove - not configured |
-| `@testing-library/user-event` | Move to devDependencies |
-
----
-
-## PHASE 3: Monitoring & Observability (Important for Launch)
-
-### 3.1 Verify Health Check Endpoint
-- Test `/health` endpoint returns correct status
-- Ensure it checks database connectivity
-- Set up monitoring to ping this endpoint
-
-### 3.2 Edge Function Logging Review
-The edge functions have good logging for debugging but should be reviewed:
-- `generate-study-plan`: Lines 960-967 have detailed debug logs
-- `generate-questions`: Lines 342, 356 log insertion counts
-- These are acceptable for server-side but consider log levels
-
----
-
-## PHASE 4: Final Cleanup (Nice to Have)
-
-### 4.1 Update Documentation
-- Update PRODUCTION_READINESS_REVIEW.md to mark completed items
-- Update PRODUCTION_FIXES_SUMMARY.md with final status
-- Consider removing outdated audit files after launch
-
-### 4.2 Consider for Post-Launch
-- Test coverage improvement (currently 1.5%)
-- Performance optimization review
-- Bundle size analysis
-
----
-
-## Implementation Order
-
-```text
-+------------------+     +------------------+     +------------------+
-|   PHASE 1        |     |   PHASE 2        |     |   PHASE 3        |
-|   Security       | --> |   Code Quality   | --> |   Monitoring     |
-+------------------+     +------------------+     +------------------+
-| 1. Sentry DSN    |     | 1. Fix `any`     |     | 1. Test /health  |
-| 2. DB Security   |     | 2. Console logs  |     | 2. Review logs   |
-| 3. Edge Validate |     | 3. Dependencies  |     +------------------+
-| 4. Debug page    |     +------------------+
-+------------------+
+**Fix mb6 (Lines 54-59):**
+```typescript
+// Change correctAnswer from 2 to 1
+{
+  id: 'mb6',
+  question: 'Solve for x: 3x - 7 = 2',
+  options: ['1', '3', '2', '5'],
+  correctAnswer: 1,  // Was 2, now points to '3'
+  explanation: '3x - 7 = 2 → 3x = 9 → x = 3',
+  difficulty: 'medium'
+},
 ```
+
+**Fix p4m2 (Lines 894-901):**
+```typescript
+// Change correctAnswer from 2 to 0
+{
+  id: 'p4m2',
+  question: 'What is the circumference of a circle with radius 4?',
+  options: ['8π', '12π', '16π', '20π'],
+  correctAnswer: 0,  // Was 2, now points to '8π'
+  explanation: 'C = 2πr = 2π×4 = 8π',  // Remove confusing note about area
+  difficulty: 'medium'
+},
+```
+
+**Fix p6m3 (Lines 1260-1267):**
+```typescript
+// Fix duplicate options - make D a different distractor
+{
+  id: 'p6m3',
+  question: 'Add the matrices: [1 2; 3 4] + [4 3; 2 1].',
+  options: ['[5 5; 5 5]', '[5 5; 5 4]', '[5 4; 5 5]', '[4 5; 5 5]'],  // Fixed duplicates
+  correctAnswer: 0,
+  explanation: 'Add corresponding elements: [1+4 2+3; 3+2 4+1] = [5 5; 5 5]',
+  difficulty: 'easy'
+},
+```
+
+**Fix q7m3 (Lines 1441-1448):**
+```typescript
+// Change correctAnswer from 2 to 0
+{
+  id: 'q7m3',
+  question: 'Solve for x: 3(x − 2) = 15.',
+  options: ['7', '6', '5', '8'],
+  correctAnswer: 0,  // Was 2, now points to '7'
+  explanation: '3(x − 2) = 15 → x − 2 = 5 → x = 7',
+  difficulty: 'easy'
+},
+```
+
+### File: public/import-data/form_a_reading.tsv
+
+**Fix FA_RD_021 (Line 22):**
+- Remove duplicate columns 18-21 (the repeated answer/explanation)
+
+**Fix FA_RD_030 (Line 31):**
+- Add the missing question text. Based on skill_code R3.J and the answer options ("second-person instructions", "a sequence of donor interviews", "chronological history of chairs"), the question should be about structure/development
+
+**Fix Lines 42-75:**
+- Delete all empty and partial rows (these appear to be leftover from a failed import)
+
+### File: public/import-data/form_a_science.tsv
+
+**Fix FA_SCI_013 (Line 14):**
+- Change answer from "C" to "B" (correct: 47 − 18 = 29)
+- Update explanation to remove conflicting text
+
+**Fix FA_SCI_027 (Line 28):**
+- Change answer from "C" to "B" (correct: 7.2 − 4.8 = 2.4)
+- Update explanation to remove conflicting text
 
 ---
 
@@ -147,46 +126,25 @@ The edge functions have good logging for debugging but should be reviewed:
 
 | File | Priority | Changes |
 |------|----------|---------|
-| `supabase/functions/tutor-chat/index.ts` | HIGH | Add Zod input validation |
-| `supabase/functions/cron-daily/index.ts` | HIGH | Add request validation |
-| `supabase/functions/session-fetch/index.ts` | HIGH | Add UUID validation |
-| `src/pages/SimpleLogin.tsx` | HIGH | Delete or gate behind admin |
-| `src/App.tsx` | HIGH | Remove SimpleLogin route if deleting |
-| `src/pages/AdminLessonImport.tsx` | MEDIUM | Fix `any` types |
-| `src/pages/DiagnosticResultsComplete.tsx` | MEDIUM | Fix `Map<string, any>` |
-| `src/pages/Simulation.tsx` | MEDIUM | Fix `Record<string, any>` |
-| `src/pages/ReviewMissed.tsx` | MEDIUM | Fix `any` type |
-| `src/data/companionTips.ts` | LOW | Fix `any` type |
-| `src/hooks/useTestCompanion.ts` | LOW | Fix `any` type |
-| `src/lib/offline-queue.ts` | LOW | Use logger |
-| `src/components/AdminCronButton.tsx` | LOW | Use logger |
-| `package.json` | LOW | Remove unused dependencies |
+| `src/data/curriculum.ts` | HIGH | Fix 4 question answer keys/options |
+| `public/import-data/form_a_reading.tsv` | HIGH | Fix 2 data rows + delete 34 empty rows |
+| `public/import-data/form_a_science.tsv` | HIGH | Fix 2 answer keys |
 
 ---
 
-## External Actions Required (Supabase Dashboard)
+## Database Sync Consideration
 
-These cannot be done via code and require manual action:
+The TSV files are source files for import. After fixing them:
+1. The fixes will be in the import files
+2. If these questions are already in `staging_items`, they'll need to be re-imported or updated via SQL
 
-1. **Add SENTRY_DSN secret** - Edge Functions secrets page
-2. **Enable Leaked Password Protection** - Auth settings
-3. **Reduce OTP Expiry** - Auth settings  
-4. **Move Extensions** - Run SQL to move from public schema
-5. **Upgrade Postgres** - Database settings
-6. **Review RLS policies** - Ensure all tables have appropriate policies
+**I'll check if these specific questions exist in staging_items and if so, update them directly as well.**
 
 ---
 
-## Summary
+## Technical Notes
 
-| Phase | Items | Effort |
-|-------|-------|--------|
-| Phase 1 (Critical) | 4 items | ~2 hours |
-| Phase 2 (High) | 3 categories | ~3 hours |
-| Phase 3 (Important) | 2 items | ~30 min |
-| Phase 4 (Nice to Have) | 2 items | ~1 hour |
-
-**Total estimated effort: 6-7 hours**
-
-The application is currently **deployable** with the critical fixes already completed. This plan addresses remaining polish items and security hardening to ensure a robust production launch.
+- All curriculum.ts questions use 0-based indexing for `correctAnswer`
+- The TSV files use letter answers (A, B, C, D)
+- FA_RD items (lines 42-75) appear to be placeholder stubs from English section (FA_EN_*) that got misplaced into the reading file
 
