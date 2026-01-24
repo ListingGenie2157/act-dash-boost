@@ -176,7 +176,6 @@ export default function AdminQuestionGenerator() {
     }
 
     setIsInserting(true);
-    console.log(`Inserting ${approvedQuestions.length} questions via edge function...`);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -202,7 +201,6 @@ export default function AdminQuestionGenerator() {
       );
 
       const data = await response.json();
-      console.log("Insert response:", data);
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to insert questions");
