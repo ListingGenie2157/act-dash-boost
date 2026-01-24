@@ -48,33 +48,33 @@ export async function getQuestionsBySkill(skill_code: string, n: number) {
     return { data: null, error: new Error(`Skill not found: ${skill_code}`) };
   }
   
-  // Query staging_items for drill questions (DR_* forms)
+  // Query v_staging_items_public for drill questions (excludes answer/explanation for security)
   const { data, error } = await supabase
-    .from('staging_items')
-    .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, answer, explanation, skill_code, difficulty, form_id')
+    .from('v_staging_items_public')
+    .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, skill_code, difficulty, form_id')
     .eq('skill_code', skillId)
     .like('form_id', 'DR_%')
-    .in('answer', ['A', 'B', 'C', 'D'])
     .limit(n);
 
   if (error) {
     return { data: null, error };
   }
 
-  // Map staging_items format to expected question format
-  const mappedData = (data || []).map(item => ({
-    id: item.staging_id.toString(),
-    stem: item.question,
-    choice_a: item.choice_a,
-    choice_b: item.choice_b,
-    choice_c: item.choice_c,
-    choice_d: item.choice_d,
-    answer: item.answer,
-    explanation: item.explanation,
-    skill_id: item.skill_code,
-    difficulty: item.difficulty === 'easy' ? 1 : item.difficulty === 'hard' ? 3 : 2,
-    time_limit_secs: 45,
-  }));
+  // Map v_staging_items_public format to expected question format
+  // Note: answer/explanation are NOT included (server-side validation only)
+  const mappedData = (data || [])
+    .filter(item => item.staging_id !== null)
+    .map(item => ({
+      id: item.staging_id!.toString(),
+      stem: item.question || '',
+      choice_a: item.choice_a || '',
+      choice_b: item.choice_b || '',
+      choice_c: item.choice_c || '',
+      choice_d: item.choice_d || '',
+      skill_id: item.skill_code,
+      difficulty: item.difficulty === 'easy' ? 1 : item.difficulty === 'hard' ? 3 : 2,
+      time_limit_secs: 45,
+    }));
 
   return { data: mappedData, error: null };
 }
