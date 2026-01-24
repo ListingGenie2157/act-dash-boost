@@ -23,7 +23,7 @@ interface Question {
 interface Passage {
   title: string;
   passage_text: string;
-  marked_text?: Record<string, any> | null;
+  marked_text?: Record<string, unknown> | null;
 }
 
 interface EnglishPassageLayoutProps {

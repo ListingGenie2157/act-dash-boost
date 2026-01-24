@@ -22,7 +22,9 @@ export const getSupabaseConfigStatus = () => ({
   anonKey: 'Set' as const,
 });
 
+const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
+
 export const logSupabaseConfigStatus = (): void => {
-  if (!isBrowser) return;
+  if (!isBrowser || !isDev) return;
   console.info('[env] Supabase config: ✓ URL and anon key configured');
 };

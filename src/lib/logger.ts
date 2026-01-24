@@ -20,7 +20,22 @@ export const logger = {
   },
   
   error: (...args: unknown[]) => {
-    // Always log errors, even in production
-    console.error(...args);
+    if (isDev) {
+      // Full error details in development
+      console.error(...args);
+    } else {
+      // Sanitized error in production - only message, no stack/headers
+      const sanitized = args.map(arg => {
+        if (arg instanceof Error) {
+          return arg.message;
+        }
+        if (typeof arg === 'object' && arg !== null) {
+          // Don't log full objects in production
+          return '[object]';
+        }
+        return arg;
+      });
+      console.error(...sanitized);
+    }
   }
 };

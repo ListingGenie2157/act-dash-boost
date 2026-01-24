@@ -22,16 +22,30 @@ interface WeakSkill {
   section: string;
 }
 
+interface DiagnosticBlock {
+  questions?: Array<{
+    id: string;
+    skill_tags?: string[];
+  }>;
+  answers?: Array<{
+    questionId: string;
+    isCorrect: boolean;
+  }>;
+}
+
+// Type guard for DiagnosticBlock
+function isDiagnosticBlock(value: unknown): value is DiagnosticBlock {
+  if (typeof value !== 'object' || value === null) return false;
+  const obj = value as Record<string, unknown>;
+  return Array.isArray(obj.questions) || Array.isArray(obj.answers);
+}
+
 export default function DiagnosticResultsComplete() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [sectionResults, setSectionResults] = useState<SectionResult[]>([]);
   const [weakSkills, setWeakSkills] = useState<WeakSkill[]>([]);
   const [overallScore, setOverallScore] = useState(0);
-
-  useEffect(() => {
-    fetchAllResults();
-  }, []);
 
   const fetchAllResults = useCallback(async () => {
     try {
@@ -84,22 +98,47 @@ export default function DiagnosticResultsComplete() {
       const avgScore = latestResults.reduce((sum, r) => sum + r.score, 0) / latestResults.length;
       setOverallScore(Math.round(avgScore));
 
-      // Aggregate weak skills across all sections
-      const allWeakSkills: WeakSkill[] = [];
-      
-      interface DiagnosticBlock {
-        questions?: Array<{
-          id: string;
-          skill_tags?: string[];
-        }>;
-        answers?: Array<{
-          questionId: string;
-          isCorrect: boolean;
-        }>;
-      }
+      // PHASE 1: Collect all unique skill IDs from responses
+      const allSkillIds = new Set<string>();
       
       for (const diag of diagnostics) {
-        const responses = (diag.responses || []) as DiagnosticBlock[];
+        const rawResponses = diag.responses;
+        // Validate responses is an array and filter valid blocks
+        if (!Array.isArray(rawResponses)) continue;
+        
+        const responses = rawResponses.filter(isDiagnosticBlock) as DiagnosticBlock[];
+        
+        for (const block of responses) {
+          if (block.questions) {
+            for (const q of block.questions) {
+              if (q.skill_tags?.[0]) {
+                allSkillIds.add(q.skill_tags[0]);
+              }
+            }
+          }
+        }
+      }
+
+      // PHASE 2: Batch fetch all skill names in a single query
+      const skillNameMap = new Map<string, string>();
+      if (allSkillIds.size > 0) {
+        const { data: skillsData } = await supabase
+          .from('skills')
+          .select('id, name')
+          .in('id', Array.from(allSkillIds));
+        
+        skillsData?.forEach(s => skillNameMap.set(s.id, s.name));
+      }
+
+      // PHASE 3: Process diagnostics with pre-fetched skill names
+      const allWeakSkills: WeakSkill[] = [];
+      
+      for (const diag of diagnostics) {
+        const rawResponses = diag.responses;
+        // Validate responses is an array and filter valid blocks
+        if (!Array.isArray(rawResponses)) continue;
+        
+        const responses = rawResponses.filter(isDiagnosticBlock) as DiagnosticBlock[];
         
         for (const block of responses) {
           if (block.questions && block.answers) {
@@ -109,13 +148,7 @@ export default function DiagnosticResultsComplete() {
               
               if (answer && question.skill_tags && question.skill_tags.length > 0) {
                 const skillId = question.skill_tags[0];
-                
-                // Fetch skill name from skills table
-                const { data: skillData } = await supabase
-                  .from('skills')
-                  .select('name')
-                  .eq('id', skillId)
-                  .maybeSingle();
+                const skillName = skillNameMap.get(skillId) || skillId;
                 
                 const existing = allWeakSkills.find(s => s.skill_id === skillId);
                 if (existing) {
@@ -128,7 +161,7 @@ export default function DiagnosticResultsComplete() {
                 } else {
                   allWeakSkills.push({
                     skill_id: skillId,
-                    skill_name: skillData?.name || skillId,
+                    skill_name: skillName,
                     accuracy: answer.isCorrect ? 100 : 0,
                     total_questions: 1,
                     section: diag.section
