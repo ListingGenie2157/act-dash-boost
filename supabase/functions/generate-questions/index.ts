@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.56.0";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 interface GeneratedQuestion {
   question: string;
@@ -215,6 +211,8 @@ function getSkillsForSection(section: string): string[] {
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -871,7 +869,8 @@ IMPORTANT:
     }
 
     const data = await response.json();
-    console.log("AI response:", JSON.stringify(data, null, 2));
+    // Log only structure info, not full payload (privacy)
+    console.log("AI response received, choices:", data.choices?.length || 0);
 
     // Extract questions from tool call
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
