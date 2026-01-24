@@ -11,6 +11,7 @@ import { LiveStreakCounter } from '@/components/LiveStreakCounter';
 import { BreakModal } from '@/components/BreakModal';
 import { getRunStyle, type RunStyle } from '@/lib/runStyles';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 export default function DrillRunner() {
   const navigate = useNavigate();
@@ -156,7 +157,7 @@ export default function DrillRunner() {
           const validQuestions = mappedQuestions.filter(q => {
             const isValid = q.answer && ['A', 'B', 'C', 'D'].includes(q.answer);
             if (!isValid) {
-              console.warn(`Skipping question ${q.id} with invalid answer: "${q.answer}"`);
+              logger.debug(`Skipping question ${q.id} with invalid answer: "${q.answer}"`);
             }
             return isValid;
           });
@@ -166,7 +167,7 @@ export default function DrillRunner() {
           } else {
             setQuestions(validQuestions);
             if (validQuestions.length < mappedQuestions.length) {
-              console.warn(`Filtered out ${mappedQuestions.length - validQuestions.length} questions with invalid answers`);
+              logger.debug(`Filtered out ${mappedQuestions.length - validQuestions.length} questions with invalid answers`);
             }
             
             // Create study_task for tracking

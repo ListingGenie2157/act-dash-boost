@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { BackButton } from '@/components/BackButton';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 interface MissedQuestion {
   question_id: string;
@@ -105,7 +106,7 @@ export default function ReviewMissed() {
 
       setMissedQuestions(merged);
     } catch (error) {
-      console.error('Error loading missed questions:', error);
+      logger.error('Error loading missed questions:', error);
       toast.error('Failed to load missed questions');
     } finally {
       setLoading(false);

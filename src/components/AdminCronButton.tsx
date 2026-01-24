@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Play, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 export const AdminCronButton = () => {
   const [loading, setLoading] = useState(false);
@@ -24,9 +25,9 @@ export const AdminCronButton = () => {
 
       setLastResult(data);
       toast.success('Cron job completed successfully');
-      console.warn('Cron job result:', data);
+      logger.debug('Cron job result:', data);
     } catch (error) {
-      console.error('Error calling cron function:', error);
+      logger.error('Error calling cron function:', error);
       toast.error('Failed to run cron job');
     } finally {
       setLoading(false);

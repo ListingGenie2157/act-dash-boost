@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, FileText, CheckCircle, AlertTriangle, Download, Play } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 interface ImportRecord {
   id?: string;
@@ -270,7 +271,7 @@ export default function AdminImport() {
         setProgress((processedFiles / selectedFiles.length) * 50); // First 50% for parsing
       }
 
-      console.warn(`Parsed ${allRecords.length} records with ${allErrors.length} errors`);
+      logger.debug(`Parsed ${allRecords.length} records with ${allErrors.length} errors`);
 
       if (allErrors.length > 0 && !dryRun) {
         setResults({

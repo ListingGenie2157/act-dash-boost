@@ -150,7 +150,7 @@ export default function AdminLessonImport() {
           description: 'No skills found in database. Cannot validate skill codes.',
           variant: 'destructive',
         });
-        console.error('No skills found for validation');
+        logger.error('No skills found for validation');
         return;
       }
 
@@ -168,7 +168,7 @@ export default function AdminLessonImport() {
         }
       });
 
-      console.info('Skill validation index built:', {
+      logger.debug('Skill validation index built:', {
         totalSkills: allSkills.length,
         uniqueRefs: validSkillRefs.size,
         extractedLessons: lessons.length,
@@ -193,7 +193,7 @@ export default function AdminLessonImport() {
         
         if (!isValid) {
           errors.push(`Skill not found: ${lesson.skill_code}`);
-          console.warn(`Skill not found after normalization: "${lesson.skill_code}"`);
+          logger.debug(`Skill not found after normalization: "${lesson.skill_code}"`);
         }
 
         return {
