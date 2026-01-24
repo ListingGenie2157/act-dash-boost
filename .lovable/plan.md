@@ -1,342 +1,282 @@
 
 
-# Fix Database Audit Findings
+# Fix Remaining Audit Findings
 
-## Summary
+## Audit Analysis Summary
 
-This audit identified **14 issues** across database/schema mismatches, dead code, logic bugs, and syntax problems. I've categorized them by priority and validated each against the actual codebase.
-
----
-
-## Issue Analysis
-
-### HIGH PRIORITY - Must Fix
-
-| ID | Issue | File | Status |
-|----|-------|------|--------|
-| 1 | `test_packages` query uses non-existent columns | `src/lib/content.ts` L82-86 | ✅ Valid |
-| 2 | `rewards_ledger` nullable fields treated as required | `src/pages/ParentPortal.tsx` L345-350 | ✅ Valid |
-| 3 | 7-day plan fetches 8 days (off-by-one) | `src/pages/Plan.tsx` L36-46 | ✅ Valid |
-| 4 | WeeklyCalendar task index mismatch after filtering | `src/components/WeeklyCalendar.tsx` L160-166 | ✅ Valid |
-| 5 | DrillRunner saves wrong `choice_order` | `src/pages/DrillRunner.tsx` L236-244 | ✅ Valid |
-| 6 | QuizRunner saves wrong `choice_order` | `src/pages/QuizRunner.tsx` L65-72 | ✅ Valid |
-| 7 | Navigate to wrong drill route | `src/pages/EnhancedLessonViewer.tsx` L159-163 | ✅ Valid |
-
-### MEDIUM PRIORITY - Should Fix
-
-| ID | Issue | File | Status |
-|----|-------|------|--------|
-| 8 | `LessonsQuickAccess` compares skill_code to skill.name incorrectly | `src/components/LessonsQuickAccess.tsx` L49-60 | ✅ Valid |
-
-### LOW PRIORITY - Dead Code Cleanup
-
-| ID | Issue | File | Status |
-|----|-------|------|--------|
-| 9 | `getLessonBySkill` and `getFullTestPackage` unused | `src/lib/content.ts` | ✅ Valid |
-| 10 | `DayView` component unused | `src/components/DayView.tsx` | ✅ Valid |
-| 11 | `SectionPicker` component unused | `src/components/SectionPicker.tsx` | ✅ Valid |
-| 12 | `useShuffledQuestion` hooks unused | `src/hooks/useShuffledQuestion.ts` | ✅ Valid |
-| 13 | `useReadingPreferences` hook unused | `src/components/ReadingPreferences.tsx` L122-131 | ✅ Valid |
-| 14 | All `useQuestions` hooks unused | `src/hooks/queries/useQuestions.ts` | ✅ Valid |
-| 15 | Zombie code comment | `src/hooks/use-mobile.tsx` L4 | ✅ Valid |
+| Finding | Severity | Verdict | Rationale |
+|---------|----------|---------|-----------|
+| Hardcoded Supabase credentials | High | **NOT VALID** | Intentional Lovable architecture pattern (documented in project memories) |
+| console.info in env.ts | Med | **VALID** | Should be dev-only |
+| test_packages query issues | High | **ALREADY FIXED** | `getLessonBySkill` and `getFullTestPackage` were removed in previous plan |
+| DiagnosticResultsComplete duplicate effects | High | **VALID** | Lines 32-34 and 159-161 both call fetchAllResults() |
+| DiagnosticResultsComplete unsafe cast | High | **VALID** | Line 102 casts JSON to array without validation |
+| DiagnosticResultsComplete N+1 queries | Med | **VALID** | Lines 114-118 query skills inside loop |
+| EnglishPassageLayout `any` type | Med | **VALID** | Line 26 uses `Record<string, any>` |
+| lessons.ts regex escape | Low | **VALID** | Line 287 has unnecessary escapes |
+| generate-study-plan `any` type | Med | **VALID** | Line 741 uses `(task: any)` |
+| logger.error in production | Med | **PARTIALLY VALID** | Consider sanitizing, but errors need to be logged |
+| AdminQuestionGenerator console.log | Low | **VALID** | Lines 158, 179, 205 have debug logs |
+| AdminLessonImport console.log | Low | **ALREADY FIXED** | Already uses dev-only `logger.debug` |
+| Unused dependencies | Med | **PARTIALLY VALID** | Some are truly unused, some are type definitions |
 
 ---
 
-## Detailed Fixes
+## Changes to Implement
 
-### 1. Fix `test_packages` Query (HIGH)
+### 1. Fix DiagnosticResultsComplete.tsx (HIGH PRIORITY)
 
-**File:** `src/lib/content.ts` (Lines 82-88)
+**Issue 1: Duplicate useEffect calls**
+Lines 32-34 call `fetchAllResults()` directly, while lines 159-161 use the proper dependency pattern.
 
-The `test_packages` table only has columns: `id`, `label`, `created_at`
-
-The query requests non-existent columns: `name`, `description`, `sections`, `updated_at`
-
-**Current:**
 ```typescript
-const { data, error } = await supabase
-  .from('test_packages')
-  .select('id, name, description, sections, created_at, updated_at')
-  .eq('id', id)
+// DELETE THIS (lines 32-34):
+useEffect(() => {
+  fetchAllResults();
+}, []);
+
+// KEEP THIS (lines 159-161):
+useEffect(() => {
+  fetchAllResults();
+}, [fetchAllResults]);
+```
+
+**Issue 2: Unsafe JSON cast**
+Line 102 casts `diag.responses` to `DiagnosticBlock[]` without validation.
+
+```typescript
+// BEFORE (line 102):
+const responses = (diag.responses || []) as DiagnosticBlock[];
+
+// AFTER:
+const rawResponses = diag.responses;
+const responses: DiagnosticBlock[] = Array.isArray(rawResponses) 
+  ? rawResponses.filter(
+      (r): r is DiagnosticBlock => 
+        typeof r === 'object' && r !== null && 
+        (Array.isArray(r.questions) || Array.isArray(r.answers))
+    )
+  : [];
+```
+
+**Issue 3: N+1 skill queries**
+Lines 113-118 query skills individually inside a nested loop.
+
+```typescript
+// BEFORE: Individual query inside loop (lines 114-118)
+const { data: skillData } = await supabase
+  .from('skills')
+  .select('name')
+  .eq('id', skillId)
   .maybeSingle();
-```
 
-**Fix:**
-```typescript
-const { data, error } = await supabase
-  .from('test_packages')
-  .select('id, label, created_at')
-  .eq('id', id)
-  .maybeSingle();
-```
-
-Since this function is unused (dead code), the cleanest fix is to **remove it entirely** along with `getLessonBySkill`.
-
----
-
-### 2. Fix `rewards_ledger` Nullable Fields (HIGH)
-
-**File:** `src/pages/ParentPortal.tsx` (Lines 21-28, 345-350)
-
-Schema shows `student_id: string | null` and `earned_at: string | null`, but the interface and code treat them as required.
-
-**Current Interface:**
-```typescript
-interface RewardLedgerEntry {
-  id: string;
-  student_id: string;  // Should be nullable
-  rule_id: string;
-  earned_at: string;   // Should be nullable
-  amount_cents: number;
-  status: 'PENDING' | 'APPROVED' | 'DENIED';
+// AFTER: Batch query before loop
+// Collect all unique skill IDs first
+const allSkillIds = new Set<string>();
+for (const diag of diagnostics) {
+  const rawResponses = diag.responses;
+  const responses: DiagnosticBlock[] = Array.isArray(rawResponses) 
+    ? rawResponses.filter(/* validation */) 
+    : [];
+  for (const block of responses) {
+    if (block.questions) {
+      for (const q of block.questions) {
+        if (q.skill_tags?.[0]) allSkillIds.add(q.skill_tags[0]);
+      }
+    }
+  }
 }
+
+// Batch fetch all skills
+const { data: skillsData } = await supabase
+  .from('skills')
+  .select('id, name')
+  .in('id', Array.from(allSkillIds));
+
+const skillNameMap = new Map(skillsData?.map(s => [s.id, s.name]) || []);
+
+// Then use skillNameMap.get(skillId) in the processing loop
 ```
 
-**Fixed Interface:**
+---
+
+### 2. Fix EnglishPassageLayout.tsx (MEDIUM PRIORITY)
+
+**Line 26: Replace `any` with proper type**
+
 ```typescript
-interface RewardLedgerEntry {
-  id: string;
-  student_id: string | null;
-  rule_id: string | null;  // Also nullable per schema
-  earned_at: string | null;
-  amount_cents: number;
-  status: string | null;  // Also nullable per schema
+// BEFORE:
+marked_text?: Record<string, any> | null;
+
+// AFTER (use Json type for schema alignment):
+marked_text?: Record<string, unknown> | null;
+```
+
+---
+
+### 3. Fix src/lib/lessons.ts (LOW PRIORITY)
+
+**Line 287: Remove unnecessary regex escapes**
+
+```typescript
+// BEFORE:
+const re = /(?:^|\s)(\d+)[\.\-–]\s*(.+?)(?=\s+\d+[\.\-–]\s+|$)/g;
+
+// AFTER (escape only necessary chars - the dot inside character class, the hyphen at start/end):
+const re = /(?:^|\s)(\d+)[.\-–]\s*(.+?)(?=\s+\d+[.\-–]\s+|$)/g;
+```
+
+Note: Inside character classes `[]`, the dot `.` doesn't need escaping (it's literal). The hyphen `-` should be at start or end to be literal.
+
+---
+
+### 4. Fix generate-study-plan Edge Function (MEDIUM PRIORITY)
+
+**Line 741: Type the task properly**
+
+```typescript
+// BEFORE (line 741):
+specialTasks.forEach((task: any) => {
+
+// AFTER:
+interface SpecialTask {
+  type: string;
+  skill_id?: string | null;
+  size: number;
+  estimated_mins?: number;
 }
-```
 
-**Current Usage (Line 345):**
-```typescript
-{new Date(entry.earned_at).toLocaleDateString()}
-```
-
-**Fixed Usage:**
-```typescript
-{entry.earned_at ? new Date(entry.earned_at).toLocaleDateString() : 'N/A'}
-```
-
-**Current Usage (Line 350):**
-```typescript
-{entry.student_id.slice(0, 8)}...
-```
-
-**Fixed Usage:**
-```typescript
-{entry.student_id ? `${entry.student_id.slice(0, 8)}...` : 'Unknown'}
+specialTasks.forEach((task: SpecialTask) => {
 ```
 
 ---
 
-### 3. Fix 7-Day Plan Off-by-One (HIGH)
+### 5. Fix src/lib/env.ts Logging (MEDIUM PRIORITY)
 
-**File:** `src/pages/Plan.tsx` (Lines 36-46, 85-95)
-
-Using `.lte(today + 7 days)` with `.gte(today)` fetches 8 days inclusive.
-
-**Current:**
-```typescript
-const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-  .toISOString()
-  .split('T')[0];
-// ...
-.lte('the_date', sevenDaysFromNow)
-```
-
-**Fix (use 6 days for 7-day range):**
-```typescript
-const sixDaysFromNow = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000)
-  .toISOString()
-  .split('T')[0];
-// ...
-.lte('the_date', sixDaysFromNow)
-```
-
-This change needs to be made in **two places**: the initial fetch (L36-46) and the refetch after generation (L85-95).
-
----
-
-### 4. Fix WeeklyCalendar Task Index Mismatch (HIGH)
-
-**File:** `src/components/WeeklyCalendar.tsx` (Lines 160-166)
-
-After filtering out SIM tasks, the loop uses `taskIdx` which is the filtered index, but the route `/task/:date/:idx` expects the original index from `tasks_json`.
-
-**Current:**
-```typescript
-day.tasks
-  .filter(task => task.type !== 'SIM')
-  .map((task, taskIdx) => (
-    <Link
-      key={taskIdx}
-      to={`/task/${day.date}/${taskIdx}`}  // Wrong index!
-```
-
-**Fix (preserve original index):**
-```typescript
-day.tasks
-  .map((task, originalIdx) => ({ task, originalIdx }))
-  .filter(({ task }) => task.type !== 'SIM')
-  .map(({ task, originalIdx }) => (
-    <Link
-      key={originalIdx}
-      to={`/task/${day.date}/${originalIdx}`}  // Correct index
-```
-
----
-
-### 5. Fix DrillRunner `choice_order` (HIGH)
-
-**File:** `src/pages/DrillRunner.tsx` (Lines 236-244)
-
-The UI shuffles choices but hardcodes `choice_order: [0, 1, 2, 3]` instead of the actual shuffled order.
-
-**Current:**
-```typescript
-await supabase.from('attempts').insert({
-  // ...
-  choice_order: [0, 1, 2, 3],  // Wrong - always default order
-  correct_idx: correctIdx,
-  selected_idx: selectedIdx,
-  // ...
-});
-```
-
-The shuffle happens in `handleShuffledAnswer` which maps the shuffled index to original, but `choice_order` should store the actual shuffled sequence.
-
-**Fix:** Pass the shuffled order to `handleAnswer`:
+**Line 25-28: Make logSupabaseConfigStatus dev-only**
 
 ```typescript
-const handleShuffledAnswer = async (shuffledIndex: number) => {
-  if (!shuffled) return;
-  
-  const originalIndex = shuffled.choiceOrder[shuffledIndex];
-  await handleAnswer(originalIndex, shuffled.choiceOrder);
+// BEFORE:
+export const logSupabaseConfigStatus = (): void => {
+  if (!isBrowser) return;
+  console.info('[env] Supabase config: ✓ URL and anon key configured');
 };
 
-const handleAnswer = async (selectedIdx: number, choiceOrder: number[] = [0, 1, 2, 3]) => {
-  // ...
-  await supabase.from('attempts').insert({
-    // ...
-    choice_order: choiceOrder,  // Now stores actual shuffle order
+// AFTER:
+const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
+
+export const logSupabaseConfigStatus = (): void => {
+  if (!isBrowser || !isDev) return;
+  console.info('[env] Supabase config: ✓ URL and anon key configured');
+};
 ```
 
 ---
 
-### 6. Fix QuizRunner `choice_order` (HIGH)
+### 6. Fix AdminQuestionGenerator.tsx Logging (LOW PRIORITY)
 
-**File:** `src/pages/QuizRunner.tsx` (Lines 65-72)
+**Lines 158, 179, 205: Remove/replace console.log calls**
 
-Same issue as DrillRunner - hardcoded `[0, 1, 2, 3]`.
-
-**Current:**
 ```typescript
-await supabase.from('attempts').insert({
-  // ...
-  choice_order: [0, 1, 2, 3],
-```
+// Line 158: Remove or use logger
+console.error("Generation error:", error);  // Keep - errors are important
 
-**Fix:** Same pattern as DrillRunner - pass shuffled order from handler.
+// Line 179: Remove debug log
+console.log(`Inserting ${approvedQuestions.length} questions via edge function...`);
+// REMOVE THIS LINE
 
----
-
-### 7. Fix Drill Route Navigation (HIGH)
-
-**File:** `src/pages/EnhancedLessonViewer.tsx` (Lines 159-163)
-
-Navigation uses `/drill/setup?...` but the actual route is `/drill/:subject/setup`.
-
-**Current:**
-```typescript
-navigate(`/drill/setup?skill=${topic}&mode=learned`)
-```
-
-**Fix (use correct route pattern):**
-```typescript
-// Determine subject from lesson data
-const subject = lesson?.subject?.toLowerCase() || 'math';
-navigate(`/drill/${subject}/setup?skill=${topic}&mode=learned`)
+// Line 205: Remove debug log
+console.log("Insert response:", data);
+// REMOVE THIS LINE
 ```
 
 ---
 
-### 8. Fix LessonsQuickAccess Skill Comparison (MEDIUM)
+### 7. Sanitize logger.error for Production (MEDIUM PRIORITY)
 
-**File:** `src/components/LessonsQuickAccess.tsx` (Lines 49-60)
+**File: src/lib/logger.ts**
 
-Compares `staging_items.skill_code` (which is a skill ID) against `skill.name` instead of `skill.id`.
+The current `logger.error` always logs in production. While errors should be logged, we should sanitize to avoid exposing sensitive data.
 
-**Current:**
 ```typescript
-const skillsWithContent = Array.from(new Set(itemsData?.map(i => i.skill_code) || []));
+// BEFORE (lines 22-25):
+error: (...args: unknown[]) => {
+  // Always log errors, even in production
+  console.error(...args);
+}
 
-const lessonsWithContent = (skillsData || [])
-  .filter(skill => skillsWithContent.includes(skill.name))  // Wrong field!
-  .map(skill => ({
-    skill_code: skill.name,  // Wrong field!
-```
-
-**Fix:**
-```typescript
-const skillsWithContent = Array.from(new Set(itemsData?.map(i => i.skill_code) || []));
-
-const lessonsWithContent = (skillsData || [])
-  .filter(skill => skillsWithContent.includes(skill.id))  // Correct: use skill.id
-  .map(skill => ({
-    skill_code: skill.id,  // Correct: use skill.id
+// AFTER:
+error: (...args: unknown[]) => {
+  if (isDev) {
+    // Full error details in development
+    console.error(...args);
+  } else {
+    // Sanitized error in production - only message, no stack/headers
+    const sanitized = args.map(arg => {
+      if (arg instanceof Error) {
+        return arg.message;
+      }
+      if (typeof arg === 'object' && arg !== null) {
+        // Don't log full objects in production
+        return '[object]';
+      }
+      return arg;
+    });
+    console.error(...sanitized);
+  }
+}
 ```
 
 ---
 
-### 9-15. Dead Code Removal (LOW)
+### 8. Clean Up Unused Dependencies (LOW PRIORITY)
 
-These files/functions are unused and can be safely removed:
+Based on search verification, these packages are truly unused:
 
-| File | Action |
-|------|--------|
-| `src/lib/content.ts` L23-40, L82-88 | Remove `getLessonBySkill` and `getFullTestPackage` functions |
-| `src/components/DayView.tsx` | Delete entire file |
-| `src/components/SectionPicker.tsx` | Delete entire file |
-| `src/hooks/useShuffledQuestion.ts` | Delete entire file |
-| `src/components/ReadingPreferences.tsx` L122-163 | Remove `useReadingPreferences` hook (keep component) |
-| `src/hooks/queries/useQuestions.ts` | Delete entire file |
-| `src/hooks/use-mobile.tsx` L4 | Remove commented-out line |
+| Package | Status | Action |
+|---------|--------|--------|
+| `@hookform/resolvers` | Unused | Remove |
+| `@radix-ui/react-switch` | Custom impl used | Remove |
+| `@testing-library/user-event` | Not imported | Move to devDependencies or remove |
+| `@testsprite/testsprite-mcp` | Not imported | Remove |
+| `@types/canvas-confetti` | **IN USE** | Keep (canvas-confetti is used) |
+| `@types/dompurify` | **IN USE** | Keep (dompurify is used in sanitize.ts) |
+| `@vitest/ui` | **IN USE** | Keep (vitest tooling) |
+| `vite-plugin-pwa` | Not configured | Remove |
+
+**Note:** Dependency cleanup should be done carefully and tested. I recommend leaving this for a separate PR.
 
 ---
 
 ## Files to Modify
 
-| File | Changes |
-|------|---------|
-| `src/lib/content.ts` | Remove 2 unused functions |
-| `src/pages/ParentPortal.tsx` | Fix nullable types and guards |
-| `src/pages/Plan.tsx` | Fix off-by-one (2 locations) |
-| `src/components/WeeklyCalendar.tsx` | Preserve original task index |
-| `src/pages/DrillRunner.tsx` | Save actual shuffled choice_order |
-| `src/pages/QuizRunner.tsx` | Save actual shuffled choice_order |
-| `src/pages/EnhancedLessonViewer.tsx` | Fix drill route navigation |
-| `src/components/LessonsQuickAccess.tsx` | Fix skill ID comparison |
+| File | Priority | Changes |
+|------|----------|---------|
+| `src/pages/DiagnosticResultsComplete.tsx` | HIGH | Remove duplicate effect, validate JSON, batch skill queries |
+| `src/components/EnglishPassageLayout.tsx` | MEDIUM | Replace `any` with `unknown` |
+| `src/lib/lessons.ts` | LOW | Fix regex escapes |
+| `supabase/functions/generate-study-plan/index.ts` | MEDIUM | Type task properly |
+| `src/lib/env.ts` | MEDIUM | Make logging dev-only |
+| `src/pages/AdminQuestionGenerator.tsx` | LOW | Remove console.log calls |
+| `src/lib/logger.ts` | MEDIUM | Sanitize production error logs |
 
-## Files to Delete
+---
 
-| File | Reason |
+## Not Changing (By Design)
+
+| Item | Reason |
 |------|--------|
-| `src/components/DayView.tsx` | Unused component |
-| `src/components/SectionPicker.tsx` | Unused component |
-| `src/hooks/useShuffledQuestion.ts` | Unused hooks |
-| `src/hooks/queries/useQuestions.ts` | Unused hooks |
-
-## Files with Minor Cleanup
-
-| File | Change |
-|------|--------|
-| `src/hooks/use-mobile.tsx` | Remove commented line |
-| `src/components/ReadingPreferences.tsx` | Remove unused hook (lines 122-163) |
+| Hardcoded Supabase URL/anon key | Correct Lovable architecture pattern - documented in memories |
+| `src/lib/content.ts` issues | Already fixed in previous plan |
+| `AdminLessonImport.tsx` logging | Already uses dev-only `logger.debug` |
+| Package.json dependencies | Recommend separate PR for thorough testing |
 
 ---
 
 ## Technical Notes
 
-- No database migrations required
-- No edge function changes needed
-- All fixes are backwards-compatible
-- Dead code removal reduces bundle size
+- DiagnosticResultsComplete fix eliminates duplicate API calls and prevents potential race conditions
+- N+1 query fix could improve page load by 10-50x for users with many diagnostic responses
+- Type safety improvements in edge functions help catch bugs at build time
+- Logger sanitization prevents accidental PII exposure in production logs
 
