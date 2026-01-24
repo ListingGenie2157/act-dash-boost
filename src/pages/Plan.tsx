@@ -34,7 +34,8 @@ export default function Plan() {
           return;
         }
         const today = new Date().toISOString().split('T')[0];
-        const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        // Use 6 days from now for a proper 7-day range (today + 6 = 7 days inclusive)
+        const sixDaysFromNow = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000)
           .toISOString()
           .split('T')[0];
         const { data: planDays, error: fetchError } = await supabase
@@ -42,7 +43,7 @@ export default function Plan() {
           .select('the_date, tasks_json, generated_at, user_id')
           .eq('user_id', user.id)
           .gte('the_date', today)
-          .lte('the_date', sevenDaysFromNow)
+          .lte('the_date', sixDaysFromNow)
           .order('the_date');
         
         if (fetchError) {
@@ -83,7 +84,8 @@ export default function Plan() {
         if (!user) return;
         
         const today = new Date().toISOString().split('T')[0];
-        const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        // Use 6 days from now for a proper 7-day range (today + 6 = 7 days inclusive)
+        const sixDaysFromNow = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000)
           .toISOString()
           .split('T')[0];
         const { data: planDays } = await supabase
@@ -91,7 +93,7 @@ export default function Plan() {
           .select('the_date, tasks_json, generated_at, user_id')
           .eq('user_id', user.id)
           .gte('the_date', today)
-          .lte('the_date', sevenDaysFromNow)
+          .lte('the_date', sixDaysFromNow)
           .order('the_date');
 
         // Type cast and validate tasks_json

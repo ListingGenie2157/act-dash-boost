@@ -20,11 +20,11 @@ interface RewardRule {
 
 interface RewardLedgerEntry {
   id: string;
-  student_id: string;
-  rule_id: string;
-  earned_at: string;
+  student_id: string | null;
+  rule_id: string | null;
+  earned_at: string | null;
   amount_cents: number;
-  status: 'PENDING' | 'APPROVED' | 'DENIED';
+  status: string | null;
 }
 
 export default function ParentPortal() {
@@ -342,12 +342,12 @@ export default function ParentPortal() {
               {ledger.map((entry) => (
                 <TableRow key={entry.id}>
                   <TableCell>
-                    {new Date(entry.earned_at).toLocaleDateString()}
+                    {entry.earned_at ? new Date(entry.earned_at).toLocaleDateString() : 'N/A'}
                   </TableCell>
                   <TableCell className="font-medium">
                     ${(entry.amount_cents / 100).toFixed(2)}
                   </TableCell>
-                  <TableCell>{entry.student_id.slice(0, 8)}...</TableCell>
+                  <TableCell>{entry.student_id ? `${entry.student_id.slice(0, 8)}...` : 'Unknown'}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Button

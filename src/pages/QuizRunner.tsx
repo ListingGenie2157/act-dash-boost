@@ -55,19 +55,20 @@ export default function QuizRunner() {
     void fetchData();
   }, [section, searchParams]);
 
-  const handleAnswer = async (selectedIdx: number) => {
+  const handleAnswer = async (selectedIdx: number, choiceOrder: number[] = [0, 1, 2, 3]) => {
     if (!userId) return;
     const q = questions[current];
     if (!q) return;
     
     const correctIdx = ['A', 'B', 'C', 'D'].indexOf(q.answer);
     try {
+      // Store actual shuffled choice_order for accurate attempt reconstruction
       await supabase.from('attempts').insert({
         user_id: userId,
         question_id: q.id,
         form_id: q.form_id ?? 'quiz',
         question_ord: current + 1,
-        choice_order: [0, 1, 2, 3],
+        choice_order: choiceOrder,
         correct_idx: correctIdx,
         selected_idx: selectedIdx,
       });
@@ -106,9 +107,9 @@ export default function QuizRunner() {
   const handleShuffledAnswer = async (shuffledIndex: number) => {
     if (!shuffled) return;
     
-    // Map shuffled index back to original index
+    // Map shuffled index back to original index and pass actual choice order for DB persistence
     const originalIndex = shuffled.choiceOrder[shuffledIndex];
-    await handleAnswer(originalIndex);
+    await handleAnswer(originalIndex, shuffled.choiceOrder);
   };
 
   return (

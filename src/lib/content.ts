@@ -20,27 +20,22 @@ export async function resolveSkillId(ref: string): Promise<string | null> {
   return skill.id;
 }
 
-export async function getLessonBySkill(skill_code: string) {
-  // Since there's no lessons table, we fetch from skills table
-  const { data, error } = await supabase
-    .from('skills')
-    .select('id, name, description, subject, cluster, order_index, prereq_skill_ids, created_at')
-    .eq('id', skill_code)
-    .maybeSingle();
-  
-  // Transform skill data into lesson-like format
-  const lesson = data ? {
-    id: data.id,
-    title: data.name,
-    body: data.description || 'No content available',
-    skill_code: data.id,
-    subject: data.subject,
-  } : null;
-  
-  return { data: lesson, error };
+// Note: getLessonBySkill and getFullTestPackage were removed as dead code.
+// These functions queried non-existent columns and were never used.
+
+interface DrillQuestion {
+  id: string;
+  stem: string;
+  choice_a: string;
+  choice_b: string;
+  choice_c: string;
+  choice_d: string;
+  skill_id: string | null;
+  difficulty: number;
+  time_limit_secs: number;
 }
 
-export async function getQuestionsBySkill(skill_code: string, n: number) {
+export async function getQuestionsBySkill(skill_code: string, n: number): Promise<{ data: DrillQuestion[] | null; error: Error | null }> {
   // Resolve skill_code to skill_id first
   const skillId = await resolveSkillId(skill_code);
   
@@ -62,7 +57,7 @@ export async function getQuestionsBySkill(skill_code: string, n: number) {
 
   // Map v_staging_items_public format to expected question format
   // Note: answer/explanation are NOT included (server-side validation only)
-  const mappedData = (data || [])
+  const mappedData: DrillQuestion[] = (data || [])
     .filter(item => item.staging_id !== null)
     .map(item => ({
       id: item.staging_id!.toString(),
@@ -77,13 +72,4 @@ export async function getQuestionsBySkill(skill_code: string, n: number) {
     }));
 
   return { data: mappedData, error: null };
-}
-
-export async function getFullTestPackage(id = 'act') {
-  const { data, error } = await supabase
-    .from('test_packages')
-    .select('id, name, description, sections, created_at, updated_at')
-    .eq('id', id)
-    .maybeSingle();
-  return { data, error };
 }

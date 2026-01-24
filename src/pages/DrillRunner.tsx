@@ -198,7 +198,7 @@ export default function DrillRunner() {
     void fetchData();
   }, [subject, searchParams]);
 
-  const handleAnswer = async (selectedIdx: number) => {
+  const handleAnswer = async (selectedIdx: number, choiceOrder: number[] = [0, 1, 2, 3]) => {
     if (!userId || isSubmitting) return;
     const q = questions[current];
     if (!q) return;
@@ -232,13 +232,13 @@ export default function DrillRunner() {
     setTimeout(() => setStreakEvent(null), 600);
     
     try {
-      // Track attempt in database with task_id
+      // Track attempt in database with task_id and actual shuffled choice_order
       await supabase.from('attempts').insert({
         user_id: userId,
         question_id: q.id,
         form_id: q.form_id ?? 'drill',
         question_ord: current + 1,
-        choice_order: [0, 1, 2, 3],
+        choice_order: choiceOrder,
         correct_idx: correctIdx,
         selected_idx: selectedIdx,
         task_id: taskId,
@@ -418,9 +418,9 @@ export default function DrillRunner() {
   const handleShuffledAnswer = async (shuffledIndex: number) => {
     if (!shuffled) return;
     
-    // Map shuffled index back to original index
+    // Map shuffled index back to original index and pass actual choice order for DB persistence
     const originalIndex = shuffled.choiceOrder[shuffledIndex];
-    await handleAnswer(originalIndex);
+    await handleAnswer(originalIndex, shuffled.choiceOrder);
   };
 
   return (
