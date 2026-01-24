@@ -1,108 +1,235 @@
 
 
-# Fix Remaining Audit Findings
+# Fix Answer Key Exposure (Test Integrity Critical Issue)
 
-## Audit Analysis Summary
+## The Problem
 
-| Finding | Verdict | Rationale |
-|---------|---------|-----------|
-| CRITICAL-1: Hardcoded Supabase credentials | **NOT VALID** | Intentional architecture for Lovable - these are public/publishable values (documented in memory) |
-| CRITICAL-2: Legacy CORS wildcard export | **VALID** | 5 edge functions still use wildcard `*` CORS |
-| HIGH-1: 230 console.log calls | **PARTIALLY VALID** | Edge functions have verbose logging; client-side mostly fixed |
-| HIGH-3: Sentry DSN not configured | **CONFIG ISSUE** | Not a code fix - user needs to add DSN to secrets |
-| HIGH-4: Inconsistent error reporting | **LOW PRIORITY** | Error boundary already reports to Sentry when configured |
-| HIGH-5: 6 components exceed 500 lines | **NOT BLOCKING** | Maintainability concern, not a security/launch blocker |
-| HIGH-6: No image optimization | **LOW PRIORITY** | Performance optimization, not blocking |
+Students can open browser DevTools → Network tab and see correct answers before finishing a test. This **completely undermines test validity**.
+
+**Affected flows (all expose `answer` and `explanation` to client):**
+
+| File | Issue |
+|------|-------|
+| `DiagnosticTest.tsx` | Queries `staging_items` with `select('*')` — answer sent to browser |
+| `DrillRunner.tsx` | Explicitly selects `answer, explanation` from `staging_items` |
+| `DrillPlayer.tsx` | Queries `staging_items` with `select('*')` |
+| `ReviewSpaced.tsx` | Explicitly selects `answer, explanation` from `staging_items` |
+| `content.ts` | Selects `answer, explanation` for drill questions |
+| `QuizRunner.tsx` | Uses `getQuestionsBySkill` which returns answers |
+| `session-fetch` edge function | Returns full `staging_items` including answers |
+| `useFormQuestions` hook | Queries `v_form_section` which includes `answer, explanation` |
 
 ---
 
-## Changes to Implement
+## The Solution
 
-### 1. Fix 5 Edge Functions with Wildcard CORS (CRITICAL-2)
+### Architecture Change
 
-The following functions define local `corsHeaders` with `'*'` instead of using the secure `getCorsHeaders(req)`:
+**Before**: Client fetches questions with answers → validates locally → sends to server  
+**After**: Client fetches questions WITHOUT answers → submits choice to server → server validates and returns correctness
 
-| Function | Current Issue |
-|----------|---------------|
-| `check-subscription` | Local wildcard CORS |
-| `create-checkout` | Local wildcard CORS |
-| `customer-portal` | Local wildcard CORS |
-| `generate-questions` | Local wildcard CORS |
-| `stripe-webhook` | Local wildcard CORS (but webhooks need special handling) |
+### Implementation
 
-**Note:** `stripe-webhook` is a special case - Stripe webhooks come from Stripe's servers, not our frontend, so CORS isn't relevant. However, we should still clean up the code for consistency.
+#### 1. Update Client Queries to Use Safe Views
 
-**Changes:**
+All client-side code must query `v_staging_items_public` instead of `staging_items` directly. This view already exists and excludes `answer` and `explanation`.
+
+**Files to update:**
+
+| File | Change |
+|------|--------|
+| `src/pages/DiagnosticTest.tsx` | Query `v_staging_items_public` instead of `staging_items` |
+| `src/pages/DrillRunner.tsx` | Query `v_staging_items_public`, remove answer/explanation from select |
+| `src/pages/DrillPlayer.tsx` | Query `v_staging_items_public` |
+| `src/pages/ReviewSpaced.tsx` | Query `v_staging_items_public`, handle answer checking server-side |
+| `src/lib/content.ts` | Query `v_staging_items_public` |
+| `src/pages/QuizRunner.tsx` | Remove answer from client state |
+
+#### 2. Update session-fetch Edge Function
+
+The `session-fetch` function currently returns full `staging_items` data. Strip answer/explanation before sending to client.
+
+**File:** `supabase/functions/session-fetch/index.ts`
+
+Currently returns all columns. Must exclude `answer` and `explanation` from the response.
+
+#### 3. Fix Answer Validation Flow
+
+For diagnostics and drills, the client currently stores `answer` to validate locally. Instead:
+- Store `correct_idx` in `attempts` table (already exists) — this is acceptable since it's user-specific shuffled order
+- Use `submit-response` edge function for real-time validation (already works correctly for simulations)
+
+#### 4. Handle Review Flows (Special Case)
+
+For `ReviewSpaced.tsx` — the user is reviewing **previously missed questions**, so showing the answer AFTER they attempt is acceptable. The fix:
+- Fetch questions without answers initially
+- After user submits, call an edge function to get the explanation
+- Or: Create a dedicated edge function that returns answer/explanation only after recording the response
+
+---
+
+## Detailed Changes
+
+### DiagnosticTest.tsx (Lines 196-245)
+
 ```typescript
-// Remove local corsHeaders definition
-// Add import at top:
-import { getCorsHeaders } from '../_shared/cors.ts';
+// BEFORE:
+const { data, error } = await supabase
+  .from('staging_items')
+  .select('*')
+  .eq('form_id', formId)
+  .order('ord', { ascending: true });
 
-// In handler, replace static corsHeaders with:
-const corsHeaders = getCorsHeaders(req);
+// AFTER:
+const { data, error } = await supabase
+  .from('v_staging_items_public')
+  .select('staging_id, form_id, section, ord, skill_code, question, choice_a, choice_b, choice_c, choice_d, difficulty, passage_id, passage_text, passage_title')
+  .eq('form_id', formId)
+  .order('ord', { ascending: true });
 ```
 
-### 2. Remove Legacy CORS Export
+Remove lines 239-240 where `answer` and `explanation` are mapped.
 
-**File: `supabase/functions/_shared/cors.ts`**
+The correct answer index is already computed server-side when shuffling and stored in `attempts.correct_idx`.
 
-Delete the legacy export (lines 35-43) that enables wildcard CORS:
+### DrillRunner.tsx (Lines 129-134)
+
 ```typescript
-// DELETE THIS:
-export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+// BEFORE:
+const { data, error: qError } = await supabase
+  .from('staging_items')
+  .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, answer, explanation, skill_code, form_id')
+
+// AFTER:
+const { data, error: qError } = await supabase
+  .from('v_staging_items_public')
+  .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, skill_code, form_id')
+```
+
+### DrillPlayer.tsx (Lines 52-56)
+
+```typescript
+// BEFORE:
+let query = supabase
+  .from('staging_items')
+  .select('*')
+
+// AFTER:
+let query = supabase
+  .from('v_staging_items_public')
+  .select('staging_id, form_id, section, ord, skill_code, question, choice_a, choice_b, choice_c, choice_d, difficulty')
+```
+
+### ReviewSpaced.tsx (Lines 72-75)
+
+```typescript
+// BEFORE:
+const { data: stagingItems, error: stagingError } = await supabase
+  .from('staging_items')
+  .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, answer, explanation')
+
+// AFTER:
+const { data: stagingItems, error: stagingError } = await supabase
+  .from('v_staging_items_public')
+  .select('staging_id, question, choice_a, choice_b, choice_c, choice_d')
+```
+
+For the spaced repetition flow, we'll need to fetch answer/explanation after submission via a new edge function or RPC.
+
+### content.ts (Lines 52-58)
+
+```typescript
+// BEFORE:
+const { data, error } = await supabase
+  .from('staging_items')
+  .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, answer, explanation, skill_code, difficulty, form_id')
+
+// AFTER:
+const { data, error } = await supabase
+  .from('v_staging_items_public')
+  .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, skill_code, difficulty, form_id')
+```
+
+### session-fetch/index.ts (Lines 136-141)
+
+```typescript
+// BEFORE:
+const { data, error } = await supabase
+  .from('staging_items')
+  .select('*')
+
+// AFTER:
+const { data, error } = await supabase
+  .from('v_staging_items_public')
+  .select('staging_id, form_id, section, ord, skill_code, question, choice_a, choice_b, choice_c, choice_d, difficulty, passage_id, passage_text, passage_title, underlined_text, reference_number, position_in_passage, image_url, image_caption, image_position, calculator_allowed')
+```
+
+---
+
+## Additional Fix: N+1 Query in DiagnosticTest.tsx
+
+The audit correctly identified a performance issue. Lines 256-263 perform individual queries per question:
+
+```typescript
+// BEFORE (N+1 pattern):
+for (const question of mappedQuestions) {
+  const { data: existing } = await supabase
+    .from('attempts')
+    .select('*')
+    .eq('user_id', user.user.id)
+    .eq('form_id', formId)
+    .eq('question_id', question.question_id)
+    .maybeSingle();
   ...
-};
+}
+
+// AFTER (batch query):
+const questionIds = mappedQuestions.map(q => q.question_id);
+const { data: existingAttempts } = await supabase
+  .from('attempts')
+  .select('*')
+  .eq('user_id', user.user.id)
+  .eq('form_id', formId)
+  .in('question_id', questionIds);
+
+const attemptMap = new Map(existingAttempts?.map(a => [a.question_id, a]) || []);
+
+// Then in the loop, use attemptMap.get(question.question_id) instead of querying
 ```
 
-This ensures no function can accidentally import the insecure version.
+---
 
-### 3. Clean Up Edge Function Logging (HIGH-1)
+## Items Already Fixed (From Previous Audits)
 
-Replace verbose `console.log` with structured logging that doesn't leak full payloads:
-
-**File: `supabase/functions/generate-study-plan/index.ts`**
-- Line 968: Remove `JSON.stringify(allStudyTasks[0])` - log count only
-- Line 991: Remove `JSON.stringify(allStudyTasks.slice(0,2))` - log error only
-- Line 1026: Log summary stats, not full response
-
-**File: `supabase/functions/generate-questions/index.ts`**
-- Line 874: Remove full AI response logging
-
-**File: `supabase/functions/create-checkout/index.ts` & `customer-portal/index.ts`**
-- Modify `logStep` to not stringify arbitrary objects, or remove `details` parameter
+| Item | Status |
+|------|--------|
+| Hardcoded Supabase credentials | ✅ Intentional architecture for Lovable |
+| PII logging in production | ✅ Fixed — `logger.warn` is now dev-only |
+| CORS wildcard | ✅ Fixed — all functions use `getCorsHeaders(req)` |
+| Sentry DSN not configured | Config issue — add DSN to Supabase secrets when ready |
+| Test coverage | Ongoing effort — not a launch blocker |
 
 ---
 
 ## Files to Modify
 
-| File | Change |
-|------|--------|
-| `supabase/functions/_shared/cors.ts` | Remove legacy `corsHeaders` export |
-| `supabase/functions/check-subscription/index.ts` | Use `getCorsHeaders(req)` |
-| `supabase/functions/create-checkout/index.ts` | Use `getCorsHeaders(req)`, sanitize logging |
-| `supabase/functions/customer-portal/index.ts` | Use `getCorsHeaders(req)`, sanitize logging |
-| `supabase/functions/generate-questions/index.ts` | Use `getCorsHeaders(req)`, remove payload logging |
-| `supabase/functions/stripe-webhook/index.ts` | Use `getCorsHeaders(req)` for consistency |
-| `supabase/functions/generate-study-plan/index.ts` | Remove sensitive payload logging |
-
----
-
-## Not Changing (By Design)
-
-| Item | Reason |
-|------|--------|
-| Hardcoded Supabase URL/anon key | Correct Lovable architecture pattern |
-| Sentry DSN | Configuration, not code - add to Supabase secrets when ready |
-| Large component files | Refactoring scope - not a launch blocker |
-| Image optimization | Performance enhancement - not a launch blocker |
+| File | Priority | Change |
+|------|----------|--------|
+| `src/pages/DiagnosticTest.tsx` | CRITICAL | Use `v_staging_items_public`, fix N+1 query |
+| `src/pages/DrillRunner.tsx` | CRITICAL | Use `v_staging_items_public` |
+| `src/pages/DrillPlayer.tsx` | CRITICAL | Use `v_staging_items_public` |
+| `src/pages/ReviewSpaced.tsx` | HIGH | Use `v_staging_items_public` |
+| `src/lib/content.ts` | HIGH | Use `v_staging_items_public` |
+| `src/pages/QuizRunner.tsx` | HIGH | Remove answer from client state |
+| `supabase/functions/session-fetch/index.ts` | CRITICAL | Use `v_staging_items_public` |
 
 ---
 
 ## Technical Notes
 
-- All 7 edge functions will be auto-deployed after changes
-- Removing legacy CORS export is a breaking change if any function imports it - but search confirms none do
-- `stripe-webhook` doesn't truly need CORS (webhook calls from Stripe servers), but using `getCorsHeaders` is cleaner
-- After this fix, all 19 edge functions will use consistent, secure CORS handling
+- `v_staging_items_public` view already exists and excludes `answer` and `explanation`
+- `submit-response` edge function already validates answers server-side
+- `attempts.correct_idx` already stores the correct shuffled answer index
+- No database migrations required
+- Edge function will be auto-deployed
 
