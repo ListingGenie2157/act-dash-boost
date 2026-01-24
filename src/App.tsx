@@ -14,7 +14,7 @@ import { ProtectedAdminRoute } from './components/ProtectedAdminRoute';
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
-import SimpleLogin from "./pages/SimpleLogin";
+// SimpleLogin removed - was debug-only page
 import Onboarding from "./pages/Onboarding";
 import Simulation from "./pages/Simulation";
 import SimulationResults from "./pages/SimulationResults";
@@ -89,7 +89,7 @@ const App = () => (
                 {/* Public routes */}
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<Login />} />
-                <Route path="/simple-login" element={<SimpleLogin />} />
+                {/* SimpleLogin route removed - was debug-only */}
                 <Route path="/update-password" element={<UpdatePassword />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/subscription-success" element={<SubscriptionSuccess />} />

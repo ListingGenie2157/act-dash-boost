@@ -185,7 +185,7 @@ export default function Simulation() {
       if (!mounted) return;
       
       if (!session) {
-        navigate('/simple-login', { replace: true });
+        navigate('/login', { replace: true });
         return;
       }
       setAuthChecking(false);
@@ -196,7 +196,7 @@ export default function Simulation() {
         if (!mounted) return;
         
         if (!session) {
-          navigate('/simple-login', { replace: true });
+          navigate('/login', { replace: true });
         }
       }
     );

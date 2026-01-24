@@ -2,6 +2,7 @@ import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 
+
 interface AttemptQueueItem {
   id?: number;
   questionId: string;
@@ -92,7 +93,7 @@ export async function flushOfflineQueue() {
   }
   
   if (syncedCount > 0) {
-    logger.info(`✓ Synced ${syncedCount} offline attempts`);
+    logger.debug(`✓ Synced ${syncedCount} offline attempts`);
   }
   
   if (failedCount > 0) {

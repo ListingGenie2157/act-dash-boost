@@ -2,6 +2,12 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+
+// Request schema for manual trigger
+const cronRequestSchema = z.object({
+  manual: z.boolean().optional(),
+}).optional();
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -12,6 +18,24 @@ serve(async (req) => {
   }
 
   try {
+    // Parse and validate request body (if POST with body)
+    let requestBody: z.infer<typeof cronRequestSchema> = undefined;
+    if (req.method === 'POST') {
+      try {
+        const rawBody = await req.json().catch(() => ({}));
+        const parsed = cronRequestSchema.safeParse(rawBody);
+        if (!parsed.success) {
+          return new Response(JSON.stringify({ error: 'Invalid request body' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        requestBody = parsed.data;
+      } catch {
+        // Empty body is fine
+      }
+    }
+
     // Verify cron secret to prevent unauthorized triggering
     const cronSecret = req.headers.get('x-cron-secret');
     const expectedSecret = Deno.env.get('CRON_SECRET');
