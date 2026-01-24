@@ -158,7 +158,11 @@ export default function EnhancedLessonViewer() {
         action: (
           <Button 
             size="sm" 
-            onClick={() => navigate(`/drill/setup?skill=${topic}&mode=learned`)}
+            onClick={() => {
+              // Navigate to the correct drill route pattern: /drill/:subject/setup
+              const subject = lesson?.subject?.toLowerCase() || 'math';
+              navigate(`/drill/${subject}/setup?skill=${topic}&mode=learned`);
+            }}
           >
             Practice More
           </Button>

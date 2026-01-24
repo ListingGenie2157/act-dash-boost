@@ -46,18 +46,18 @@ export function LessonsQuickAccess() {
         return acc;
       }, {} as Record<string, number>);
 
-      // Get unique skills from staging_items
+      // Get unique skills from staging_items (skill_code is the skill id)
       const skillsWithContent = Array.from(new Set(itemsData?.map(i => i.skill_code) || []));
 
-      // Filter to only skills with content
+      // Filter to only skills with content - compare against skill.id, not skill.name
       const lessonsWithContent = (skillsData || [])
-        .filter(skill => skillsWithContent.includes(skill.name))
+        .filter(skill => skillsWithContent.includes(skill.id))
         .map(skill => ({
-          skill_code: skill.name,
+          skill_code: skill.id,
           skill_name: skill.name,
           subject: skill.subject,
           section: skill.cluster,
-          questionCount: questionCounts[skill.name] || 0
+          questionCount: questionCounts[skill.id] || 0
         }));
 
       setTotalLessons(lessonsWithContent.length);

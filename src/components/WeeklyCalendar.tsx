@@ -158,11 +158,12 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
                   </div>
                 ) : (
                   day.tasks
-                    .filter(task => task.type !== 'SIM')
-                    .map((task, taskIdx) => (
+                    .map((task, originalIdx) => ({ task, originalIdx }))
+                    .filter(({ task }) => task.type !== 'SIM')
+                    .map(({ task, originalIdx }) => (
                       <Link
-                        key={taskIdx}
-                        to={`/task/${day.date}/${taskIdx}`}
+                        key={originalIdx}
+                        to={`/task/${day.date}/${originalIdx}`}
                         className="w-full text-left p-2 rounded-md hover:bg-accent transition-colors flex items-start gap-2 cursor-pointer no-underline"
                       >
                         {task.status === 'COMPLETED' ? (

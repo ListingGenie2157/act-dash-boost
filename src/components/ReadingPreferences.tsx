@@ -119,45 +119,4 @@ export function ReadingPreferences({ onPrefsChange }: ReadingPreferencesProps) {
   );
 }
 
-// Helper hook to apply reading preferences to an element
-export function useReadingPreferences() {
-  const [prefs, setPrefs] = useState<ReadingPrefs | null>(null);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('reading-preferences');
-    if (saved) {
-      setPrefs(JSON.parse(saved));
-    }
-  }, []);
-
-  const getClassName = () => {
-    if (!prefs) return '';
-    
-    const fontSizeMap = {
-      small: 'text-sm',
-      medium: 'text-base',
-      large: 'text-lg'
-    };
-
-    const lineHeightMap = {
-      compact: 'leading-relaxed',
-      normal: 'leading-loose',
-      relaxed: 'leading-[2]'
-    };
-
-    const themeMap = {
-      light: 'bg-background text-foreground',
-      sepia: 'bg-amber-50 text-amber-950 dark:bg-amber-950 dark:text-amber-50',
-      dark: 'bg-slate-900 text-slate-100'
-    };
-
-    return `${fontSizeMap[prefs.fontSize]} ${lineHeightMap[prefs.lineHeight]} ${themeMap[prefs.theme]}`;
-  };
-
-  const getStyle = () => {
-    if (!prefs) return {};
-    return { maxWidth: `${prefs.width}%` };
-  };
-
-  return { prefs, getClassName, getStyle };
-}
+// Note: useReadingPreferences hook was removed as dead code (never used)
