@@ -964,8 +964,6 @@ serve(async (req) => {
       console.warn("Weak skills count:", weakestSkills?.length || 0);
       console.warn("Available skills count:", allSkills?.length || 0);
       console.warn("Lessons per day:", lessonsPerDay);
-    } else {
-      console.log("Sample task:", JSON.stringify(allStudyTasks[0], null, 2));
     }
     
     if (allStudyTasks.length > 0) {
@@ -987,8 +985,7 @@ serve(async (req) => {
         });
 
       if (tasksError) {
-        console.error("❌ Error saving study tasks:", tasksError);
-        console.error("Failed tasks sample:", JSON.stringify(allStudyTasks.slice(0, 2), null, 2));
+        console.error("❌ Error saving study tasks:", tasksError.message);
       } else {
         console.log(
           `✅ Saved ${allStudyTasks.length} non-SIM study tasks across 7 days`,
@@ -1023,7 +1020,7 @@ serve(async (req) => {
       total_tasks: allStudyTasks.length,
     };
 
-    console.warn("7-day study plan generated successfully:", response);
+    console.log(`✅ Study plan generated: ${allStudyTasks.length} tasks, mode=${mode.name}, daysLeft=${daysLeft}`);
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

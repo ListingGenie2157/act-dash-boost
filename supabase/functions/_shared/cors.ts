@@ -32,12 +32,4 @@ export function getCorsHeaders(req: Request): Record<string, string> {
   };
 }
 
-/**
- * Legacy CORS headers for backward compatibility during transition
- * TODO: Remove this after all functions are updated to use getCorsHeaders
- */
-export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-app',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-};
+// Legacy wildcard CORS removed - all functions now use getCorsHeaders(req)
