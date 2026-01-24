@@ -5,7 +5,10 @@ import { reportError } from './lib/errorReporter'
 
 // Global error handlers for unhandled promise rejections and errors
 window.addEventListener('unhandledrejection', (event) => {
-  console.error('Unhandled promise rejection:', event.reason);
+  // Only log detailed rejection info in development to prevent sensitive data exposure
+  if (import.meta.env.DEV) {
+    console.error('Unhandled promise rejection:', event.reason);
+  }
   reportError(
     event.reason instanceof Error ? event.reason : new Error(String(event.reason)),
     { source: 'unhandledrejection' }

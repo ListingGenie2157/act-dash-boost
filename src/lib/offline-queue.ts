@@ -46,7 +46,7 @@ export async function queueAttemptOffline(attempt: Omit<AttemptQueueItem, 'id' |
   };
   
   await database.add('attemptQueue', item);
-  logger.warn('Queued attempt offline:', item);
+  logger.debug('Queued attempt offline');
 }
 
 export async function flushOfflineQueue() {

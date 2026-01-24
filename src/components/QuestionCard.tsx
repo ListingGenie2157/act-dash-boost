@@ -85,7 +85,12 @@ export function QuestionCard({
 
     return (
       <div className={`relative ${position === 'above_question' ? 'mb-4' : position === 'inline' ? 'my-4' : 'my-6'}`}>
-        <div className="relative group cursor-pointer" onClick={() => setImageZoomed(true)}>
+        <button 
+          type="button"
+          className="relative group cursor-pointer w-full text-left"
+          onClick={() => setImageZoomed(true)}
+          aria-label="Zoom image"
+        >
           <AspectRatio ratio={16 / 9} className="bg-muted rounded-lg overflow-hidden">
             <img
               src={question.image_url}
@@ -98,7 +103,7 @@ export function QuestionCard({
               <ZoomIn className="h-5 w-5" />
             </div>
           </div>
-        </div>
+        </button>
         {question.image_caption && (
           <p className="text-sm text-muted-foreground mt-2 italic text-center">
             {question.image_caption}

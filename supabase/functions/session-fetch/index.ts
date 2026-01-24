@@ -100,8 +100,10 @@ serve(async (req) => {
       session_id = body.session_id;
     }
 
-    if (!session_id) {
-      return new Response(JSON.stringify({ error: 'Missing session_id parameter' }), {
+    // Validate session_id format (must be UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!session_id || !uuidRegex.test(session_id)) {
+      return new Response(JSON.stringify({ error: 'Invalid or missing session_id format' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

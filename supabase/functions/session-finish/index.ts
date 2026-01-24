@@ -1,12 +1,14 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 
-interface SessionFinishRequest {
-  session_id: string;
-}
+// Zod schema for input validation
+const SessionFinishSchema = z.object({
+  session_id: z.string().uuid()
+});
 
 interface MissedQuestion {
   question_id: string;
@@ -73,7 +75,21 @@ serve(async (req) => {
       return createRateLimitResponse(corsHeaders);
     }
 
-    const { session_id }: SessionFinishRequest = await req.json();
+    // Parse and validate input
+    const body = await req.json();
+    const validationResult = SessionFinishSchema.safeParse(body);
+    
+    if (!validationResult.success) {
+      return new Response(JSON.stringify({ 
+        error: 'Invalid request data',
+        details: validationResult.error.errors 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    const { session_id } = validationResult.data;
 
     // Verify session belongs to user
     const { data: session, error: sessionError } = await supabase
