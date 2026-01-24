@@ -18,12 +18,13 @@ interface StagingQuestion {
   choice_b: string;
   choice_c: string;
   choice_d: string;
-  answer: string;
-  explanation: string | null;
+  // answer and explanation fetched separately after user attempts
 }
 
 interface ReviewCardWithQuestion extends ReviewCard {
   staging_question: StagingQuestion | null;
+  answer?: string;
+  explanation?: string | null;
 }
 
 export default function ReviewSpaced() {
@@ -68,17 +69,19 @@ export default function ReviewSpaced() {
         .map(item => parseInt(item.question_id as unknown as string, 10))
         .filter(id => !isNaN(id));
 
-      // Fetch staging items for these questions
+      // Fetch staging items using safe view (excludes answer/explanation for security)
       const { data: stagingItems, error: stagingError } = await supabase
-        .from('staging_items')
-        .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, answer, explanation')
+        .from('v_staging_items_public')
+        .select('staging_id, question, choice_a, choice_b, choice_c, choice_d')
         .in('staging_id', stagingIds);
 
       if (stagingError) throw stagingError;
 
-      // Create a map for quick lookup
+      // Create a map for quick lookup (filter out null staging_ids)
       const stagingMap = new Map<number, StagingQuestion>(
-        (stagingItems || []).map(item => [item.staging_id, item])
+        (stagingItems || [])
+          .filter(item => item.staging_id !== null)
+          .map(item => [item.staging_id!, item as StagingQuestion])
       );
 
       // Merge review items with staging questions
@@ -110,8 +113,31 @@ export default function ReviewSpaced() {
     loadDueCards();
   }, [loadDueCards]);
 
-  const handleAnswerSelect = (answer: string) => {
+  const handleAnswerSelect = async (answer: string) => {
+    if (!currentCard?.staging_question) return;
+    
     setSelectedAnswer(answer);
+    
+    // Fetch answer and explanation after user attempts (security: only available post-attempt)
+    try {
+      const { data: fullQuestion } = await supabase
+        .from('staging_items')
+        .select('answer, explanation')
+        .eq('staging_id', currentCard.staging_question.staging_id)
+        .single();
+      
+      if (fullQuestion) {
+        // Update current card with answer/explanation
+        setCurrentCard(prev => prev ? {
+          ...prev,
+          answer: fullQuestion.answer,
+          explanation: fullQuestion.explanation
+        } : null);
+      }
+    } catch (error) {
+      console.error('Error fetching answer:', error);
+    }
+    
     setShowAnswer(true);
   };
 
@@ -225,26 +251,26 @@ export default function ReviewSpaced() {
             ) : (
               <>
                 <div className={`p-4 rounded-lg border-2 ${
-                  selectedAnswer === currentCard.staging_question.answer
+                  currentCard.answer && selectedAnswer === currentCard.answer
                     ? 'bg-success/10 border-success'
                     : 'bg-destructive/10 border-destructive'
                 }`}>
                   <div className="flex items-center gap-2 mb-2">
-                    {selectedAnswer === currentCard.staging_question.answer ? (
+                    {currentCard.answer && selectedAnswer === currentCard.answer ? (
                       <CheckCircle2 className="h-5 w-5 text-success" />
                     ) : (
                       <XCircle className="h-5 w-5 text-destructive" />
                     )}
                     <span className="font-semibold">
-                      {selectedAnswer === currentCard.staging_question.answer ? 'Correct!' : 'Incorrect'}
+                      {currentCard.answer && selectedAnswer === currentCard.answer ? 'Correct!' : 'Incorrect'}
                     </span>
                   </div>
                   <p className="text-sm mb-2">
-                    Correct Answer: <span className="font-semibold">{currentCard.staging_question.answer}</span>
+                    Correct Answer: <span className="font-semibold">{currentCard.answer || 'Loading...'}</span>
                   </p>
-                  {currentCard.staging_question.explanation && (
+                  {currentCard.explanation && (
                     <p className="text-sm text-muted-foreground">
-                      {currentCard.staging_question.explanation}
+                      {currentCard.explanation}
                     </p>
                   )}
                 </div>

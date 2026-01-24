@@ -49,11 +49,11 @@ export default function DrillPlayer() {
           return;
         }
 
+        // Use v_staging_items_public view (excludes answer/explanation for security)
         let query = supabase
-          .from('staging_items')
-          .select('*')
-          .eq('form_id', drillFormId)
-          .in('answer', ['A', 'B', 'C', 'D']); // Only valid answers
+          .from('v_staging_items_public')
+          .select('staging_id, form_id, section, ord, skill_code, question, choice_a, choice_b, choice_c, choice_d, difficulty, passage_id, passage_text, passage_title, underlined_text, reference_number')
+          .eq('form_id', drillFormId);
 
         // Apply mode-specific filters
         if (mode === 'weak') {
@@ -135,13 +135,12 @@ export default function DrillPlayer() {
             };
             const targetSection = sectionMap[subject];
 
-            // Fetch staging items for missed questions, filtered by subject
+            // Fetch staging items for missed questions, filtered by subject (using safe view)
             const { data: stagingData } = await supabase
-              .from('staging_items')
-              .select('*')
+              .from('v_staging_items_public')
+              .select('staging_id, form_id, section, ord, skill_code, question, choice_a, choice_b, choice_c, choice_d, difficulty, passage_id, passage_text, passage_title, underlined_text, reference_number')
               .in('staging_id', stagingIds)
-              .eq('section', targetSection)
-              .in('answer', ['A', 'B', 'C', 'D']);
+              .eq('section', targetSection);
 
             if (!stagingData || stagingData.length === 0) {
               toast.error('No missed questions available for this subject');
@@ -149,20 +148,23 @@ export default function DrillPlayer() {
               return;
             }
 
-            // Convert to drill format
-            const questions: LegacyQuestion[] = stagingData.slice(0, questionCount).map(q => ({
-              id: q.staging_id.toString(),
-              question: q.question,
-              options: [q.choice_a, q.choice_b, q.choice_c, q.choice_d],
-              correctAnswer: ['A', 'B', 'C', 'D'].indexOf(q.answer),
-              explanation: q.explanation || 'No explanation available',
-              difficulty: q.difficulty === 'easy' ? 'easy' : q.difficulty === 'hard' ? 'hard' : 'medium',
-              passageText: q.passage_text || undefined,
-              passageTitle: q.passage_title || undefined,
-              passageId: q.passage_id || undefined,
-              underlinedText: q.underlined_text || undefined,
-              referenceNumber: q.reference_number || undefined,
-            }));
+            // Convert to drill format (answer validated server-side)
+            const questions: LegacyQuestion[] = stagingData
+              .filter(q => q.staging_id !== null)
+              .slice(0, questionCount)
+              .map(q => ({
+                id: q.staging_id!.toString(),
+                question: q.question || '',
+                options: [q.choice_a || '', q.choice_b || '', q.choice_c || '', q.choice_d || ''],
+                correctAnswer: 0, // Placeholder - actual validation is server-side
+                explanation: 'Review after submission', // Explanation fetched after attempt
+                difficulty: (q.difficulty === 'easy' ? 'easy' : q.difficulty === 'hard' ? 'hard' : 'medium') as 'easy' | 'medium' | 'hard',
+                passageText: q.passage_text || undefined,
+                passageTitle: q.passage_title || undefined,
+                passageId: q.passage_id || undefined,
+                underlinedText: q.underlined_text || undefined,
+                referenceNumber: q.reference_number || undefined,
+              }));
 
             const drillSession: DrillSession = {
               id: `drill-${Date.now()}`,
@@ -198,20 +200,22 @@ export default function DrillPlayer() {
         const shuffled = [...data].sort(() => Math.random() - 0.5);
         const selected = shuffled.slice(0, Math.min(questionCount, shuffled.length));
 
-        // Convert to LegacyQuestion format for DrillComponent
-        const questions: LegacyQuestion[] = selected.map(q => ({
-          id: q.staging_id.toString(),
-          question: q.question,
-          options: [q.choice_a, q.choice_b, q.choice_c, q.choice_d],
-          correctAnswer: ['A', 'B', 'C', 'D'].indexOf(q.answer),
-          explanation: q.explanation || 'No explanation available',
-          difficulty: q.difficulty === 'easy' ? 'easy' : q.difficulty === 'hard' ? 'hard' : 'medium',
-          passageText: q.passage_text || undefined,
-          passageTitle: q.passage_title || undefined,
-          passageId: q.passage_id || undefined,
-          underlinedText: q.underlined_text || undefined,
-          referenceNumber: q.reference_number || undefined,
-        }));
+        // Convert to LegacyQuestion format for DrillComponent (answer validated server-side)
+        const questions: LegacyQuestion[] = selected
+          .filter(q => q.staging_id !== null)
+          .map(q => ({
+            id: q.staging_id!.toString(),
+            question: q.question || '',
+            options: [q.choice_a || '', q.choice_b || '', q.choice_c || '', q.choice_d || ''],
+            correctAnswer: 0, // Placeholder - actual validation is server-side
+            explanation: 'Review after submission', // Explanation fetched after attempt
+            difficulty: (q.difficulty === 'easy' ? 'easy' : q.difficulty === 'hard' ? 'hard' : 'medium') as 'easy' | 'medium' | 'hard',
+            passageText: q.passage_text || undefined,
+            passageTitle: q.passage_title || undefined,
+            passageId: q.passage_id || undefined,
+            underlinedText: q.underlined_text || undefined,
+            referenceNumber: q.reference_number || undefined,
+          }));
 
         const drillSession: DrillSession = {
           id: `drill-${Date.now()}`,

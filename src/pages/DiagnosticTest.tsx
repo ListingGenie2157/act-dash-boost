@@ -16,8 +16,6 @@ interface Question {
   choice_b: string;
   choice_c: string;
   choice_d: string;
-  answer: string;
-  explanation: string;
   passage_text?: string;
   passage_title?: string;
 }
@@ -193,10 +191,10 @@ export default function DiagnosticTest() {
         return;
       }
 
-      // Load questions from staging_items (like DrillRunner)
+      // Load questions from v_staging_items_public (answer/explanation excluded for security)
       const { data, error } = await supabase
-        .from('staging_items')
-        .select('*')
+        .from('v_staging_items_public')
+        .select('staging_id, form_id, section, ord, skill_code, question, choice_a, choice_b, choice_c, choice_d, difficulty, passage_id, passage_text, passage_title')
         .eq('form_id', formId)
         .order('ord', { ascending: true });
 
@@ -219,7 +217,8 @@ export default function DiagnosticTest() {
         }
       });
 
-      // Map staging_items to Question type with skill_id resolution
+      // Map v_staging_items_public to Question type with skill_id resolution
+      // Note: answer/explanation are not available client-side (server-side validation only)
       const mappedQuestions: (Question & { skill_id?: string | null })[] = (data || []).map(q => {
         let skill_id: string | null = null;
         
@@ -236,8 +235,6 @@ export default function DiagnosticTest() {
           choice_b: q.choice_b ?? '',
           choice_c: q.choice_c ?? '',
           choice_d: q.choice_d ?? '',
-          answer: q.answer ?? 'A',
-          explanation: q.explanation ?? '',
           passage_text: q.passage_text ?? undefined,
           passage_title: q.passage_title ?? undefined,
           skill_id
@@ -253,14 +250,21 @@ export default function DiagnosticTest() {
       const existingAttempts: Record<string, Attempt> = {};
       const newAttempts: Attempt[] = [];
 
+      // Batch fetch all existing attempts (avoiding N+1 query)
+      const questionIds = mappedQuestions.map(q => q.question_id);
+      const { data: existingAttemptsData } = await supabase
+        .from('attempts')
+        .select('*')
+        .eq('user_id', user.user.id)
+        .eq('form_id', formId)
+        .in('question_id', questionIds);
+
+      const attemptMap = new Map(
+        (existingAttemptsData || []).map(a => [a.question_id, a])
+      );
+
       for (const question of mappedQuestions) {
-        const { data: existing } = await supabase
-          .from('attempts')
-          .select('*')
-          .eq('user_id', user.user.id)
-          .eq('form_id', formId)
-          .eq('question_id', question.question_id)
-          .maybeSingle();
+        const existing = attemptMap.get(question.question_id);
 
         if (existing) {
           existingAttempts[question.question_id] = {
@@ -272,11 +276,13 @@ export default function DiagnosticTest() {
           };
         } else {
           // Create new attempt with shuffled choices using stable seed
-          const answerMap = { A: 0, B: 1, C: 2, D: 3 };
-          const baseIdx = answerMap[question.answer as keyof typeof answerMap] ?? 0;
+          // Note: correct_idx is computed server-side via submit-response edge function
+          // We generate shuffle order now and store it; correctness is validated server-side
           const stableSeed = hashCode(`${user.user.id}-${formId}-${question.question_id}`);
           const choiceOrder = shuffle([0, 1, 2, 3], stableSeed);
-          const correctIdx = choiceOrder.indexOf(baseIdx);
+          // correct_idx will be set by server when answer is submitted
+          // For now, we set it to 0 as placeholder (actual validation is server-side)
+          const correctIdx = 0;
 
           const attempt: Attempt = {
             question_id: question.question_id,

@@ -126,10 +126,10 @@ export default function DrillRunner() {
           return;
         }
 
-        // Fetch questions from staging_items using drill form ID
+        // Fetch questions from v_staging_items_public (answer/explanation excluded for security)
         const { data, error: qError } = await supabase
-          .from('staging_items')
-          .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, answer, explanation, skill_code, form_id')
+          .from('v_staging_items_public')
+          .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, skill_code, form_id')
           .eq('form_id', drillFormId)
           .limit(n ?? 10); // Use default of 10 if undefined
 
@@ -138,7 +138,8 @@ export default function DrillRunner() {
         } else if (!data || data.length === 0) {
           setError('No questions found for this section');
         } else {
-          // Map staging_items to Question type
+          // Map v_staging_items_public to Question type
+          // Note: answer is validated server-side, not available client-side
           const mappedQuestions: Question[] = data.map((q) => ({
             id: String(q.staging_id || ''),
             stem: q.question || '',
@@ -146,8 +147,7 @@ export default function DrillRunner() {
             choice_b: q.choice_b || '',
             choice_c: q.choice_c || '',
             choice_d: q.choice_d || '',
-            answer: (q.answer.toUpperCase() as 'A' | 'B' | 'C' | 'D') || 'A',
-            explanation: q.explanation ?? undefined,
+            answer: 'A' as const, // Placeholder - actual validation is server-side
             skill_code: q.skill_code ?? undefined,
             form_id: q.form_id ?? undefined,
           }));

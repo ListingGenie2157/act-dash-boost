@@ -33,16 +33,16 @@ export default function QuizRunner() {
           setError(qError.message);
         } else {
           // Map DB questions to Question type with proper defaults
+          // Note: answer is NOT available client-side (server-side validation only)
           const mappedQuestions: Question[] = (data ?? []).map(q => ({
             id: q.id,
-            stem: q.stem,
-            choice_a: q.choice_a,
-            choice_b: q.choice_b,
-            choice_c: q.choice_c,
-            choice_d: q.choice_d,
-            answer: q.answer,
-            explanation: q.explanation ?? undefined,
-            skill_code: q.skill_id,
+            stem: q.stem || '',
+            choice_a: q.choice_a || '',
+            choice_b: q.choice_b || '',
+            choice_c: q.choice_c || '',
+            choice_d: q.choice_d || '',
+            answer: 'A' as const, // Placeholder - actual validation is server-side
+            skill_code: q.skill_id || undefined,
           }));
           setQuestions(mappedQuestions);
         }
