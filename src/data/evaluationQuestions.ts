@@ -14,7 +14,9 @@ export const evaluationQuestions = {
       ],
       correctAnswer: 1,
       explanation: 'Use gender-neutral pronouns or repeat the noun for clarity.',
-      skill: 'pronoun-antecedent agreement'
+      skill: 'pronoun-antecedent agreement',
+      difficulty: 'medium',
+      category: 'Conventions of Standard English'
     },
     {
       id: 'eng2',
@@ -28,7 +30,9 @@ export const evaluationQuestions = {
       ],
       correctAnswer: 3,
       explanation: 'The original maintains appropriate academic tone.',
-      skill: 'tone and style'
+      skill: 'tone and style',
+      difficulty: 'medium',
+      category: 'Production of Writing'
     }
   ],
   math: [
@@ -38,7 +42,9 @@ export const evaluationQuestions = {
       options: ['3', '5', '7', '9'],
       correctAnswer: 1,
       explanation: '3x + 7 = 22, so 3x = 15, therefore x = 5',
-      skill: 'linear equations'
+      skill: 'linear equations',
+      difficulty: 'easy',
+      category: 'Algebra'
     },
     {
       id: 'math2',
@@ -46,7 +52,9 @@ export const evaluationQuestions = {
       options: ['8π', '12π', '16π', '32π'],
       correctAnswer: 2,
       explanation: 'Area = πr² = π(4)² = 16π',
-      skill: 'circles and areas'
+      skill: 'circles and areas',
+      difficulty: 'medium',
+      category: 'Geometry'
     }
   ],
   reading: [
@@ -62,7 +70,9 @@ export const evaluationQuestions = {
       ],
       correctAnswer: 1,
       explanation: 'The passage emphasizes the importance of human connection.',
-      skill: 'author attitude'
+      skill: 'author attitude',
+      difficulty: 'medium',
+      category: 'Craft and Structure'
     }
   ],
   science: [
@@ -72,7 +82,9 @@ export const evaluationQuestions = {
       options: ['Humidity', 'Pressure', 'Wind speed', 'Altitude'],
       correctAnswer: 0,
       explanation: 'Look for the variable that changes most consistently with temperature.',
-      skill: 'data analysis'
+      skill: 'data analysis',
+      difficulty: 'medium',
+      category: 'Data Representation'
     }
   ]
 };
