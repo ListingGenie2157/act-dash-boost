@@ -255,6 +255,29 @@ const LandingPage = () => {
             </p>
           </div>
         </div>
+
+        {/* Footer */}
+        <footer className="border-t border-border/50 pt-8 pb-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">
+              © {new Date().getFullYear()} Preppit Pacing. All rights reserved.
+            </p>
+            <div className="flex items-center gap-6">
+              <a 
+                href="/terms" 
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Terms of Service
+              </a>
+              <a 
+                href="/privacy" 
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Privacy Policy
+              </a>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   );

@@ -56,7 +56,10 @@ import AdminQuestionGenerator from "./pages/AdminQuestionGenerator";
 import AdminSimulationGenerator from "./pages/AdminSimulationGenerator";
 import Pricing from "./pages/Pricing";
 import SubscriptionSuccess from "./pages/SubscriptionSuccess";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 import { HealthCheck } from "./pages/HealthCheck";
+import { CookieConsent } from "./components/CookieConsent";
 
 
 // Configure QueryClient with production-ready defaults
@@ -93,6 +96,8 @@ const App = () => (
                 <Route path="/update-password" element={<UpdatePassword />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/subscription-success" element={<SubscriptionSuccess />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/privacy" element={<Privacy />} />
                 
                 {/* Protected routes with sidebar layout */}
                 <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
@@ -225,6 +230,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
+            <CookieConsent />
           </BrowserRouter>
         </TooltipProvider>
       </TutorProvider>
