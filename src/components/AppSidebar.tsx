@@ -276,7 +276,7 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
-      {/* Footer with Logout */}
+      {/* Footer with Logout and Legal Links */}
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -292,6 +292,12 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        {!collapsed && (
+          <div className="px-3 py-2 text-xs text-muted-foreground flex gap-3">
+            <a href="/terms" className="hover:text-foreground transition-colors">Terms</a>
+            <a href="/privacy" className="hover:text-foreground transition-colors">Privacy</a>
+          </div>
+        )}
       </SidebarFooter>
     </Sidebar>
   );
