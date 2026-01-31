@@ -1,276 +1,252 @@
 
-# Address "Missing Link" Production Checks
+
+# Study Plan Generation Deep Dive - Analysis & Fix Plan
 
 ## Executive Summary
 
-This plan addresses all four categories of production readiness checks you identified. Here's the complete assessment and implementation plan:
+I've identified **5 critical issues** causing the study plan system to malfunction when users return after being away. The core problem is a **multi-layered failure** where the cron job runs but fails, the UI shows stale/empty plans, and there's no fallback mechanism.
 
 ---
 
-## 1. Money & Access Check (Critical)
+## Issue #1: Duplicate Cron Jobs with Wrong Auth (ROOT CAUSE)
 
-### 1.1 Webhook Resilience
-
-**Current State:**
-- `stripe-webhook/index.ts` handles: `checkout.session.completed`, `customer.subscription.created/updated/deleted`, `invoice.payment_failed`
-- `SubscriptionSuccess.tsx` only calls `refetch()` once on mount
-- **No fallback polling** if webhook is delayed or fails
-
-**Risk:** If Stripe webhook fails (network issue, edge function timeout), student pays but sees "not subscribed"
-
-**Fix: Add Polling Fallback on Success Page**
-
-| File | Change |
-|------|--------|
-| `src/pages/SubscriptionSuccess.tsx` | Add polling loop that checks subscription status every 3 seconds for up to 30 seconds |
-
-```text
-Flow:
-1. Student completes Stripe payment → redirected to /subscription-success
-2. Page immediately calls refetch()
-3. If not subscribed after 2 seconds, start polling every 3 seconds
-4. After 30 seconds (10 attempts), show manual retry button
-5. Display "Activating..." state during polling
+**Evidence from database:**
+```
+jobid:1 - "daily-study-plan-generation" at 0 11 * * * (11 AM UTC)
+  → Uses x-cron-secret header ✅ CORRECT
+  
+jobid:2 - "regenerate-study-plans-daily" at 0 2 * * * (2 AM UTC)  
+  → Uses Authorization: Bearer <anon_key> ❌ WRONG - will fail auth check!
 ```
 
-### 1.2 Subscription Expiry During Test
+**Problem:** Job #2 uses the anon key instead of x-cron-secret, so the `cron-daily` edge function rejects it with 401 Unauthorized. The logs show both jobs running successfully at the Postgres level, but job #2's HTTP call gets rejected.
 
-**Current State:** GOOD
-- `RequireSubscription.tsx` uses `useSubscription()` which has `staleTime: 60 * 1000` (1 minute)
-- Check happens at component mount, not during active session
-- Simulations store `started_at` timestamp server-side; even if subscription lapses, in-progress session continues
-- **No mid-session kicks** - only checked when navigating to new pages
-
-**Verdict:** This is correctly implemented.
+**Fix:** Delete the duplicate cron job #2.
 
 ---
 
-## 2. Real World Environment Check
+## Issue #2: Cron Job Runs But Generate-Study-Plan Fails Silently
 
-### 2.1 Environment Variables
-
-**Current State:**
-- No `.env.example` file exists
-- Required secrets identified from codebase:
-  - `STRIPE_SECRET_KEY` (Edge functions - exists)
-  - `SUPABASE_SERVICE_ROLE_KEY` (Edge functions - auto-provided)
-  - `SUPABASE_URL` (Edge functions - auto-provided)
-  - `SUPABASE_ANON_KEY` (Edge functions - auto-provided)
-  - `CRON_SECRET` (Edge functions - exists)
-  - `LOVABLE_API_KEY` (Internal - exists)
-  - `SENTRY_DSN` (Not configured - recommended)
-
-**Fix: Create `.env.example`**
-
-| File | Change |
-|------|--------|
-| `.env.example` | Document all required environment variables |
-
-```env
-# Supabase (auto-provided in Lovable Cloud)
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
-
-# Edge Function Secrets (set in Supabase Dashboard)
-# STRIPE_SECRET_KEY=sk_live_...
-# CRON_SECRET=random-secret-for-cron-auth
-# SENTRY_DSN=https://xxx@sentry.io/xxx (optional, for error tracking)
+**Evidence from edge function logs:**
+```
+ERROR ❌ Error saving study tasks: duplicate key value violates unique constraint "study_tasks_user_date_type_unique"
 ```
 
-### 2.2 Build Optimization
+**Problem:** There are **two conflicting unique constraints** on `study_tasks`:
+```sql
+study_tasks_user_date_type_skill_unique (user_id, the_date, type, skill_id)  -- Used by code
+study_tasks_user_date_type_unique (user_id, the_date, type)                   -- Causing conflict
+```
 
-**Current State:** GOOD
-- No Redux DevTools in dependencies
-- Logger utility gates console output: `if (isDev)` check in `logger.ts`
-- No large dev-only libraries shipped
-- Previous cleanup removed unused deps
+The edge function uses `onConflict: 'user_id,the_date,type,skill_id'` but there's a stricter constraint `(user_id, the_date, type)` that blocks inserts when the same user has multiple tasks of the same type on the same day.
 
-**Verdict:** Production builds are clean.
+**Impact:** Plans save to `study_plan_days` ✅ but tasks fail to save to `study_tasks` ❌
 
-### 2.3 CORS & Headers
-
-**Current State:** GOOD
-- `_shared/cors.ts` has `getAllowedOrigins()` with explicit allowlist:
-  - `getpreppit.com`
-  - `www.getpreppit.com`
-  - Lovable preview/published URLs
-  - Localhost for dev
-- All edge functions use `getCorsHeaders(req)` which validates origin
-
-**Verdict:** Properly secured against unauthorized domains.
+**Fix:** Drop the overly restrictive constraint:
+```sql
+DROP INDEX IF EXISTS study_tasks_user_date_type_unique;
+```
 
 ---
 
-## 3. Student Experience Check (UX)
+## Issue #3: No Auto-Regeneration on Login
 
-### 3.1 Mobile Responsiveness
+**Current flow when user logs in after 2+ weeks:**
+1. Dashboard loads → checks `has_study_plan = true`
+2. Shows `StudyPlanWidget` 
+3. Widget queries `study_plan_days` for today's date
+4. Returns **empty** because old plans are all past dates
+5. Shows "No Study Plan Yet" with manual generate button
 
-**Current State:**
-- Uses Tailwind responsive classes throughout
-- `use-mobile.tsx` hook exists for mobile detection
-- Math rendering uses `font-mono` which may be narrow on mobile
-- MathJax/KaTeX not used (simpler text-based math)
+**Missing:** There's no automatic regeneration when plans are stale!
 
-**Assessment Needed:** Visual testing on 375px screens recommended
-
-**Recommendation:** Add viewport meta test and review key pages:
-- QuestionCard
-- Simulation
-- DrillPlayer
-- DiagnosticTest
-
-### 3.2 Loss of Connection
-
-**Current State:** GOOD
-- `offline-queue.ts` uses IndexedDB for local storage
-- Queues failed operations and retries on reconnect
-- Timer in Simulation uses `started_at` timestamp from server
-- Timer continues counting based on elapsed time since start, not client ticks
-- Progress saves incrementally via `responses` table
-
-**Verdict:** Properly handles offline scenarios.
-
-### 3.3 404s & Empty States
-
-**Current State:** GOOD
-- `NotFound.tsx` exists with friendly message
-- Catch-all route `<Route path="*" element={<NotFound />} />` in App.tsx
-- `DataStateWrapper.tsx` handles empty states in data components
-
-**Verdict:** Graceful error handling in place.
+**Fix:** Add auto-regeneration check in Dashboard or StudyPlanWidget when:
+- User has `has_study_plan = true` 
+- BUT no future `study_plan_days` exist
 
 ---
 
-## 4. Compliance & Legal Check
+## Issue #4: WeeklyCalendar Shows Empty When Plans Expired
 
-### 4.1 Terms & Privacy Links
+**Evidence from database:**
+```
+user_id: 7ad8d9c5... has:
+  - has_study_plan: true
+  - future_plans: 0
+  - last_generated: 2025-12-14 (47 days ago!)
+  - latest_plan_date: 2025-12-20 (all expired)
+```
 
-**Current State:**
-- `Onboarding.tsx` has checkboxes for:
-  - "I agree to the Terms of Service"
-  - "I agree to the Privacy Policy"
-- BUT: No actual links to view these documents!
-- No Terms or Privacy pages exist
-- No footer with legal links
+The calendar queries for future dates but finds nothing, showing an empty week.
 
-**Fix: Create Legal Pages and Update Links**
-
-| File | Change |
-|------|--------|
-| `src/pages/Terms.tsx` | Create Terms of Service page |
-| `src/pages/Privacy.tsx` | Create Privacy Policy page |
-| `src/App.tsx` | Add routes for `/terms` and `/privacy` |
-| `src/pages/Onboarding.tsx` | Make checkbox labels clickable links |
-| `src/pages/LandingPage.tsx` | Add footer with legal links |
-| `src/components/AppSidebar.tsx` | Add legal links to footer section |
-
-### 4.2 Cookie Consent Banner
-
-**Current State:**
-- No cookie consent banner
-- No analytics tracking code visible (no GA, no Mixpanel)
-- Sentry integration exists but not configured with DSN
-
-**Assessment:**
-- If no third-party tracking cookies → banner not strictly required
-- If Sentry is enabled → may need consent for EU users
-- Supabase auth uses session storage, not tracking cookies
-
-**Recommendation:** Create a lightweight cookie banner component for GDPR compliance if any analytics are added later.
-
-| File | Change |
-|------|--------|
-| `src/components/CookieConsent.tsx` | Create consent banner |
-| `src/App.tsx` | Include banner at app root |
-| `localStorage` | Store consent preference |
+**Root cause:** Same as Issue #3 - no auto-regeneration.
 
 ---
 
-## Implementation Priority
+## Issue #5: Dashboard Checks study_tasks Instead of study_plan_days
 
-| Priority | Item | Effort | Impact |
-|----------|------|--------|--------|
-| **P0** | Webhook polling fallback | 30 min | Prevents "paid but locked out" |
-| **P0** | Terms & Privacy pages + links | 1 hour | Legal compliance |
-| **P1** | `.env.example` | 10 min | Deployment documentation |
-| **P2** | Cookie consent banner | 30 min | GDPR preparation |
-| **P3** | Mobile responsiveness audit | 2 hours | UX improvement |
+**Code in Dashboard.tsx (lines 61-67):**
+```typescript
+// Check for actual study tasks
+const { data: planCheck } = await supabase
+  .from('study_tasks')
+  .select('id')
+  .eq('user_id', session.user.id)
+  .limit(1);
+
+const actuallyHasPlan = profileData.has_study_plan || (planCheck && planCheck.length > 0);
+```
+
+**Problem:** Queries `study_tasks` which may have failed to save (Issue #2), not `study_plan_days` which is the source of truth.
 
 ---
 
-## Files to Create
+## Database Evidence Summary
 
-| File | Purpose |
-|------|---------|
-| `src/pages/Terms.tsx` | Terms of Service page |
-| `src/pages/Privacy.tsx` | Privacy Policy page |
-| `src/components/CookieConsent.tsx` | Cookie consent banner |
-| `.env.example` | Environment variable documentation |
+| User ID | has_study_plan | future_plans | last_generated | Status |
+|---------|---------------|--------------|----------------|--------|
+| 0ea65a... | true | 7 | Today | ✅ Working |
+| 7ad8d9c... | true | 0 | Dec 14, 2025 | ❌ Stale |
+| 88da1f1... | true | 0 | Dec 10, 2025 | ❌ Stale |
+| 073c5c4... | false | 0 | - | ⚠️ No plan |
+
+---
+
+## Implementation Plan
+
+### Phase 1: Database Fixes (Critical)
+
+**1.1 Drop the conflicting unique constraint:**
+```sql
+-- Run in Supabase SQL Editor
+DROP INDEX IF EXISTS study_tasks_user_date_type_unique;
+```
+
+**1.2 Delete the duplicate/broken cron job:**
+```sql
+SELECT cron.unschedule('regenerate-study-plans-daily');
+```
+
+### Phase 2: Add Auto-Regeneration on Login
+
+**File: `src/components/StudyPlanWidget.tsx`**
+
+Add logic to detect stale plans and auto-regenerate:
+
+```typescript
+const loadTodaysTasks = async () => {
+  // ... existing code ...
+  
+  // If user should have a plan but none exists for today, check if we need to regenerate
+  if (!planDay?.tasks_json || rawTasks.length === 0) {
+    // Check if there are ANY future plans
+    const { data: futurePlans } = await supabase
+      .from('study_plan_days')
+      .select('the_date')
+      .eq('user_id', user.id)
+      .gte('the_date', today)
+      .limit(1);
+    
+    // If no future plans exist, auto-regenerate
+    if (!futurePlans || futurePlans.length === 0) {
+      console.log('No future plans found, auto-regenerating...');
+      await generatePlan();
+      return; // generatePlan already calls loadTodaysTasks
+    }
+  }
+  // ... rest of function ...
+};
+```
+
+### Phase 3: Fix Dashboard Source of Truth
+
+**File: `src/pages/Dashboard.tsx`**
+
+Change the plan check from `study_tasks` to `study_plan_days`:
+
+```typescript
+// OLD (broken):
+const { data: planCheck } = await supabase
+  .from('study_tasks')  // ❌ May have failed to save
+  .select('id')
+  .eq('user_id', session.user.id)
+  .limit(1);
+
+// NEW (correct):
+const today = new Date().toISOString().split('T')[0];
+const { data: planCheck } = await supabase
+  .from('study_plan_days')  // ✅ Source of truth
+  .select('the_date')
+  .eq('user_id', session.user.id)
+  .gte('the_date', today)
+  .limit(1);
+
+const actuallyHasPlan = profileData.has_study_plan || (planCheck && planCheck.length > 0);
+```
+
+### Phase 4: Immediate Data Recovery
+
+For users with stale plans, trigger regeneration:
+
+```sql
+-- Run manually or via admin button
+-- This will cause the cron job to regenerate plans for all stale users
+-- Or call the edge function directly for specific users
+```
+
+---
 
 ## Files to Modify
 
-| File | Changes |
-|------|---------|
-| `src/pages/SubscriptionSuccess.tsx` | Add polling fallback for webhook delays |
-| `src/pages/Onboarding.tsx` | Add links to Terms/Privacy in checkbox labels |
-| `src/pages/LandingPage.tsx` | Add footer section with legal links |
-| `src/components/AppSidebar.tsx` | Add legal links in sidebar footer |
-| `src/App.tsx` | Add routes for `/terms` and `/privacy` |
+| File | Change |
+|------|--------|
+| `src/components/StudyPlanWidget.tsx` | Add auto-regeneration when no future plans exist |
+| `src/pages/Dashboard.tsx` | Query `study_plan_days` instead of `study_tasks` |
+
+## Database Changes Required
+
+| Action | SQL |
+|--------|-----|
+| Drop conflicting constraint | `DROP INDEX IF EXISTS study_tasks_user_date_type_unique;` |
+| Remove duplicate cron job | `SELECT cron.unschedule('regenerate-study-plans-daily');` |
 
 ---
 
-## Summary Table
-
-| Check | Status | Action |
-|-------|--------|--------|
-| Webhook Resilience | Needs Fix | Add polling fallback |
-| Subscription Expiry | GOOD | No change needed |
-| Environment Variables | Needs Fix | Create `.env.example` |
-| Build Optimization | GOOD | No change needed |
-| CORS & Headers | GOOD | No change needed |
-| Mobile Responsiveness | Review | Visual audit recommended |
-| Loss of Connection | GOOD | No change needed |
-| 404s & Empty States | GOOD | No change needed |
-| Terms & Privacy Links | Needs Fix | Create pages + links |
-| Cookie Consent | Optional | Add banner for future-proofing |
-
----
-
-## Technical Details
-
-### Webhook Polling Implementation
-
-```typescript
-// In SubscriptionSuccess.tsx
-const [attempts, setAttempts] = useState(0);
-const maxAttempts = 10;
-const pollInterval = 3000;
-
-useEffect(() => {
-  if (!isSubscribed && attempts < maxAttempts) {
-    const timer = setTimeout(() => {
-      refetch();
-      setAttempts(prev => prev + 1);
-    }, pollInterval);
-    return () => clearTimeout(timer);
-  }
-}, [isSubscribed, attempts, refetch]);
-```
-
-### Terms/Privacy Page Structure
+## Root Cause Flow
 
 ```text
-/terms → Simple page with:
-- Last updated date
-- Service description
-- User obligations
-- Disclaimer
-- Contact info
-
-/privacy → Simple page with:
-- Data we collect
-- How we use it
-- Third parties (Stripe, Supabase)
-- Student data protection (COPPA note)
-- Contact for data requests
+User logs in after 2 weeks
+    ↓
+Dashboard loads → has_study_plan = true
+    ↓
+StudyPlanWidget queries study_plan_days for TODAY
+    ↓
+Returns empty (old plans are all past dates)
+    ↓
+UI shows "No Study Plan Yet" button (but user expects their plan!)
+    ↓
+Meanwhile, cron job runs daily BUT...
+    ↓
+Job #1 (correct) calls generate-study-plan
+    ↓
+generate-study-plan creates study_plan_days ✅
+    ↓
+BUT study_tasks insert fails due to constraint conflict ❌
+    ↓
+Error is logged but function returns "success"
+    ↓
+User still sees empty calendar
 ```
+
+---
+
+## Testing Plan
+
+After fixes:
+
+1. Manually trigger `cron-daily` function
+2. Verify no constraint errors in logs
+3. Check `study_plan_days` has 7 future days for test users
+4. Check `study_tasks` has corresponding tasks
+5. Login as a stale user and verify calendar populates
+
