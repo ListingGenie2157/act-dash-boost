@@ -83,19 +83,35 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
         if (planError.code !== 'PGRST116') { // Not a "no rows" error
           throw planError;
         }
-        setTasks([]);
-        return;
       }
 
-      if (!planDay?.tasks_json) {
-        setTasks([]);
-        return;
-      }
-
-      // Map tasks_json to StudyTask format
-      const rawTasks = Array.isArray(planDay.tasks_json) 
+      // Parse raw tasks from today's plan
+      const rawTasks = planDay?.tasks_json && Array.isArray(planDay.tasks_json) 
         ? (planDay.tasks_json as unknown as PlanTaskJson[])
         : [];
+
+      // If no tasks for today, check if we need to auto-regenerate
+      if (rawTasks.length === 0) {
+        // Check if there are ANY future plans scheduled
+        const { data: futurePlans } = await supabase
+          .from('study_plan_days')
+          .select('the_date')
+          .eq('user_id', user.id)
+          .gte('the_date', today)
+          .limit(1);
+
+        // If no future plans exist at all, auto-regenerate the plan
+        if (!futurePlans || futurePlans.length === 0) {
+          console.log('[StudyPlanWidget] No future plans found, auto-regenerating...');
+          setLoading(false);
+          await generatePlan();
+          return; // generatePlan already calls loadTodaysTasks after success
+        }
+        
+        // There are future plans but none for today - just show empty state
+        setTasks([]);
+        return;
+      }
       
       // Fetch skill details to get subject information
       const skillIds = rawTasks

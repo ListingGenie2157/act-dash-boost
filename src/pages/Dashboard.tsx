@@ -57,11 +57,13 @@ const Dashboard = () => {
         if (mounted && profileData) {
           setProfile(profileData);
 
-          // Check for actual study tasks
+          // Check for future study plan days (source of truth)
+          const today = new Date().toISOString().split('T')[0];
           const { data: planCheck } = await supabase
-            .from('study_tasks')
-            .select('id')
+            .from('study_plan_days')
+            .select('the_date')
             .eq('user_id', session.user.id)
+            .gte('the_date', today)
             .limit(1);
 
           const actuallyHasPlan = profileData.has_study_plan || (planCheck && planCheck.length > 0);
