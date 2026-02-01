@@ -110,10 +110,10 @@ export function getPriorityColor(priority: 'critical' | 'high' | 'medium'): {
   switch (priority) {
     case 'critical':
       return {
-        bg: 'bg-destructive/10',
-        text: 'text-destructive',
-        border: 'border-destructive/30',
-        badge: 'bg-destructive/20 text-destructive',
+        bg: 'bg-amber-100 dark:bg-amber-900/30',
+        text: 'text-amber-700 dark:text-amber-400',
+        border: 'border-amber-300 dark:border-amber-700',
+        badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300',
       };
     case 'high':
       return {

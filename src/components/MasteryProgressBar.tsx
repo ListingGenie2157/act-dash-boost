@@ -70,7 +70,7 @@ export function MasteryProgressBar({
         <span className={accuracy >= MASTERY_THRESHOLDS.PROFICIENT ? 'text-blue-600 font-medium' : ''}>
           75%
         </span>
-        <span className={accuracy >= MASTERY_THRESHOLDS.MASTERED ? 'text-green-600 font-medium' : ''}>
+        <span className={accuracy >= MASTERY_THRESHOLDS.MASTERED ? 'text-emerald-600 font-medium' : ''}>
           90%
         </span>
       </div>

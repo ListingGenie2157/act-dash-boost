@@ -52,9 +52,9 @@ export function getMasteryColor(level: MasteryLevel): {
   switch (level) {
     case 'mastered':
       return {
-        bg: 'bg-green-100 dark:bg-green-900/30',
-        text: 'text-green-700 dark:text-green-400',
-        border: 'border-green-300 dark:border-green-700',
+        bg: 'bg-emerald-100 dark:bg-emerald-900/30',
+        text: 'text-emerald-700 dark:text-emerald-400',
+        border: 'border-emerald-300 dark:border-emerald-700',
         icon: '🏆',
       };
     case 'proficient':
