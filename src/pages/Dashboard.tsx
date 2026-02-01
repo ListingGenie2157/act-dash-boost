@@ -123,7 +123,7 @@ const Dashboard = () => {
       <div className="relative container max-w-7xl mx-auto px-4 py-8">
         <div className="space-y-8">
           {/* Welcome Section */}
-          <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/20 via-accent/15 to-primary/10 backdrop-blur-sm border border-primary/30 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in overflow-hidden">
+          <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/30 via-accent/25 to-primary/15 backdrop-blur-sm border border-primary/30 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in overflow-hidden">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-2">
