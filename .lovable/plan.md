@@ -1,175 +1,221 @@
 
 
-# Dashboard Color Refinement Plan
+# Lead Capture Backend Implementation Plan
 
-## Problems Identified
+## Overview
 
-| Issue | Current | Problem |
-|-------|---------|---------|
-| **Fluorescent green** | `green-700`/`green-400` (Tailwind defaults) | Too saturated/neon, doesn't match brand palette |
-| **Muted header** | `from-primary/20 via-accent/15 to-primary/10` | Low opacity creates washed-out, lifeless feel |
-| **Random red** | `destructive` color for critical weak areas | Conflates "error/delete" semantics with "needs attention" |
+This plan implements a complete lead capture system for collecting emails from landing pages. The system includes:
+- A `leads` table with proper indexing and RLS
+- A `capture-lead` edge function with rate limiting and spam protection
+- Frontend integration helper
 
 ---
 
-## Proposed Color Refinements
+## 1. Database: `leads` Table
 
-### 1. Replace Fluorescent Green with Brand-Aligned "Deep Teal" Success
+### Schema Design
 
-Instead of generic Tailwind greens, create custom success tones that harmonize with your navy/teal palette:
+| Column | Type | Required | Description |
+|--------|------|----------|-------------|
+| id | UUID | Yes | Primary key |
+| email | TEXT | Yes | Lead's email address |
+| role | TEXT | No | "student" or "parent" |
+| bucket | TEXT | No | Score bucket (e.g., "20-25") |
+| test_date | TEXT | No | Target ACT test date |
+| beta_interest | BOOLEAN | No | Interested in beta access |
+| source | TEXT | No | Where the lead came from (e.g., "landing", "cheatsheet") |
+| utm_source | TEXT | No | UTM source parameter |
+| utm_medium | TEXT | No | UTM medium parameter |
+| utm_campaign | TEXT | No | UTM campaign parameter |
+| page_path | TEXT | No | Page URL path where form was submitted |
+| ip_hash | TEXT | No | SHA-256 hash of IP (privacy-safe rate limiting) |
+| user_agent | TEXT | No | Browser user agent |
+| created_at | TIMESTAMPTZ | Yes | When the lead was captured |
 
-**Current:**
-- `--success: 145 60% 42%` (saturated Kelly green)
-- Mastery uses `green-100`, `green-700`, etc.
+### Indexes
+- **Unique de-dupe index**: Prevents duplicate entries per email + source combination
+- **Query indexes**: For filtering by role, bucket, and date ranges
 
-**Proposed:**
-```css
-/* Deeper, more sophisticated teal-green that complements the brand */
---success: 162 48% 38%;  /* Deeper sea green - less neon */
---success-foreground: 0 0% 100%;
+### Row-Level Security (RLS)
+- **No client access**: Only the edge function (using service role) can insert
+- Anonymous and authenticated users cannot read, insert, update, or delete
+
+---
+
+## 2. Edge Function: `capture-lead`
+
+### Security Features
+
+| Feature | Implementation |
+|---------|----------------|
+| **Email validation** | Regex check before insert |
+| **IP rate limiting** | Max 10 submissions per IP per 10 minutes |
+| **IP hashing** | SHA-256 with salt for privacy |
+| **No client inserts** | Uses service role key |
+| **CORS headers** | Allows cross-origin requests |
+
+### Request Flow
+
+```text
+POST /functions/v1/capture-lead
+    ↓
+Validate email format
+    ↓
+Hash IP address with salt
+    ↓
+Check rate limit (10 per 10 min per IP)
+    ↓
+Upsert lead (update if exists, insert if new)
+    ↓
+Return { ok: true, id: "...", created_at: "..." }
 ```
 
-**Visual comparison:**
-- **Old:** #3DAA5D (bright grass green)
-- **New:** #328c6c (sophisticated sea green / deep teal-green)
+### Expected Request Body
 
-This pairs better with your navy (#071B2D) and mint/teal (#35E0D1) palette.
-
-### 2. Boost Header Gradient Vibrancy
-
-**Current (washed out):**
-```tsx
-className="from-primary/20 via-accent/15 to-primary/10"
+```json
+{
+  "email": "student@example.com",
+  "role": "student",
+  "bucket": "25-28",
+  "test_date": "2025-04",
+  "beta_interest": true,
+  "source": "cheatsheet",
+  "page_path": "/cheatsheets/math",
+  "utm_source": "google",
+  "utm_medium": "cpc",
+  "utm_campaign": "act_prep_2025"
+}
 ```
 
-**Proposed (more presence):**
-```tsx
-className="from-primary/30 via-accent/25 to-primary/15"
+### Response Examples
+
+**Success:**
+```json
+{ "ok": true, "id": "uuid...", "created_at": "2025-02-02T..." }
 ```
 
-Or introduce a dedicated header variable:
-```css
---gradient-header: linear-gradient(135deg, hsl(173 72% 54% / 0.25), hsl(204 82% 20% / 0.2), hsl(173 72% 54% / 0.15));
+**Error (invalid email):**
+```json
+{ "error": "Invalid email" }
 ```
 
-### 3. Replace Red for "Critical" Weak Areas with Amber/Orange Warning
+**Error (rate limited):**
+```json
+{ "error": "Rate limit exceeded" }
+```
 
-The key insight: **Critical weak areas are not errors—they're opportunities.** Using the same red as delete buttons creates unnecessary anxiety.
+---
 
-**Current (using destructive):**
+## 3. Secret Required
+
+The edge function needs one new secret for IP hashing:
+
+| Secret Name | Purpose |
+|-------------|---------|
+| `LEAD_IP_SALT` | Random string to salt IP hashes (prevents rainbow table attacks) |
+
+The following secrets are already configured:
+- `SUPABASE_URL` - Already exists
+- `SUPABASE_SERVICE_ROLE_KEY` - Already exists
+
+---
+
+## 4. Frontend Integration
+
+A helper function will be added to call the edge function from any landing page:
+
 ```typescript
-case 'critical':
-  return {
-    bg: 'bg-destructive/10',      // coral red
-    text: 'text-destructive',      // coral red
-    border: 'border-destructive/30',
-    badge: 'bg-destructive/20 text-destructive',
-  };
-```
-
-**Proposed (using warning amber):**
-```typescript
-case 'critical':
-  return {
-    bg: 'bg-amber-100 dark:bg-amber-900/30',
-    text: 'text-amber-700 dark:text-amber-400',
-    border: 'border-amber-300 dark:border-amber-700',
-    badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300',
-  };
-```
-
-**Visual result:**
-- **Old:** Coral red (#FF4D6D) - alarming, "you failed"
-- **New:** Amber (#D97706) - warm, "let's work on this together"
-
----
-
-## Complete Color Hierarchy (Updated)
-
-| Semantic Use | Color | When to Use |
-|--------------|-------|-------------|
-| **Primary actions** | Teal (#35E0D1) | CTAs, active states, highlights |
-| **Success/Mastered** | Deep Teal-Green (#328c6c) | Completed, mastered, positive feedback |
-| **Warning/Critical focus** | Amber (#D97706) | Weak areas needing attention |
-| **Destructive only** | Coral (#FF4D6D) | Delete buttons, error alerts, failed payments |
-| **High priority** | Primary teal (muted) | Important but not urgent |
-| **Medium priority** | Muted gray | Neutral, informational |
-
----
-
-## Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/index.css` | Update `--success` HSL values for less fluorescent green |
-| `src/lib/weakAreas.ts` | Change `critical` priority from `destructive` to `amber-*` Tailwind classes |
-| `src/lib/mastery.ts` | Replace `green-*` classes with custom success-aligned tones |
-| `src/pages/Dashboard.tsx` | Boost welcome banner gradient opacity (20→30, 15→25, 10→15) |
-| `src/components/MasteryDashboard.tsx` | Update mastery card colors to match new palette |
-| `src/components/MasteryProgressBar.tsx` | Update milestone marker colors |
-
----
-
-## Technical Implementation
-
-### index.css Changes
-```css
-/* Updated success - less fluorescent, more sophisticated */
---success: 162 48% 38%;  /* Deep sea green */
---success-foreground: 0 0% 100%;
-```
-
-### weakAreas.ts Changes
-```typescript
-case 'critical':
-  return {
-    bg: 'bg-amber-100 dark:bg-amber-900/30',
-    text: 'text-amber-700 dark:text-amber-400',
-    border: 'border-amber-300 dark:border-amber-700',
-    badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300',
-  };
-```
-
-### mastery.ts Changes
-```typescript
-case 'mastered':
-  return {
-    bg: 'bg-emerald-100 dark:bg-emerald-900/30',    // Softer than green
-    text: 'text-emerald-700 dark:text-emerald-400',
-    border: 'border-emerald-300 dark:border-emerald-700',
-    icon: '🏆',
-  };
-```
-
-### Dashboard.tsx Changes
-```tsx
-// Welcome banner - boost opacity
-className="from-primary/30 via-accent/25 to-primary/15"
+// Usage example
+await captureLead({
+  email: "user@example.com",
+  role: "student",
+  bucket: "25-28",
+  test_date: "2025-04",
+  beta_interest: true,
+  source: "landing",
+  page_path: window.location.pathname,
+  utm_source: new URLSearchParams(location.search).get("utm_source"),
+  utm_medium: new URLSearchParams(location.search).get("utm_medium"),
+  utm_campaign: new URLSearchParams(location.search).get("utm_campaign"),
+});
 ```
 
 ---
 
-## Before/After Preview
+## 5. Files to Create/Modify
 
-**Weak Areas Card:**
-- Before: Red "Needs Focus" badges that look like errors
-- After: Warm amber "Needs Focus" badges that feel encouraging
+| File | Action | Description |
+|------|--------|-------------|
+| Migration SQL | Create | `leads` table, indexes, RLS policies |
+| `supabase/config.toml` | Modify | Add `[functions.capture-lead]` with `verify_jwt = false` |
+| `supabase/functions/capture-lead/index.ts` | Create | Edge function with validation, rate limiting, upsert logic |
+| `src/lib/captureLead.ts` | Create | Frontend helper function for calling the edge function |
 
-**Mastery Dashboard:**
-- Before: Neon green "Mastered" badges
-- After: Sophisticated emerald/teal-green tones
+---
 
-**Welcome Header:**
-- Before: Pale, barely visible gradient
-- After: Vibrant but not overwhelming brand presence
+## Technical Details
+
+### Migration SQL
+
+```sql
+-- 1) Lead capture table
+CREATE TABLE IF NOT EXISTS public.leads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL,
+  role TEXT,
+  bucket TEXT,
+  test_date TEXT,
+  beta_interest BOOLEAN NOT NULL DEFAULT false,
+  source TEXT DEFAULT 'landing',
+  utm_source TEXT,
+  utm_medium TEXT,
+  utm_campaign TEXT,
+  page_path TEXT,
+  ip_hash TEXT,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 2) De-dupe index: one row per email per source
+CREATE UNIQUE INDEX IF NOT EXISTS leads_email_source_unique 
+  ON public.leads (lower(email), COALESCE(source, ''));
+
+-- 3) Query indexes
+CREATE INDEX IF NOT EXISTS leads_created_at_idx ON public.leads (created_at);
+CREATE INDEX IF NOT EXISTS leads_role_idx ON public.leads (role);
+CREATE INDEX IF NOT EXISTS leads_bucket_idx ON public.leads (bucket);
+CREATE INDEX IF NOT EXISTS leads_ip_hash_idx ON public.leads (ip_hash, created_at);
+
+-- 4) RLS: lock down table
+ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
+
+-- No client access at all - only service role can insert
+REVOKE ALL ON TABLE public.leads FROM anon, authenticated;
+```
+
+### Edge Function Structure
+
+```text
+capture-lead/
+└── index.ts
+    ├── CORS headers
+    ├── Email validation function
+    ├── SHA-256 IP hashing function
+    ├── Rate limiting check (10 per 10 min)
+    ├── Upsert to leads table
+    └── JSON response
+```
 
 ---
 
 ## Summary
 
-| Change | Impact |
-|--------|--------|
-| Emerald instead of green | Mastered skills feel premium, not gamified |
-| Amber instead of red | Critical areas feel supportive, not punitive |
-| Boosted header opacity | Dashboard feels more alive and branded |
+| Component | Purpose |
+|-----------|---------|
+| `leads` table | Store email signups with metadata |
+| Unique index | Prevent duplicate submissions |
+| RLS policies | Block all client access |
+| Edge function | Secure server-side insertion with rate limiting |
+| IP hashing | Privacy-safe rate limiting |
+| Frontend helper | Easy integration into any landing page |
 
