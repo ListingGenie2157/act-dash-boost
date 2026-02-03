@@ -300,6 +300,57 @@ export type Database = {
         }
         Relationships: []
       }
+      leads: {
+        Row: {
+          beta_interest: boolean
+          bucket: string | null
+          created_at: string
+          email: string
+          id: string
+          ip_hash: string | null
+          page_path: string | null
+          role: string | null
+          source: string | null
+          test_date: string | null
+          user_agent: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          beta_interest?: boolean
+          bucket?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          ip_hash?: string | null
+          page_path?: string | null
+          role?: string | null
+          source?: string | null
+          test_date?: string | null
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          beta_interest?: boolean
+          bucket?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          ip_hash?: string | null
+          page_path?: string | null
+          role?: string | null
+          source?: string | null
+          test_date?: string | null
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: []
+      }
       lesson_content: {
         Row: {
           checkpoint_quiz_q1: string[] | null
