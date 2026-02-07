@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 
 // Stripe price IDs for each plan
 const PRICE_IDS = {
@@ -29,6 +30,9 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
+    // Rate limit: 5 checkout attempts per minute per user
+    const clientIp = getClientIp(req);
+
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
     logStep("Stripe key verified");
@@ -47,7 +51,14 @@ serve(async (req) => {
     
     const user = userData.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
-    logStep("User authenticated", { userId: user.id, email: user.email });
+    logStep("User authenticated", { userId: user.id });
+
+    // Apply rate limit now that we have userId
+    const allowed = await checkRateLimit(user.id, clientIp, 'create-checkout', 5, 60000);
+    if (!allowed) {
+      logStep("Rate limit exceeded", { userId: user.id });
+      return createRateLimitResponse(corsHeaders);
+    }
 
     const { planType } = await req.json();
     if (!planType || !PRICE_IDS[planType as keyof typeof PRICE_IDS]) {

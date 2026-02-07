@@ -255,31 +255,11 @@ export default function DrillRunner() {
           interval_days: 2,
         });
         
-        // Also record in error_bank for missed questions page
-        const { data: existingError } = await supabase
-          .from('error_bank')
-          .select('miss_count')
-          .eq('user_id', userId)
-          .eq('question_id', q.id)
-          .single();
-        
-        if (existingError) {
-          await supabase
-            .from('error_bank')
-            .update({
-              miss_count: (existingError.miss_count || 0) + 1,
-              last_missed_at: new Date().toISOString(),
-            })
-            .eq('user_id', userId)
-            .eq('question_id', q.id);
-        } else {
-          await supabase.from('error_bank').insert({
-            user_id: userId,
-            question_id: q.id,
-            last_missed_at: new Date().toISOString(),
-            miss_count: 1,
-          });
-        }
+        // Record in error_bank using atomic RPC (replaces N+1 SELECT/INSERT/UPDATE)
+        await supabase.rpc('increment_error_bank', {
+          p_user_id: userId,
+          p_question_id: q.id,
+        });
       }
     } catch (err) {
       console.error('Error tracking drill answer:', err);
@@ -438,15 +418,16 @@ export default function DrillRunner() {
         <Button
           variant="outline"
           onClick={() => navigate('/drill-runner')}
+          aria-label="Back to Drills"
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
+          <ArrowLeft className="h-4 w-4 mr-2" aria-hidden="true" />
           Back to Drills
         </Button>
         <div className="flex items-center gap-3">
           {/* Timer Display */}
           {timeLeft !== null && timeLeft > 0 && (
-            <Badge variant={timeLeft < 60 ? 'destructive' : 'secondary'} className="font-mono flex items-center gap-1">
-              <Timer className="h-3 w-3" />
+            <Badge variant={timeLeft < 60 ? 'destructive' : 'secondary'} className="font-mono flex items-center gap-1" aria-live="polite" aria-atomic="true">
+              <Timer className="h-3 w-3" aria-hidden="true" />
               {formatTime(timeLeft)}
               {isOnBreak && <span className="ml-1 text-xs">(Break)</span>}
             </Badge>
