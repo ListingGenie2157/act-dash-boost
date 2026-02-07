@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { PlanTaskJson } from '@/types/studyPlan';
+import { SKILL_PREFIX } from '@/lib/sectionMapping';
 
 export default function TaskLauncher() {
   const { date, idx } = useParams<{ date?: string; idx?: string }>();
@@ -77,9 +78,13 @@ export default function TaskLauncher() {
         case 'LEARN':
           navigate(`/lesson/${code}?date=${encodeURIComponent(date)}&i=${i}`, { replace: true });
           break;
-        case 'DRILL':
-          navigate(`/drill/${code}?n=${n}&date=${encodeURIComponent(date)}&i=${i}`, { replace: true });
+        case 'DRILL': {
+          // Reverse-lookup subject from skill prefix (M->Math, E->English, etc.)
+          const prefix = code[0]?.toUpperCase() ?? '';
+          const subject = Object.entries(SKILL_PREFIX).find(([, p]) => p === prefix)?.[0] ?? 'Math';
+          navigate(`/drill/${subject}?n=${n}&skill=${encodeURIComponent(code)}&date=${encodeURIComponent(date)}&i=${i}`, { replace: true });
           break;
+        }
         case 'QUIZ':
           navigate(`/quiz/${code}?n=${n}&date=${encodeURIComponent(date)}&i=${i}`, { replace: true });
           break;
