@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Thank You – Preppit Pacing</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; font-family: Arial, Helvetica, sans-serif;
+            background: #f6fbfa; color: #0d2c4b; line-height: 1.6;
+        }
+        header {
+            background: #ffffff; padding: 1rem 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        header h1 { margin: 0; font-size: 1.5rem; color: #0d2c4b; }
+        .container {
+            max-width: 600px; margin: 3rem auto; padding: 2rem;
+            background: #ffffff; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center;
+        }
+        .container h2 { font-size: 1.8rem; margin-top: 0; }
+        .container p { font-size: 1.05rem; color: #334155; }
+        .download-btn {
+            display: inline-block; margin: 1.5rem 0; padding: 0.85rem 2rem;
+            background: linear-gradient(90deg, #34d399, #0891b2);
+            color: #ffffff; font-weight: bold; font-size: 1.1rem;
+            border-radius: 6px; text-decoration: none; transition: background 0.3s;
+        }
+        .download-btn:hover { background: linear-gradient(90deg, #2cc58a, #067a90); }
+        .divider {
+            border: none; border-top: 1px solid #e2e8f0; margin: 2rem 0;
+        }
+        .waitlist { text-align: left; }
+        .waitlist h3 { margin-bottom: 0.5rem; }
+        .waitlist p { font-size: 0.95rem; color: #64748b; margin-top: 0; }
+        .waitlist label { display: block; margin: 0.5rem 0 0.25rem; font-weight: bold; font-size: 0.95rem; }
+        .waitlist input, .waitlist select {
+            width: 100%; padding: 0.5rem; margin-bottom: 0.75rem;
+            border: 1px solid #cbd5e1; border-radius: 4px; font-size: 1rem;
+        }
+        .waitlist button {
+            width: 100%; padding: 0.7rem; background: #0d2c4b; color: #ffffff;
+            font-weight: bold; border: none; border-radius: 4px; cursor: pointer;
+            transition: background 0.3s;
+        }
+        .waitlist button:hover { background: #0a2240; }
+        .waitlist button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .success-msg { color: #059669; font-weight: bold; margin-top: 0.5rem; }
+        footer { text-align: center; padding: 2rem; font-size: 0.9rem; color: #64748b; }
+    </style>
+</head>
+<body>
+    <header><h1>Preppit Pacing</h1></header>
+
+    <div class="container">
+        <h2>🎉 You're in!</h2>
+        <p>Download your free ACT Pacing Cheatsheet below.</p>
+        <a class="download-btn" href="/Preppit_ACT_Pacing_Cheatsheet.pdf" download>
+            📥 Download Cheatsheet
+        </a>
+
+        <hr class="divider">
+
+        <div class="waitlist">
+            <h3>Want early access to Preppit Pacing?</h3>
+            <p>Join the beta waitlist and be the first to try our full platform.</p>
+            <form id="waitlistForm">
+                <label for="wl-email">Email</label>
+                <input type="email" id="wl-email" required>
+
+                <label for="wl-role">I am a…</label>
+                <select id="wl-role">
+                    <option value="student">Student</option>
+                    <option value="parent">Parent</option>
+                </select>
+
+                <button type="submit">Join the Waitlist</button>
+                <div class="success-msg" id="waitlistSuccess" style="display:none;">
+                    ✅ You're on the list!
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer>&copy; 2026 Preppit Pacing. All rights reserved.</footer>
+
+    <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var email = params.get('email') || '';
+      var role = params.get('role') || 'student';
+
+      // Prefill waitlist form
+      var emailInput = document.getElementById('wl-email');
+      var roleSelect = document.getElementById('wl-role');
+      if (email) emailInput.value = email;
+      if (role) roleSelect.value = role;
+
+      document.getElementById('waitlistForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var btn = this.querySelector('button');
+        btn.disabled = true;
+        btn.textContent = 'Submitting…';
+
+        try {
+          var res = await fetch('https://hhbkmxrzxcswwokmbtbz.supabase.co/functions/v1/capture-lead', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: emailInput.value.trim(),
+              role: roleSelect.value,
+              beta_interest: true,
+              source: 'waitlist',
+              page_path: '/thank-you.html'
+            })
+          });
+          if (!res.ok) throw new Error('Failed');
+          document.getElementById('waitlistSuccess').style.display = 'block';
+          btn.textContent = 'Joined!';
+        } catch (err) {
+          alert('Something went wrong. Please try again.');
+          btn.disabled = false;
+          btn.textContent = 'Join the Waitlist';
+        }
+      });
+    })();
+    </script>
+</body>
+</html>
