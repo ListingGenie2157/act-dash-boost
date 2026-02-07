@@ -448,6 +448,13 @@ serve(async (req) => {
       userId = user.id;
     }
 
+    // Rate limit: 10 plan generations per minute per user
+    const clientIp = getClientIp(req);
+    const rateLimitAllowed = await checkRateLimit(userId, clientIp, 'generate-study-plan', 10, 60000);
+    if (!rateLimitAllowed) {
+      return createRateLimitResponse(corsHeaders);
+    }
+
     const today = getTodayInChicago();
     const todayStr = today.toISOString().split("T")[0];
 

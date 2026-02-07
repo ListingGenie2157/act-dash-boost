@@ -58,14 +58,14 @@ export function TimerBar({ timeLeftSec, totalTimeSec, onTimeEnd, isActive = true
     <div className="w-full bg-background border rounded-lg p-4 shadow-sm">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2">
-          <Clock className={`h-5 w-5 ${isCritical ? 'text-destructive' : isWarning ? 'text-yellow-600' : 'text-muted-foreground'}`} />
+          <Clock className={`h-5 w-5 ${isCritical ? 'text-destructive' : isWarning ? 'text-yellow-600' : 'text-muted-foreground'}`} aria-hidden="true" />
           <span className="font-medium text-sm">Time Remaining</span>
         </div>
         <div className="flex items-center space-x-2">
           {isWarning && (
             <AlertTriangle className={`h-4 w-4 ${isCritical ? 'text-destructive' : 'text-yellow-600'}`} />
           )}
-          <Badge variant={getVariant()} className="font-mono text-sm">
+          <Badge variant={getVariant()} className="font-mono text-sm" aria-live="polite" aria-atomic="true">
             {formatTime(timeLeft)}
           </Badge>
         </div>

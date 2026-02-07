@@ -16,9 +16,15 @@ const PLAN_DURATIONS: Record<string, number> = {
   "12_month": 365,
 };
 
-const logStep = (step: string, details?: unknown) => {
-  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
-  console.log(`[STRIPE-WEBHOOK] ${step}${detailsStr}`);
+// Safe fields that are allowed in logs (no PII)
+const SAFE_LOG_FIELDS = ['userId', 'planType', 'customerId', 'subscriptionId', 'status', 'type', 'endDate', 'message'];
+
+const logStep = (step: string, details?: Record<string, string | number | boolean | null>) => {
+  const safeDetails = details ? Object.entries(details)
+    .filter(([k]) => SAFE_LOG_FIELDS.includes(k))
+    .map(([k, v]) => `${k}=${v}`)
+    .join(', ') : '';
+  console.log(`[STRIPE-WEBHOOK] ${step}${safeDetails ? ` - ${safeDetails}` : ''}`);
 };
 
 serve(async (req) => {
@@ -43,21 +49,31 @@ serve(async (req) => {
     
     let event: Stripe.Event;
     
-    if (webhookSecret && signature) {
-      try {
-        event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-        logStep("Webhook signature verified");
-      } catch (err) {
-        logStep("Webhook signature verification failed", { error: err });
-        return new Response(JSON.stringify({ error: "Invalid signature" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 400,
-        });
-      }
-    } else {
-      // For testing without webhook secret
-      event = JSON.parse(body);
-      logStep("Webhook received without signature verification");
+    if (!webhookSecret) {
+      logStep("STRIPE_WEBHOOK_SECRET not configured - rejecting request");
+      return new Response(JSON.stringify({ error: "Webhook secret not configured" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      });
+    }
+
+    if (!signature) {
+      logStep("Missing stripe-signature header");
+      return new Response(JSON.stringify({ error: "Missing signature" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
+    }
+
+    try {
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      logStep("Webhook signature verified");
+    } catch (err) {
+      logStep("Webhook signature verification failed");
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
     }
 
     const supabaseClient = createClient(
@@ -66,7 +82,7 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    logStep("Processing event", { type: event.type });
+    logStep("Processing event", { type: event.type as string });
 
     switch (event.type) {
       case "checkout.session.completed": {
@@ -80,7 +96,7 @@ serve(async (req) => {
           break;
         }
 
-        logStep("Checkout completed", { userId, planType, customerId });
+        logStep("Checkout completed", { userId, planType });
 
         if (session.mode === "subscription") {
           // Subscription will be handled by customer.subscription.created
