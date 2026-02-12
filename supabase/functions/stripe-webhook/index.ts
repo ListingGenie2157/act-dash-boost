@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getCorsHeaders } from '../_shared/cors.ts';
-import { getProductToPlan, PLAN_DURATIONS, isValidPlanType } from '../_shared/stripeConfig.ts';
+import { getPriceToPlan, PLAN_DURATIONS, isValidPlanType } from '../_shared/stripeConfig.ts';
 
 // Safe fields that are allowed in logs (no PII)
 const SAFE_LOG_FIELDS = ['userId', 'planType', 'customerId', 'subscriptionId', 'status', 'type', 'endDate', 'message'];
@@ -70,7 +70,7 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    const PRODUCT_TO_PLAN = getProductToPlan();
+    const PRICE_TO_PLAN = getPriceToPlan();
     logStep("Processing event", { type: event.type as string });
 
     switch (event.type) {
@@ -125,8 +125,8 @@ serve(async (req) => {
           break;
         }
 
-        const productId = subscription.items.data[0].price.product as string;
-        const planType = PRODUCT_TO_PLAN[productId] || "monthly";
+        const priceId = subscription.items.data[0].price.id;
+        const planType = PRICE_TO_PLAN[priceId] || "monthly";
 
         await supabaseClient
           .from("subscriptions")
