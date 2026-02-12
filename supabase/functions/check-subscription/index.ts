@@ -2,13 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getCorsHeaders } from '../_shared/cors.ts';
-
-// Product IDs for plan identification
-const PRODUCT_TO_PLAN: Record<string, string> = {
-  "prod_TmxJE2ECwzSjMp": "monthly",
-  "prod_TmxJKMqCjxglb6": "90_day",
-  "prod_TmxKBXb9uac3oL": "12_month",
-};
+import { getProductToPlan } from '../_shared/stripeConfig.ts';
 
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
@@ -108,6 +102,7 @@ serve(async (req) => {
 
     if (activeSub) {
       const subscription = activeSub;
+      const PRODUCT_TO_PLAN = getProductToPlan();
       const productId = subscription.items.data[0].price.product as string;
       const planType = PRODUCT_TO_PLAN[productId] || "monthly";
       const isTrialing = subscription.status === 'trialing';

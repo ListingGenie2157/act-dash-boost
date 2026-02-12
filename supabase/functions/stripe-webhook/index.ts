@@ -2,19 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getCorsHeaders } from '../_shared/cors.ts';
-
-// Product IDs for plan identification
-const PRODUCT_TO_PLAN: Record<string, string> = {
-  "prod_TmxJE2ECwzSjMp": "monthly",
-  "prod_TmxJKMqCjxglb6": "90_day",
-  "prod_TmxKBXb9uac3oL": "12_month",
-};
-
-// Duration in days for one-time purchases
-const PLAN_DURATIONS: Record<string, number> = {
-  "90_day": 90,
-  "12_month": 365,
-};
+import { getProductToPlan, PLAN_DURATIONS, isValidPlanType } from '../_shared/stripeConfig.ts';
 
 // Safe fields that are allowed in logs (no PII)
 const SAFE_LOG_FIELDS = ['userId', 'planType', 'customerId', 'subscriptionId', 'status', 'type', 'endDate', 'message'];
@@ -82,6 +70,7 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
+    const PRODUCT_TO_PLAN = getProductToPlan();
     logStep("Processing event", { type: event.type as string });
 
     switch (event.type) {
@@ -91,8 +80,8 @@ serve(async (req) => {
         const planType = session.metadata?.plan_type;
         const customerId = session.customer as string;
         
-        if (!userId || !planType) {
-          logStep("Missing metadata", { userId, planType });
+        if (!userId || !planType || !isValidPlanType(planType)) {
+          logStep("Missing or invalid metadata", { userId, planType });
           break;
         }
 
