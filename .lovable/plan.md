@@ -1,44 +1,82 @@
 
 
-# Fix: Drill Launch from Study Plan Shows "Unavailable"
+## Comprehensive Automated Test Suite
 
-## Root Cause
+### What This Covers
 
-When you click a DRILL task in the daily study plan, `TaskLauncher` navigates to:
-```
-/drill/M1.A?n=10&date=...&i=...
-```
+Three testing layers that let you verify the entire app with minimal manual effort:
 
-But the route `/drill/:subject` loads `DrillRunner`, which maps the `:subject` param to a drill form ID using a lookup table that only recognizes values like `Math`, `MA`, `Reading`, `RD`, etc. A skill code like `M1.A` doesn't match anything, so it falls through to "Invalid drill subject" / "Content Coming Soon".
+1. **Edge Function Integration Tests** -- Call every deployed function and verify it responds correctly
+2. **Frontend Unit Tests** -- Render critical pages/components and verify they don't crash
+3. **Expanded E2E Tests** -- Playwright tests covering the public user journey (landing, login, health check)
 
-## Fix
+---
 
-Update `TaskLauncher.tsx` to derive the **subject** from the skill code's first character before building the drill URL. The existing `SKILL_PREFIX` mapping in `sectionMapping.ts` already defines: E=English, M=Math, R=Reading, S=Science.
+### Layer 1: Edge Function Integration Tests (new file)
 
-For the DRILL case, the navigation will change from:
-```
-/drill/M1.A?n=10&...
-```
-to:
-```
-/drill/Math?n=10&skill=M1.A&...
-```
+Create `supabase/functions/_shared/integration.test.ts` that hits every deployed edge function endpoint via HTTP and checks for valid responses (not 500 errors). Functions tested:
 
-This way `DrillRunner` gets a valid subject (`Math`), and the skill code is passed as an optional query param for filtering.
+| Function | Test |
+|---|---|
+| health | GET returns 200 + `status: "healthy"` |
+| check-subscription | POST without auth returns 401 |
+| capture-lead | POST with email returns 200 |
+| session-start | POST without auth returns 401 |
+| submit-response | POST without auth returns 401 |
+| session-fetch | POST without auth returns 401 |
+| session-finish | POST without auth returns 401 |
+| set-baseline | POST without auth returns 401 |
+| set-test-date | POST without auth returns 401 |
+| days-left | POST without auth returns 401 |
+| generate-study-plan | POST without auth returns 401 |
+| complete-task | POST without auth returns 401 |
+| finish-diagnostic | POST without auth returns 401 |
+| create-checkout | POST without auth returns 401 |
+| customer-portal | POST without auth returns 401 |
+| tutor-chat | POST without auth returns 401 |
+| generate-questions | POST without auth returns 401 |
 
-## Changes
+This confirms every function is deployed, reachable, and correctly rejects unauthenticated requests (no 500 crashes).
 
-| File | Change |
-|------|--------|
-| `src/pages/TaskLauncher.tsx` | Import `SKILL_PREFIX` from `sectionMapping.ts`. In the DRILL case, reverse-lookup the subject from the first character of `code`, then navigate to `/drill/{subject}` with `skill={code}` as a query param. |
+### Layer 2: Frontend Component Smoke Tests (new file)
 
-## Technical Detail
+Create `src/tests/pages.test.tsx` that renders each major public page inside a test wrapper and asserts it doesn't throw:
 
-The skill prefix mapping is:
-- `E` -> `English`
-- `M` -> `Math`
-- `R` -> `Reading`
-- `S` -> `Science`
+- LandingPage
+- Login
+- Pricing
+- Terms
+- Privacy
+- HealthCheck
+- NotFound
 
-The reverse lookup will find the subject from `code[0]`, then navigate to `/drill/{subject}?n={n}&skill={code}&date=...&i=...`. DrillRunner already supports a `skill` query param for skill-specific filtering.
+These catch import errors, missing dependencies, and render crashes without needing authentication.
+
+### Layer 3: Expanded Playwright E2E Tests (update existing file)
+
+Update `e2e/smoke.spec.ts` to add:
+
+- Health check endpoint returns "OK" or "UNHEALTHY" text
+- Landing page has call-to-action buttons
+- Pricing page loads and shows plan options
+- Login page shows email input
+- 404 page renders for invalid routes
+
+---
+
+### Technical Details
+
+**Files created:**
+- `supabase/functions/_shared/integration.test.ts` -- Deno test file calling all 17+ edge functions
+- `src/tests/pages.test.tsx` -- Vitest tests for public page rendering
+
+**Files modified:**
+- `e2e/smoke.spec.ts` -- Add 3-4 more Playwright specs
+
+**How to run:**
+- Edge function tests: Run via the Deno test tool (I'll run them after creating)
+- Frontend tests: Run via Vitest (existing setup)
+- E2E tests: Playwright (existing setup)
+
+**No database changes or new dependencies required.**
 
