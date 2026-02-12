@@ -3,13 +3,7 @@ import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
-
-// Stripe price IDs for each plan
-const PRICE_IDS = {
-  monthly: "price_1SpNOrHa0TfiT4jGfXpytR29",      // $29.99/month recurring
-  "90_day": "price_1SpNPAHa0TfiT4jGAQvwWd2W",    // $119 one-time
-  "12_month": "price_1SpNPOHa0TfiT4jGIC35qxLq",  // $249 one-time
-};
+import { getPriceIds, isValidPlanType } from '../_shared/stripeConfig.ts';
 
 const logStep = (step: string, details?: Record<string, string | number | boolean | null>) => {
   // Sanitize: only log specific safe fields, not arbitrary objects
@@ -61,12 +55,13 @@ serve(async (req) => {
     }
 
     const { planType } = await req.json();
-    if (!planType || !PRICE_IDS[planType as keyof typeof PRICE_IDS]) {
+    if (!isValidPlanType(planType)) {
       throw new Error(`Invalid plan type: ${planType}`);
     }
     logStep("Plan type received", { planType });
 
-    const priceId = PRICE_IDS[planType as keyof typeof PRICE_IDS];
+    const PRICE_IDS = getPriceIds();
+    const priceId = PRICE_IDS[planType];
     const isSubscription = planType === "monthly";
     
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
