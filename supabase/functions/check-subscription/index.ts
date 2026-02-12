@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getCorsHeaders } from '../_shared/cors.ts';
-import { getProductToPlan } from '../_shared/stripeConfig.ts';
+import { getPriceToPlan } from '../_shared/stripeConfig.ts';
 
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
@@ -102,9 +102,9 @@ serve(async (req) => {
 
     if (activeSub) {
       const subscription = activeSub;
-      const PRODUCT_TO_PLAN = getProductToPlan();
-      const productId = subscription.items.data[0].price.product as string;
-      const planType = PRODUCT_TO_PLAN[productId] || "monthly";
+      const PRICE_TO_PLAN = getPriceToPlan();
+      const priceId = subscription.items.data[0].price.id;
+      const planType = PRICE_TO_PLAN[priceId] || "monthly";
       const isTrialing = subscription.status === 'trialing';
       const subscriptionEnd = isTrialing && subscription.trial_end
         ? new Date(subscription.trial_end * 1000).toISOString()
