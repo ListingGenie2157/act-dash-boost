@@ -101,7 +101,7 @@ export const PLAN_NAMES: Record<string, string> = {
 
 // Plan prices for display
 export const PLAN_PRICES: Record<string, { amount: number; label: string; savings?: string }> = {
-  monthly: { amount: 29.99, label: '$29.99/month' },
-  '90_day': { amount: 119, label: '$119 one-time', savings: 'Save $70' },
-  '12_month': { amount: 249, label: '$249 one-time', savings: 'Save $110' },
+  monthly: { amount: 39, label: '$39/month' },
+  '90_day': { amount: 89, label: '$89 one-time', savings: 'Save $28 vs 3 months' },
+  '12_month': { amount: 199, label: '$199 one-time', savings: 'Save $269 vs 12 months' },
 };
