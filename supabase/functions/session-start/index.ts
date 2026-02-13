@@ -5,6 +5,7 @@ import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 import { getAllSectionVariants } from '../_shared/sectionVariants.ts';
+import { requireEnv } from '../_shared/env.ts';
 
 const SessionStartSchema = z.object({
   form_id: z.string().min(1).max(50),
@@ -31,16 +32,9 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
-      return new Response(JSON.stringify({ error: 'Server misconfigured' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const supabaseUrl = requireEnv('SUPABASE_URL');
+    const supabaseAnonKey = requireEnv('SUPABASE_ANON_KEY');
+    const supabaseServiceKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
 
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
