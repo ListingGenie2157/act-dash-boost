@@ -1,29 +1,90 @@
 
 
-## Fix: Remove Anonymous Access to v_questions_public
+# Fix Session Integrity in submit-response
 
-### Problem
+## Problem
 
-`v_questions_public` is currently granted to `anon`, meaning anyone without authentication can scrape all question content (stems, choices, skill codes, etc.) -- even though answers are excluded, this is still proprietary content.
+The `submit-response` edge function has two issues flagged by the ChatGPT audit:
 
-### Fix
+1. **Broken query**: It queries `v_form_section` (line 127), which was revoked from `authenticated` users in our Blocker #3 fix. This means UUID-based question lookups will silently fail, returning "Question not found" for packaged form content.
 
-Run this single SQL statement in the Supabase SQL Editor:
+2. **Defense-in-depth**: The session ownership check uses a two-step pattern (fetch then compare) instead of a single `.eq('user_id', user.id)` in the query. While RLS protects against abuse, the recommendation is to add the constraint at the query level too.
 
-```text
-REVOKE ALL ON public.v_questions_public FROM anon;
+Additionally, `session-finish` line 113 updates sessions without `.eq('user_id', user.id)` -- RLS covers this, but we should add it for defense-in-depth.
+
+## Plan
+
+### 1. Fix `submit-response` session query (defense-in-depth)
+
+Change the session lookup from two-step to single-query:
+
+```typescript
+// Before (lines 77-94):
+const { data: session } = await supabase
+  .from('sessions')
+  .select('user_id, form_id, section')
+  .eq('id', session_id)
+  .single();
+// then: if (session.user_id !== user.id) return 403
+
+// After:
+const { data: session } = await supabase
+  .from('sessions')
+  .select('user_id, form_id, section')
+  .eq('id', session_id)
+  .eq('user_id', user.id)
+  .single();
+// Remove the separate user_id !== user.id check
 ```
 
-That's it. The `authenticated` role still has access (needed for `v_form_section_public` and session loading), but unauthenticated users can no longer browse or scrape question content.
+### 2. Fix `submit-response` answer lookup (broken query)
 
-### Why This Is Safe
+For UUID-based questions, use a `service_role` client to query the original `v_form_section` (which has answers and is service-role-only), since the edge function needs the answer to grade the response:
 
-- The `session-fetch` edge function authenticates users before querying, so it uses the `authenticated` role -- unaffected.
-- The staging items path doesn't use this view at all.
-- No frontend code queries `v_questions_public` directly as `anon`.
-- If you ever need a pre-auth preview (e.g., on a landing page), create a separate tiny "sample_questions" table with a handful of example items rather than exposing the full question bank.
+```typescript
+const serviceClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', {
+  auth: { persistSession: false },
+});
 
-### No Code Changes Needed
+// Use serviceClient for answer lookups on v_form_section
+const { data, error } = await serviceClient
+  .from('v_form_section')
+  .select('answer, question_id')
+  .eq('form_id', session.form_id)
+  .eq('section', session.section)
+  .eq('question_id', question_id)
+  .single();
+```
 
-This is a database-only fix -- one REVOKE statement.
+### 3. Fix `session-finish` update query (defense-in-depth)
+
+Add `.eq('user_id', user.id)` to the session update:
+
+```typescript
+// Before (line 110-113):
+.update({ ended_at: new Date().toISOString() })
+.eq('id', session_id);
+
+// After:
+.update({ ended_at: new Date().toISOString() })
+.eq('id', session_id)
+.eq('user_id', user.id);
+```
+
+### 4. Deploy both updated edge functions
+
+- Deploy `submit-response`
+- Deploy `session-finish`
+
+## Files Changed
+
+- `supabase/functions/submit-response/index.ts` -- fix session query + use service_role for answer lookup
+- `supabase/functions/session-finish/index.ts` -- add user_id to update query
+
+## What Was Already Fine
+
+- `session-fetch`: Already has `.eq('user_id', user.id)` on session lookup
+- `session-start`: Creates sessions with `user_id: user.id` (insert, not lookup)
+- `session-finish`: Session SELECT already has `.eq('user_id', user.id)` -- only the UPDATE was missing it
+- All tables have RLS policies enforcing `auth.uid() = user_id` as a safety net
 
