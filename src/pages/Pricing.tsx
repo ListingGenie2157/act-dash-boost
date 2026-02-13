@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useSubscription, PLAN_NAMES, PLAN_PRICES } from '@/hooks/useSubscription';
+import { Settings } from 'lucide-react';
 import { useAuthUser } from '@/hooks/queries/useAuth';
 import { toast } from 'sonner';
 
@@ -107,8 +108,9 @@ function PricingCard({ planType, title, description, isPopular, isCurrentPlan, o
 export default function Pricing() {
   const navigate = useNavigate();
   const { data: user } = useAuthUser();
-  const { isSubscribed, planType: currentPlan, createCheckout } = useSubscription();
+  const { isSubscribed, planType: currentPlan, createCheckout, openCustomerPortal } = useSubscription();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [loadingPortal, setLoadingPortal] = useState(false);
 
   const handleSelectPlan = async (planType: 'monthly' | '90_day' | '12_month') => {
     if (!user) {
@@ -191,12 +193,43 @@ export default function Pricing() {
           </div>
         </div>
 
-        {/* Back to dashboard link for subscribers */}
+        {/* Manage Subscription + Back to dashboard for subscribers */}
         {isSubscribed && (
-          <div className="text-center mt-8">
-            <Button variant="link" onClick={() => navigate('/dashboard')}>
-              ← Back to Dashboard
+          <div className="text-center mt-8 space-y-3">
+            <Button 
+              variant="outline" 
+              size="lg"
+              className="gap-2"
+              onClick={async () => {
+                setLoadingPortal(true);
+                try {
+                  await openCustomerPortal();
+                } catch (error) {
+                  console.error('Portal error:', error);
+                  toast.error('Failed to open subscription portal. Please try again.');
+                } finally {
+                  setLoadingPortal(false);
+                }
+              }}
+              disabled={loadingPortal}
+            >
+              {loadingPortal ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Opening...
+                </>
+              ) : (
+                <>
+                  <Settings className="w-4 h-4" />
+                  Manage Subscription
+                </>
+              )}
             </Button>
+            <div>
+              <Button variant="link" onClick={() => navigate('/dashboard')}>
+                ← Back to Dashboard
+              </Button>
+            </div>
           </div>
         )}
       </div>

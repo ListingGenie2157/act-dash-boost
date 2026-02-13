@@ -54,10 +54,25 @@ export default function Terms() {
             <li>Subscription fees are billed in advance on a recurring basis</li>
             <li>You authorize us to charge your payment method for the applicable fees</li>
             <li>Subscriptions automatically renew unless cancelled before the renewal date</li>
-            <li>Refunds are provided at our discretion and in accordance with our refund policy</li>
+            <li>You may cancel your subscription at any time through the Manage Subscription portal in your account</li>
           </ul>
 
-          <h2>5. Acceptable Use</h2>
+          <h2>5. Refund Policy</h2>
+          <p>
+            We want you to be satisfied with your Preppit Pacing experience. Our refund policy is as follows:
+          </p>
+          <ul>
+            <li><strong>Monthly Subscriptions:</strong> You may cancel at any time. No refunds are issued for partial months, but you retain access until the end of your current billing period.</li>
+            <li><strong>7-Day Free Trial:</strong> If you cancel during your free trial period, you will not be charged.</li>
+            <li><strong>90-Day and 12-Month Passes:</strong> Refund requests must be submitted within 7 days of purchase. After 7 days, no refunds will be issued, but you retain full access for the duration of your pass.</li>
+            <li><strong>How to Request a Refund:</strong> Contact us at support@getpreppit.com with your account email and reason for the request. We will respond within 2 business days.</li>
+          </ul>
+          <p>
+            Chargebacks filed without first contacting our support team may result in account suspension. 
+            We encourage you to reach out to us directly so we can resolve any issues promptly.
+          </p>
+
+          <h2>6. Acceptable Use</h2>
           <p>You agree not to:</p>
           <ul>
             <li>Share your account credentials with others</li>
@@ -68,48 +83,48 @@ export default function Terms() {
             <li>Use the Service for any unlawful purpose</li>
           </ul>
 
-          <h2>6. Intellectual Property</h2>
+          <h2>7. Intellectual Property</h2>
           <p>
             All content on the Service, including but not limited to questions, explanations, 
             study materials, and software, is the property of Preppit Pacing or its licensors 
             and is protected by copyright and other intellectual property laws.
           </p>
 
-          <h2>7. Disclaimer of Warranties</h2>
+          <h2>8. Disclaimer of Warranties</h2>
           <p>
             THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR 
             IMPLIED. WE DO NOT GUARANTEE THAT THE SERVICE WILL BE UNINTERRUPTED, ERROR-FREE, 
             OR THAT ANY SPECIFIC SCORE IMPROVEMENT WILL BE ACHIEVED.
           </p>
 
-          <h2>8. Limitation of Liability</h2>
+          <h2>9. Limitation of Liability</h2>
           <p>
             TO THE MAXIMUM EXTENT PERMITTED BY LAW, PREPPIT PACING SHALL NOT BE LIABLE FOR ANY 
             INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING OUT OF 
             YOUR USE OF THE SERVICE.
           </p>
 
-          <h2>9. Changes to Terms</h2>
+          <h2>10. Changes to Terms</h2>
           <p>
             We reserve the right to modify these Terms at any time. We will notify users of 
             material changes by posting the updated Terms on the Service. Your continued use 
             of the Service after such changes constitutes acceptance of the new Terms.
           </p>
 
-          <h2>10. Termination</h2>
+          <h2>11. Termination</h2>
           <p>
             We may terminate or suspend your account at any time for violation of these Terms 
             or for any other reason at our sole discretion. Upon termination, your right to 
             use the Service will immediately cease.
           </p>
 
-          <h2>11. Governing Law</h2>
+          <h2>12. Governing Law</h2>
           <p>
             These Terms shall be governed by and construed in accordance with the laws of the 
             United States, without regard to its conflict of law provisions.
           </p>
 
-          <h2>12. Contact Information</h2>
+          <h2>13. Contact Information</h2>
           <p>
             If you have any questions about these Terms, please contact us at:
           </p>
