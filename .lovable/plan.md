@@ -1,36 +1,29 @@
 
 
-## Fix Dependency Tooling Drift: Standardize on npm
+## Fix: Remove Anonymous Access to v_questions_public
 
 ### Problem
 
-The project has **both** `bun.lockb` and `package-lock.json` checked into the repo. This causes inconsistent dependency resolution depending on which tool a developer (or CI) happens to use, leading to "works on my machine" bugs.
+`v_questions_public` is currently granted to `anon`, meaning anyone without authentication can scrape all question content (stems, choices, skill codes, etc.) -- even though answers are excluded, this is still proprietary content.
 
-### Decision: Keep npm, Remove bun
+### Fix
 
-Lovable's build system uses **npm**. The `package-lock.json` is the canonical lockfile. The `bun.lockb` is leftover drift.
-
-### Changes
-
-**1. Delete `bun.lockb`**
-
-Remove the file from the repository.
-
-**2. Update `.gitignore` to block future lockfile drift**
-
-Add the following entries:
+Run this single SQL statement in the Supabase SQL Editor:
 
 ```text
-# Lockfile drift prevention — npm is the standard
-bun.lockb
-yarn.lock
-pnpm-lock.yaml
+REVOKE ALL ON public.v_questions_public FROM anon;
 ```
 
-This prevents anyone from accidentally committing an alternative lockfile in the future.
+That's it. The `authenticated` role still has access (needed for `v_form_section_public` and session loading), but unauthenticated users can no longer browse or scrape question content.
 
-### Files Changed
+### Why This Is Safe
 
-- `bun.lockb` -- deleted
-- `.gitignore` -- add `bun.lockb`, `yarn.lock`, `pnpm-lock.yaml`
+- The `session-fetch` edge function authenticates users before querying, so it uses the `authenticated` role -- unaffected.
+- The staging items path doesn't use this view at all.
+- No frontend code queries `v_questions_public` directly as `anon`.
+- If you ever need a pre-auth preview (e.g., on a landing page), create a separate tiny "sample_questions" table with a handful of example items rather than exposing the full question bank.
+
+### No Code Changes Needed
+
+This is a database-only fix -- one REVOKE statement.
 
