@@ -928,6 +928,35 @@ export type Database = {
           },
         ]
       }
+      session_questions: {
+        Row: {
+          ord: number
+          passage_id: string | null
+          question_id: string
+          session_id: string
+        }
+        Insert: {
+          ord: number
+          passage_id?: string | null
+          question_id: string
+          session_id: string
+        }
+        Update: {
+          ord?: number
+          passage_id?: string | null
+          question_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_questions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sessions: {
         Row: {
           coached: boolean
