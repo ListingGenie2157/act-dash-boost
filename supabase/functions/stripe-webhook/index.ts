@@ -70,6 +70,26 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
+    // Idempotency guard: reject duplicate events (Stripe retries frequently)
+    const { data: existing } = await supabaseClient
+      .from("stripe_webhook_events")
+      .select("id")
+      .eq("id", event.id)
+      .maybeSingle();
+
+    if (existing) {
+      logStep("Duplicate event, skipping", { type: event.type as string });
+      return new Response(JSON.stringify({ received: true, duplicate: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
+    // Record event ID before processing
+    await supabaseClient
+      .from("stripe_webhook_events")
+      .insert({ id: event.id });
+
     const PRICE_TO_PLAN = getPriceToPlan();
     logStep("Processing event", { type: event.type as string });
 
