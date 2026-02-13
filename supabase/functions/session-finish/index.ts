@@ -110,7 +110,8 @@ serve(async (req) => {
     const { error: updateError } = await supabase
       .from('sessions')
       .update({ ended_at: new Date().toISOString() })
-      .eq('id', session_id);
+      .eq('id', session_id)
+      .eq('user_id', user.id);
 
     if (updateError) {
       console.error('Session update error:', updateError);
