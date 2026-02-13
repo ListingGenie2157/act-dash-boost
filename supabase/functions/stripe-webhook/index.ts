@@ -3,6 +3,7 @@ import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { getPriceToPlan, PLAN_DURATIONS, isValidPlanType } from '../_shared/stripeConfig.ts';
+import { requireEnv } from '../_shared/env.ts';
 
 // Safe fields that are allowed in logs (no PII)
 const SAFE_LOG_FIELDS = ['userId', 'planType', 'customerId', 'subscriptionId', 'status', 'type', 'endDate', 'message'];
@@ -25,10 +26,8 @@ serve(async (req) => {
   try {
     logStep("Webhook received");
 
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
-    
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
+    const stripeKey = requireEnv("STRIPE_SECRET_KEY");
+    const webhookSecret = requireEnv("STRIPE_WEBHOOK_SECRET");
     
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     
@@ -36,14 +35,6 @@ serve(async (req) => {
     const signature = req.headers.get("stripe-signature");
     
     let event: Stripe.Event;
-    
-    if (!webhookSecret) {
-      logStep("STRIPE_WEBHOOK_SECRET not configured - rejecting request");
-      return new Response(JSON.stringify({ error: "Webhook secret not configured" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      });
-    }
 
     if (!signature) {
       logStep("Missing stripe-signature header");
@@ -65,8 +56,8 @@ serve(async (req) => {
     }
 
     const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      requireEnv("SUPABASE_URL"),
+      requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
       { auth: { persistSession: false } }
     );
 

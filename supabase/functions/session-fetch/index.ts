@@ -4,6 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 import { getAllSectionVariants } from '../_shared/sectionVariants.ts';
+import { requireEnv } from '../_shared/env.ts';
 
 type PassagePayload = {
   title: string;
@@ -25,15 +26,8 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return new Response(JSON.stringify({ error: 'Server misconfigured' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const supabaseUrl = requireEnv('SUPABASE_URL');
+    const supabaseAnonKey = requireEnv('SUPABASE_ANON_KEY');
 
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
