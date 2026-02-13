@@ -1125,6 +1125,21 @@ export type Database = {
           },
         ]
       }
+      stripe_webhook_events: {
+        Row: {
+          id: string
+          received_at: string
+        }
+        Insert: {
+          id: string
+          received_at?: string
+        }
+        Update: {
+          id?: string
+          received_at?: string
+        }
+        Relationships: []
+      }
       study_plan_days: {
         Row: {
           generated_at: string | null
@@ -1765,6 +1780,7 @@ export type Database = {
         Args: { p_key: string; p_limit: number; p_window_ms: number }
         Returns: Json
       }
+      cleanup_old_webhook_events: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
