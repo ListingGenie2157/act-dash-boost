@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 
 /**
  * Get all possible database variants for a section code.
@@ -87,6 +88,13 @@ serve(async (req) => {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Rate limit: 30 requests per minute per user
+    const ip = getClientIp(req);
+    const allowed = await checkRateLimit(user.id, ip, 'session-fetch', 30, 60000);
+    if (!allowed) {
+      return createRateLimitResponse(corsHeaders);
     }
 
     // Get session_id from query params (GET) or body (POST)
