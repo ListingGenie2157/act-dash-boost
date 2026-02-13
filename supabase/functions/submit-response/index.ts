@@ -42,6 +42,18 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
+    // Service-role client for answer lookups (v_form_section is service-role-only)
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!serviceRoleKey) {
+      return new Response(
+        JSON.stringify({ error: 'Server misconfigured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const serviceClient = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false },
+    });
+
     // Verify authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
@@ -73,24 +85,18 @@ serve(async (req) => {
 
     const { session_id, question_id, selected, time_ms } = validationResult.data;
 
-    // Verify session belongs to user
+    // Verify session belongs to user (defense-in-depth: single query with user_id)
     const { data: session, error: sessionError } = await supabase
       .from('sessions')
       .select('user_id, form_id, section')
       .eq('id', session_id)
+      .eq('user_id', user.id)
       .single();
 
     if (sessionError || !session) {
       return new Response(
         JSON.stringify({ error: 'Session not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (session.user_id !== user.id) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized: Session does not belong to user' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -122,9 +128,9 @@ serve(async (req) => {
       }
     }
     
-    // Try v_form_section for UUID-based question IDs
+    // Try v_form_section for UUID-based question IDs (service-role only)
     if (!questionData) {
-      const { data, error } = await supabase
+      const { data, error } = await serviceClient
         .from('v_form_section')
         .select('answer, question_id')
         .eq('form_id', session.form_id)
