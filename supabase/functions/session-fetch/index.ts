@@ -124,6 +124,30 @@ serve(async (req) => {
       });
     }
 
+    // Exempt diagnostic/onboarding from subscription check
+    const isExemptForm = session.form_id.startsWith('D2') || session.form_id.startsWith('ONB');
+    
+    if (!isExemptForm) {
+      // Enforce subscription gating at the server level
+      const serviceClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', {
+        auth: { persistSession: false },
+      });
+      const { data: sub } = await serviceClient
+        .from('subscriptions')
+        .select('status, current_period_end')
+        .eq('user_id', user.id)
+        .in('status', ['active', 'trialing'])
+        .limit(1)
+        .maybeSingle();
+
+      if (!sub || (sub.current_period_end && new Date(sub.current_period_end) < new Date())) {
+        return new Response(JSON.stringify({ error: 'Subscription required' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // Determine data source
     const useStaging = session.form_id.startsWith('F') || session.form_id.startsWith('DR_') || session.form_id.startsWith('D2') || session.form_id.startsWith('ONB');
     const sectionVariants = getAllSectionVariants(session.section);
