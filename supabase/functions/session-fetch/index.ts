@@ -133,18 +133,19 @@ serve(async (req) => {
     let questionsError: unknown = null;
 
     if (useStaging) {
-      // Use explicit column selection to exclude answer/explanation (security: prevent client-side cheating)
+      // Use safe public view that excludes answer/explanation
       const { data, error } = await supabase
-        .from('staging_items')
-        .select('staging_id, form_id, section, ord, skill_code, question, choice_a, choice_b, choice_c, choice_d, choice_e, difficulty, passage_id, passage_text, passage_title, underlined_text, reference_number, position_in_passage, image_url, image_caption, image_position, calculator_allowed')
+        .from('v_staging_items_public')
+        .select('staging_id, form_id, section, ord, skill_code, question, choice_a, choice_b, choice_c, choice_d, difficulty, passage_id, passage_text, passage_title, underlined_text, reference_number, position_in_passage, image_url, image_caption, image_position, calculator_allowed')
         .eq('form_id', session.form_id)
         .in('section', sectionVariants)
         .order('ord');
       questionsData = (data as QuestionRow[]) || [];
       questionsError = error;
     } else {
+      // Use safe public view that excludes answer/explanation
       const { data, error } = await supabase
-        .from('v_form_section')
+        .from('v_form_section_public')
         .select('*')
         .eq('form_id', session.form_id)
         .in('section', sectionVariants)

@@ -1503,6 +1503,74 @@ export type Database = {
           },
         ]
       }
+      v_form_section_public: {
+        Row: {
+          calculator_allowed: boolean | null
+          chart_images: string[] | null
+          choice_a: string | null
+          choice_b: string | null
+          choice_c: string | null
+          choice_d: string | null
+          choice_e: string | null
+          difficulty: number | null
+          form_id: string | null
+          has_charts: boolean | null
+          image_caption: string | null
+          image_position: string | null
+          image_url: string | null
+          marked_text: Json | null
+          ord: number | null
+          passage_format: string | null
+          passage_id: string | null
+          passage_text: string | null
+          passage_title: string | null
+          passage_type: string | null
+          position_in_passage: number | null
+          question: string | null
+          question_id: string | null
+          reference_number: number | null
+          section: string | null
+          skill_id: string | null
+          underlined_text: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_questions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_questions_passage_id_fkey"
+            columns: ["passage_id"]
+            isOneToOne: false
+            referencedRelation: "passages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_questions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_questions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "v_questions_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "questions_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_questions_public: {
         Row: {
           calculator_allowed: boolean | null
