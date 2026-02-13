@@ -1,0 +1,1 @@
+REVOKE ALL ON public.v_questions_public FROM anon;
