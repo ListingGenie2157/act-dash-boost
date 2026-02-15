@@ -101,7 +101,7 @@ export default function Login() {
   if (showForgotPassword) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <Card className="w-full max-w-md animate-scale-in radial-glow">
+        <Card className="w-full max-w-md animate-scale-in">
           <CardHeader className="space-y-1 text-center pb-8">
             <div className="flex justify-center mb-4">
               <img src={preppitLogo} alt="Preppit Pacing" className="h-16 w-auto" />
@@ -134,9 +134,9 @@ export default function Login() {
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <Card className="w-full max-w-md animate-scale-in radial-glow">
+        <Card className="w-full max-w-md animate-scale-in">
           <CardContent className="pt-8 pb-8 text-center space-y-6">
-            <div className="mx-auto w-20 h-20 bg-gradient-primary rounded-full flex items-center justify-center shadow-glow-teal">
+            <div className="mx-auto w-20 h-20 bg-gradient-primary rounded-full flex items-center justify-center">
               <Check className="w-10 h-10 text-white" />
             </div>
             <div className="space-y-2">
@@ -161,7 +161,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-      <Card className="w-full max-w-md animate-scale-in radial-glow">
+      <Card className="w-full max-w-md animate-scale-in">
         <CardHeader className="space-y-1 text-center pb-8">
           <div className="flex justify-center mb-4">
             <img src={preppitLogo} alt="Preppit Pacing" className="h-16 w-auto" />

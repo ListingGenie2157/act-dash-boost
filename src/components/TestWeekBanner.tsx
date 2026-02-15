@@ -78,8 +78,8 @@ export const TestWeekBanner = () => {
               key={item.day}
               className={`p-3 rounded-lg border transition-all ${
                 item.isToday
-                  ? 'border-coral bg-coral/10 shadow-glow-coral'
-                  : 'border-white/[0.06] bg-secondary'
+                  ? 'border-l-4 border-l-coral border-white/[0.06] bg-card'
+                  : 'border-white/[0.06] bg-card'
               }`}
             >
               <div className="flex items-center gap-2 mb-2">

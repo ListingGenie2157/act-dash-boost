@@ -114,11 +114,11 @@ const Dashboard = () => {
       <div className="container max-w-7xl mx-auto px-4 py-8">
         <div className="space-y-8">
           {/* Welcome Section */}
-          <div className="p-6 rounded-2xl bg-card border border-white/[0.06] shadow-card radial-glow animate-fade-in">
+          <div className="p-6 rounded-2xl bg-card border border-white/[0.06] shadow-card animate-fade-in">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 rounded-xl bg-primary/10 flex-shrink-0">
+                  <div className="p-2 rounded-xl bg-secondary flex-shrink-0">
                     <User className="w-6 h-6 text-primary" />
                   </div>
                   <h1 className="text-2xl sm:text-3xl font-bold break-words">
@@ -167,7 +167,7 @@ const Dashboard = () => {
                 <AchievementBadges />
               </div>
               
-              <Card className="radial-glow">
+              <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-2 mb-4">
                     <Zap className="w-5 h-5 text-primary" />
@@ -193,10 +193,10 @@ const Dashboard = () => {
               <MasteryDashboard />
               
               {!hasDiagnostic && (
-                <Card className="radial-glow">
+                <Card>
                   <CardContent className="pt-6">
                     <div className="flex flex-col md:flex-row items-center gap-6">
-                      <div className="p-6 rounded-2xl bg-primary/10">
+                      <div className="p-6 rounded-2xl bg-secondary">
                         <Target className="w-12 h-12 text-primary" />
                       </div>
                       <div className="flex-1 text-center md:text-left">
@@ -221,9 +221,9 @@ const Dashboard = () => {
           ) : (
             <div className="space-y-8">
               {/* Choose Your Path */}
-              <Card className="p-8 radial-glow animate-fade-in">
+              <Card className="p-8 animate-fade-in">
                 <div className="max-w-3xl mx-auto text-center space-y-4">
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary border border-white/[0.06] mb-4">
                     <Target className="w-4 h-4 text-primary" />
                     <span className="text-sm font-medium text-primary">Choose Your Path</span>
                   </div>
@@ -253,9 +253,9 @@ const Dashboard = () => {
 
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in">
                 <Link to="/lessons">
-                  <Card className="group p-6 h-full card-hover radial-glow">
+                  <Card className="group p-6 h-full card-hover">
                     <CardContent className="p-0 space-y-4">
-                      <div className="p-3 rounded-xl bg-primary/10 w-fit group-hover:scale-110 transition-transform">
+                      <div className="p-3 rounded-xl bg-secondary w-fit group-hover:scale-110 transition-transform">
                         <BookOpen className="w-6 h-6 text-primary" />
                       </div>
                       <div>
@@ -267,9 +267,9 @@ const Dashboard = () => {
                 </Link>
                 
                 <Link to="/calculator-lab">
-                  <Card className="group p-6 h-full card-hover radial-glow">
+                  <Card className="group p-6 h-full card-hover">
                     <CardContent className="p-0 space-y-4">
-                      <div className="p-3 rounded-xl bg-primary/10 w-fit group-hover:scale-110 transition-transform">
+                      <div className="p-3 rounded-xl bg-secondary w-fit group-hover:scale-110 transition-transform">
                         <Calculator className="w-6 h-6 text-primary" />
                       </div>
                       <div>
@@ -281,9 +281,9 @@ const Dashboard = () => {
                 </Link>
                 
                 <Link to="/drill-runner">
-                  <Card className="group p-6 h-full card-hover radial-glow">
+                  <Card className="group p-6 h-full card-hover">
                     <CardContent className="p-0 space-y-4">
-                      <div className="p-3 rounded-xl bg-primary/10 w-fit group-hover:scale-110 transition-transform">
+                      <div className="p-3 rounded-xl bg-secondary w-fit group-hover:scale-110 transition-transform">
                         <Target className="w-6 h-6 text-primary" />
                       </div>
                       <div>
@@ -295,9 +295,9 @@ const Dashboard = () => {
                 </Link>
                 
                 <Link to="/simulation">
-                  <Card className="group p-6 h-full card-hover radial-glow">
+                  <Card className="group p-6 h-full card-hover">
                     <CardContent className="p-0 space-y-4">
-                      <div className="p-3 rounded-xl bg-primary/10 w-fit group-hover:scale-110 transition-transform">
+                      <div className="p-3 rounded-xl bg-secondary w-fit group-hover:scale-110 transition-transform">
                         <PlayCircle className="w-6 h-6 text-primary" />
                       </div>
                       <div>
@@ -317,10 +317,10 @@ const Dashboard = () => {
               <MasteryDashboard />
               
               {!hasDiagnostic && (
-                <Card className="radial-glow">
+                <Card>
                   <CardContent className="pt-6">
                     <div className="flex flex-col md:flex-row items-center gap-6">
-                      <div className="p-6 rounded-2xl bg-primary/10">
+                      <div className="p-6 rounded-2xl bg-secondary">
                         <Target className="w-12 h-12 text-primary" />
                       </div>
                       <div className="flex-1 text-center md:text-left">

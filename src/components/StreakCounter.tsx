@@ -25,7 +25,7 @@ export function StreakCounter() {
   const isActiveToday = streak.lastActiveDate === new Date().toISOString().split('T')[0];
 
   return (
-    <Card className={`radial-glow ${streak.currentStreak > 0 ? 'shadow-glow-teal' : ''}`}>
+    <Card className={streak.currentStreak > 0 ? 'border-l-4 border-l-primary' : ''}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Flame className={`h-5 w-5 ${streak.currentStreak > 0 ? 'text-primary' : 'text-muted-foreground'}`} />
@@ -58,7 +58,7 @@ export function StreakCounter() {
             <div className="flex items-center gap-2 text-sm">
               {streak.currentStreak >= 30 && <span className="text-primary font-medium">Unstoppable.</span>}
               {streak.currentStreak >= 7 && streak.currentStreak < 30 && <span className="text-primary font-medium">Locked in.</span>}
-              {streak.currentStreak < 7 && <span className="text-muted-foreground">Building momentum.</span>}
+              {streak.currentStreak < 7 && <span className="text-muted-foreground">Building.</span>}
             </div>
           </div>
         )}

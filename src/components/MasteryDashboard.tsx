@@ -47,7 +47,7 @@ export function MasteryDashboard() {
     : 0;
 
   return (
-    <Card className="radial-glow">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Trophy className="h-5 w-5 text-primary" />
@@ -67,32 +67,32 @@ export function MasteryDashboard() {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary border border-primary/20">
-            <div className="text-2xl">🏆</div>
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-card border border-white/[0.06]">
+            <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />
             <div>
               <div className="text-2xl font-bold text-primary">{summary.mastered}</div>
               <div className="text-xs text-muted-foreground">Mastered</div>
             </div>
           </div>
 
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary border border-accent/20">
-            <div className="text-2xl">⭐</div>
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-card border border-white/[0.06]">
+            <div className="w-2 h-2 rounded-full bg-accent mt-2 flex-shrink-0" />
             <div>
               <div className="text-2xl font-bold text-accent">{summary.proficient}</div>
               <div className="text-xs text-muted-foreground">Proficient</div>
             </div>
           </div>
 
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary border border-warning/20">
-            <div className="text-2xl">📚</div>
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-card border border-white/[0.06]">
+            <div className="w-2 h-2 rounded-full bg-warning mt-2 flex-shrink-0" />
             <div>
               <div className="text-2xl font-bold text-warning">{summary.learning}</div>
               <div className="text-xs text-muted-foreground">Learning</div>
             </div>
           </div>
 
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary border border-white/[0.06]">
-            <div className="text-2xl">🌱</div>
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-card border border-white/[0.06]">
+            <div className="w-2 h-2 rounded-full bg-muted-foreground mt-2 flex-shrink-0" />
             <div>
               <div className="text-2xl font-bold text-muted-foreground">{summary.beginner}</div>
               <div className="text-xs text-muted-foreground">Beginner</div>

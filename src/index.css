@@ -57,17 +57,14 @@
     --radius: 0.75rem;
 
     /* Performance shadows & glows */
-    --shadow-card: 0 10px 30px rgba(0,0,0,0.4);
+    --shadow-card: 0 8px 24px rgba(0,0,0,0.35);
     --shadow-soft: 0 2px 8px rgba(0,0,0,0.3);
     --shadow-medium: 0 4px 16px rgba(0,0,0,0.35);
     --shadow-strong: 0 8px 32px rgba(0,0,0,0.5);
-    --glow-teal: 0 0 25px rgba(20,184,166,0.35);
-    --glow-coral: 0 0 30px rgba(240,68,82,0.25);
 
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(170 78% 39%), hsl(195 81% 31%));
     --gradient-primary-btn: linear-gradient(135deg, #14B8A6 0%, #0E7490 100%);
-    --radial-card: radial-gradient(circle at top left, rgba(20,184,166,0.08), transparent 60%);
 
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -123,7 +120,6 @@
   }
   .card-hover:hover {
     transform: translateY(-3px);
-    box-shadow: var(--shadow-card);
   }
 
   /* Button press */
@@ -131,10 +127,8 @@
     transform: scale(0.98);
   }
 
-  /* Radial glow overlay for cards */
-  .radial-glow {
-    background-image: radial-gradient(circle at top left, rgba(20,184,166,0.08), transparent 60%);
-  }
+  /* Kept for backwards compat — now a no-op */
+  .radial-glow {}
 
   .animate-fade-in {
     animation: fadeIn 0.6s ease-out forwards;
