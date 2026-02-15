@@ -256,7 +256,7 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="bg-secondary rounded-lg p-2.5">
-                      <Icon className="h-5 w-5 text-primary" />
+                      <Icon className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <Badge className="bg-secondary text-foreground border-0 text-xs">
                       {config.label}
@@ -313,7 +313,7 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
             <Card className="p-6 transition-all duration-300 card-hover">
               <div className="flex flex-col items-center text-center gap-3">
                 <div className="p-3 rounded-xl bg-secondary transition-colors">
-                  <BookOpen className="h-6 w-6 text-primary" />
+                  <BookOpen className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <div>
                   <p className="font-semibold text-base mb-1">Lessons Library</p>
@@ -327,7 +327,7 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
             <Card className="p-6 transition-all duration-300 card-hover">
               <div className="flex flex-col items-center text-center gap-3">
                 <div className="p-3 rounded-xl bg-secondary transition-colors">
-                  <Timer className="h-6 w-6 text-primary" />
+                  <Timer className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <div>
                   <p className="font-semibold text-base mb-1">Timed Drills</p>
@@ -341,7 +341,7 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
             <Card className="p-6 transition-all duration-300 card-hover">
               <div className="flex flex-col items-center text-center gap-3">
                 <div className="p-3 rounded-xl bg-secondary transition-colors">
-                  <TestTube className="h-6 w-6 text-primary" />
+                  <TestTube className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <div>
                   <p className="font-semibold text-base mb-1">Full Simulations</p>

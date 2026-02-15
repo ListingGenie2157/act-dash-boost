@@ -39,7 +39,7 @@ export function StreakCounter() {
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Current</p>
-            <p className="text-5xl font-bold text-primary">{streak.currentStreak}</p>
+            <p className="text-6xl font-bold text-primary">{streak.currentStreak}</p>
             <p className="text-xs text-muted-foreground">days</p>
           </div>
           
@@ -48,7 +48,7 @@ export function StreakCounter() {
               <TrendingUp className="h-3 w-3" />
               Best
             </p>
-            <p className="text-2xl font-bold text-muted-foreground">{streak.longestStreak}</p>
+            <p className="text-3xl font-bold text-muted-foreground">{streak.longestStreak}</p>
             <p className="text-xs text-muted-foreground">days</p>
           </div>
         </div>
@@ -56,8 +56,8 @@ export function StreakCounter() {
         {streak.currentStreak > 0 && (
           <div className="pt-4 border-t border-white/[0.06]">
             <div className="flex items-center gap-2 text-sm">
-              {streak.currentStreak >= 30 && <span className="text-primary font-medium">Unstoppable.</span>}
-              {streak.currentStreak >= 7 && streak.currentStreak < 30 && <span className="text-primary font-medium">Locked in.</span>}
+              {streak.currentStreak >= 30 && <span className="text-muted-foreground font-medium">Unstoppable.</span>}
+              {streak.currentStreak >= 7 && streak.currentStreak < 30 && <span className="text-muted-foreground font-medium">Locked in.</span>}
               {streak.currentStreak < 7 && <span className="text-muted-foreground">Building.</span>}
             </div>
           </div>

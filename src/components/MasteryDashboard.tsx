@@ -50,7 +50,7 @@ export function MasteryDashboard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-primary" />
+          <Trophy className="h-5 w-5 text-muted-foreground" />
           Mastery Progress
         </CardTitle>
         <CardDescription>
@@ -70,7 +70,7 @@ export function MasteryDashboard() {
           <div className="flex items-start gap-3 p-3 rounded-lg bg-card border border-white/[0.06]">
             <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />
             <div>
-              <div className="text-2xl font-bold text-primary">{summary.mastered}</div>
+              <div className="text-3xl font-bold text-primary">{summary.mastered}</div>
               <div className="text-xs text-muted-foreground">Mastered</div>
             </div>
           </div>
@@ -78,7 +78,7 @@ export function MasteryDashboard() {
           <div className="flex items-start gap-3 p-3 rounded-lg bg-card border border-white/[0.06]">
             <div className="w-2 h-2 rounded-full bg-accent mt-2 flex-shrink-0" />
             <div>
-              <div className="text-2xl font-bold text-accent">{summary.proficient}</div>
+              <div className="text-3xl font-bold text-accent">{summary.proficient}</div>
               <div className="text-xs text-muted-foreground">Proficient</div>
             </div>
           </div>
@@ -86,7 +86,7 @@ export function MasteryDashboard() {
           <div className="flex items-start gap-3 p-3 rounded-lg bg-card border border-white/[0.06]">
             <div className="w-2 h-2 rounded-full bg-warning mt-2 flex-shrink-0" />
             <div>
-              <div className="text-2xl font-bold text-warning">{summary.learning}</div>
+              <div className="text-3xl font-bold text-warning">{summary.learning}</div>
               <div className="text-xs text-muted-foreground">Learning</div>
             </div>
           </div>
@@ -94,7 +94,7 @@ export function MasteryDashboard() {
           <div className="flex items-start gap-3 p-3 rounded-lg bg-card border border-white/[0.06]">
             <div className="w-2 h-2 rounded-full bg-muted-foreground mt-2 flex-shrink-0" />
             <div>
-              <div className="text-2xl font-bold text-muted-foreground">{summary.beginner}</div>
+              <div className="text-3xl font-bold text-muted-foreground">{summary.beginner}</div>
               <div className="text-xs text-muted-foreground">Beginner</div>
             </div>
           </div>
@@ -102,7 +102,7 @@ export function MasteryDashboard() {
 
         {summary.mastered > 0 && (
           <div className="flex items-center gap-2 p-3 bg-secondary rounded-lg border border-white/[0.06]">
-            <TrendingUp className="h-4 w-4 text-primary" />
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
               {summary.mastered === 1 ? "First skill mastered." : `${summary.mastered} skills mastered.`}
             </p>
@@ -111,7 +111,7 @@ export function MasteryDashboard() {
 
         {summary.beginner > 0 && (
           <div className="flex items-center gap-2 p-3 bg-secondary rounded-lg border border-white/[0.06]">
-            <Target className="h-4 w-4 text-primary" />
+            <Target className="h-4 w-4 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
               {summary.beginner} skill{summary.beginner > 1 ? 's' : ''} need more reps.
             </p>

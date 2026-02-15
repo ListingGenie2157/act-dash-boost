@@ -69,12 +69,12 @@ export function AchievementBadges() {
               <div className="text-center space-y-3">
                 <div className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center transition-transform duration-200 ${
                   achievement.unlocked 
-                    ? 'bg-primary/10 group-hover:scale-110' 
+                    ? 'bg-secondary group-hover:scale-110' 
                     : 'bg-muted'
                 }`}>
                   <Icon 
                     name={achievement.icon} 
-                    className={`h-7 w-7 ${achievement.unlocked ? 'text-primary' : 'text-muted-foreground'}`}
+                    className={`h-7 w-7 ${achievement.unlocked ? 'text-foreground' : 'text-muted-foreground'}`}
                   />
                 </div>
                 <div className="min-w-0">
