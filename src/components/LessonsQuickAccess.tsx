@@ -17,7 +17,7 @@ interface Lesson {
 export function LessonsQuickAccess() {
   const [recommendedLessons, setRecommendedLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
-  const [totalLessons, setTotalLessons] = useState(0);
+  const [, setTotalLessons] = useState(0);
   
   const { data: masteryMap } = useUserMastery();
 
@@ -122,9 +122,7 @@ export function LessonsQuickAccess() {
     return acc;
   }, {} as Record<string, typeof recommendedLessons>);
 
-  const startedCount = masteryMap 
-    ? Array.from(masteryMap.values()).filter(m => m.total > 0).length 
-    : 0;
+  void masteryMap; // keep hook dependency
 
   if (loading) {
     return (
@@ -144,7 +142,7 @@ export function LessonsQuickAccess() {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Lessons Library</h2>
           <p className="text-muted-foreground text-sm mt-1">
-            {totalLessons} lessons • {startedCount} started
+            Browse and study by subject
           </p>
         </div>
       </div>
@@ -170,7 +168,7 @@ export function LessonsQuickAccess() {
                           <div className="flex-1">
                             <h3 className="text-lg font-semibold tracking-tight">{subject}</h3>
                             <p className="text-sm text-white/90">
-                              {lessons.length} lessons available
+                              Start learning
                             </p>
                           </div>
                           <ArrowRight className="h-5 w-5" />
