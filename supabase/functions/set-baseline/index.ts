@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
+import { parseBodyWithLimit } from '../_shared/mod.ts';
 
 interface SetBaselineRequest {
   scores: {
@@ -63,7 +64,9 @@ Deno.serve(async (req) => {
       return createRateLimitResponse(corsHeaders);
     }
 
-    const body: SetBaselineRequest = await req.json();
+    const parsed = await parseBodyWithLimit(req, corsHeaders);
+    if ('error' in parsed) return parsed.error;
+    const body = parsed.data as SetBaselineRequest;
     
     if (!body.scores || Object.keys(body.scores).length === 0) {
       return new Response(

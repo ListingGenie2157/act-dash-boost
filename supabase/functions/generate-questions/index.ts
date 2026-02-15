@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.56.0";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
+import { parseBodyWithLimit } from '../_shared/mod.ts';
 
 interface GeneratedQuestion {
   question: string;
@@ -267,7 +269,16 @@ serve(async (req) => {
       });
     }
 
-    const body = await req.json();
+    // Rate limit: 3 requests per minute for admin content generation
+    const clientIp = getClientIp(req);
+    const rateLimitAllowed = await checkRateLimit(user.id, clientIp, 'generate-questions', 3, 60000);
+    if (!rateLimitAllowed) {
+      return createRateLimitResponse(corsHeaders);
+    }
+
+    const parsed = await parseBodyWithLimit(req, corsHeaders);
+    if ('error' in parsed) return parsed.error;
+    const body = parsed.data as Record<string, unknown>;
     const { action = "generate", section, skill_codes, count = 5, difficulty_distribution, questions: questionsToInsert } = body;
 
     // Handle diagnostic insert action

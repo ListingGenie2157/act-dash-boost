@@ -2,6 +2,8 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { requireEnv } from '../_shared/env.ts';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 
 // Pure function for calculating days difference (testable)
 export function calculateDaysLeft(today: Date, testDate: Date | null): number | null {
@@ -44,17 +46,8 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY');
-
-    if (!supabaseUrl || !supabaseKey) {
-      return new Response(JSON.stringify({ error: 'Server misconfigured' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseUrl = requireEnv('SUPABASE_URL');
+    const supabaseKey = requireEnv('SUPABASE_ANON_KEY');
 
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
@@ -64,6 +57,10 @@ serve(async (req) => {
       });
     }
 
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
@@ -72,6 +69,13 @@ serve(async (req) => {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Rate limit: 30 requests per minute per user
+    const clientIp = getClientIp(req);
+    const allowed = await checkRateLimit(user.id, clientIp, 'days-left', 30, 60000);
+    if (!allowed) {
+      return createRateLimitResponse(corsHeaders);
     }
 
     const { data: profile, error: profileError } = await supabase

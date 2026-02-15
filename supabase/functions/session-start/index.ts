@@ -6,6 +6,7 @@ import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 import { getAllSectionVariants } from '../_shared/sectionVariants.ts';
 import { requireEnv } from '../_shared/env.ts';
+import { parseBodyWithLimit } from '../_shared/mod.ts';
 
 const SessionStartSchema = z.object({
   form_id: z.string().min(1).max(50),
@@ -64,7 +65,9 @@ serve(async (req) => {
       return createRateLimitResponse(corsHeaders);
     }
 
-    const body = await req.json();
+    const parsed = await parseBodyWithLimit(req, corsHeaders);
+    if ('error' in parsed) return parsed.error;
+    const body = parsed.data;
 
     const validationResult = SessionStartSchema.safeParse(body);
     if (!validationResult.success) {

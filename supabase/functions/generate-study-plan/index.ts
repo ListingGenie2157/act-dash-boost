@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.56.0";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
+import { parseBodyWithLimit } from '../_shared/mod.ts';
 
 // Helper function to select lessons for a specific day with subject balancing
 // Now uses round-robin subject selection to ensure variety across all 4 subjects
@@ -404,7 +405,9 @@ serve(async (req) => {
     }
 
     // Parse request body for force flag and optional userId (for cron job)
-    const body = await req.json();
+    const parsed = await parseBodyWithLimit(req, corsHeaders);
+    if ('error' in parsed) return parsed.error;
+    const body = parsed.data as Record<string, unknown>;
     const force = body?.force === true;
     const cronUserId = body?.userId; // userId passed by cron job
 
