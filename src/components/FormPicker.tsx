@@ -126,7 +126,6 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
       <div className="grid gap-6">
         {testPackages.map((pkg) => {
           const allComplete = pkg.forms.every(f => f.isAvailable);
-          const availableCount = pkg.forms.filter(f => f.isAvailable).length;
           
           return (
             <Card key={pkg.id} className="w-full">
@@ -135,7 +134,7 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
                   <div>
                     <CardTitle className="text-xl">{pkg.label}</CardTitle>
                     <CardDescription>
-                      {availableCount} of {pkg.forms.length} sections available
+                      Select a section to begin
                     </CardDescription>
                   </div>
                   <Badge variant={allComplete ? 'default' : 'secondary'}>
@@ -173,7 +172,7 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
                           {sectionNames[section]}
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">
-                          {timeLimits[section]} • {form.questionCount} questions
+                          {timeLimits[section]}
                         </div>
                         {!form.isAvailable && (
                           <Badge variant="outline" className="mt-2 text-xs">

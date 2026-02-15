@@ -273,7 +273,7 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
                       </p>
                     )}
                     <p className="text-muted-foreground text-xs">
-                      {task.size} questions
+                      {config.description}
                     </p>
                   </div>
                   
