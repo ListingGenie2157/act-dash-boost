@@ -110,24 +110,24 @@ export function getPriorityColor(priority: 'critical' | 'high' | 'medium'): {
   switch (priority) {
     case 'critical':
       return {
-        bg: 'bg-amber-100 dark:bg-amber-900/30',
-        text: 'text-amber-700 dark:text-amber-400',
-        border: 'border-amber-300 dark:border-amber-700',
-        badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300',
+        bg: 'bg-card border-l-4 border-l-coral',
+        text: 'text-coral',
+        border: 'border-white/[0.06]',
+        badge: 'bg-coral/10 text-coral',
       };
     case 'high':
       return {
-        bg: 'bg-primary/5',
+        bg: 'bg-card border-l-4 border-l-primary',
         text: 'text-primary',
-        border: 'border-primary/20',
+        border: 'border-white/[0.06]',
         badge: 'bg-primary/10 text-primary',
       };
     case 'medium':
       return {
-        bg: 'bg-muted',
+        bg: 'bg-card border-l-4 border-l-white/10',
         text: 'text-muted-foreground',
-        border: 'border-border',
-        badge: 'bg-muted text-muted-foreground',
+        border: 'border-white/[0.06]',
+        badge: 'bg-secondary text-muted-foreground',
       };
   }
 }

@@ -28,7 +28,7 @@ const LandingPage = () => {
             <img src={preppitLogo} alt="Preppit Pacing" className="h-24 w-auto" />
           </div>
 
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 animate-fade-in">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary border border-white/[0.06] animate-fade-in">
             <span className="text-sm font-medium text-primary">The Smart Way to Prep for ACT</span>
           </div>
 
@@ -128,7 +128,7 @@ const LandingPage = () => {
         {/* Social Proof */}
         <div className="max-w-5xl mx-auto mt-20 text-center space-y-8 animate-fade-in">
           <div className="grid md:grid-cols-2 gap-6">
-            <Card className="p-8 radial-glow">
+            <Card className="p-8">
               <div className="space-y-4">
                 <div className="flex items-center justify-center gap-2">
                   <div className="flex -space-x-2">
@@ -145,7 +145,7 @@ const LandingPage = () => {
               </div>
             </Card>
 
-            <Card className="p-8 radial-glow">
+            <Card className="p-8">
               <div className="space-y-4">
                 <div className="flex items-center justify-center">
                   <Users className="w-8 h-8 text-primary" />

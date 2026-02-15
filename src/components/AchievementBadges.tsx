@@ -62,8 +62,8 @@ export function AchievementBadges() {
               key={achievement.id}
               className={`group relative p-4 rounded-lg border transition-all duration-200 ${
                 achievement.unlocked
-                  ? 'border-primary/50 bg-gradient-to-br from-primary/5 to-primary/10 hover:shadow-md hover:border-primary'
-                  : 'border-border bg-muted/30 opacity-70 hover:opacity-90'
+                  ? 'border-l-4 border-l-primary border-white/[0.06] bg-card'
+                  : 'border-white/[0.06] bg-card opacity-50'
               }`}
             >
               <div className="text-center space-y-3">
@@ -92,9 +92,6 @@ export function AchievementBadges() {
                 )}
               </div>
               
-              {achievement.unlocked && (
-                <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-              )}
             </div>
           ))}
         </div>

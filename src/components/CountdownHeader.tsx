@@ -163,9 +163,9 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
   
   const getMotivationalMessage = () => {
     if (daysLeftNum === null) return '';
-    if (daysLeftNum === 0) return 'Test Day. Execute.';
-    if (daysLeftNum < 0) return 'Test completed.';
-    if (daysLeftNum <= 7) return 'Final Week. Lock In.';
+    if (daysLeftNum === 0) return 'Execute.';
+    if (daysLeftNum < 0) return 'Complete.';
+    if (daysLeftNum <= 7) return 'Final Week.';
     if (daysLeftNum <= 30) return 'Stay on pace.';
     return 'Time is on your side.';
   };
@@ -178,8 +178,8 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
 
   return (
     <Card className={cn(
-      "radial-glow border-white/[0.06]",
-      isUrgent && "shadow-glow-coral",
+      "border-white/[0.06]",
+      isUrgent && "border-l-4 border-l-coral",
       className
     )}>
       <CardContent className="flex items-center gap-6 p-6">

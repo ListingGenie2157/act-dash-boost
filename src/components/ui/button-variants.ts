@@ -5,7 +5,7 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-gradient-primary text-white shadow-glow-teal hover:shadow-glow-teal-lg",
+        default: "bg-gradient-primary text-white shadow-sm hover:shadow-md",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline: "border border-white/10 bg-transparent hover:bg-white/5 text-foreground",
         secondary: "bg-secondary border border-primary/20 text-secondary-foreground hover:bg-primary/10",
@@ -13,7 +13,7 @@ export const buttonVariants = cva(
         warning: "bg-warning text-warning-foreground hover:bg-warning/90",
         ghost: "hover:bg-white/5 text-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        hero: "bg-gradient-primary text-white shadow-glow-teal hover:shadow-glow-teal-lg transform hover:scale-105",
+        hero: "bg-gradient-primary text-white shadow-sm hover:shadow-md",
       },
       size: {
         default: "h-10 px-4 py-2",

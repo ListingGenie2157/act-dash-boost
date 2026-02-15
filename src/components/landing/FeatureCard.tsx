@@ -20,12 +20,12 @@ export const FeatureCard = ({
 }: FeatureCardProps) => {
   return (
     <Card 
-      className="group relative overflow-hidden border-white/[0.06] hover:border-primary/30 transition-all duration-300 card-hover radial-glow"
+      className="group relative overflow-hidden border-white/[0.06] hover:border-primary/30 transition-all duration-300 card-hover"
       style={{ animationDelay: `${delay}ms` }}
     >
       <CardContent className="relative p-6 space-y-4">
         <div className="flex items-start justify-between">
-          <div className="p-3 rounded-xl bg-primary/10 group-hover:bg-primary/20 group-hover:scale-110 transition-all duration-300">
+          <div className="p-3 rounded-xl bg-secondary group-hover:scale-110 transition-all duration-300">
             <Icon className="w-6 h-6 text-primary" />
           </div>
           {badge && (
@@ -44,7 +44,7 @@ export const FeatureCard = ({
           </p>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
+        
       </CardContent>
     </Card>
   );

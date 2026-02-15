@@ -248,35 +248,36 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
               >
                 <Card
                   className={`
-                    relative overflow-hidden p-5 text-white transition-all duration-300
-                    bg-gradient-to-br ${config.gradient}
-                    hover:scale-105 hover:shadow-xl border-0
+                    relative overflow-hidden p-5 transition-all duration-300
+                    bg-card border border-white/[0.06]
+                    ${task.type === 'SIM' ? 'border-l-4 border-l-coral' : 'border-l-4 border-l-primary'}
+                    card-hover
                   `}
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2.5">
-                      <Icon className="h-5 w-5" />
+                    <div className="bg-secondary rounded-lg p-2.5">
+                      <Icon className="h-5 w-5 text-primary" />
                     </div>
-                    <Badge className="bg-white/20 backdrop-blur-sm text-white border-0 text-xs">
+                    <Badge className="bg-secondary text-foreground border-0 text-xs">
                       {config.label}
                     </Badge>
                   </div>
                   
-                  <h3 className="text-base font-bold mb-2 line-clamp-1">
+                  <h3 className="text-base font-bold mb-2 line-clamp-1 text-foreground">
                     {task.skill_name || config.description}
                   </h3>
                   <div className="space-y-0.5 mb-3">
                     {task.skill_name && task.subject && (
-                      <p className="text-white/90 text-xs font-medium line-clamp-1">
+                      <p className="text-muted-foreground text-xs font-medium line-clamp-1">
                         {task.subject} • {task.skill_name}
                       </p>
                     )}
-                    <p className="text-white/80 text-xs">
+                    <p className="text-muted-foreground text-xs">
                       {task.size} questions
                     </p>
                   </div>
                   
-                  <div className="flex items-center gap-1.5 text-white/90 text-xs font-medium group-hover:text-white transition-colors">
+                  <div className="flex items-center gap-1.5 text-primary text-xs font-medium group-hover:text-primary transition-colors">
                     <span>Start Now</span>
                     <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
                   </div>
@@ -309,9 +310,9 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
         <h3 className="text-lg font-semibold">Quick Access</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Link to="/lessons" className="block group">
-            <Card className="p-6 transition-all duration-300 hover:scale-105 hover:shadow-xl border-2 hover:border-primary">
+            <Card className="p-6 transition-all duration-300 card-hover">
               <div className="flex flex-col items-center text-center gap-3">
-                <div className="p-3 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                <div className="p-3 rounded-xl bg-secondary transition-colors">
                   <BookOpen className="h-6 w-6 text-primary" />
                 </div>
                 <div>
@@ -323,10 +324,10 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
           </Link>
           
           <Link to="/drills" className="block group">
-            <Card className="p-6 transition-all duration-300 hover:scale-105 hover:shadow-xl border-2 hover:border-primary">
+            <Card className="p-6 transition-all duration-300 card-hover">
               <div className="flex flex-col items-center text-center gap-3">
-                <div className="p-3 rounded-xl bg-secondary/10 group-hover:bg-secondary/20 transition-colors">
-                  <Timer className="h-6 w-6 text-secondary" />
+                <div className="p-3 rounded-xl bg-secondary transition-colors">
+                  <Timer className="h-6 w-6 text-primary" />
                 </div>
                 <div>
                   <p className="font-semibold text-base mb-1">Timed Drills</p>
@@ -337,10 +338,10 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
           </Link>
           
           <Link to="/simulation" className="block group">
-            <Card className="p-6 transition-all duration-300 hover:scale-105 hover:shadow-xl border-2 hover:border-primary">
+            <Card className="p-6 transition-all duration-300 card-hover">
               <div className="flex flex-col items-center text-center gap-3">
-                <div className="p-3 rounded-xl bg-destructive/10 group-hover:bg-destructive/20 transition-colors">
-                  <TestTube className="h-6 w-6 text-destructive" />
+                <div className="p-3 rounded-xl bg-secondary transition-colors">
+                  <TestTube className="h-6 w-6 text-primary" />
                 </div>
                 <div>
                   <p className="font-semibold text-base mb-1">Full Simulations</p>

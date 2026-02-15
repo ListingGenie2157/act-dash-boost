@@ -39,7 +39,7 @@ const PacingLab = () => {
   return (
     <div className="container mx-auto p-6 max-w-6xl">
       <div className="mb-10">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary border border-white/[0.06] mb-4">
           <Timer className="w-4 h-4 text-primary" />
           <span className="text-sm font-medium text-primary">Pacing Lab</span>
         </div>
@@ -136,10 +136,10 @@ const PacingLab = () => {
         </div>
       </section>
 
-      <Card className="radial-glow">
+      <Card>
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row items-start gap-6">
-            <div className="p-4 rounded-2xl bg-primary/10">
+            <div className="p-4 rounded-2xl bg-secondary">
               <Brain className="w-10 h-10 text-primary" />
             </div>
             <div className="flex-1 space-y-4">

@@ -79,7 +79,7 @@ export function WeakAreasCard({ limit = 5, showActions = true }: WeakAreasCardPr
   const highCount = weakAreas.filter(a => a.priority === 'high').length;
 
   return (
-    <Card className="border-primary/20">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <AlertTriangle className="h-5 w-5 text-primary" />
@@ -175,7 +175,7 @@ export function WeakAreasCard({ limit = 5, showActions = true }: WeakAreasCardPr
         )}
 
         {/* Summary Message */}
-        <div className="mt-4 p-3 bg-muted rounded-lg">
+        <div className="mt-4 p-3 bg-card rounded-lg border border-white/[0.06]">
           <div className="flex items-start gap-2">
             <TrendingDown className="h-4 w-4 text-primary mt-0.5" />
             <p className="text-sm text-muted-foreground">
