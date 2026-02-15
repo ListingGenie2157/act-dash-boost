@@ -123,10 +123,8 @@ export default function TimedDrills() {
                         <Clock className="h-5 w-5" />
                         {stat.subject}
                       </CardTitle>
-                      <CardDescription className="flex items-center gap-2">
-                        <Badge variant="secondary">
-                          {stat.questionCount} questions
-                        </Badge>
+                      <CardDescription>
+                        Targeted practice for this section
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
