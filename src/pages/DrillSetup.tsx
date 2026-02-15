@@ -136,11 +136,11 @@ export default function DrillSetup() {
     <div className="container mx-auto p-6 max-w-4xl">
       <Button
         variant="outline"
-        onClick={() => navigate('/drill-runner')}
+        onClick={() => navigate('/pacing-lab')}
         className="mb-4"
       >
         <ArrowLeft className="h-4 w-4 mr-2" />
-        Back to Drills
+        Back to Pacing Lab
       </Button>
 
       <div className="flex items-center gap-3 mb-6">

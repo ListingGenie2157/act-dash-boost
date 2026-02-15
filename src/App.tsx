@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { Navigate } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -46,7 +47,7 @@ import TaskLauncher from "./pages/TaskLauncher";
 import EnhancedLessonViewer from "./pages/EnhancedLessonViewer";
 import LessonsLibrary from "./pages/LessonsLibrary";
 import DrillRunner from "./pages/DrillRunner";
-import TimedDrills from "./pages/TimedDrills";
+// TimedDrills removed — now embedded in PacingLab
 import QuizRunner from "./pages/QuizRunner";
 import WeakAreas from "./pages/WeakAreas";
 import CalculatorLab from "./pages/CalculatorLab";
@@ -61,6 +62,8 @@ import Privacy from "./pages/Privacy";
 import { HealthCheck } from "./pages/HealthCheck";
 import { CookieConsent } from "./components/CookieConsent";
 
+
+const PacingLabRedirect = () => <Navigate to="/pacing-lab" replace />;
 
 // Configure QueryClient with production-ready defaults
 const queryClient = new QueryClient({
@@ -195,9 +198,9 @@ const App = () => (
                   <Route path="/lesson/:topic" element={<EnhancedLessonViewer />} />
                   <Route path="/lessons" element={<LessonsLibrary />} />
                   
-                  {/* Drills */}
-                  <Route path="/drills" element={<TimedDrills />} />
-                  <Route path="/drill-runner" element={<TimedDrills />} />
+                  {/* Drills - redirect legacy routes to Pacing Lab */}
+                  <Route path="/drills" element={<PacingLabRedirect />} />
+                  <Route path="/drill-runner" element={<PacingLabRedirect />} />
                   <Route path="/drill/:subject/setup" element={<DrillSetup />} />
                   <Route path="/drill/:subject/play" element={<DrillPlayer />} />
                   <Route path="/drill-history" element={<DrillHistory />} />
