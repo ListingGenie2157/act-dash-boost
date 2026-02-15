@@ -42,48 +42,14 @@ export const TestWeekBanner = () => {
       if (daysLeft > 7 || daysLeft < 0) return;
 
       const scheduleItems = [
-        {
-          day: 7,
-          label: 'T-7',
-          activity: 'English SIM (75 questions)',
-          icon: <Target className="w-4 h-4" />,
-          isToday: daysLeft === 7
-        },
-        {
-          day: 5,
-          label: 'T-5',
-          activity: 'English SIM (75 questions)',
-          icon: <Target className="w-4 h-4" />,
-          isToday: daysLeft === 5
-        },
-        {
-          day: 3,
-          label: 'T-3',
-          activity: 'English SIM (75 questions)',
-          icon: <Target className="w-4 h-4" />,
-          isToday: daysLeft === 3
-        },
-        {
-          day: 2,
-          label: 'T-2',
-          activity: 'Review Only (20 mins)',
-          icon: <Clock className="w-4 h-4" />,
-          isToday: daysLeft === 2
-        },
-        {
-          day: 1,
-          label: 'T-1',
-          activity: 'Warmup (15 mins)',
-          icon: <Brain className="w-4 h-4" />,
-          isToday: daysLeft === 1
-        }
+        { day: 7, label: 'T-7', activity: 'English SIM (75 questions)', icon: <Target className="w-4 h-4" />, isToday: daysLeft === 7 },
+        { day: 5, label: 'T-5', activity: 'English SIM (75 questions)', icon: <Target className="w-4 h-4" />, isToday: daysLeft === 5 },
+        { day: 3, label: 'T-3', activity: 'English SIM (75 questions)', icon: <Target className="w-4 h-4" />, isToday: daysLeft === 3 },
+        { day: 2, label: 'T-2', activity: 'Review Only (20 mins)', icon: <Clock className="w-4 h-4" />, isToday: daysLeft === 2 },
+        { day: 1, label: 'T-1', activity: 'Warmup (15 mins)', icon: <Brain className="w-4 h-4" />, isToday: daysLeft === 1 },
       ];
 
-      setSchedule({
-        daysLeft,
-        testDate: testDate.toLocaleDateString(),
-        schedule: scheduleItems
-      });
+      setSchedule({ daysLeft, testDate: testDate.toLocaleDateString(), schedule: scheduleItems });
     };
 
     fetchTestWeekSchedule();
@@ -92,15 +58,13 @@ export const TestWeekBanner = () => {
   if (!schedule) return null;
 
   return (
-    <Card className="mb-6 border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5">
+    <Card className="mb-6">
       <div className="p-4">
         <div className="flex items-center gap-2 mb-3">
-          <Calendar className="w-5 h-5 text-primary" />
-          <h2 className="text-lg font-semibold text-primary">
-            Test Week Schedule
-          </h2>
-          <Badge variant="outline">
-            {schedule.daysLeft} {schedule.daysLeft === 1 ? 'day' : 'days'} until test
+          <Calendar className="w-5 h-5 text-coral" />
+          <h2 className="text-lg font-semibold text-foreground">Final Week Protocol</h2>
+          <Badge variant="coral">
+            {schedule.daysLeft} {schedule.daysLeft === 1 ? 'day' : 'days'} left
           </Badge>
         </div>
         
@@ -114,26 +78,18 @@ export const TestWeekBanner = () => {
               key={item.day}
               className={`p-3 rounded-lg border transition-all ${
                 item.isToday
-                  ? 'border-primary bg-primary/10 shadow-sm'
-                  : 'border-border bg-card/50'
+                  ? 'border-coral bg-coral/10 shadow-glow-coral'
+                  : 'border-white/[0.06] bg-secondary'
               }`}
             >
               <div className="flex items-center gap-2 mb-2">
                 {item.icon}
-                <span className={`font-medium text-sm ${
-                  item.isToday ? 'text-primary' : 'text-foreground'
-                }`}>
+                <span className={`font-medium text-sm ${item.isToday ? 'text-coral' : 'text-foreground'}`}>
                   {item.label}
                 </span>
-                {item.isToday && (
-                  <Badge variant="default" className="text-xs">
-                    Today
-                  </Badge>
-                )}
+                {item.isToday && <Badge variant="coral" className="text-xs">Today</Badge>}
               </div>
-              <div className="text-xs text-muted-foreground">
-                {item.activity}
-              </div>
+              <div className="text-xs text-muted-foreground">{item.activity}</div>
             </div>
           ))}
         </div>

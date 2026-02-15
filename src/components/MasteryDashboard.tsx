@@ -27,7 +27,7 @@ export function MasteryDashboard() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-yellow-500" />
+            <Trophy className="h-5 w-5 text-primary" />
             Mastery Progress
           </CardTitle>
           <CardDescription>Complete quizzes to track your progress</CardDescription>
@@ -35,7 +35,7 @@ export function MasteryDashboard() {
         <CardContent>
           <div className="text-center py-8 text-muted-foreground">
             <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p>No progress yet. Start learning to see your mastery levels!</p>
+            <p>No progress yet. Start training to see mastery levels.</p>
           </div>
         </CardContent>
       </Card>
@@ -47,92 +47,73 @@ export function MasteryDashboard() {
     : 0;
 
   return (
-    <Card>
+    <Card className="radial-glow">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-yellow-500" />
+          <Trophy className="h-5 w-5 text-primary" />
           Mastery Progress
         </CardTitle>
         <CardDescription>
-          {summary.totalSkills} skills tracked • {summary.overallAccuracy.toFixed(0)}% overall accuracy
+          {summary.totalSkills} skills tracked • {summary.overallAccuracy.toFixed(0)}% accuracy
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Overall Progress */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="font-medium">Skills Mastered</span>
-            <span className="text-muted-foreground">
-              {summary.mastered} / {summary.totalSkills}
-            </span>
+            <span className="text-muted-foreground">{summary.mastered} / {summary.totalSkills}</span>
           </div>
           <Progress value={masteredPercent} className="h-2" />
         </div>
 
-        {/* Mastery Breakdown */}
         <div className="grid grid-cols-2 gap-4">
-          {/* Mastered */}
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary border border-primary/20">
             <div className="text-2xl">🏆</div>
             <div>
-              <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
-                {summary.mastered}
-              </div>
-              <div className="text-xs text-emerald-600 dark:text-emerald-500">Mastered</div>
+              <div className="text-2xl font-bold text-primary">{summary.mastered}</div>
+              <div className="text-xs text-muted-foreground">Mastered</div>
             </div>
           </div>
 
-          {/* Proficient */}
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary border border-accent/20">
             <div className="text-2xl">⭐</div>
             <div>
-              <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">
-                {summary.proficient}
-              </div>
-              <div className="text-xs text-blue-600 dark:text-blue-500">Proficient</div>
+              <div className="text-2xl font-bold text-accent">{summary.proficient}</div>
+              <div className="text-xs text-muted-foreground">Proficient</div>
             </div>
           </div>
 
-          {/* Learning */}
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary border border-warning/20">
             <div className="text-2xl">📚</div>
             <div>
-              <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-400">
-                {summary.learning}
-              </div>
-              <div className="text-xs text-yellow-600 dark:text-yellow-500">Learning</div>
+              <div className="text-2xl font-bold text-warning">{summary.learning}</div>
+              <div className="text-xs text-muted-foreground">Learning</div>
             </div>
           </div>
 
-          {/* Beginner */}
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-muted border border-border">
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-secondary border border-white/[0.06]">
             <div className="text-2xl">🌱</div>
             <div>
-              <div className="text-2xl font-bold text-muted-foreground">
-                {summary.beginner}
-              </div>
+              <div className="text-2xl font-bold text-muted-foreground">{summary.beginner}</div>
               <div className="text-xs text-muted-foreground">Beginner</div>
             </div>
           </div>
         </div>
 
-        {/* Motivational Message */}
         {summary.mastered > 0 && (
-          <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-            <TrendingUp className="h-4 w-4 text-green-600" />
+          <div className="flex items-center gap-2 p-3 bg-secondary rounded-lg border border-white/[0.06]">
+            <TrendingUp className="h-4 w-4 text-primary" />
             <p className="text-sm text-muted-foreground">
-              {summary.mastered === 1 
-                ? "You've mastered your first skill! Keep it up!" 
-                : `Great work! ${summary.mastered} skills mastered!`}
+              {summary.mastered === 1 ? "First skill mastered." : `${summary.mastered} skills mastered.`}
             </p>
           </div>
         )}
 
         {summary.beginner > 0 && (
-          <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+          <div className="flex items-center gap-2 p-3 bg-secondary rounded-lg border border-white/[0.06]">
             <Target className="h-4 w-4 text-primary" />
             <p className="text-sm text-muted-foreground">
-              Focus on {summary.beginner} skill{summary.beginner > 1 ? 's' : ''} that need more practice
+              {summary.beginner} skill{summary.beginner > 1 ? 's' : ''} need more reps.
             </p>
           </div>
         )}

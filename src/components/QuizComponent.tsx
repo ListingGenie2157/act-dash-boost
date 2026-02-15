@@ -331,8 +331,8 @@ export const QuizComponent = ({
             {currentQ.options.map((option, index) => (
               <Button
                 key={index}
-                variant="quiz"
-                className={`w-full justify-start text-left whitespace-normal min-h-12 h-auto py-3 ${
+                variant="outline"
+                className={`w-full justify-start text-left whitespace-normal min-h-12 h-auto py-3 border-white/10 hover:border-primary hover:bg-primary/10 ${
                   answers[currentQuestion] === index ? 'border-primary bg-primary/10' : ''
                 }`}
                 onClick={() => handleAnswerSelect(index)}

@@ -16,23 +16,20 @@ export const FeatureCard = ({
   title, 
   description, 
   badge,
-  gradient = "from-primary/10 to-secondary/10",
   delay = 0
 }: FeatureCardProps) => {
   return (
     <Card 
-      className="group relative overflow-hidden border-2 hover:border-primary/50 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-2"
+      className="group relative overflow-hidden border-white/[0.06] hover:border-primary/30 transition-all duration-300 card-hover radial-glow"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-      
       <CardContent className="relative p-6 space-y-4">
         <div className="flex items-start justify-between">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20 group-hover:scale-110 transition-transform duration-500">
+          <div className="p-3 rounded-xl bg-primary/10 group-hover:bg-primary/20 group-hover:scale-110 transition-all duration-300">
             <Icon className="w-6 h-6 text-primary" />
           </div>
           {badge && (
-            <Badge variant="secondary" className="animate-pulse">
+            <Badge variant="secondary" className="text-xs">
               {badge}
             </Badge>
           )}
@@ -47,7 +44,7 @@ export const FeatureCard = ({
           </p>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-secondary to-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
       </CardContent>
     </Card>
   );
