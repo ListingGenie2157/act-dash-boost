@@ -26,57 +26,27 @@ export default function Login() {
   const [resetLoading, setResetLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Check password strength
   useEffect(() => {
-    if (!password) {
-      setPasswordStrength('weak');
-      return;
-    }
-    
+    if (!password) { setPasswordStrength('weak'); return; }
     let strength = 0;
     if (password.length >= 8) strength++;
     if (/[A-Z]/.test(password)) strength++;
     if (/[0-9]/.test(password)) strength++;
     if (/[^A-Za-z0-9]/.test(password)) strength++;
-    
     if (strength <= 1) setPasswordStrength('weak');
     else if (strength <= 2) setPasswordStrength('medium');
     else setPasswordStrength('strong');
   }, [password]);
 
   const validateForm = (): boolean => {
-    if (!email || !password) {
-      setError('Please fill in all fields');
-      return false;
-    }
-
-    if (!isValidEmail(email)) {
-      setError('Please enter a valid email address');
-      return false;
-    }
-
+    if (!email || !password) { setError('Please fill in all fields'); return false; }
+    if (!isValidEmail(email)) { setError('Please enter a valid email address'); return false; }
     if (isSignUp) {
-      if (!firstName.trim() || !lastName.trim()) {
-        setError('Please enter your first and last name');
-        return false;
-      }
-
-      if (firstName.trim().length < 2 || lastName.trim().length < 2) {
-        setError('Names must be at least 2 characters');
-        return false;
-      }
-
-      if (password.length < 8) {
-        setError('Password must be at least 8 characters');
-        return false;
-      }
-
-      if (password !== confirmPassword) {
-        setError('Passwords do not match');
-        return false;
-      }
+      if (!firstName.trim() || !lastName.trim()) { setError('Please enter your first and last name'); return false; }
+      if (firstName.trim().length < 2 || lastName.trim().length < 2) { setError('Names must be at least 2 characters'); return false; }
+      if (password.length < 8) { setError('Password must be at least 8 characters'); return false; }
+      if (password !== confirmPassword) { setError('Passwords do not match'); return false; }
     }
-
     return true;
   };
 
@@ -84,53 +54,24 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setError('');
-
-    if (!validateForm()) {
-      setLoading(false);
-      return;
-    }
+    if (!validateForm()) { setLoading(false); return; }
 
     try {
       if (isSignUp) {
         const normalizedEmail = normalizeEmail(email);
         const { data, error } = await supabase.auth.signUp({
-          email: normalizedEmail,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`,
-            data: {
-              first_name: firstName.trim(),
-              last_name: lastName.trim(),
-            }
-          }
+          email: normalizedEmail, password,
+          options: { emailRedirectTo: `${window.location.origin}/`, data: { first_name: firstName.trim(), last_name: lastName.trim() } }
         });
-
-        if (error) {
-          setError(error.message);
-        } else if (data.user) {
-          setSuccess(true);
-        }
+        if (error) setError(error.message);
+        else if (data.user) setSuccess(true);
       } else {
         const normalizedEmail = normalizeEmail(email);
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: normalizedEmail,
-          password,
-        });
-
-        if (error) {
-          setError(error.message);
-        } else if (data.session) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('onboarding_complete')
-            .eq('id', data.user.id)
-            .single();
-
-          if (profile?.onboarding_complete) {
-            navigate('/dashboard');
-          } else {
-            navigate('/onboarding');
-          }
+        const { data, error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
+        if (error) setError(error.message);
+        else if (data.session) {
+          const { data: profile } = await supabase.from('profiles').select('onboarding_complete').eq('id', data.user.id).single();
+          navigate(profile?.onboarding_complete ? '/dashboard' : '/onboarding');
         }
       }
     } catch (err) {
@@ -144,28 +85,11 @@ export default function Login() {
     e.preventDefault();
     setResetLoading(true);
     setError('');
-
-    if (!isValidEmail(resetEmail)) {
-      setError('Please enter a valid email address');
-      setResetLoading(false);
-      return;
-    }
-
+    if (!isValidEmail(resetEmail)) { setError('Please enter a valid email address'); setResetLoading(false); return; }
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(
-        normalizeEmail(resetEmail),
-        {
-          redirectTo: `${window.location.origin}/update-password`
-        }
-      );
-
-      if (error) {
-        setError(error.message);
-      } else {
-        toast.success('Password reset email sent! Check your inbox.');
-        setShowForgotPassword(false);
-        setResetEmail('');
-      }
+      const { error } = await supabase.auth.resetPasswordForEmail(normalizeEmail(resetEmail), { redirectTo: `${window.location.origin}/update-password` });
+      if (error) setError(error.message);
+      else { toast.success('Password reset email sent! Check your inbox.'); setShowForgotPassword(false); setResetEmail(''); }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
     } finally {
@@ -173,78 +97,34 @@ export default function Login() {
     }
   };
 
+
   if (showForgotPassword) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-accent via-primary/80 to-secondary/60 animate-gradient relative overflow-hidden">
-        {/* Animated background shapes */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-20 w-64 h-64 bg-primary/20 rounded-full blur-3xl animate-float" />
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-secondary/20 rounded-full blur-3xl animate-float-delayed" />
-        </div>
-
-        <Card className="w-full max-w-md backdrop-blur-xl bg-card/95 border-primary/20 shadow-2xl relative z-10 animate-scale-in">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+        <Card className="w-full max-w-md animate-scale-in radial-glow">
           <CardHeader className="space-y-1 text-center pb-8">
             <div className="flex justify-center mb-4">
               <img src={preppitLogo} alt="Preppit Pacing" className="h-16 w-auto" />
             </div>
-            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Reset Password
-            </CardTitle>
-            <CardDescription className="text-base">
-              Enter your email and we'll send you a reset link
-            </CardDescription>
+            <CardTitle className="text-3xl font-bold text-primary">Reset Password</CardTitle>
+            <CardDescription className="text-base">Enter your email and we'll send you a reset link</CardDescription>
           </CardHeader>
-
           <CardContent className="space-y-4">
             <form onSubmit={handleForgotPassword} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="resetEmail">Email</Label>
-                <Input
-                  id="resetEmail"
-                  type="email"
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  required
-                  className="transition-all focus:ring-2 focus:ring-primary"
-                />
+                <Input id="resetEmail" type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="your@email.com" required />
               </div>
-
               {error && (
                 <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <span>{error}</span>
+                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" /><span>{error}</span>
                 </div>
               )}
-
-              <Button
-                type="submit"
-                className="w-full bg-gradient-to-r from-primary to-accent hover:shadow-lg transition-all duration-300 hover:scale-[1.02]"
-                disabled={resetLoading}
-              >
-                {resetLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    Sending...
-                  </>
-                ) : (
-                  'Send Reset Link'
-                )}
+              <Button type="submit" className="w-full" disabled={resetLoading}>
+                {resetLoading ? (<><Loader2 className="w-4 h-4 animate-spin mr-2" />Sending...</>) : 'Send Reset Link'}
               </Button>
             </form>
-
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                setShowForgotPassword(false);
-                setError('');
-                setResetEmail('');
-              }}
-            >
-              Back to Sign In
-            </Button>
+            <Button type="button" variant="outline" className="w-full" onClick={() => { setShowForgotPassword(false); setError(''); setResetEmail(''); }}>Back to Sign In</Button>
           </CardContent>
         </Card>
       </div>
@@ -253,45 +133,26 @@ export default function Login() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-accent via-primary/80 to-secondary/60 animate-gradient relative overflow-hidden">
-        {/* Floating shapes */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-20 w-64 h-64 bg-primary/20 rounded-full blur-3xl animate-float" />
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-secondary/20 rounded-full blur-3xl animate-float-delayed" />
-        </div>
-
-        <Card className="w-full max-w-md backdrop-blur-xl bg-card/95 border-primary/20 shadow-2xl relative z-10 animate-scale-in">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+        <Card className="w-full max-w-md animate-scale-in radial-glow">
           <CardContent className="pt-8 pb-8 text-center space-y-6">
-            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-success to-primary rounded-full flex items-center justify-center shadow-lg">
-              <Check className="w-10 h-10 text-success-foreground" />
+            <div className="mx-auto w-20 h-20 bg-gradient-primary rounded-full flex items-center justify-center shadow-glow-teal">
+              <Check className="w-10 h-10 text-white" />
             </div>
-            
             <div className="space-y-2">
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Check Your Email!
-              </h2>
-              <p className="text-muted-foreground">
-                We've sent a confirmation link to
-              </p>
+              <h2 className="text-2xl font-bold text-primary">Check Your Email</h2>
+              <p className="text-muted-foreground">We've sent a confirmation link to</p>
               <p className="font-semibold text-foreground">{email}</p>
             </div>
-
-            <div className="bg-muted/50 rounded-lg p-4 text-sm text-left space-y-2">
+            <div className="bg-secondary rounded-lg p-4 text-sm text-left space-y-2">
               <p className="font-medium">Next steps:</p>
               <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
                 <li>Check your inbox (and spam folder)</li>
                 <li>Click the confirmation link</li>
-                <li>Start crushing your ACT goals!</li>
+                <li>Start training.</li>
               </ol>
             </div>
-
-            <Button
-              onClick={() => setSuccess(false)}
-              variant="outline"
-              className="w-full"
-            >
-              Back to Sign In
-            </Button>
+            <Button onClick={() => setSuccess(false)} variant="outline" className="w-full">Back to Sign In</Button>
           </CardContent>
         </Card>
       </div>
@@ -299,40 +160,24 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-accent via-primary/80 to-secondary/60 animate-gradient relative overflow-hidden">
-      {/* Animated background shapes */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-20 w-64 h-64 bg-primary/20 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-secondary/20 rounded-full blur-3xl animate-float-delayed" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-accent/10 rounded-full blur-3xl" />
-      </div>
-
-      <Card className="w-full max-w-md backdrop-blur-xl bg-card/95 border-primary/20 shadow-2xl relative z-10 animate-scale-in">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+      <Card className="w-full max-w-md animate-scale-in radial-glow">
         <CardHeader className="space-y-1 text-center pb-8">
           <div className="flex justify-center mb-4">
             <img src={preppitLogo} alt="Preppit Pacing" className="h-16 w-auto" />
           </div>
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            {isSignUp ? 'Create Your Account' : 'Welcome Back'}
+          <CardTitle className="text-3xl font-bold text-primary">
+            {isSignUp ? 'Create Account' : 'Welcome Back'}
           </CardTitle>
           <CardDescription className="text-base">
-            {isSignUp ? 'Join students crushing their ACT goals' : 'Sign in to continue your progress'}
+            {isSignUp ? 'Join the training system.' : 'Sign in to continue.'}
           </CardDescription>
           
           {isSignUp && (
             <div className="flex items-center justify-center gap-4 pt-4 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Target className="w-3 h-3" />
-                <span>129 Skills</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Brain className="w-3 h-3" />
-                <span>AI Tutor</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Calculator className="w-3 h-3" />
-                <span>Calculator Lab</span>
-              </div>
+              <div className="flex items-center gap-1"><Target className="w-3 h-3" /><span>129 Skills</span></div>
+              <div className="flex items-center gap-1"><Brain className="w-3 h-3" /><span>AI Tutor</span></div>
+              <div className="flex items-center gap-1"><Calculator className="w-3 h-3" /><span>Calculator Lab</span></div>
             </div>
           )}
         </CardHeader>
@@ -343,78 +188,31 @@ export default function Login() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">First Name</Label>
-                  <Input
-                    id="firstName"
-                    type="text"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    placeholder="John"
-                    required={isSignUp}
-                    className="transition-all focus:ring-2 focus:ring-primary"
-                  />
+                  <Input id="firstName" type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="John" required={isSignUp} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="lastName">Last Name</Label>
-                  <Input
-                    id="lastName"
-                    type="text"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    placeholder="Doe"
-                    required={isSignUp}
-                    className="transition-all focus:ring-2 focus:ring-primary"
-                  />
+                  <Input id="lastName" type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Doe" required={isSignUp} />
                 </div>
               </div>
             )}
 
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                required
-                className="transition-all focus:ring-2 focus:ring-primary"
-              />
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="your@email.com" required />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                minLength={8}
-                className="transition-all focus:ring-2 focus:ring-primary"
-              />
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={8} />
               {isSignUp && password && (
                 <div className="flex items-center gap-2 text-xs">
-                  <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-300 ${
-                        passwordStrength === 'weak'
-                          ? 'w-1/3 bg-destructive'
-                          : passwordStrength === 'medium'
-                          ? 'w-2/3 bg-warning'
-                          : 'w-full bg-success'
-                      }`}
-                    />
+                  <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+                    <div className={`h-full transition-all duration-300 ${
+                      passwordStrength === 'weak' ? 'w-1/3 bg-destructive' : passwordStrength === 'medium' ? 'w-2/3 bg-warning' : 'w-full bg-success'
+                    }`} />
                   </div>
-                  <span
-                    className={
-                      passwordStrength === 'weak'
-                        ? 'text-destructive'
-                        : passwordStrength === 'medium'
-                        ? 'text-warning'
-                        : 'text-success'
-                    }
-                  >
+                  <span className={passwordStrength === 'weak' ? 'text-destructive' : passwordStrength === 'medium' ? 'text-warning' : 'text-success'}>
                     {passwordStrength}
                   </span>
                 </div>
@@ -424,82 +222,38 @@ export default function Login() {
             {isSignUp && (
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required={isSignUp}
-                  className="transition-all focus:ring-2 focus:ring-primary"
-                />
+                <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" required={isSignUp} />
                 {confirmPassword && password !== confirmPassword && (
-                  <p className="text-xs text-destructive flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    Passwords do not match
-                  </p>
+                  <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="w-3 h-3" />Passwords do not match</p>
                 )}
               </div>
             )}
 
             {error && (
               <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                <span>{error}</span>
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" /><span>{error}</span>
               </div>
             )}
 
-            <Button
-              type="submit"
-              className="w-full bg-gradient-to-r from-primary to-accent hover:shadow-lg transition-all duration-300 hover:scale-[1.02]"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  {isSignUp ? 'Creating Account...' : 'Signing In...'}
-                </>
-              ) : (
-                isSignUp ? 'Create Account' : 'Sign In'
-              )}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? (<><Loader2 className="w-4 h-4 animate-spin mr-2" />{isSignUp ? 'Creating...' : 'Signing In...'}</>) : (isSignUp ? 'Create Account' : 'Sign In')}
             </Button>
           </form>
 
           <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-muted" />
-            </div>
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/[0.06]" /></div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">
-                {isSignUp ? 'Already have an account?' : "Don't have an account?"}
-              </span>
+              <span className="bg-card px-2 text-muted-foreground">{isSignUp ? 'Already have an account?' : "Don't have an account?"}</span>
             </div>
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={() => {
-              setIsSignUp(!isSignUp);
-              setError('');
-              setFirstName('');
-              setLastName('');
-              setConfirmPassword('');
-            }}
-          >
+          <Button type="button" variant="outline" className="w-full" onClick={() => { setIsSignUp(!isSignUp); setError(''); setFirstName(''); setLastName(''); setConfirmPassword(''); }}>
             {isSignUp ? 'Sign In Instead' : 'Create Account'}
           </Button>
 
           {!isSignUp && (
             <p className="text-center text-xs text-muted-foreground">
-              <button
-                type="button"
-                className="hover:underline text-primary font-medium"
-                onClick={() => setShowForgotPassword(true)}
-              >
-                Forgot your password?
-              </button>
+              <button type="button" className="hover:underline text-primary font-medium" onClick={() => setShowForgotPassword(true)}>Forgot your password?</button>
             </p>
           )}
         </CardContent>

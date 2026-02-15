@@ -1,23 +1,7 @@
 import { 
-  Home, 
-  BookOpen, 
-  Timer, 
-  PlayCircle, 
-  Calculator, 
-  TrendingDown,
-  BarChart3,
-  History,
-  Target,
-  FileText,
-  Settings,
-  Users,
-  FlaskConical,
-  Upload,
-  Code,
-  LogOut,
-  ChevronDown,
-  XCircle,
-  RotateCcw
+  Home, BookOpen, Timer, PlayCircle, Calculator, TrendingDown,
+  BarChart3, History, Target, FileText, Settings, Users, FlaskConical,
+  Upload, Code, LogOut, ChevronDown, XCircle, RotateCcw
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/queries/useIsAdmin';
@@ -25,17 +9,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarFooter,
-  SidebarHeader,
-  useSidebar,
+  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
+  SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
+  SidebarFooter, SidebarHeader, useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -53,7 +29,7 @@ const studyItems = [
 const progressItems = [
   { title: 'Analytics', url: '/analytics', icon: BarChart3 },
   { title: 'Drill History', url: '/drill-history', icon: History },
-  { title: 'Mastery Tracker', url: '/', icon: Target, end: true }, // Links to dashboard mastery section
+  { title: 'Mastery Tracker', url: '/', icon: Target, end: true },
 ];
 
 const reviewItems = [
@@ -90,115 +66,54 @@ export function AppSidebar() {
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
-      toast({
-        title: 'Logged out',
-        description: 'You have been successfully logged out.',
-      });
+      toast({ title: 'Logged out', description: 'You have been successfully logged out.' });
       navigate('/login');
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to log out. Please try again.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Failed to log out. Please try again.', variant: 'destructive' });
     }
   };
 
+  const navClassName = "flex items-center gap-2 hover:bg-white/5 transition-colors";
+  const activeClassName = "bg-white/5 text-primary font-medium border-l-2 border-primary";
+
+  const renderSection = (label: string, items: typeof studyItems) => (
+    <SidebarGroup>
+      <SidebarGroupLabel>{label}</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {items.map((item) => (
+            <SidebarMenuItem key={item.title}>
+              <SidebarMenuButton asChild>
+                <NavLink to={item.url} end={item.end} className={navClassName} activeClassName={activeClassName}>
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  {!collapsed && <span>{item.title}</span>}
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
+
   return (
     <Sidebar collapsible="icon">
-      {/* Logo Header */}
-      <SidebarHeader className="border-b border-sidebar-border p-4">
+      <SidebarHeader className="border-b border-white/[0.06] p-4">
         <NavLink to="/" className="flex items-center gap-3">
-          <img 
-            src={preppitLogo} 
-            alt="Preppit Pacing" 
-            className={`${collapsed ? 'h-8 w-8' : 'h-10'} w-auto transition-all`} 
-          />
-          {!collapsed && (
-            <span className="font-bold text-lg bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Preppit Pacing
-            </span>
-          )}
+          <img src={preppitLogo} alt="Preppit Pacing" className={`${collapsed ? 'h-8 w-8' : 'h-10'} w-auto transition-all`} />
+          {!collapsed && <span className="font-bold text-lg text-primary">Preppit Pacing</span>}
         </NavLink>
       </SidebarHeader>
 
       <SidebarContent>
-        {/* Study & Practice */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Study & Practice</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {studyItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      end={item.end}
-                      className="flex items-center gap-2 hover:bg-muted/50 transition-colors"
-                      activeClassName="bg-muted text-primary font-medium"
-                    >
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {renderSection('Study & Practice', studyItems)}
+        {renderSection('Progress & Analytics', progressItems)}
+        {renderSection('Review & Practice', reviewItems)}
 
-        {/* Progress & Analytics */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Progress & Analytics</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {progressItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url}
-                      end={item.end}
-                      className="flex items-center gap-2 hover:bg-muted/50 transition-colors"
-                      activeClassName="bg-muted text-primary font-medium"
-                    >
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Review & Practice */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Review & Practice</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {reviewItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url}
-                      className="flex items-center gap-2 hover:bg-muted/50 transition-colors"
-                      activeClassName="bg-muted text-primary font-medium"
-                    >
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Resources - Collapsible */}
         <Collapsible defaultOpen={false}>
           <SidebarGroup>
             <CollapsibleTrigger asChild>
-              <SidebarGroupLabel className="cursor-pointer hover:bg-muted/50 transition-colors flex items-center justify-between">
+              <SidebarGroupLabel className="cursor-pointer hover:bg-white/5 transition-colors flex items-center justify-between">
                 <span>Cheatsheets</span>
                 {!collapsed && <ChevronDown className="h-4 w-4" />}
               </SidebarGroupLabel>
@@ -209,11 +124,7 @@ export function AppSidebar() {
                   {resourceItems.map((item) => (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild>
-                        <NavLink 
-                          to={item.url}
-                          className="flex items-center gap-2 hover:bg-muted/50 transition-colors"
-                          activeClassName="bg-muted text-primary font-medium"
-                        >
+                        <NavLink to={item.url} className={navClassName} activeClassName={activeClassName}>
                           <item.icon className="h-4 w-4 shrink-0" />
                           {!collapsed && <span>{item.title}</span>}
                         </NavLink>
@@ -226,65 +137,16 @@ export function AppSidebar() {
           </SidebarGroup>
         </Collapsible>
 
-        {/* Settings & More */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Settings & More</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {settingsItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url}
-                      className="flex items-center gap-2 hover:bg-muted/50 transition-colors"
-                      activeClassName="bg-muted text-primary font-medium"
-                    >
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {renderSection('Settings & More', settingsItems)}
 
-        {/* Admin Section - Only show if user is admin */}
-        {isAdmin && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Admin</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {adminItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      <NavLink 
-                        to={item.url}
-                        className="flex items-center gap-2 hover:bg-muted/50 transition-colors"
-                        activeClassName="bg-muted text-primary font-medium"
-                      >
-                        <item.icon className="h-4 w-4 shrink-0" />
-                        {!collapsed && <span>{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
+        {isAdmin && renderSection('Admin', adminItems)}
       </SidebarContent>
 
-      {/* Footer with Logout and Legal Links */}
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
-              <Button
-                variant="ghost"
-                onClick={handleLogout}
-                className="w-full justify-start gap-2 hover:bg-muted/50"
-              >
+              <Button variant="ghost" onClick={handleLogout} className="w-full justify-start gap-2">
                 <LogOut className="h-4 w-4 shrink-0" />
                 {!collapsed && <span>Logout</span>}
               </Button>

@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import type { Session } from '@supabase/supabase-js';
-import { Calculator, Target, Sparkles, ArrowRight, BookOpen, PlayCircle, Zap, User } from 'lucide-react';
+import { Calculator, Target, ArrowRight, BookOpen, PlayCircle, Zap, User } from 'lucide-react';
 import { logger } from '@/lib/logger';
 
 interface Profile {
@@ -47,7 +47,6 @@ const Dashboard = () => {
       setSession(session);
 
       try {
-        // Fetch profile
         const { data: profileData } = await supabase
           .from('profiles')
           .select('test_date, onboarding_complete, has_study_plan, first_name')
@@ -57,7 +56,6 @@ const Dashboard = () => {
         if (mounted && profileData) {
           setProfile(profileData);
 
-          // Check for future study plan days (source of truth)
           const today = new Date().toISOString().split('T')[0];
           const { data: planCheck } = await supabase
             .from('study_plan_days')
@@ -69,7 +67,6 @@ const Dashboard = () => {
           const actuallyHasPlan = profileData.has_study_plan || (planCheck && planCheck.length > 0);
           setHasStudyPlan(actuallyHasPlan);
 
-          // Check for completed diagnostic
           const { data: diagnosticData } = await supabase
             .from('diagnostics')
             .select('id')
@@ -101,52 +98,46 @@ const Dashboard = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground">Loading your dashboard...</p>
+          <p className="text-muted-foreground">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/5 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-      </div>
-
-      <div className="relative container mx-auto px-4 pt-4">
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 pt-4">
         <ParentBanner />
         <TestWeekBanner />
       </div>
       
-      <div className="relative container max-w-7xl mx-auto px-4 py-8">
+      <div className="container max-w-7xl mx-auto px-4 py-8">
         <div className="space-y-8">
           {/* Welcome Section */}
-          <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/30 via-accent/25 to-primary/15 backdrop-blur-sm border border-primary/30 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in overflow-hidden">
+          <div className="p-6 rounded-2xl bg-card border border-white/[0.06] shadow-card radial-glow animate-fade-in">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 rounded-xl bg-gradient-to-br from-primary/30 to-accent/30 flex-shrink-0">
+                  <div className="p-2 rounded-xl bg-primary/10 flex-shrink-0">
                     <User className="w-6 h-6 text-primary" />
                   </div>
                   <h1 className="text-2xl sm:text-3xl font-bold break-words">
-                    Welcome back{profile?.first_name ? `, ${profile.first_name}` : ''}!
+                    {profile?.first_name ? `${profile.first_name}.` : 'Welcome back.'}
                   </h1>
                 </div>
                 <p className="text-muted-foreground sm:ml-14 break-words">
-                  {hasStudyPlan ? 'Your personalized study plan for today' : 'Continue your ACT preparation with Preppit Pacing'}
+                  {hasStudyPlan ? 'Your plan for today.' : 'Continue your ACT preparation.'}
                 </p>
               </div>
               {hasStudyPlan && (
                 <Button
                   variant="outline"
                   size="sm"
-                  className="bg-background/50 backdrop-blur-sm hover:bg-background/80 flex-shrink-0 w-full sm:w-auto"
+                  className="flex-shrink-0 w-full sm:w-auto"
                   onClick={async () => {
                     if (!session?.user?.id) return;
                     
-                    if (confirm('Switch to self-directed learning mode? Your study plan will remain saved.')) {
+                    if (confirm('Switch to self-directed mode? Your study plan stays saved.')) {
                       const { error } = await supabase
                         .from('profiles')
                         .update({ has_study_plan: false })
@@ -166,21 +157,17 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Conditional Dashboard Content Based on has_study_plan Flag */}
           {hasStudyPlan ? (
-            // Structured Study Plan Dashboard
             <>
               <StudyPlanWidget hasStudyPlan={hasStudyPlan ?? false} />
               <WeeklyCalendar userId={session?.user?.id || ''} testDate={profile?.test_date} />
               
-              {/* Gamification */}
               <div className="grid gap-6 md:grid-cols-2">
                 <StreakCounter />
                 <AchievementBadges />
               </div>
               
-              {/* Quick Access Resources */}
-              <Card className="bg-gradient-to-br from-primary/5 via-accent/5 to-muted/20 backdrop-blur-sm border-primary/20 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in">
+              <Card className="radial-glow">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-2 mb-4">
                     <Zap className="w-5 h-5 text-primary" />
@@ -188,16 +175,13 @@ const Dashboard = () => {
                   </div>
                   <div className="grid gap-3 md:grid-cols-2">
                     <Link to="/lessons">
-                      <Button variant="outline" className="w-full justify-start gap-3 group bg-background/50 backdrop-blur-sm hover:bg-primary/10 hover:border-primary/50 transition-all duration-300">
+                      <Button variant="outline" className="w-full justify-start gap-3 group">
                         <BookOpen className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
                         <span>Browse All Lessons</span>
                       </Button>
                     </Link>
                     <Link to="/calculator-lab">
-                      <Button 
-                        variant="outline" 
-                        className="w-full justify-start gap-3 group bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20 hover:from-primary/20 hover:to-accent/20 transition-all duration-300"
-                      >
+                      <Button variant="outline" className="w-full justify-start gap-3 group">
                         <Calculator className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
                         <span>Calculator Lab</span>
                       </Button>
@@ -208,23 +192,21 @@ const Dashboard = () => {
               
               <MasteryDashboard />
               
-              {/* Diagnostic CTA - Only show if not completed */}
               {!hasDiagnostic && (
-                <Card className="bg-gradient-to-br from-primary/10 via-accent/10 to-muted/20 backdrop-blur-sm border-primary/20 shadow-lg hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 animate-fade-in">
+                <Card className="radial-glow">
                   <CardContent className="pt-6">
                     <div className="flex flex-col md:flex-row items-center gap-6">
-                      <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 group-hover:scale-110 transition-transform">
+                      <div className="p-6 rounded-2xl bg-primary/10">
                         <Target className="w-12 h-12 text-primary" />
                       </div>
                       <div className="flex-1 text-center md:text-left">
-                        <h3 className="text-xl font-bold mb-2">Haven't taken the diagnostic yet?</h3>
+                        <h3 className="text-xl font-bold mb-2">Run Diagnostic. Know Your Baseline.</h3>
                         <p className="text-muted-foreground mb-4">
-                          Take a quick diagnostic to identify your strengths and weaknesses across all ACT sections. 
-                          This helps us personalize your study plan and focus on areas that need the most attention.
+                          Identify strengths and weaknesses across all ACT sections. Get a personalized plan.
                         </p>
-                        <Button size="lg" asChild className="w-full md:w-auto group bg-gradient-to-r from-primary to-accent hover:shadow-xl hover:shadow-primary/50 transition-all">
+                        <Button size="lg" asChild className="w-full md:w-auto group">
                           <Link to="/diagnostic" className="flex items-center gap-2">
-                            Take Diagnostic Exam
+                            Take Diagnostic
                             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                           </Link>
                         </Button>
@@ -237,33 +219,28 @@ const Dashboard = () => {
               <WeakAreasCard />
             </>
           ) : (
-            // Self-Directed Learning Dashboard
             <div className="space-y-8">
-              {/* Choose Your Path Section */}
-              <div className="bg-gradient-to-br from-primary/10 via-accent/10 to-muted/20 backdrop-blur-sm border border-primary/20 rounded-2xl p-8 shadow-lg hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 animate-fade-in">
+              {/* Choose Your Path */}
+              <Card className="p-8 radial-glow animate-fade-in">
                 <div className="max-w-3xl mx-auto text-center space-y-4">
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm mb-4">
-                    <Sparkles className="w-4 h-4 text-primary" />
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4">
+                    <Target className="w-4 h-4 text-primary" />
                     <span className="text-sm font-medium text-primary">Choose Your Path</span>
                   </div>
-                  <h2 className="text-3xl font-bold">Ready to Start Learning?</h2>
+                  <h2 className="text-3xl font-bold">Start Training.</h2>
                   <p className="text-muted-foreground text-lg">
-                    Browse lessons and drills at your own pace, or let Preppit Pacing create a personalized study plan based on your test date and goals.
+                    Browse lessons and drills at your own pace, or let Preppit Pacing build a personalized plan.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
                     <Link to="/lessons">
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        className="gap-3 w-full sm:w-auto bg-background/50 backdrop-blur-sm hover:bg-primary/10 hover:border-primary/50 transition-all group"
-                      >
+                      <Button size="lg" variant="outline" className="gap-3 w-full sm:w-auto group">
                         <BookOpen className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                        Browse All Lessons
+                        Browse Lessons
                       </Button>
                     </Link>
                     <Button
                       size="lg"
-                      className="gap-3 bg-gradient-to-r from-primary to-accent hover:shadow-xl hover:shadow-primary/50 transition-all group"
+                      className="gap-3 group"
                       onClick={() => setWizardOpen(true)}
                     >
                       <Target className="w-5 h-5 group-hover:scale-110 transition-transform" />
@@ -272,75 +249,66 @@ const Dashboard = () => {
                     </Button>
                   </div>
                 </div>
-              </div>
+              </Card>
 
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in">
                 <Link to="/lessons">
-                  <Card className="group p-6 h-full bg-gradient-to-br from-background to-primary/5 backdrop-blur-sm border-primary/20 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 hover:-translate-y-2">
+                  <Card className="group p-6 h-full card-hover radial-glow">
                     <CardContent className="p-0 space-y-4">
-                      <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 w-fit group-hover:scale-110 transition-transform">
+                      <div className="p-3 rounded-xl bg-primary/10 w-fit group-hover:scale-110 transition-transform">
                         <BookOpen className="w-6 h-6 text-primary" />
                       </div>
                       <div>
                         <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">Lessons Library</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Browse and learn concepts at your own pace
-                        </p>
+                        <p className="text-sm text-muted-foreground">Browse and learn at your own pace.</p>
                       </div>
                     </CardContent>
                   </Card>
                 </Link>
                 
                 <Link to="/calculator-lab">
-                  <Card className="group p-6 h-full bg-gradient-to-br from-primary/5 to-accent/5 backdrop-blur-sm border-primary/20 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 hover:-translate-y-2">
+                  <Card className="group p-6 h-full card-hover radial-glow">
                     <CardContent className="p-0 space-y-4">
-                      <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 w-fit group-hover:scale-110 transition-transform">
+                      <div className="p-3 rounded-xl bg-primary/10 w-fit group-hover:scale-110 transition-transform">
                         <Calculator className="w-6 h-6 text-primary" />
                       </div>
                       <div>
                         <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">Calculator Lab</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Master calculator shortcuts to save 10-15 minutes
-                        </p>
+                        <p className="text-sm text-muted-foreground">Master shortcuts. Save 10-15 minutes.</p>
                       </div>
                     </CardContent>
                   </Card>
                 </Link>
                 
                 <Link to="/drill-runner">
-                  <Card className="group p-6 h-full bg-gradient-to-br from-background to-accent/5 backdrop-blur-sm border-accent/20 hover:border-accent/50 hover:shadow-2xl hover:shadow-accent/20 transition-all duration-300 hover:-translate-y-2">
+                  <Card className="group p-6 h-full card-hover radial-glow">
                     <CardContent className="p-0 space-y-4">
-                      <div className="p-3 rounded-xl bg-gradient-to-br from-accent/20 to-primary/20 w-fit group-hover:scale-110 transition-transform">
-                        <Target className="w-6 h-6 text-accent-foreground" />
+                      <div className="p-3 rounded-xl bg-primary/10 w-fit group-hover:scale-110 transition-transform">
+                        <Target className="w-6 h-6 text-primary" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold mb-2 group-hover:text-accent-foreground transition-colors">Timed Drills</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Practice specific skills with timed questions
-                        </p>
+                        <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">Timed Drills</h3>
+                        <p className="text-sm text-muted-foreground">Practice specific skills under pressure.</p>
                       </div>
                     </CardContent>
                   </Card>
                 </Link>
                 
                 <Link to="/simulation">
-                  <Card className="group p-6 h-full bg-gradient-to-br from-background to-accent/5 backdrop-blur-sm border-accent/20 hover:border-accent/50 hover:shadow-2xl hover:shadow-accent/20 transition-all duration-300 hover:-translate-y-2">
+                  <Card className="group p-6 h-full card-hover radial-glow">
                     <CardContent className="p-0 space-y-4">
-                      <div className="p-3 rounded-xl bg-gradient-to-br from-accent/20 to-primary/20 w-fit group-hover:scale-110 transition-transform">
-                        <PlayCircle className="w-6 h-6 text-accent-foreground" />
+                      <div className="p-3 rounded-xl bg-primary/10 w-fit group-hover:scale-110 transition-transform">
+                        <PlayCircle className="w-6 h-6 text-primary" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold mb-2 group-hover:text-accent-foreground transition-colors">Practice Simulations</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Take full-length section tests with real timing
-                        </p>
+                        <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">Full Simulations</h3>
+                        <p className="text-sm text-muted-foreground">Full-length section tests. Real timing.</p>
                       </div>
                     </CardContent>
                   </Card>
                 </Link>
               </div>
               
-              {/* Gamification */}
               <div className="grid gap-6 md:grid-cols-2">
                 <StreakCounter />
                 <AchievementBadges />
@@ -348,23 +316,21 @@ const Dashboard = () => {
               
               <MasteryDashboard />
               
-              {/* Diagnostic CTA - Only show if not completed */}
               {!hasDiagnostic && (
-                <Card className="bg-gradient-to-br from-primary/10 via-accent/10 to-muted/20 backdrop-blur-sm border-primary/20 shadow-lg hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 animate-fade-in">
+                <Card className="radial-glow">
                   <CardContent className="pt-6">
                     <div className="flex flex-col md:flex-row items-center gap-6">
-                      <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 group-hover:scale-110 transition-transform">
+                      <div className="p-6 rounded-2xl bg-primary/10">
                         <Target className="w-12 h-12 text-primary" />
                       </div>
                       <div className="flex-1 text-center md:text-left">
-                        <h3 className="text-xl font-bold mb-2">Haven't taken the diagnostic yet?</h3>
+                        <h3 className="text-xl font-bold mb-2">Run Diagnostic. Know Your Baseline.</h3>
                         <p className="text-muted-foreground mb-4">
-                          Take a quick diagnostic to identify your strengths and weaknesses across all ACT sections. 
-                          This helps us personalize your study plan and focus on areas that need the most attention.
+                          Identify strengths and weaknesses across all ACT sections. Get a personalized plan.
                         </p>
-                        <Button size="lg" asChild className="w-full md:w-auto group bg-gradient-to-r from-primary to-accent hover:shadow-xl hover:shadow-primary/50 transition-all">
+                        <Button size="lg" asChild className="w-full md:w-auto group">
                           <Link to="/diagnostic" className="flex items-center gap-2">
-                            Take Diagnostic Exam
+                            Take Diagnostic
                             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                           </Link>
                         </Button>
@@ -380,7 +346,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Study Plan Wizard */}
       <StudyPlanWizard 
         open={wizardOpen} 
         onOpenChange={setWizardOpen}

@@ -316,8 +316,8 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
               {currentQ.options.map((option, index) => (
                   <Button
                     key={index}
-                    variant="quiz"
-                    className="w-full justify-start hover:border-primary hover:bg-primary/5 transition-fast text-left"
+                    variant="outline"
+                    className="w-full justify-start border-white/10 hover:border-primary hover:bg-primary/10 transition-all duration-200 text-left h-auto p-4"
                     onClick={() => handleAnswerSelect(index)}
                   >
                     <span className="mr-3 flex-shrink-0 w-6 h-6 rounded-full border border-current flex items-center justify-center text-xs font-bold">

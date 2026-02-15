@@ -25,40 +25,40 @@ export function StreakCounter() {
   const isActiveToday = streak.lastActiveDate === new Date().toISOString().split('T')[0];
 
   return (
-    <Card className="border-primary/20">
+    <Card className={`radial-glow ${streak.currentStreak > 0 ? 'shadow-glow-teal' : ''}`}>
       <CardHeader>
-      <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2">
           <Flame className={`h-5 w-5 ${streak.currentStreak > 0 ? 'text-primary' : 'text-muted-foreground'}`} />
           Study Streak
         </CardTitle>
         <CardDescription>
-          {isActiveToday ? 'Keep it going!' : 'Study today to continue your streak'}
+          {isActiveToday ? 'Streak active. Keep pushing.' : 'Train today to extend your streak.'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">Current Streak</p>
-            <p className="text-4xl font-bold text-primary">{streak.currentStreak}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Current</p>
+            <p className="text-5xl font-bold text-primary">{streak.currentStreak}</p>
             <p className="text-xs text-muted-foreground">days</p>
           </div>
           
           <div className="text-right space-y-1">
-            <p className="text-sm text-muted-foreground flex items-center gap-1 justify-end">
+            <p className="text-xs text-muted-foreground flex items-center gap-1 justify-end uppercase tracking-wider">
               <TrendingUp className="h-3 w-3" />
-              Best Streak
+              Best
             </p>
-            <p className="text-2xl font-semibold text-muted-foreground">{streak.longestStreak}</p>
+            <p className="text-2xl font-bold text-muted-foreground">{streak.longestStreak}</p>
             <p className="text-xs text-muted-foreground">days</p>
           </div>
         </div>
 
         {streak.currentStreak > 0 && (
-          <div className="pt-4 border-t">
+          <div className="pt-4 border-t border-white/[0.06]">
             <div className="flex items-center gap-2 text-sm">
-              {streak.currentStreak >= 7 && <span className="text-primary">🔥 On fire!</span>}
-              {streak.currentStreak >= 30 && <span className="text-primary">🔥 Unstoppable!</span>}
-              {streak.currentStreak < 7 && <span className="text-muted-foreground">Keep going!</span>}
+              {streak.currentStreak >= 30 && <span className="text-primary font-medium">Unstoppable.</span>}
+              {streak.currentStreak >= 7 && streak.currentStreak < 30 && <span className="text-primary font-medium">Locked in.</span>}
+              {streak.currentStreak < 7 && <span className="text-muted-foreground">Building momentum.</span>}
             </div>
           </div>
         )}

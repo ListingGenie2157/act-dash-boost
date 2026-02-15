@@ -1,4 +1,3 @@
-// src/components/ui/badge.tsx
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
@@ -8,10 +7,10 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground",
-        secondary: "bg-muted text-muted-foreground border-border",
-        destructive: "bg-destructive text-destructive-foreground",
-        outline: "text-foreground",
+        default: "bg-primary text-primary-foreground border-transparent",
+        secondary: "bg-secondary text-secondary-foreground border-white/10",
+        destructive: "bg-destructive text-destructive-foreground border-transparent",
+        outline: "text-foreground border-white/10",
         success: "bg-success text-success-foreground border-transparent",
         warning: "bg-warning text-warning-foreground border-transparent",
         coral: "bg-coral text-coral-foreground border-transparent",
@@ -30,4 +29,3 @@ export function Badge({ className, variant, ...props }: BadgeProps) {
     <div className={cn(badgeVariants({ variant }), className)} {...props} />
   )
 }
-

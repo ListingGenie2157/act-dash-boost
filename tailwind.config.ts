@@ -68,7 +68,17 @@ export default {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)'
-      }
+      },
+      boxShadow: {
+        'card': '0 10px 30px rgba(0,0,0,0.4)',
+        'glow-teal': '0 0 25px rgba(20,184,166,0.35)',
+        'glow-teal-lg': '0 0 35px rgba(20,184,166,0.5)',
+        'glow-coral': '0 0 30px rgba(240,68,82,0.25)',
+      },
+      backgroundImage: {
+        'gradient-primary': 'linear-gradient(135deg, #14B8A6 0%, #0E7490 100%)',
+        'radial-card': 'radial-gradient(circle at top left, rgba(20,184,166,0.08), transparent 60%)',
+      },
     }
   },
   plugins: [tailwindcssAnimate]

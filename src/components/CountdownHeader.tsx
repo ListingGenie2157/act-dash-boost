@@ -40,7 +40,6 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
       if (error) {
         reportError(error as Error, { component: 'CountdownHeader', action: 'fetchDaysLeft' });
         
-        // Fallback: Query profiles table directly
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           const { data: profile } = await supabase
@@ -111,7 +110,6 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
         return;
       }
 
-      // Optimistic update
       if (daysLeft) {
         const today = new Date(daysLeft.today);
         const timeDiff = date.getTime() - today.getTime();
@@ -159,33 +157,35 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
   const daysLeftNum = daysLeft.days_left;
   const testDate = new Date(daysLeft.test_date);
   
-  // Calculate percentage (assuming 90 days max prep time)
   const maxPrepDays = 90;
   const totalDays = maxPrepDays;
   const percentage = daysLeftNum !== null ? ((totalDays - daysLeftNum) / totalDays) * 100 : 0;
   
-  // Get motivational message based on days left
   const getMotivationalMessage = () => {
     if (daysLeftNum === null) return '';
-    if (daysLeftNum === 0) return "It's Test Day! You've got this!";
-    if (daysLeftNum < 0) return 'Test completed';
-    if (daysLeftNum <= 7) return 'Final stretch! Give it everything!';
-    if (daysLeftNum <= 30) return 'Building momentum! Stay focused!';
-    return 'Plenty of time to master everything';
+    if (daysLeftNum === 0) return 'Test Day. Execute.';
+    if (daysLeftNum < 0) return 'Test completed.';
+    if (daysLeftNum <= 7) return 'Final Week. Lock In.';
+    if (daysLeftNum <= 30) return 'Stay on pace.';
+    return 'Time is on your side.';
   };
 
-  // Calculate circumference for circle progress
+  const isUrgent = daysLeftNum !== null && daysLeftNum <= 7 && daysLeftNum >= 0;
+
   const radius = 45;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
   return (
-    <Card className={cn("bg-gradient-to-br from-primary/10 to-secondary/10 backdrop-blur-sm border-primary/20 shadow-lg", className)}>
+    <Card className={cn(
+      "radial-glow border-white/[0.06]",
+      isUrgent && "shadow-glow-coral",
+      className
+    )}>
       <CardContent className="flex items-center gap-6 p-6">
         {/* Circular Progress Ring */}
         <div className="relative w-24 h-24 flex-shrink-0">
           <svg className="transform -rotate-90 w-full h-full" viewBox="0 0 100 100">
-            {/* Background circle */}
             <circle
               cx="50"
               cy="50"
@@ -193,9 +193,8 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
               stroke="currentColor"
               strokeWidth="8"
               fill="none"
-              className="text-muted/30"
+              className="text-white/5"
             />
-            {/* Progress circle */}
             <circle
               cx="50"
               cy="50"
@@ -206,51 +205,48 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
               strokeDasharray={circumference}
               strokeDashoffset={strokeDashoffset}
               strokeLinecap="round"
-              className="transition-all duration-1000 ease-out"
+              className="transition-all duration-1000 ease-out animate-progress-ring"
             />
-            {/* Gradient definition */}
             <defs>
               <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" className="[stop-color:hsl(var(--primary))]" />
-                <stop offset="100%" className="[stop-color:hsl(var(--secondary))]" />
+                <stop offset="0%" stopColor="#14B8A6" />
+                <stop offset="100%" stopColor="#0E7490" />
               </linearGradient>
             </defs>
           </svg>
-          {/* Center text */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-3xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">
+            <span className="text-4xl font-bold text-foreground">
               {daysLeftNum}
             </span>
-            <span className="text-xs text-muted-foreground">days</span>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">days</span>
           </div>
         </div>
         
         {/* Text Content */}
         <div className="flex-1 min-w-0">
-          <h3 className="text-2xl font-bold mb-1">
+          <h3 className="text-lg font-bold mb-1">
             {daysLeftNum !== null && daysLeftNum > 0 ? (
-              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                {daysLeftNum} Days Until Test
+              <span className="text-foreground">
+                <span className="text-primary">{daysLeftNum}</span> Days Until Test
               </span>
             ) : daysLeftNum === 0 ? (
-              <span className="text-warning">Test Day!</span>
+              <span className="text-coral">Test Day.</span>
             ) : (
               <span className="text-muted-foreground">Test Passed</span>
             )}
           </h3>
-          <p className="text-sm text-muted-foreground mb-3">
+          <p className="text-sm text-muted-foreground mb-3 font-medium">
             {getMotivationalMessage()}
           </p>
           
-          {/* Progress bar */}
           <div className="space-y-1">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>Progress</span>
               <span>{Math.round(percentage)}%</span>
             </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-1000 ease-out"
+                className="h-full bg-gradient-to-r from-[#14B8A6] to-[#0E7490] transition-all duration-1000 ease-out rounded-full"
                 style={{ width: `${Math.min(100, percentage)}%` }}
               />
             </div>
