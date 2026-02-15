@@ -1,131 +1,143 @@
 
-# Minimal Dark Performance System — Strip & Flatten
 
-Remove all remaining visual noise: radial glows, colored card backgrounds, glow halos, gradient task cards, amber/orange fills. Replace with flat dark surfaces + accent stripes.
+# Premium Dark Performance Polish + Remove Question Counts
 
----
-
-## Design Rules (Enforced)
-
-1. Background: `#0B132B` flat — no page-level gradients or haze
-2. Cards: `#111C3A` only — no `radial-glow`, no `bg-primary/10`, no colored fills
-3. Teal gradient ONLY on: primary buttons, progress rings, active nav
-4. Coral ONLY on: critical alerts, urgency labels, zero-accuracy states
-5. Shadows: `0 8px 24px rgba(0,0,0,0.35)` only — no glow halos
-6. Card accents: left 4px vertical stripe (teal or coral) instead of colored backgrounds
-7. Copy: tighter — two lines max for motivational text
+Three areas: remove question counts from simulations, refine the design system for authority and depth, and tighten typography/spacing/radius across the app.
 
 ---
 
-## Files & Changes
+## 1. Remove Question Counts (Simulations)
 
-### 1. `src/index.css`
-- Remove `--glow-teal` and `--glow-coral` custom properties
-- Change `--shadow-card` to `0 8px 24px rgba(0,0,0,0.35)`
-- Remove `--radial-card` gradient
-- Remove `.radial-glow` utility class
-- Remove `.card-hover:hover` box-shadow (keep translateY only)
+### `src/components/FormPicker.tsx`
+- Line 176: Remove `{form.questionCount} questions` from the button text — show only time limit (e.g., "45 min")
+- Line 138-139: Remove `CardDescription` showing "X of Y sections available" — replace with just "Select a section to begin"
+- The `questionCount` data still gets passed through to `onFormSelect` (needed for session logic), just not displayed
 
-### 2. `tailwind.config.ts`
-- Remove `glow-teal`, `glow-teal-lg`, `glow-coral` from `boxShadow`
-- Remove `radial-card` from `backgroundImage`
-- Update `card` shadow to `0 8px 24px rgba(0,0,0,0.35)`
+### `src/components/SimulationStartDialog.tsx`
+- Lines 66-73: Remove the "Questions" stat from the 2-column grid — show only "Time Limit" (single column or centered)
+- Line 70: Remove `{questionCount} questions` display
 
-### 3. `src/components/ui/card.tsx`
-- Change default shadow to `shadow-card` (the new subtle one)
-- Remove any radial glow reference
+### `src/components/StudyPlanWidget.tsx`
+- Line 276: Remove `{task.size} questions` line from task cards
 
-### 4. `src/components/ui/button-variants.ts`
-- `default`: flat teal gradient, NO glow shadow — just `shadow-sm`
-- `hero`: same as default, remove `hover:scale-105` and glow
-- Remove `shadow-glow-teal` and `shadow-glow-teal-lg` references
-
-### 5. `src/components/CountdownHeader.tsx`
-- Remove `radial-glow` class
-- Remove `shadow-glow-coral` conditional — use `border-l-4 border-coral` when urgent instead
-- Tighten copy:
-  - `<= 7`: "Final Week." (line 1) — no "Lock In"
-  - `<= 30`: "Stay on pace."
-  - `> 30`: "Time is on your side."
-  - `=== 0`: "Execute."
-  - `< 0`: "Complete."
-
-### 6. `src/components/TestWeekBanner.tsx`
-- Today items: `border-l-4 border-coral` instead of `bg-coral/10 shadow-glow-coral`
-- Non-today items: flat `bg-card` with `border-white/[0.06]`
-
-### 7. `src/pages/Dashboard.tsx`
-- Remove ALL `radial-glow` classes from every Card
-- Remove `bg-primary/10` icon backgrounds — use flat `bg-secondary` instead
-- Welcome card: plain `bg-card border border-white/[0.06]`
-- Diagnostic CTA card: flat dark card, no colored icon wrapper
-- Feature cards (Lessons Library, Calculator Lab, etc.): flat `bg-card`, no `radial-glow`
-- Quick Access card: flat, no glow
-
-### 8. `src/components/StreakCounter.tsx`
-- Remove `radial-glow` and `shadow-glow-teal` classes
-- Active streak: `border-l-4 border-primary` instead of glow
-- Copy: streak >= 30 stays "Unstoppable." / >= 7 stays "Locked in." / < 7: "Building."
-
-### 9. `src/components/MasteryDashboard.tsx`
-- Remove `radial-glow`
-- Remove emoji icons (trophy, star, book, seedling) — use plain text or small teal/muted dots
-- Mastery tiles: flat `bg-card` with `border-white/[0.06]` — no colored borders like `border-primary/20`, `border-accent/20`, `border-warning/20`
-- Keep number colors: primary for mastered, muted for rest
-
-### 10. `src/components/WeakAreasCard.tsx`
-- Remove all colored backgrounds from priority items
-- Update `getPriorityColor` in `src/lib/weakAreas.ts`:
-  - `critical`: `bg-card`, `border-l-4 border-coral`, coral badge, coral text for accuracy
-  - `high`: `bg-card`, `border-l-4 border-primary`, teal badge
-  - `medium`: `bg-card`, `border-l-4 border-white/10`, muted badge
-- Remove `bg-amber-100`, `bg-amber-900/30`, all amber fills
-- Summary message box: `bg-card` instead of `bg-muted`
-
-### 11. `src/components/AchievementBadges.tsx`
-- Unlocked state: `bg-card border-white/[0.06]` with `border-l-4 border-primary` — remove `bg-gradient-to-br from-primary/5 to-primary/10`
-- Locked state: `bg-card border-white/[0.06] opacity-50`
-- Remove hover gradient overlay
-
-### 12. `src/components/StudyPlanWidget.tsx`
-- Task cards: remove colored gradients (`bg-gradient-to-br ${config.gradient}`) — use flat `bg-card` with left accent stripe per type:
-  - LEARN: `border-l-4 border-primary`
-  - DRILL: `border-l-4 border-primary`
-  - REVIEW: `border-l-4 border-primary`
-  - FLASH: `border-l-4 border-primary`
-  - SIM: `border-l-4 border-coral`
-- Text: foreground (not white)
-- Badge: `bg-secondary` text-foreground
-- Quick Access cards: remove `hover:scale-105`, `hover:shadow-xl`, `border-2 hover:border-primary` — use flat `bg-card card-hover`
-- Remove colored icon backgrounds (`bg-primary/10`, `bg-secondary/10`, `bg-destructive/10`)
-
-### 13. `src/pages/PacingLab.tsx`
-- Remove `bg-primary/10 border-primary/20` pill at top — use plain `bg-secondary` with muted text
-- "Why Pacing Works" card: remove `radial-glow`, remove `bg-primary/10` icon wrapper
-
-### 14. `src/pages/LandingPage.tsx`
-- Remove `radial-glow` from social proof cards
-- Stats bar cards: already flat — keep
-- Feature pill: `bg-secondary` instead of `bg-primary/10 border-primary/20`
-- CTA button: keep gradient but remove glow shadow (handled by button variant change)
-
-### 15. `src/pages/Login.tsx`
-- Remove `radial-glow` from all Card instances
-- Success icon: keep gradient circle but remove `shadow-glow-teal`
-
-### 16. `src/components/landing/FeatureCard.tsx`
-- Remove `radial-glow` class
-- Remove bottom gradient bar (`bg-gradient-primary scale-x-0 group-hover:scale-x-100`)
-- Keep `hover:border-primary/30` as the only hover effect
-- Icon wrapper: `bg-secondary` instead of `bg-primary/10`
+### `src/pages/LandingPage.tsx`
+- The "466 questions" badge visible in the reference screenshot is from `FeatureCard` badges — currently the code doesn't show question counts in badges (they show "UNIQUE", "NEW", etc.), so this is already clean. No change needed.
 
 ---
+
+## 2. Background Depth (Subtle Vertical Variation)
+
+### `src/index.css`
+- Change `--background` from flat `225 58% 11%` to the same value (the token stays flat)
+- Add a new body pseudo-element or body background gradient for subtle vertical depth:
+
+```css
+body {
+  background: linear-gradient(
+    180deg,
+    hsl(225 58% 9%) 0%,
+    hsl(225 58% 12%) 40%,
+    hsl(225 58% 9%) 100%
+  );
+}
+```
+
+This creates a subtle darkened top/bottom with a slightly lighter mid-section. Very subtle (9% to 12% to 9% lightness).
+
+---
+
+## 3. Reduce Border Radius (Sharper = More Mature)
+
+### `src/index.css`
+- Change `--radius: 0.75rem` to `--radius: 0.5rem` (8px instead of 12px — 33% reduction)
+
+### `src/components/ui/badge.tsx`
+- Change `rounded-full` to `rounded-md` — less "friendly", more tactical
+
+---
+
+## 4. Typography Authority
+
+### `src/index.css`
+- Headlines: tighten letter-spacing from `-0.02em` to `-0.025em`
+- Body line-height: keep 1.4
+
+### `src/pages/LandingPage.tsx`
+- Hero headline: increase from `text-5xl md:text-7xl` to `text-6xl md:text-8xl` (~15% larger)
+- Subtitle: reduce from `text-xl md:text-2xl` to `text-lg md:text-xl`
+- Trim copy: "Full-length simulations. Coached practice tests. AI tutoring. Parent rewards." becomes "Full Simulations. AI Coaching. Parent Accountability."
+- Section header "More Than a Question Bank": stays but reduce `text-3xl md:text-4xl` to `text-2xl md:text-3xl`
+- Remove the subtitle paragraph under it — just the heading
+
+### `src/pages/Dashboard.tsx`
+- Welcome heading: keep `text-2xl sm:text-3xl`
+- Tighten vertical spacing: reduce `space-y-8` to `space-y-6` in main container
+- "Choose Your Path" copy: trim description paragraph
+
+---
+
+## 5. Card Hierarchy (Not All Siblings)
+
+### Feature Cards (`src/components/landing/FeatureCard.tsx`)
+- Thin border only: `border border-white/[0.06]` (already correct)
+- Remove `hover:border-primary/30` — keep hover subtle: `hover:border-white/10`
+- Remove `group-hover:text-primary` on title
+- Remove `group-hover:scale-110` on icon
+
+### Social Proof Cards (`src/pages/LandingPage.tsx`)
+- Remove border entirely — use slightly lighter surface: `bg-secondary border-0`
+- This differentiates testimonials from feature cards
+
+### Dashboard Cards
+- Already using `bg-card border border-white/[0.06]` — keep as-is
+- These are denser by nature (smaller padding, more data)
+
+---
+
+## 6. Tighter Spacing
+
+### `src/pages/LandingPage.tsx`
+- Hero section: reduce `mb-20` to `mb-16`
+- Stats bar: reduce `gap-6` to `gap-4`
+- Features section: reduce `space-y-12` to `space-y-8`
+- Social proof: reduce `mt-20` to `mt-16`
+- Footer: reduce `mt-16` to `mt-12`
+
+### `src/pages/Dashboard.tsx`
+- Main container: `space-y-8` to `space-y-6`
+- Feature card grid: keep `gap-6`
+
+---
+
+## 7. Numbers Larger
+
+### `src/components/landing/AnimatedCounter.tsx`
+- Check current size and increase by ~25% (likely needs `text-4xl font-bold` if currently `text-3xl`)
+
+### General
+- Numeric metrics throughout should use `text-3xl font-bold` minimum — this is already done in most places (CountdownHeader, MasteryDashboard, etc.)
+
+---
+
+## Files to Change
+
+| File | Changes |
+|------|---------|
+| `src/index.css` | Body gradient background, reduce `--radius` to `0.5rem`, tighter headline spacing |
+| `src/components/ui/badge.tsx` | `rounded-full` to `rounded-md` |
+| `src/components/FormPicker.tsx` | Remove question count display from buttons and card descriptions |
+| `src/components/SimulationStartDialog.tsx` | Remove question count stat |
+| `src/components/StudyPlanWidget.tsx` | Remove `{task.size} questions` line |
+| `src/pages/LandingPage.tsx` | Larger hero, tighter copy, card hierarchy, reduced spacing |
+| `src/components/landing/FeatureCard.tsx` | Subtler hover, remove scale/color transitions |
+| `src/pages/Dashboard.tsx` | Tighter spacing |
+| `src/components/landing/AnimatedCounter.tsx` | Larger numbers |
 
 ## What Does NOT Change
-- All routing, data fetching, Supabase integrations
-- Component structure, props, logic
-- Drill/simulation/quiz mechanics
-- Edge functions
-- Typography system (Inter/Manrope, weights, letter spacing)
-- Progress ring SVG gradient in CountdownHeader (teal gradient stays — it's a progress ring)
-- Active nav state (teal left border — already correct)
+
+- Coral color system (confirmed perfect)
+- All routing, data, Supabase integrations
+- Card shadow values
+- Button gradients
+- Progress ring styling
+- Component structure and props
