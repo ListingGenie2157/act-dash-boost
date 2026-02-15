@@ -28,9 +28,6 @@ const LandingPage = () => {
             <img src={preppitLogo} alt="Preppit Pacing" className="h-24 w-auto" />
           </div>
 
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary border border-white/[0.06] animate-fade-in">
-            <span className="text-sm font-medium text-primary">The Smart Way to Prep for ACT</span>
-          </div>
 
           <div className="space-y-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
             <h1 className="text-6xl md:text-8xl font-bold tracking-tight">
