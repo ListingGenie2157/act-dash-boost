@@ -31,7 +31,7 @@ export const AnimatedCounter = ({ end, duration = 2000, suffix = '', prefix = ''
   }, [end, duration]);
 
   return (
-    <span className="font-bold text-4xl bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent">
+    <span className="font-bold text-5xl text-primary">
       {prefix}{count}{suffix}
     </span>
   );

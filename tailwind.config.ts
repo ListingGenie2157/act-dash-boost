@@ -70,7 +70,7 @@ export default {
         sm: 'calc(var(--radius) - 4px)'
       },
       boxShadow: {
-        'card': '0 8px 24px rgba(0,0,0,0.35)',
+        'card': '0 8px 24px rgba(0,0,0,0.2)',
       },
       backgroundImage: {
         'gradient-primary': 'linear-gradient(135deg, #14B8A6 0%, #0E7490 100%)',

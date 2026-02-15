@@ -37,7 +37,7 @@ const LandingPage = () => {
               <br />
               <span className="text-foreground">Crush The ACT.</span>
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+            <p className="text-base md:text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
               Full Simulations. AI Coaching. Parent Accountability.
             </p>
           </div>
@@ -52,19 +52,19 @@ const LandingPage = () => {
             </div>
             <div className="p-4 rounded-xl bg-card border border-white/[0.06] shadow-card card-hover">
               <div className="text-center space-y-1">
-                <ClipboardCheck className="w-8 h-8 mx-auto text-primary" />
+                <ClipboardCheck className="w-8 h-8 mx-auto text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">Full Simulations</p>
               </div>
             </div>
             <div className="p-4 rounded-xl bg-card border border-white/[0.06] shadow-card card-hover">
               <div className="text-center space-y-1">
-                <span className="font-bold text-3xl text-primary">AI</span>
+                <span className="font-bold text-3xl text-foreground">AI</span>
                 <p className="text-sm text-muted-foreground">Tutor Included</p>
               </div>
             </div>
             <div className="p-4 rounded-xl bg-card border border-white/[0.06] shadow-card card-hover">
               <div className="text-center space-y-1">
-                <Users className="w-8 h-8 mx-auto text-accent" />
+                <Users className="w-8 h-8 mx-auto text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">Parent Portal</p>
               </div>
             </div>

@@ -26,7 +26,7 @@ export const FeatureCard = ({
       <CardContent className="relative p-6 space-y-4">
         <div className="flex items-start justify-between">
           <div className="p-3 rounded-xl bg-secondary transition-all duration-300">
-            <Icon className="w-6 h-6 text-primary" />
+            <Icon className="w-6 h-6 text-foreground" />
           </div>
           {badge && (
             <Badge variant="secondary" className="text-xs">

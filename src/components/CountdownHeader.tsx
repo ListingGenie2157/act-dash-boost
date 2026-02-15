@@ -215,7 +215,7 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
             </defs>
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-4xl font-bold text-foreground">
+            <span className="text-5xl font-bold text-foreground">
               {daysLeftNum}
             </span>
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider">days</span>

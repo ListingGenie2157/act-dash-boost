@@ -124,7 +124,7 @@ export function WeakAreasCard({ limit = 5, showActions = true }: WeakAreasCardPr
                   </p>
                 </div>
                 <div className="text-right">
-                  <div className={`text-2xl font-bold ${colors.text}`}>
+                  <div className={`text-3xl font-bold ${colors.text}`}>
                     {area.accuracy.toFixed(0)}%
                   </div>
                   <div className="text-xs text-muted-foreground">accuracy</div>
@@ -177,7 +177,7 @@ export function WeakAreasCard({ limit = 5, showActions = true }: WeakAreasCardPr
         {/* Summary Message */}
         <div className="mt-4 p-3 bg-card rounded-lg border border-white/[0.06]">
           <div className="flex items-start gap-2">
-            <TrendingDown className="h-4 w-4 text-primary mt-0.5" />
+            <TrendingDown className="h-4 w-4 text-muted-foreground mt-0.5" />
             <p className="text-sm text-muted-foreground">
               {criticalCount > 0 ? (
                 <>Focus on <strong>{criticalCount} critical skill{criticalCount > 1 ? 's' : ''}</strong> first for maximum impact</>

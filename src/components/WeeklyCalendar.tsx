@@ -131,7 +131,7 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
           {weekData.map((day) => (
             <Card
               key={day.date} 
-              className={`${day.isToday ? 'border-primary shadow-md' : ''}`}
+              className={`${day.isToday ? 'border-l-4 border-l-primary' : ''}`}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -171,7 +171,7 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
                         ) : task.status === 'IN_PROGRESS' ? (
                           <AlertCircle className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
                         ) : (
-                          <BookOpen className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                          <BookOpen className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                         )}
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium truncate">
@@ -192,7 +192,7 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
         </div>
 
         {daysUntilTest !== null && daysUntilTest <= 7 && (
-          <div className="mt-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <div className="mt-6 p-4 bg-card border-l-4 border-l-coral rounded-lg border border-white/[0.06]">
             <div className="flex items-center gap-2 text-destructive">
               <AlertCircle className="h-5 w-5" />
               <div className="font-semibold">Test Week Alert</div>
