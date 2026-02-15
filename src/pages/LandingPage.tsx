@@ -23,7 +23,7 @@ const LandingPage = () => {
     <div className="min-h-screen bg-background relative overflow-hidden">
       <div className="relative container mx-auto px-4 py-16">
         {/* Hero Section */}
-        <div className="max-w-5xl mx-auto text-center space-y-8 mb-20">
+        <div className="max-w-5xl mx-auto text-center space-y-8 mb-16">
           <div className="flex justify-center mb-8 animate-fade-in">
             <img src={preppitLogo} alt="Preppit Pacing" className="h-24 w-auto" />
           </div>
@@ -33,21 +33,20 @@ const LandingPage = () => {
           </div>
 
           <div className="space-y-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight">
+            <h1 className="text-6xl md:text-8xl font-bold tracking-tight">
               <span className="bg-gradient-to-r from-[#14B8A6] to-[#0E7490] bg-clip-text text-transparent">
                 Train Your Brain.
               </span>
               <br />
               <span className="text-foreground">Crush The ACT.</span>
             </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              Full-length simulations. Coached practice tests. AI tutoring. Parent rewards. 
-              <span className="font-semibold text-foreground"> Not just a question bank</span> — a complete training system.
+            <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+              Full Simulations. AI Coaching. Parent Accountability.
             </p>
           </div>
 
           {/* Stats Bar */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto animate-fade-in" style={{ animationDelay: '200ms' }}>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto animate-fade-in" style={{ animationDelay: '200ms' }}>
             <div className="p-4 rounded-xl bg-card border border-white/[0.06] shadow-card card-hover">
               <div className="text-center space-y-1">
                 <AnimatedCounter end={129} suffix="+" />
@@ -102,14 +101,11 @@ const LandingPage = () => {
         </div>
 
         {/* Features Section */}
-        <div className="max-w-6xl mx-auto space-y-12">
-          <div className="text-center space-y-4 animate-fade-in">
-            <h2 className="text-3xl md:text-4xl font-bold">
+        <div className="max-w-6xl mx-auto space-y-8">
+          <div className="text-center animate-fade-in">
+            <h2 className="text-2xl md:text-3xl font-bold">
               More Than a <span className="text-primary">Question Bank</span>
             </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Full simulations, real-time coaching, parent accountability, and science-backed review
-            </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
@@ -126,9 +122,9 @@ const LandingPage = () => {
         </div>
 
         {/* Social Proof */}
-        <div className="max-w-5xl mx-auto mt-20 text-center space-y-8 animate-fade-in">
+        <div className="max-w-5xl mx-auto mt-16 text-center space-y-8 animate-fade-in">
           <div className="grid md:grid-cols-2 gap-6">
-            <Card className="p-8">
+            <Card className="p-8 bg-secondary border-0">
               <div className="space-y-4">
                 <div className="flex items-center justify-center gap-2">
                   <div className="flex -space-x-2">
@@ -145,7 +141,7 @@ const LandingPage = () => {
               </div>
             </Card>
 
-            <Card className="p-8">
+            <Card className="p-8 bg-secondary border-0">
               <div className="space-y-4">
                 <div className="flex items-center justify-center">
                   <Users className="w-8 h-8 text-primary" />
@@ -177,7 +173,7 @@ const LandingPage = () => {
         </div>
 
         {/* Footer */}
-        <footer className="border-t border-white/[0.06] pt-8 pb-4 mt-16">
+        <footer className="border-t border-white/[0.06] pt-8 pb-4 mt-12">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} Preppit Pacing. All rights reserved.

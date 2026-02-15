@@ -112,7 +112,7 @@ const Dashboard = () => {
       </div>
       
       <div className="container max-w-7xl mx-auto px-4 py-8">
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* Welcome Section */}
           <div className="p-6 rounded-2xl bg-card border border-white/[0.06] shadow-card animate-fade-in">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -219,7 +219,7 @@ const Dashboard = () => {
               <WeakAreasCard />
             </>
           ) : (
-            <div className="space-y-8">
+            <div className="space-y-6">
               {/* Choose Your Path */}
               <Card className="p-8 animate-fade-in">
                 <div className="max-w-3xl mx-auto text-center space-y-4">
@@ -228,8 +228,8 @@ const Dashboard = () => {
                     <span className="text-sm font-medium text-primary">Choose Your Path</span>
                   </div>
                   <h2 className="text-3xl font-bold">Start Training.</h2>
-                  <p className="text-muted-foreground text-lg">
-                    Browse lessons and drills at your own pace, or let Preppit Pacing build a personalized plan.
+                  <p className="text-muted-foreground">
+                    Self-directed or AI-planned. Your call.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
                     <Link to="/lessons">

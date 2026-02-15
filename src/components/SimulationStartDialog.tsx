@@ -4,12 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Clock, HelpCircle, Play, Sparkles, Brain, Target } from 'lucide-react';
+import { ArrowLeft, Clock, Play, Sparkles, Brain, Target } from 'lucide-react';
 
 interface SimulationStartDialogProps {
   formId: string;
   section: string;
-  questionCount: number;
+  questionCount?: number;
   onStart: (coached: boolean) => void;
   onBack: () => void;
 }
@@ -24,7 +24,6 @@ const SECTION_CONFIG: Record<string, { name: string; timeMinutes: number; icon: 
 export function SimulationStartDialog({ 
   formId, 
   section, 
-  questionCount,
   onStart, 
   onBack 
 }: SimulationStartDialogProps) {
@@ -55,20 +54,11 @@ export function SimulationStartDialog({
         
         <CardContent className="space-y-6">
           {/* Test Details */}
-          <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="text-sm text-muted-foreground">Time Limit</p>
-                <p className="font-semibold">{config.timeMinutes} minutes</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <HelpCircle className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="text-sm text-muted-foreground">Questions</p>
-                <p className="font-semibold">{questionCount} questions</p>
-              </div>
+          <div className="flex items-center justify-center gap-2 p-4 bg-muted/50 rounded-lg">
+            <Clock className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <p className="text-sm text-muted-foreground">Time Limit</p>
+              <p className="font-semibold">{config.timeMinutes} minutes</p>
             </div>
           </div>
 
