@@ -45,7 +45,6 @@ const studyItems = [
   { title: 'Dashboard', url: '/', icon: Home, end: true },
   { title: 'Lessons Library', url: '/lessons', icon: BookOpen },
   { title: 'Pacing Lab', url: '/pacing-lab', icon: Timer },
-  { title: 'Timed Drills', url: '/drill-runner', icon: Target },
   { title: 'Practice Tests', url: '/simulation', icon: PlayCircle },
   { title: 'Calculator Lab', url: '/calculator-lab', icon: Calculator },
   { title: 'Weak Areas', url: '/weak-areas', icon: TrendingDown },

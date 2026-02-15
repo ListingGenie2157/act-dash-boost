@@ -1,195 +1,251 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Timer, Zap, Target, Clock, ArrowRight, TrendingUp, Brain, RotateCcw } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Timer, Clock, Brain, TrendingUp, Zap, Target, BookOpen, History, PlayCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+
+type SubjectStats = {
+  subject: string;
+  questionCount: number;
+};
+
+const sectionSimCards = [
+  {
+    section: 'English',
+    questions: 75,
+    time: '45 min',
+    description: 'Pace through 5 passages with chunk timers and two-pass coaching.',
+  },
+  {
+    section: 'Math',
+    questions: 60,
+    time: '60 min',
+    description: 'Build speed on 60 questions with real-time pace-ahead/behind alerts.',
+  },
+  {
+    section: 'Reading',
+    questions: 40,
+    time: '35 min',
+    description: 'Train the two-pass strategy across 4 passages under timed pressure.',
+  },
+  {
+    section: 'Science',
+    questions: 40,
+    time: '35 min',
+    description: 'Practice data-heavy passages with chunk-based pacing cues.',
+  },
+];
 
 const PacingLab = () => {
-  const [selectedMode, setSelectedMode] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [subjects, setSubjects] = useState<SubjectStats[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const pacingModes = [
-    {
-      id: 'quick-drill',
-      title: 'Quick Drill Pacing',
-      description: 'Short 5-question bursts with real-time pace feedback. Perfect for building speed on individual skills.',
-      icon: Zap,
-      badge: 'SPEED',
-      duration: '3-5 min',
-      gradient: 'from-primary/10 via-accent/10 to-primary/10',
-      link: '/drill-runner?mode=quick-pace',
-      features: ['5 questions per drill', 'Real-time pace indicator', 'Target time per question', 'Instant feedback']
-    },
-    {
-      id: 'section-sim',
-      title: 'Section Simulation Pacing',
-      description: 'Full section practice with live pacing cues. Learn to manage your time across an entire section.',
-      icon: Clock,
-      badge: 'ENDURANCE',
-      duration: '35-60 min',
-      gradient: 'from-accent/10 via-secondary/10 to-accent/10',
-      link: '/simulation?coached=true',
-      features: ['Full section timing', 'Pace-ahead/behind alerts', 'Chunk timer support', 'Section-specific strategies']
-    },
-    {
-      id: 'two-pass',
-      title: 'Two-Pass Trainer',
-      description: 'Master the two-pass strategy: quick first pass, then deep dive on flagged questions.',
-      icon: RotateCcw,
-      badge: 'STRATEGY',
-      duration: '20-40 min',
-      gradient: 'from-secondary/10 via-primary/10 to-secondary/10',
-      link: '/simulation?coached=true&twopass=true',
-      features: ['Pass 1: Quick scan', 'Pass 2: Deep dive', 'Flag management', 'Time allocation coaching']
-    },
-    {
-      id: 'chunk-timer',
-      title: 'Chunk Timer Practice',
-      description: 'Break sections into manageable 5-10 question chunks. Build stamina without overwhelm.',
-      icon: Target,
-      badge: 'FOCUS',
-      duration: '15-30 min',
-      gradient: 'from-primary/10 via-secondary/10 to-primary/10',
-      link: '/simulation?coached=true&chunks=true',
-      features: ['5-10 questions per chunk', 'Chunk completion celebrations', 'Pace tracking per chunk', 'Break prompts between chunks']
+  useEffect(() => {
+    async function fetchSubjects() {
+      try {
+        const drillForms = ['DR_RD', 'DR_MA', 'DR_EN', 'DR_SC'];
+        const { data, error } = await supabase
+          .from('staging_items')
+          .select('section, form_id')
+          .in('form_id', drillForms);
+
+        if (error) {
+          console.error('Error fetching questions:', error);
+          setLoading(false);
+          return;
+        }
+
+        const counts: Record<string, number> = {};
+        data.forEach(item => {
+          if (item.section) {
+            counts[item.section] = (counts[item.section] || 0) + 1;
+          }
+        });
+
+        const stats: SubjectStats[] = Object.entries(counts).map(([subject, count]) => ({
+          subject,
+          questionCount: count,
+        })).sort((a, b) => a.subject.localeCompare(b.subject));
+
+        setSubjects(stats);
+      } catch (err) {
+        console.error('Error loading drill subjects:', err);
+      } finally {
+        setLoading(false);
+      }
     }
-  ];
+
+    void fetchSubjects();
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/5 relative overflow-hidden">
-      {/* Animated background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-secondary/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-      </div>
-
-      <div className="relative container max-w-6xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="text-center space-y-4 mb-12 animate-fade-in">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm">
-            <Timer className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Pacing Lab</span>
-          </div>
-          
-          <h1 className="text-4xl md:text-5xl font-bold">
-            <span className="bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
-              Master Your Pace
-            </span>
-          </h1>
-          
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Time management is worth 3-5 points on the ACT. Train your pacing instincts with targeted practice modes designed to build speed and stamina.
-          </p>
-
-          {/* Stats */}
-          <div className="flex items-center justify-center gap-8 pt-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-primary">3-5</div>
-              <div className="text-xs text-muted-foreground">Points gained</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-secondary">10-15</div>
-              <div className="text-xs text-muted-foreground">Minutes saved</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-accent-foreground">4</div>
-              <div className="text-xs text-muted-foreground">Training modes</div>
-            </div>
-          </div>
+    <div className="container mx-auto p-6 max-w-6xl">
+      {/* Header */}
+      <div className="mb-10">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4">
+          <Timer className="w-4 h-4 text-primary" />
+          <span className="text-sm font-medium text-primary">Pacing Lab</span>
         </div>
 
-        {/* Pacing Modes Grid */}
-        <div className="grid md:grid-cols-2 gap-6 mb-12">
-          {pacingModes.map((mode, index) => (
-            <Card 
-              key={mode.id}
-              className={`group relative overflow-hidden bg-gradient-to-br ${mode.gradient} backdrop-blur-sm border-primary/20 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/20 transition-all duration-300 hover:-translate-y-2 animate-fade-in cursor-pointer`}
-              style={{ animationDelay: `${index * 100}ms` }}
-              onClick={() => setSelectedMode(selectedMode === mode.id ? null : mode.id)}
-            >
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 group-hover:scale-110 transition-transform">
-                    <mode.icon className="w-6 h-6 text-primary" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
-                      {mode.badge}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">{mode.duration}</span>
-                  </div>
-                </div>
-                <CardTitle className="text-xl group-hover:text-primary transition-colors">
-                  {mode.title}
-                </CardTitle>
-                <CardDescription className="text-sm line-clamp-2">
-                  {mode.description}
-                </CardDescription>
-              </CardHeader>
-              
-              <CardContent>
-                <div className="space-y-4">
-                  <ul className="grid grid-cols-2 gap-2">
-                    {mode.features.map((feature, i) => (
-                      <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  
-                  <Button 
-                    asChild
-                    className="w-full group/btn bg-gradient-to-r from-primary to-accent hover:shadow-lg transition-all"
-                  >
-                    <Link to={mode.link} className="flex items-center gap-2">
-                      Start Training
-                      <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
-                    </Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+        <h1 className="text-3xl md:text-4xl font-bold mb-2">
+          <span className="bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
+            Master Your Pace
+          </span>
+        </h1>
+
+        <p className="text-muted-foreground max-w-2xl">
+          Time management is worth 3-5 points on the ACT. Build speed with timed drills or practice full sections with coached pacing.
+        </p>
+      </div>
+
+      {/* ──── Section A: Timed Drills ──── */}
+      <section className="mb-12">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Target className="h-5 w-5 text-primary" />
+            <h2 className="text-xl font-semibold">Timed Drills</h2>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => navigate('/drill-history')}>
+            <History className="h-4 w-4 mr-2" />
+            Drill History
+          </Button>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Pick a subject and choose your run style — Sprint, Marathon, Pomodoro, or Random Mix.
+        </p>
+
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i}>
+                <CardHeader><Skeleton className="h-6 w-3/4" /><Skeleton className="h-4 w-1/2 mt-2" /></CardHeader>
+                <CardContent><Skeleton className="h-10 w-full" /></CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : subjects.length === 0 ? (
+          <Card>
+            <CardContent className="text-center py-12 text-muted-foreground">
+              <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p className="font-medium">No drills available yet</p>
+              <p className="text-sm mt-1">Check back soon for practice questions</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {subjects.map(stat => {
+              const hasContent = stat.questionCount > 0;
+              return hasContent ? (
+                <Link key={stat.subject} to={`/drill/${encodeURIComponent(stat.subject)}/setup`}>
+                  <Card className="h-full hover:shadow-lg hover:border-primary cursor-pointer transition-all group">
+                    <CardHeader>
+                      <CardTitle className="text-lg group-hover:text-primary transition-colors flex items-center gap-2">
+                        <Clock className="h-5 w-5" />
+                        {stat.subject}
+                      </CardTitle>
+                      <CardDescription>
+                        <Badge variant="secondary">{stat.questionCount} questions</Badge>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">Configure and start a targeted drill</p>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ) : (
+                <Card key={stat.subject} className="h-full opacity-60 cursor-not-allowed">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Clock className="h-5 w-5" />
+                      {stat.subject}
+                    </CardTitle>
+                    <CardDescription>
+                      <Badge variant="outline" className="border-destructive/50 text-destructive">Coming Soon</Badge>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">Content is being prepared</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* ──── Section B: Section Simulation (Coached Mode) ──── */}
+      <section className="mb-12">
+        <div className="flex items-center gap-2 mb-4">
+          <PlayCircle className="h-5 w-5 text-secondary" />
+          <h2 className="text-xl font-semibold">Section Simulation — Coached Mode</h2>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Full-length section practice with live pacing cues, chunk timers, and two-pass coaching. Uses official simulation content.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {sectionSimCards.map(card => (
+            <Link key={card.section} to="/simulation">
+              <Card className="h-full hover:shadow-lg hover:border-secondary cursor-pointer transition-all group">
+                <CardHeader>
+                  <CardTitle className="text-lg group-hover:text-secondary transition-colors flex items-center gap-2">
+                    <Timer className="h-5 w-5" />
+                    {card.section}
+                  </CardTitle>
+                  <CardDescription className="flex items-center gap-2">
+                    <Badge variant="outline">{card.questions} Qs</Badge>
+                    <Badge variant="outline">{card.time}</Badge>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">{card.description}</p>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
+      </section>
 
-        {/* Why Pacing Matters Section */}
-        <Card className="bg-gradient-to-br from-accent/10 via-primary/5 to-secondary/10 backdrop-blur-sm border-primary/20 animate-fade-in">
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row items-start gap-6">
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20">
-                <Brain className="w-10 h-10 text-primary" />
-              </div>
-              <div className="flex-1 space-y-4">
-                <h3 className="text-2xl font-bold">Why Pacing Training Works</h3>
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div className="p-4 rounded-xl bg-background/50 border border-border/50">
-                    <TrendingUp className="w-5 h-5 text-primary mb-2" />
-                    <h4 className="font-semibold mb-1">Build Instincts</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Train your internal clock so you naturally know when to move on.
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-background/50 border border-border/50">
-                    <Zap className="w-5 h-5 text-secondary mb-2" />
-                    <h4 className="font-semibold mb-1">Reduce Anxiety</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Confident pacers don't panic. Practice builds calm under pressure.
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-background/50 border border-border/50">
-                    <Target className="w-5 h-5 text-accent-foreground mb-2" />
-                    <h4 className="font-semibold mb-1">Maximize Points</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Never leave easy points on the table by running out of time.
-                    </p>
-                  </div>
+      {/* ──── Why Pacing Matters ──── */}
+      <Card className="bg-gradient-to-br from-accent/10 via-primary/5 to-secondary/10 border-primary/20">
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row items-start gap-6">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20">
+              <Brain className="w-10 h-10 text-primary" />
+            </div>
+            <div className="flex-1 space-y-4">
+              <h3 className="text-2xl font-bold">Why Pacing Training Works</h3>
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-xl bg-background/50 border border-border/50">
+                  <TrendingUp className="w-5 h-5 text-primary mb-2" />
+                  <h4 className="font-semibold mb-1">Build Instincts</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Train your internal clock so you naturally know when to move on.
+                  </p>
+                </div>
+                <div className="p-4 rounded-xl bg-background/50 border border-border/50">
+                  <Zap className="w-5 h-5 text-secondary mb-2" />
+                  <h4 className="font-semibold mb-1">Reduce Anxiety</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Confident pacers don't panic. Practice builds calm under pressure.
+                  </p>
+                </div>
+                <div className="p-4 rounded-xl bg-background/50 border border-border/50">
+                  <Target className="w-5 h-5 text-accent-foreground mb-2" />
+                  <h4 className="font-semibold mb-1">Maximize Points</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Never leave easy points on the table by running out of time.
+                  </p>
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
