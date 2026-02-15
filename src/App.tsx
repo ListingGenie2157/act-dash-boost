@@ -94,6 +94,7 @@ const App = () => (
               <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<LandingPage />} />
+                <Route path="/landing" element={<Navigate to="/" replace />} />
                 <Route path="/login" element={<Login />} />
                 {/* SimpleLogin route removed - was debug-only */}
                 <Route path="/update-password" element={<UpdatePassword />} />
