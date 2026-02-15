@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
+import { parseBodyWithLimit } from '../_shared/mod.ts';
 
 // Zod schemas for input validation
 const QuestionSchema = z.object({
@@ -125,7 +126,9 @@ Deno.serve(async (req) => {
       return createRateLimitResponse(corsHeaders);
     }
 
-    const requestBody = await req.json();
+    const parsed = await parseBodyWithLimit(req, corsHeaders);
+    if ('error' in parsed) return parsed.error;
+    const requestBody = parsed.data;
     const validationResult = DiagnosticRequestSchema.safeParse(requestBody);
     
     if (!validationResult.success) {

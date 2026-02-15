@@ -25,7 +25,9 @@ function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
             <details className="cursor-pointer">
               <summary className="font-medium">Error details</summary>
               <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-auto">
-                {error.message}
+                {import.meta.env.PROD
+                  ? 'An unexpected error occurred. Please try again or contact support.'
+                  : error.message}
               </pre>
             </details>
           </div>

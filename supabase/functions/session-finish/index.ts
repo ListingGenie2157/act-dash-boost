@@ -4,6 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
+import { parseBodyWithLimit } from '../_shared/mod.ts';
 
 // Zod schema for input validation
 const SessionFinishSchema = z.object({
@@ -76,7 +77,9 @@ serve(async (req) => {
     }
 
     // Parse and validate input
-    const body = await req.json();
+    const parsed = await parseBodyWithLimit(req, corsHeaders);
+    if ('error' in parsed) return parsed.error;
+    const body = parsed.data;
     const validationResult = SessionFinishSchema.safeParse(body);
     
     if (!validationResult.success) {

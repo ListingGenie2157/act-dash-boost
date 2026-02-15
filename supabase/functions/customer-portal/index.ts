@@ -2,9 +2,10 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { requireEnv } from '../_shared/env.ts';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 
 const logStep = (step: string, details?: Record<string, string | number | boolean | null>) => {
-  // Sanitize: only log specific safe fields, not arbitrary objects
   const safeDetails = details ? Object.entries(details)
     .filter(([k]) => ['userId', 'customerId', 'sessionId'].includes(k))
     .map(([k, v]) => `${k}=${v}`)
@@ -22,13 +23,12 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
+    const stripeKey = requireEnv("STRIPE_SECRET_KEY");
     logStep("Stripe key verified");
 
     const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      requireEnv("SUPABASE_URL"),
+      requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
       { auth: { persistSession: false } }
     );
 
@@ -41,7 +41,14 @@ serve(async (req) => {
     
     const user = userData.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
-    logStep("User authenticated", { userId: user.id, email: user.email });
+    logStep("User authenticated", { userId: user.id });
+
+    // Rate limit: 10 portal requests per minute per user
+    const clientIp = getClientIp(req);
+    const allowed = await checkRateLimit(user.id, clientIp, 'customer-portal', 10, 60000);
+    if (!allowed) {
+      return createRateLimitResponse(corsHeaders);
+    }
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     
@@ -60,7 +67,7 @@ serve(async (req) => {
       return_url: `${origin}/dashboard`,
     });
     
-    logStep("Portal session created", { sessionId: portalSession.id, url: portalSession.url });
+    logStep("Portal session created", { sessionId: portalSession.id });
 
     return new Response(JSON.stringify({ url: portalSession.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

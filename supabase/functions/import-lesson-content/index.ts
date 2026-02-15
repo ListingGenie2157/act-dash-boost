@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
+import { parseBodyWithLimit } from '../_shared/mod.ts';
 
 type SupabaseClientLike = ReturnType<typeof createClient>;
 
@@ -149,7 +150,9 @@ Deno.serve(async (req) => {
     // Service-role client for imports
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const body = await req.json();
+    const parsed = await parseBodyWithLimit(req, corsHeaders);
+    if ('error' in parsed) return parsed.error;
+    const body = parsed.data;
     const lessons: LessonContentInput[] = Array.isArray(body) ? body : [body];
 
     const results = {

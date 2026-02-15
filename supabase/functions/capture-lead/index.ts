@@ -1,7 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { requireEnv } from "../_shared/env.ts";
+import { parseBodyWithLimit } from "../_shared/mod.ts";
 
-const SUPABASE_URL = "https://hhbkmxrzxcswwokmbtbz.supabase.co";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "https://hhbkmxrzxcswwokmbtbz.supabase.co";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const LEAD_IP_SALT = Deno.env.get("LEAD_IP_SALT") || "default-salt";
 
@@ -38,8 +40,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
-    const email = body.email?.trim()?.toLowerCase();
+    const parsed = await parseBodyWithLimit(req, corsHeaders);
+    if ('error' in parsed) return parsed.error;
+    const body = parsed.data as Record<string, unknown>;
+    const email = (body.email as string)?.trim()?.toLowerCase();
 
     // Validate email
     if (!email || !isValidEmail(email)) {

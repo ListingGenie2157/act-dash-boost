@@ -3,6 +3,8 @@ import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { getPriceToPlan } from '../_shared/stripeConfig.ts';
+import { requireEnv } from '../_shared/env.ts';
+import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 
 const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
@@ -19,13 +21,12 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
+    const stripeKey = requireEnv("STRIPE_SECRET_KEY");
     logStep("Stripe key verified");
 
     const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      requireEnv("SUPABASE_URL"),
+      requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
       { auth: { persistSession: false } }
     );
 
@@ -38,7 +39,14 @@ serve(async (req) => {
     
     const user = userData.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
-    logStep("User authenticated", { userId: user.id, email: user.email });
+    logStep("User authenticated", { userId: user.id });
+
+    // Rate limit: 30 checks per minute per user
+    const clientIp = getClientIp(req);
+    const allowed = await checkRateLimit(user.id, clientIp, 'check-subscription', 30, 60000);
+    if (!allowed) {
+      return createRateLimitResponse(corsHeaders);
+    }
 
     // First check our local subscription table
     const { data: localSub } = await supabaseClient
@@ -52,7 +60,7 @@ serve(async (req) => {
       const periodEnd = new Date(localSub.current_period_end);
       
       if (periodEnd > now) {
-        logStep("Found active/trialing local subscription", { planType: localSub.plan_type, status: localSub.status, endsAt: localSub.current_period_end });
+        logStep("Found active/trialing local subscription", { planType: localSub.plan_type, status: localSub.status });
         return new Response(JSON.stringify({
           subscribed: true,
           plan_type: localSub.plan_type,
@@ -65,7 +73,6 @@ serve(async (req) => {
           status: 200,
         });
       } else {
-        // Subscription expired, update status
         await supabaseClient
           .from("subscriptions")
           .update({ status: "expired" })
@@ -89,13 +96,11 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
-    // Check for active or trialing subscriptions
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
       limit: 10,
     });
 
-    // Find active or trialing subscription
     const activeSub = subscriptions.data.find(
       sub => sub.status === 'active' || sub.status === 'trialing'
     );
@@ -110,7 +115,6 @@ serve(async (req) => {
         ? new Date(subscription.trial_end * 1000).toISOString()
         : new Date(subscription.current_period_end * 1000).toISOString();
       
-      // Upsert to local table
       await supabaseClient
         .from("subscriptions")
         .upsert({
@@ -124,7 +128,7 @@ serve(async (req) => {
           cancel_at_period_end: subscription.cancel_at_period_end,
         }, { onConflict: "user_id" });
 
-      logStep("Subscription found", { subscriptionId: subscription.id, planType, status: subscription.status, endDate: subscriptionEnd });
+      logStep("Subscription found", { subscriptionId: subscription.id, planType, status: subscription.status });
       
       return new Response(JSON.stringify({
         subscribed: true,

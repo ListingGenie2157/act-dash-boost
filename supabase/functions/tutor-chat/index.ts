@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
+import { parseBodyWithLimit } from '../_shared/mod.ts';
 
 interface TutorChatRequest {
   subject: string;
@@ -196,16 +197,10 @@ Deno.serve(async (req) => {
     // Create service role client for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Parse body with error handling
-    let rawBody: unknown;
-    try {
-      rawBody = await req.json();
-    } catch {
-      return new Response(
-        JSON.stringify({ error: 'Invalid request: body must be valid JSON' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Parse body with size limit
+    const parsed = await parseBodyWithLimit(req, corsHeaders);
+    if ('error' in parsed) return parsed.error;
+    const rawBody = parsed.data;
 
     // Validate request
     const validation = validateRequest(rawBody);

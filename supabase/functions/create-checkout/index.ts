@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 import { getPriceIds, isValidPlanType } from '../_shared/stripeConfig.ts';
+import { parseBodyWithLimit } from '../_shared/mod.ts';
 
 const logStep = (step: string, details?: Record<string, string | number | boolean | null>) => {
   // Sanitize: only log specific safe fields, not arbitrary objects
@@ -54,7 +55,9 @@ serve(async (req) => {
       return createRateLimitResponse(corsHeaders);
     }
 
-    const { planType } = await req.json();
+    const parsedBody = await parseBodyWithLimit(req, corsHeaders);
+    if ('error' in parsedBody) return parsedBody.error;
+    const { planType } = parsedBody.data as { planType: string };
     if (!isValidPlanType(planType)) {
       throw new Error(`Invalid plan type: ${planType}`);
     }

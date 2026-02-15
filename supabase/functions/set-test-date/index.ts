@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
+import { parseBodyWithLimit } from '../_shared/mod.ts';
 
 // Pure function for validating date input (testable)
 export function validateTestDate(testDateString: string): { isValid: boolean; error?: string; date?: Date } {
@@ -94,8 +95,9 @@ serve(async (req) => {
       return createRateLimitResponse(corsHeaders);
     }
 
-    const body = await req.json();
-    const { testDate } = body;
+    const parsed = await parseBodyWithLimit(req, corsHeaders);
+    if ('error' in parsed) return parsed.error;
+    const { testDate } = parsed.data as { testDate: string };
 
     if (!testDate) {
       return new Response(JSON.stringify({ error: 'testDate is required' }), {
