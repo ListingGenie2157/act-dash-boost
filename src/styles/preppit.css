@@ -1,228 +1,241 @@
-/* src/styles/preppit.css — Cinematic theme primitives */
+/* src/styles/preppit.css — iOS-premium glassmorphism system */
 
-/* ---------- THEME TOKENS ---------- */
-:root {
-  --pp-bg0: #050814;
-  --pp-bg1: #071024;
-  --pp-surface: rgba(255, 255, 255, 0.055);
-  --pp-surface2: rgba(255, 255, 255, 0.035);
-  --pp-border: rgba(255, 255, 255, 0.10);
-  --pp-border2: rgba(255, 255, 255, 0.16);
-  --pp-text: rgba(255, 255, 255, 0.92);
-  --pp-muted: rgba(255, 255, 255, 0.68);
-
-  --pp-teal: 20 184 166;
-  --pp-blue: 59 130 246;
-  --pp-pink: 236 72 153;
-
-  --pp-radius: 18px;
-}
-
-/* ---------- PAGE BACKGROUND (DARKER + ATMOSPHERE) ---------- */
-.pp-page-bg {
+/* ===================================================================
+   APP BACKGROUND — gradient + vignette + noise
+   =================================================================== */
+.app-bg {
+  min-height: 100vh;
+  color: hsl(var(--foreground));
   background:
-    radial-gradient(1000px 600px at 20% 0%, rgba(var(--pp-teal), 0.10), transparent 55%),
-    radial-gradient(900px 500px at 85% 10%, rgba(var(--pp-blue), 0.08), transparent 55%),
-    radial-gradient(700px 450px at 50% 90%, rgba(var(--pp-pink), 0.05), transparent 60%),
-    linear-gradient(180deg, var(--pp-bg1), var(--pp-bg0));
+    radial-gradient(900px 600px at 50% -10%, rgba(34,211,238,0.14), transparent 60%),
+    radial-gradient(700px 500px at 10% 20%, rgba(45,212,191,0.10), transparent 55%),
+    radial-gradient(900px 700px at 90% 60%, rgba(99,102,241,0.08), transparent 60%),
+    linear-gradient(180deg, #0b1220 0%, #070b13 40%, #05070d 100%);
   background-attachment: fixed;
-  color: var(--pp-text);
-}
-
-/* ---------- SECTION HALO (light source behind cards) ---------- */
-.pp-halo {
   position: relative;
 }
 
-.pp-halo::before {
+.app-bg::after {
   content: "";
-  position: absolute;
-  inset: -40px -20px;
-  background:
-    radial-gradient(600px 260px at 50% 10%, rgba(var(--pp-teal), 0.18), transparent 60%),
-    radial-gradient(420px 220px at 20% 40%, rgba(var(--pp-blue), 0.10), transparent 65%),
-    radial-gradient(420px 220px at 80% 40%, rgba(var(--pp-pink), 0.08), transparent 65%);
-  filter: blur(12px);
-  opacity: 0.9;
+  position: fixed;
+  inset: 0;
   pointer-events: none;
   z-index: 0;
+  background:
+    radial-gradient(1200px 800px at 50% 0%, transparent, rgba(0,0,0,0.55)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.25'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+  opacity: 0.18;
 }
 
-.pp-halo > * {
+.app-bg > * {
   position: relative;
   z-index: 1;
 }
 
-/* ---------- PREMIUM GLASS CARD ---------- */
-.pp-card {
+/* ===================================================================
+   GLASS CARD — the core surface
+   =================================================================== */
+.glass-card {
+  background: linear-gradient(180deg, var(--glass), var(--glass2));
+  border: 1px solid var(--stroke);
+  border-radius: 1.25rem;
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
   position: relative;
-  border-radius: var(--pp-radius);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.035));
-  border: 1px solid var(--pp-border);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow:
-    0 18px 60px rgba(0, 0, 0, 0.60),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   overflow: hidden;
 }
 
-/* top edge highlight */
-.pp-card::before {
+/* inner accent glow */
+.glass-card::before {
   content: "";
   position: absolute;
-  left: 14px;
-  right: 14px;
-  top: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(var(--pp-teal), 0.55), transparent);
-  opacity: 0.85;
-}
-
-/* soft inner vignette */
-.pp-card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(420px 220px at 30% 0%, rgba(var(--pp-teal), 0.10), transparent 55%),
-    radial-gradient(420px 220px at 70% 100%, rgba(var(--pp-blue), 0.06), transparent 55%);
-  opacity: 0.55;
+  inset: -1px;
+  background: radial-gradient(500px 220px at 20% 0%, rgba(34,211,238,0.12), transparent 55%);
+  opacity: 0.5;
   pointer-events: none;
 }
 
-/* ---------- HOVER AURA ---------- */
-.pp-card:hover {
-  border-color: rgba(var(--pp-teal), 0.22);
+/* hover state */
+.glass-card:hover {
+  border-color: rgba(34,211,238,0.18);
   box-shadow:
-    0 22px 70px rgba(0, 0, 0, 0.70),
-    0 0 46px rgba(var(--pp-teal), 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+    0 22px 70px rgba(0,0,0,0.55),
+    0 0 40px rgba(34,211,238,0.12);
 }
 
-/* ---------- ICON CHIP ---------- */
-.pp-icon {
+/* ===================================================================
+   GLOBAL SHADCN CARD OVERRIDE
+   =================================================================== */
+.app-bg .bg-card,
+.app-bg [data-slot="card"] {
+  background: linear-gradient(180deg, var(--glass), var(--glass2)) !important;
+  border: 1px solid var(--stroke) !important;
+  border-radius: 1.25rem !important;
+  box-shadow: var(--shadow-card) !important;
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+}
+
+/* ===================================================================
+   PILL BUTTONS
+   =================================================================== */
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.10);
+  color: hsl(var(--foreground));
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.btn-pill:hover {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.16);
+}
+
+.btn-pill:active {
+  transform: translateY(1px);
+}
+
+.btn-pill.primary {
+  border-color: rgba(34,211,238,0.35);
+  background:
+    radial-gradient(120% 120% at 50% 0%, rgba(34,211,238,0.22), rgba(255,255,255,0.06));
+  box-shadow:
+    0 16px 50px rgba(0,0,0,0.50),
+    0 0 0 1px rgba(34,211,238,0.20),
+    0 0 28px rgba(34,211,238,0.18);
+}
+
+.btn-pill.primary:hover {
+  box-shadow:
+    0 18px 55px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(34,211,238,0.30),
+    0 0 40px rgba(34,211,238,0.22);
+}
+
+/* ===================================================================
+   ICON CHIP
+   =================================================================== */
+.glass-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 44px;
   height: 44px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.10),
-    0 0 22px rgba(var(--pp-teal), 0.08);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
-/* ---------- SMALL BADGE ---------- */
-.pp-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 12px;
-  letter-spacing: 0.02em;
-}
-
-/* ---------- FEATURE GRID (2-up mobile, 3-up desktop) ---------- */
-.pp-feature-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-@media (min-width: 768px) {
-  .pp-feature-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 16px;
-  }
-}
-
-/* ---------- BUTTONS ---------- */
-.pp-btn-primary {
-  border-radius: 14px;
-  padding: 14px 18px;
-  font-weight: 600;
-  background: linear-gradient(135deg, rgba(var(--pp-teal), 0.95), rgba(var(--pp-blue), 0.35));
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 18px 40px rgba(0, 0, 0, 0.55),
-    0 0 40px rgba(var(--pp-teal), 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  color: white;
-  cursor: pointer;
-  transition: box-shadow 0.3s ease, transform 0.2s ease;
-}
-
-.pp-btn-primary:hover {
-  box-shadow:
-    0 22px 55px rgba(0, 0, 0, 0.65),
-    0 0 55px rgba(var(--pp-teal), 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.14);
-}
-
-.pp-btn-primary:active {
-  transform: scale(0.98);
-}
-
-.pp-btn-ghost {
-  border-radius: 14px;
-  padding: 12px 18px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(255, 255, 255, 0.88);
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
-}
-
-.pp-btn-ghost:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.16);
-}
-
-/* ---------- STAT CARD ---------- */
-.pp-stat-card {
+/* ===================================================================
+   SECTION HALO (light source behind a group)
+   =================================================================== */
+.glass-halo {
   position: relative;
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.025));
-  border: 1px solid var(--pp-border);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
-  overflow: hidden;
 }
 
-.pp-stat-card::before {
+.glass-halo::before {
   content: "";
   position: absolute;
-  left: 20%;
-  right: 20%;
-  top: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(var(--pp-teal), 0.35), transparent);
+  inset: -40px -20px;
+  background:
+    radial-gradient(600px 260px at 50% 10%, rgba(34,211,238,0.14), transparent 60%),
+    radial-gradient(420px 220px at 20% 40%, rgba(45,212,191,0.08), transparent 65%);
+  filter: blur(16px);
+  opacity: 0.8;
+  pointer-events: none;
+  z-index: 0;
 }
 
-/* ---------- GLOBAL SHADCN CARD OVERRIDE ---------- */
-.pp-page-bg .bg-card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.035)) !important;
-  border: 1px solid rgba(255, 255, 255, 0.10) !important;
-  box-shadow:
-    0 18px 60px rgba(0, 0, 0, 0.60),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+.glass-halo > * {
+  position: relative;
+  z-index: 1;
 }
 
-/* ---------- HEADER ---------- */
-.pp-header {
+/* ===================================================================
+   HEADER
+   =================================================================== */
+.app-header {
   position: sticky;
   top: 0;
   z-index: 40;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(var(--pp-teal), 0.02);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  background: rgba(5,7,13,0.65);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 }
+
+/* ===================================================================
+   NEON RING PROGRESS
+   =================================================================== */
+.neon-ring {
+  position: relative;
+}
+
+.neon-ring svg {
+  transform: rotate(-90deg);
+}
+
+.neon-ring .ring-track {
+  fill: none;
+  stroke: rgba(255,255,255,0.08);
+  stroke-width: 10;
+}
+
+.neon-ring .ring-progress {
+  fill: none;
+  stroke: url(#neonGradient);
+  stroke-width: 10;
+  stroke-linecap: round;
+  stroke-dasharray: 289;
+  stroke-dashoffset: calc(289 - (289 * var(--pct, 0)));
+  filter: url(#neonGlow);
+  transition: stroke-dashoffset 1s ease-out;
+}
+
+.neon-ring .ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.neon-ring .ring-value {
+  font-size: 38px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: hsl(var(--foreground));
+}
+
+.neon-ring .ring-label {
+  font-size: 11px;
+  color: hsl(var(--muted-foreground));
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* ===================================================================
+   LEGACY COMPAT — map old pp-* classes
+   =================================================================== */
+.pp-page-bg { /* replaced by .app-bg */ }
+.pp-card { /* replaced by .glass-card */ }
+.pp-header { /* replaced by .app-header */ }
+.pp-halo { /* replaced by .glass-halo */ }
+.pp-icon { /* replaced by .glass-icon */ }
