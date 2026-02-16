@@ -23,11 +23,11 @@ export const FeatureCard = ({
       style={{ animationDelay: `${delay}ms` }}
     >
       {/* Ambient teal glow */}
-      <div className="absolute -inset-px rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm bg-gradient-to-br from-primary/20 via-transparent to-primary-glow/10 pointer-events-none" />
+      <div className="absolute -inset-px rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-md bg-gradient-to-br from-primary/30 via-transparent to-primary-glow/15 pointer-events-none" />
 
       {/* Card surface */}
       <div
-        className="relative h-full flex flex-col rounded-lg p-5 space-y-3 border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)]"
+        className="relative h-full flex flex-col rounded-lg p-5 space-y-3 border border-white/[0.08] feature-card-cinematic"
         style={{
           background: 'linear-gradient(180deg, hsl(224 52% 17%) 0%, hsl(224 52% 14%) 100%)',
         }}

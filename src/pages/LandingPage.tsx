@@ -7,6 +7,7 @@ import { FeatureCard } from '@/components/landing/FeatureCard';
 import { Card } from '@/components/ui/card';
 import { Calculator, Target, Bot, TrendingUp, Users, Timer, ArrowRight, RotateCcw, MessageCircle, ClipboardCheck, Gift } from 'lucide-react';
 import preppitLogo from '@/assets/preppit-logo.png';
+import '@/styles/landing-cinematic.css';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -20,10 +21,14 @@ const LandingPage = () => {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
-      <div className="relative container mx-auto px-4 py-16">
+    <div className="min-h-screen landing-scene relative overflow-hidden">
+      {/* Noise texture is via ::before on .landing-scene */}
+
+      <div className="relative container mx-auto px-4 py-16" style={{ zIndex: 1 }}>
         {/* Hero Section */}
-        <div className="max-w-5xl mx-auto text-center space-y-8 mb-16">
+        <div className="max-w-5xl mx-auto text-center space-y-8 mb-16 relative">
+          {/* Radial teal glow behind hero */}
+          <div className="hero-glow" />
           <div className="flex justify-center mb-4 animate-fade-in">
             <img src={preppitLogo} alt="Preppit Pacing" className="h-24 w-auto" />
           </div>
@@ -43,25 +48,25 @@ const LandingPage = () => {
 
           {/* Stats Bar */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto animate-fade-in" style={{ animationDelay: '200ms' }}>
-            <div className="p-4 rounded-xl bg-card border border-white/[0.06] shadow-card card-hover">
+            <div className="p-4 rounded-xl border border-white/[0.08] stat-card-cinematic card-hover" style={{ background: 'linear-gradient(180deg, hsl(224 52% 16%) 0%, hsl(224 52% 13%) 100%)' }}>
               <div className="text-center space-y-1">
                 <AnimatedCounter end={129} suffix="+" />
                 <p className="text-sm text-muted-foreground">Skills Tracked</p>
               </div>
             </div>
-            <div className="p-4 rounded-xl bg-card border border-white/[0.06] shadow-card card-hover">
+            <div className="p-4 rounded-xl border border-white/[0.08] stat-card-cinematic card-hover" style={{ background: 'linear-gradient(180deg, hsl(224 52% 16%) 0%, hsl(224 52% 13%) 100%)' }}>
               <div className="text-center space-y-1">
                 <ClipboardCheck className="w-8 h-8 mx-auto text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">Full Simulations</p>
               </div>
             </div>
-            <div className="p-4 rounded-xl bg-card border border-white/[0.06] shadow-card card-hover">
+            <div className="p-4 rounded-xl border border-white/[0.08] stat-card-cinematic card-hover" style={{ background: 'linear-gradient(180deg, hsl(224 52% 16%) 0%, hsl(224 52% 13%) 100%)' }}>
               <div className="text-center space-y-1">
                 <span className="font-bold text-3xl text-foreground">AI</span>
                 <p className="text-sm text-muted-foreground">Tutor Included</p>
               </div>
             </div>
-            <div className="p-4 rounded-xl bg-card border border-white/[0.06] shadow-card card-hover">
+            <div className="p-4 rounded-xl border border-white/[0.08] stat-card-cinematic card-hover" style={{ background: 'linear-gradient(180deg, hsl(224 52% 16%) 0%, hsl(224 52% 13%) 100%)' }}>
               <div className="text-center space-y-1">
                 <Users className="w-8 h-8 mx-auto text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">Parent Portal</p>
@@ -74,7 +79,7 @@ const LandingPage = () => {
             <Button 
               size="lg" 
               onClick={() => navigate('/login')}
-              className="group text-lg px-8 py-6 h-auto"
+              className="group text-lg px-8 py-6 h-auto btn-bloom"
             >
               <span className="relative z-10 flex items-center gap-2">
                 Start Free Today
@@ -97,7 +102,9 @@ const LandingPage = () => {
         </div>
 
         {/* Features Section */}
-        <div className="max-w-6xl mx-auto space-y-8">
+        <div className="max-w-6xl mx-auto space-y-8 relative">
+          {/* Coral ambient bleed */}
+          <div className="features-glow" />
           <div className="text-center animate-fade-in">
             <h2 className="text-2xl md:text-3xl font-bold">
               More Than a <span className="text-primary">Question Bank</span>
@@ -120,7 +127,7 @@ const LandingPage = () => {
         {/* Social Proof */}
         <div className="max-w-5xl mx-auto mt-16 text-center space-y-8 animate-fade-in">
           <div className="grid md:grid-cols-2 gap-6">
-            <Card className="p-8 bg-secondary border-0">
+            <Card className="p-8 border-0 social-card-cinematic">
               <div className="space-y-4">
                 <div className="flex items-center justify-center gap-2">
                   <div className="flex -space-x-2">
@@ -137,7 +144,7 @@ const LandingPage = () => {
               </div>
             </Card>
 
-            <Card className="p-8 bg-secondary border-0">
+            <Card className="p-8 border-0 social-card-cinematic">
               <div className="space-y-4">
                 <div className="flex items-center justify-center">
                   <Users className="w-8 h-8 text-primary" />
@@ -155,7 +162,7 @@ const LandingPage = () => {
             <Button 
               size="lg"
               onClick={() => navigate('/login')}
-              className="group text-lg px-8 py-6 h-auto"
+              className="group text-lg px-8 py-6 h-auto btn-bloom"
             >
               <span className="flex items-center gap-2">
                 Get Started Free

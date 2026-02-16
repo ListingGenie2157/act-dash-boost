@@ -1,0 +1,92 @@
+/* ============================================
+   Cinematic Landing Page — Atmospheric Layers
+   Imported only by LandingPage.tsx
+   ============================================ */
+
+/* Deep black scene container with noise texture overlay */
+.landing-scene {
+  background: #050B18;
+  position: relative;
+}
+
+.landing-scene::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  opacity: 0.04;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='512' height='512' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* Radial teal glow behind hero headline */
+.hero-glow {
+  position: absolute;
+  top: -10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120%;
+  height: 70%;
+  background: radial-gradient(ellipse at 50% 40%, rgba(20, 184, 166, 0.09), rgba(14, 116, 144, 0.04) 40%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Faint coral ambient bleed behind features section */
+.features-glow {
+  position: absolute;
+  bottom: 10%;
+  right: -10%;
+  width: 60%;
+  height: 50%;
+  background: radial-gradient(ellipse at 70% 50%, rgba(240, 68, 82, 0.04), transparent 55%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Button bloom — teal glow halo */
+.btn-bloom {
+  box-shadow:
+    0 0 20px rgba(20, 184, 166, 0.3),
+    0 0 60px rgba(20, 184, 166, 0.1);
+  transition: box-shadow 0.3s ease;
+}
+.btn-bloom:hover {
+  box-shadow:
+    0 0 30px rgba(20, 184, 166, 0.45),
+    0 0 80px rgba(20, 184, 166, 0.18);
+}
+
+/* Feature card cinematic depth */
+.feature-card-cinematic {
+  box-shadow:
+    0 4px 40px rgba(0, 0, 0, 0.6),
+    0 0 12px rgba(20, 184, 166, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  transition: box-shadow 0.4s ease, transform 0.2s ease-out;
+}
+.feature-card-cinematic:hover {
+  box-shadow:
+    0 8px 50px rgba(0, 0, 0, 0.7),
+    0 0 25px rgba(20, 184, 166, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Stats card cinematic style */
+.stat-card-cinematic {
+  box-shadow:
+    0 4px 30px rgba(0, 0, 0, 0.5),
+    0 0 8px rgba(20, 184, 166, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Social proof card cinematic */
+.social-card-cinematic {
+  box-shadow:
+    0 4px 30px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  background: linear-gradient(180deg, hsl(225 44% 16%) 0%, hsl(225 44% 13%) 100%) !important;
+}
