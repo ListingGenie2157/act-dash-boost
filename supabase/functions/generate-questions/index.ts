@@ -269,9 +269,9 @@ serve(async (req) => {
       });
     }
 
-    // Rate limit: 3 requests per minute for admin content generation
+    // Rate limit: 20 requests per minute for admin content generation (needs headroom for multi-batch sim generation)
     const clientIp = getClientIp(req);
-    const rateLimitAllowed = await checkRateLimit(user.id, clientIp, 'generate-questions', 3, 60000);
+    const rateLimitAllowed = await checkRateLimit(user.id, clientIp, 'generate-questions', 20, 60000);
     if (!rateLimitAllowed) {
       return createRateLimitResponse(corsHeaders);
     }
