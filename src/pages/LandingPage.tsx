@@ -24,10 +24,9 @@ const LandingPage = () => {
       <div className="relative container mx-auto px-4 py-16">
         {/* Hero Section */}
         <div className="max-w-5xl mx-auto text-center space-y-8 mb-16">
-          <div className="flex justify-center mb-8 animate-fade-in">
+          <div className="flex justify-center mb-4 animate-fade-in">
             <img src={preppitLogo} alt="Preppit Pacing" className="h-24 w-auto" />
           </div>
-
 
           <div className="space-y-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
             <h1 className="text-6xl md:text-8xl font-bold tracking-tight">
@@ -105,7 +104,7 @@ const LandingPage = () => {
             </h2>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
+          <div className="grid grid-cols-1 min-[380px]:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5 animate-fade-in" style={{ animationDelay: '100ms' }}>
             <FeatureCard icon={MessageCircle} title="Coached Test Mode" description="Real-time strategy tips during practice tests. Learn how to think on test day." badge="NEW" delay={0} />
             <FeatureCard icon={Timer} title="Pacing Lab" description="Master time management with chunk timers and two-pass strategy training. Worth 3-5 extra points." badge="UNIQUE" delay={100} />
             <FeatureCard icon={ClipboardCheck} title="Full ACT Simulations" description="Full-length timed section tests with authentic ACT-style questions and detailed results." badge="AUTHENTIC" delay={200} />
