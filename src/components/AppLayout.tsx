@@ -11,7 +11,7 @@ export function AppLayout() {
         
         <div className="flex-1 flex flex-col w-full">
           {/* Header with Sidebar Toggle and Countdown */}
-          <header className="sticky top-0 z-40 flex items-center gap-4 border-b border-white/[0.06] bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 py-2">
+          <header className="pp-header flex items-center gap-4 px-4 py-2">
             <SidebarTrigger className="shrink-0" />
             <CountdownHeader className="border-0 p-0 flex-1 justify-start bg-transparent" />
           </header>
