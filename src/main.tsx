@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import './index.css'
+import './styles/preppit.css'
 import { reportError } from './lib/errorReporter'
 
 // Global error handlers for unhandled promise rejections and errors

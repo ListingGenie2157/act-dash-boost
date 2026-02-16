@@ -1,5 +1,4 @@
 import { LucideIcon } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 
 interface FeatureCardProps {
   icon: LucideIcon;
@@ -19,27 +18,18 @@ export const FeatureCard = ({
 }: FeatureCardProps) => {
   return (
     <div
-      className="group relative h-full rounded-lg overflow-hidden transition-all duration-300 card-hover"
+      className="pp-card group h-full p-5 transition-all duration-300"
       style={{ animationDelay: `${delay}ms` }}
     >
-      {/* Ambient teal glow */}
-      <div className="absolute -inset-px rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-md bg-gradient-to-br from-primary/30 via-transparent to-primary-glow/15 pointer-events-none" />
-
-      {/* Card surface */}
-      <div
-        className="relative h-full flex flex-col rounded-lg p-5 space-y-3 border border-white/[0.08] feature-card-cinematic"
-        style={{
-          background: 'linear-gradient(180deg, hsl(224 52% 17%) 0%, hsl(224 52% 14%) 100%)',
-        }}
-      >
+      <div className="relative z-10 flex flex-col h-full space-y-3">
         <div className="flex items-start justify-between">
-          <div className="p-2.5 rounded-lg bg-white/[0.04] border border-white/[0.06]">
-            <Icon className="w-5 h-5 text-foreground" />
+          <div className="pp-icon">
+            <Icon className="w-5 h-5" style={{ color: 'var(--pp-text)' }} />
           </div>
           {badge && (
-            <Badge variant="secondary" className="text-[10px] tracking-wide uppercase">
+            <span className="pp-badge">
               {badge}
-            </Badge>
+            </span>
           )}
         </div>
         
@@ -47,7 +37,7 @@ export const FeatureCard = ({
           <h3 className="text-base font-bold leading-tight">
             {title}
           </h3>
-          <p className="text-muted-foreground text-xs leading-relaxed">
+          <p className="text-xs leading-relaxed" style={{ color: 'var(--pp-muted)' }}>
             {description}
           </p>
         </div>

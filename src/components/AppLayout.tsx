@@ -6,7 +6,7 @@ import { CountdownHeader } from '@/components/CountdownHeader';
 export function AppLayout() {
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen flex w-full">
+      <div className="min-h-screen flex w-full pp-page-bg">
         <AppSidebar />
         
         <div className="flex-1 flex flex-col w-full">
