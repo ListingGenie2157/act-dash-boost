@@ -1,143 +1,162 @@
 
+# Fix Landing Page: Background "Blocks" and Missing Two-Column Grid
 
-# Premium Dark Performance Polish + Remove Question Counts
+## Problem Summary
 
-Three areas: remove question counts from simulations, refine the design system for authority and depth, and tighten typography/spacing/radius across the app.
+The landing page references many `pp-*` CSS classes that were either emptied out or never defined when the design system was migrated to the new `.app-bg` / `.glass-card` naming convention. This causes:
+
+1. **"Blocky" background** -- The page uses `pp-page-bg` which is now an empty stub. Without a proper background class, sections render with mismatched or missing backgrounds.
+2. **Single-column features** -- The `pp-feature-grid` class (used on the 9 feature cards) was never defined, so cards stack vertically instead of in a responsive grid.
+3. **Invisible/unstyled cards and buttons** -- `pp-card`, `pp-icon`, `pp-badge`, `pp-stat-card`, `pp-btn-primary`, and `pp-btn-ghost` are all empty or missing.
+
+## Plan
+
+### Step 1: Define all missing `pp-*` classes in `src/styles/preppit.css`
+
+Under the "LEGACY COMPAT" section, replace the empty stubs with real definitions that map to the new design tokens:
+
+- **`pp-page-bg`** -- alias to `.app-bg` styles (gradient background, noise, vignette)
+- **`pp-card`** -- alias to `.glass-card` styles (translucent glass panel)
+- **`pp-feature-grid`** -- a CSS grid: 1 column on mobile, 2 columns on tablet, 3 columns on desktop, with `14-16px` gap
+- **`pp-stat-card`** -- glass panel with lighter weight (smaller shadow, thinner border)
+- **`pp-icon`** -- alias to `.glass-icon`
+- **`pp-badge`** -- small teal pill label (uppercase, tiny text, teal border/background tint)
+- **`pp-btn-primary`** -- alias to `.btn-pill.primary` (teal glow CTA)
+- **`pp-btn-ghost`** -- alias to `.btn-pill` (glass secondary button)
+
+### Step 2: Update `LandingPage.tsx` wrapper class
+
+Change line 21 from `pp-page-bg` to `app-bg` so the page gets the navy-to-black gradient with teal/coral highlights directly, OR define `pp-page-bg` to match `.app-bg`. The plan uses the CSS alias approach so no JSX changes are needed.
+
+### Step 3: Verify card hover and badge styling
+
+The `FeatureCard` component uses `pp-card`, `pp-icon`, and `pp-badge` -- all three need real styles. The `card-hover` class on stat cards also needs a hover lift definition if not already present.
 
 ---
 
-## 1. Remove Question Counts (Simulations)
+## Technical Details
 
-### `src/components/FormPicker.tsx`
-- Line 176: Remove `{form.questionCount} questions` from the button text — show only time limit (e.g., "45 min")
-- Line 138-139: Remove `CardDescription` showing "X of Y sections available" — replace with just "Select a section to begin"
-- The `questionCount` data still gets passed through to `onFormSelect` (needed for session logic), just not displayed
-
-### `src/components/SimulationStartDialog.tsx`
-- Lines 66-73: Remove the "Questions" stat from the 2-column grid — show only "Time Limit" (single column or centered)
-- Line 70: Remove `{questionCount} questions` display
-
-### `src/components/StudyPlanWidget.tsx`
-- Line 276: Remove `{task.size} questions` line from task cards
-
-### `src/pages/LandingPage.tsx`
-- The "466 questions" badge visible in the reference screenshot is from `FeatureCard` badges — currently the code doesn't show question counts in badges (they show "UNIQUE", "NEW", etc.), so this is already clean. No change needed.
-
----
-
-## 2. Background Depth (Subtle Vertical Variation)
-
-### `src/index.css`
-- Change `--background` from flat `225 58% 11%` to the same value (the token stays flat)
-- Add a new body pseudo-element or body background gradient for subtle vertical depth:
+### New CSS to add in `src/styles/preppit.css` (replacing the empty legacy stubs):
 
 ```css
-body {
-  background: linear-gradient(
-    180deg,
-    hsl(225 58% 9%) 0%,
-    hsl(225 58% 12%) 40%,
-    hsl(225 58% 9%) 100%
-  );
+/* pp-page-bg -- same as .app-bg */
+.pp-page-bg {
+  min-height: 100vh;
+  color: hsl(var(--foreground));
+  background:
+    radial-gradient(900px 600px at 50% -10%, rgba(34,211,238,0.14), transparent 60%),
+    radial-gradient(700px 500px at 10% 20%, rgba(45,212,191,0.10), transparent 55%),
+    radial-gradient(800px 600px at 85% 65%, rgba(244,63,94,0.07), transparent 60%),
+    linear-gradient(180deg, #0b1220 0%, #070b13 40%, #030508 100%);
+  background-attachment: fixed;
+  position: relative;
+}
+
+/* pp-card -- same as .glass-card */
+.pp-card {
+  background: linear-gradient(180deg, var(--glass), var(--glass2));
+  border: 1px solid var(--stroke);
+  border-radius: 1.25rem;
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+  position: relative;
+  overflow: hidden;
+}
+
+/* pp-feature-grid -- responsive grid for feature cards */
+.pp-feature-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (min-width: 640px) {
+  .pp-feature-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1024px) {
+  .pp-feature-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* pp-stat-card */
+.pp-stat-card {
+  background: linear-gradient(180deg, var(--glass), var(--glass2));
+  border: 1px solid var(--stroke);
+  border-radius: 1rem;
+  backdrop-filter: blur(16px);
+}
+
+/* pp-icon -- same as .glass-icon */
+.pp-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px; height: 44px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* pp-badge -- teal pill label */
+.pp-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent, #22d3ee);
+  border: 1px solid rgba(34,211,238,0.25);
+  background: rgba(34,211,238,0.08);
+}
+
+/* pp-btn-primary */
+.pp-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  color: hsl(var(--foreground));
+  border-color: rgba(34,211,238,0.35);
+  background: radial-gradient(120% 120% at 50% 0%, rgba(34,211,238,0.22), rgba(255,255,255,0.06));
+  box-shadow: 0 16px 50px rgba(0,0,0,0.5), 0 0 0 1px rgba(34,211,238,0.20), 0 0 28px rgba(34,211,238,0.18);
+}
+
+/* pp-btn-ghost */
+.pp-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  color: hsl(var(--foreground));
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(14px);
+}
+
+/* card-hover utility */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 22px 70px rgba(0,0,0,0.55), 0 0 30px rgba(34,211,238,0.10);
 }
 ```
 
-This creates a subtle darkened top/bottom with a slightly lighter mid-section. Very subtle (9% to 12% to 9% lightness).
+### Files modified
 
----
+- `src/styles/preppit.css` -- replace empty legacy stubs with full definitions (single file change)
 
-## 3. Reduce Border Radius (Sharper = More Mature)
-
-### `src/index.css`
-- Change `--radius: 0.75rem` to `--radius: 0.5rem` (8px instead of 12px — 33% reduction)
-
-### `src/components/ui/badge.tsx`
-- Change `rounded-full` to `rounded-md` — less "friendly", more tactical
-
----
-
-## 4. Typography Authority
-
-### `src/index.css`
-- Headlines: tighten letter-spacing from `-0.02em` to `-0.025em`
-- Body line-height: keep 1.4
-
-### `src/pages/LandingPage.tsx`
-- Hero headline: increase from `text-5xl md:text-7xl` to `text-6xl md:text-8xl` (~15% larger)
-- Subtitle: reduce from `text-xl md:text-2xl` to `text-lg md:text-xl`
-- Trim copy: "Full-length simulations. Coached practice tests. AI tutoring. Parent rewards." becomes "Full Simulations. AI Coaching. Parent Accountability."
-- Section header "More Than a Question Bank": stays but reduce `text-3xl md:text-4xl` to `text-2xl md:text-3xl`
-- Remove the subtitle paragraph under it — just the heading
-
-### `src/pages/Dashboard.tsx`
-- Welcome heading: keep `text-2xl sm:text-3xl`
-- Tighten vertical spacing: reduce `space-y-8` to `space-y-6` in main container
-- "Choose Your Path" copy: trim description paragraph
-
----
-
-## 5. Card Hierarchy (Not All Siblings)
-
-### Feature Cards (`src/components/landing/FeatureCard.tsx`)
-- Thin border only: `border border-white/[0.06]` (already correct)
-- Remove `hover:border-primary/30` — keep hover subtle: `hover:border-white/10`
-- Remove `group-hover:text-primary` on title
-- Remove `group-hover:scale-110` on icon
-
-### Social Proof Cards (`src/pages/LandingPage.tsx`)
-- Remove border entirely — use slightly lighter surface: `bg-secondary border-0`
-- This differentiates testimonials from feature cards
-
-### Dashboard Cards
-- Already using `bg-card border border-white/[0.06]` — keep as-is
-- These are denser by nature (smaller padding, more data)
-
----
-
-## 6. Tighter Spacing
-
-### `src/pages/LandingPage.tsx`
-- Hero section: reduce `mb-20` to `mb-16`
-- Stats bar: reduce `gap-6` to `gap-4`
-- Features section: reduce `space-y-12` to `space-y-8`
-- Social proof: reduce `mt-20` to `mt-16`
-- Footer: reduce `mt-16` to `mt-12`
-
-### `src/pages/Dashboard.tsx`
-- Main container: `space-y-8` to `space-y-6`
-- Feature card grid: keep `gap-6`
-
----
-
-## 7. Numbers Larger
-
-### `src/components/landing/AnimatedCounter.tsx`
-- Check current size and increase by ~25% (likely needs `text-4xl font-bold` if currently `text-3xl`)
-
-### General
-- Numeric metrics throughout should use `text-3xl font-bold` minimum — this is already done in most places (CountdownHeader, MasteryDashboard, etc.)
-
----
-
-## Files to Change
-
-| File | Changes |
-|------|---------|
-| `src/index.css` | Body gradient background, reduce `--radius` to `0.5rem`, tighter headline spacing |
-| `src/components/ui/badge.tsx` | `rounded-full` to `rounded-md` |
-| `src/components/FormPicker.tsx` | Remove question count display from buttons and card descriptions |
-| `src/components/SimulationStartDialog.tsx` | Remove question count stat |
-| `src/components/StudyPlanWidget.tsx` | Remove `{task.size} questions` line |
-| `src/pages/LandingPage.tsx` | Larger hero, tighter copy, card hierarchy, reduced spacing |
-| `src/components/landing/FeatureCard.tsx` | Subtler hover, remove scale/color transitions |
-| `src/pages/Dashboard.tsx` | Tighter spacing |
-| `src/components/landing/AnimatedCounter.tsx` | Larger numbers |
-
-## What Does NOT Change
-
-- Coral color system (confirmed perfect)
-- All routing, data, Supabase integrations
-- Card shadow values
-- Button gradients
-- Progress ring styling
-- Component structure and props
+No JSX changes needed since the landing page already uses the correct class names.
