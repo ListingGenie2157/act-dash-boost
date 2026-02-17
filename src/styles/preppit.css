@@ -234,8 +234,160 @@
 /* ===================================================================
    LEGACY COMPAT — map old pp-* classes
    =================================================================== */
-.pp-page-bg { /* replaced by .app-bg */ }
-.pp-card { /* replaced by .glass-card */ }
-.pp-header { /* replaced by .app-header */ }
-.pp-halo { /* replaced by .glass-halo */ }
-.pp-icon { /* replaced by .glass-icon */ }
+/* pp-page-bg -- same as .app-bg */
+.pp-page-bg {
+  min-height: 100vh;
+  color: hsl(var(--foreground));
+  background:
+    radial-gradient(900px 600px at 50% -10%, rgba(34,211,238,0.14), transparent 60%),
+    radial-gradient(700px 500px at 10% 20%, rgba(45,212,191,0.10), transparent 55%),
+    radial-gradient(800px 600px at 85% 65%, rgba(244,63,94,0.07), transparent 60%),
+    linear-gradient(180deg, #0b1220 0%, #070b13 40%, #030508 100%);
+  background-attachment: fixed;
+  position: relative;
+}
+
+/* pp-card -- same as .glass-card */
+.pp-card {
+  background: linear-gradient(180deg, var(--glass), var(--glass2));
+  border: 1px solid var(--stroke);
+  border-radius: 1.25rem;
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+  position: relative;
+  overflow: hidden;
+}
+
+/* pp-feature-grid -- responsive grid for feature cards */
+.pp-feature-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (min-width: 640px) {
+  .pp-feature-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1024px) {
+  .pp-feature-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* pp-stat-card */
+.pp-stat-card {
+  background: linear-gradient(180deg, var(--glass), var(--glass2));
+  border: 1px solid var(--stroke);
+  border-radius: 1rem;
+  backdrop-filter: blur(16px);
+}
+
+/* pp-header -- same as .app-header */
+.pp-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  background: rgba(5,7,13,0.65);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/* pp-halo -- same as .glass-halo */
+.pp-halo {
+  position: relative;
+}
+.pp-halo::before {
+  content: "";
+  position: absolute;
+  inset: -40px -20px;
+  background:
+    radial-gradient(600px 260px at 50% 10%, rgba(34,211,238,0.14), transparent 60%),
+    radial-gradient(420px 220px at 20% 40%, rgba(45,212,191,0.08), transparent 65%);
+  filter: blur(16px);
+  opacity: 0.8;
+  pointer-events: none;
+  z-index: 0;
+}
+.pp-halo > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* pp-icon -- same as .glass-icon */
+.pp-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* pp-badge -- teal pill label */
+.pp-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent, #22d3ee);
+  border: 1px solid rgba(34,211,238,0.25);
+  background: rgba(34,211,238,0.08);
+}
+
+/* pp-btn-primary */
+.pp-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  color: hsl(var(--foreground));
+  border: 1px solid rgba(34,211,238,0.35);
+  background: radial-gradient(120% 120% at 50% 0%, rgba(34,211,238,0.22), rgba(255,255,255,0.06));
+  box-shadow: 0 16px 50px rgba(0,0,0,0.5), 0 0 0 1px rgba(34,211,238,0.20), 0 0 28px rgba(34,211,238,0.18);
+  transition: all 0.25s ease;
+}
+.pp-btn-primary:hover {
+  box-shadow: 0 18px 55px rgba(0,0,0,0.55), 0 0 0 1px rgba(34,211,238,0.30), 0 0 40px rgba(34,211,238,0.22);
+}
+
+/* pp-btn-ghost */
+.pp-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  color: hsl(var(--foreground));
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: all 0.25s ease;
+}
+.pp-btn-ghost:hover {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.16);
+}
+
+/* card-hover utility */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 22px 70px rgba(0,0,0,0.55), 0 0 30px rgba(34,211,238,0.10);
+}
