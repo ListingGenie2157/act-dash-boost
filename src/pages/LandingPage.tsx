@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { AnimatedCounter } from '@/components/landing/AnimatedCounter';
 import { FeatureCard } from '@/components/landing/FeatureCard';
 import { Calculator, Target, Bot, TrendingUp, Users, Timer, ArrowRight, RotateCcw, MessageCircle, ClipboardCheck, Gift } from 'lucide-react';
-import preppitLogo from '@/assets/preppit-logo.png';
+import preppitLogo from '@/assets/preppit-logo-new.png';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -27,7 +27,7 @@ const LandingPage = () => {
               src={preppitLogo}
               alt="Preppit Pacing"
               className="w-auto"
-              style={{ height: '120px', mixBlendMode: 'screen' }}
+              style={{ height: '160px', mixBlendMode: 'screen' }}
             />
           </div>
 
