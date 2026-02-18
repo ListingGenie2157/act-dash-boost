@@ -23,11 +23,11 @@ const LandingPage = () => {
         {/* Hero Section */}
         <div className="max-w-5xl mx-auto text-center space-y-8 mb-16 pp-halo">
           <div className="flex justify-center mb-4 animate-fade-in">
-            <img
+              <img
               src={preppitLogo}
               alt="Preppit Pacing"
               className="w-auto"
-              style={{ height: '120px' }}
+              style={{ height: '120px', mixBlendMode: 'screen' }}
             />
           </div>
 
