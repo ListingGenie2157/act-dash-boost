@@ -1,41 +1,65 @@
 
-# Fix Background to True Midnight Navy
+# Fix: Remove the Dark Box Around the Logo
 
-## What the Reference Image Shows
+## The Root Cause
 
-The uploaded logo image has a background color that is a very deep midnight navy — essentially:
-- Top: approximately `#0b0f1a` (very dark navy-black with a clear blue tint)
-- Bottom: approximately `#06080f` (near-black with a subtle blue undertone)
+The `preppit-logo.png` file is a **flat PNG with a dark navy background** — it is not a transparent/PNG-24 file. The background color of the image (`~#0c1829`) is close to but not identical to the page background (`#0b0f1a → #080c15`), which is why the box is visible as a slightly different shade of dark blue.
 
-This is significantly darker and more "cool-black" than the current `#0f1f3d → #0a1628 → #071020` gradient, which still reads as "rich navy" on screen. The target feels like looking at a very dark OLED screen at night with just a hint of deep blue.
+No amount of cropping or sizing will fix this — the background is part of the image pixels themselves.
 
-## Changes Needed
+## The Fix: CSS `mix-blend-mode: screen`
 
-### `src/index.css` — body background
+The `mix-blend-mode: screen` CSS property mathematically blends the image pixels with the pixels underneath. On a dark page:
+- The dark background pixels in the logo image (~`#0c1829`) blend to near-invisible (dark + screen = still dark)
+- The light pixels (the P icon, "Preppit Pacing" text, teal/coral colors) remain fully visible
 
-Update the base linear gradient from:
-```css
-linear-gradient(180deg, #0f1f3d 0%, #0a1628 50%, #071020 100%)
+This is the standard technique used for logos with dark backgrounds that need to appear on dark pages. It requires zero image editing.
+
+**Alternative: `mix-blend-mode: lighten`** — a slightly more conservative blend that also works for dark-on-dark scenarios and preserves the logo colors more faithfully.
+
+## Change
+
+**File:** `src/pages/LandingPage.tsx` — lines 26-31
+
+Change:
+```tsx
+<img
+  src={preppitLogo}
+  alt="Preppit Pacing"
+  className="w-auto"
+  style={{ height: '120px' }}
+/>
 ```
+
 To:
-```css
-linear-gradient(180deg, #0b0f1a 0%, #080c15 50%, #06080f 100%)
+```tsx
+<img
+  src={preppitLogo}
+  alt="Preppit Pacing"
+  className="w-auto"
+  style={{ height: '120px', mixBlendMode: 'screen' }}
+/>
 ```
 
-Also slightly reduce the teal/cyan radial overlays so they don't fight the darker base — keep them as subtle atmospheric hints rather than visible colored blobs:
-- Teal top glow: `rgba(34,211,238,0.10)` (down from 0.14)
-- Teal side glow: `rgba(45,212,191,0.07)` (down from 0.10)
-- Coral bottom glow: `rgba(244,63,94,0.05)` (down from 0.07)
+That single CSS property eliminates the visible box by making the dark background of the PNG transparent relative to the page.
 
-### `src/styles/preppit.css` — sync `.app-bg` and `.pp-page-bg`
+## Why This Works
 
-Update both classes to match the body background — same `#0b0f1a → #080c15 → #06080f` gradient with the same reduced overlay intensities. These three backgrounds must match exactly or page transitions will show color seams.
+`mix-blend-mode: screen` formula: `result = 1 - (1 - source) * (1 - backdrop)`
+
+For near-black pixels (`~#0c0c0c`):
+- `result = 1 - (1 - 0.047) * (1 - 0.043)` ≈ `0.088` → still very dark, effectively invisible
+
+For the white "Preppit Pacing" text pixels (`#ffffff`):
+- `result = 1 - (1 - 1.0) * (1 - anything)` = `1.0` → pure white, unchanged
+
+For the teal P icon pixels:
+- Teal is light enough that it passes through with full vibrancy
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `src/index.css` | Body gradient → midnight navy (`#0b0f1a → #080c15 → #06080f`), reduced radial overlay opacity |
-| `src/styles/preppit.css` | `.app-bg` and `.pp-page-bg` → same midnight navy gradient |
+| `src/pages/LandingPage.tsx` | Add `mixBlendMode: 'screen'` to the logo `<img>` style |
 
-No JSX changes needed. The card royal-blue glow and the feature grid are untouched — those already look correct. This is a pure color depth fix.
+One line change. No image editing, no new files.
