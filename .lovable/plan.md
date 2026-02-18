@@ -1,77 +1,119 @@
 
-# Fix: Two-Column Feature Grid on Mobile + Logo Without Slogan
+# Three Visual Fixes: Background Color, Card Glow Style, Logo Size
 
-## Root Cause: Grid Breakpoint Too Wide for Mobile
+## What You're Describing (from the reference screenshot)
 
-The `.pp-feature-grid` CSS currently starts at **1 column** and only goes to 2 columns at `min-width: 640px`. An iPhone (375–430px) is below that, so it stays single-column all day.
+1. **Background**: Deeper navy blue — not near-black. The colors `#070b13` and `#030508` are going too dark/black. The target is a rich deep navy like `#0a1628` staying more blue throughout.
 
-The reference screenshot shows 2 compact cards side-by-side on a ~390px phone screen. The fix: make **2 columns the default** with no breakpoint, and bump up to 3 columns only on desktop (1024px+).
+2. **Feature card inner glow**: The reference cards have a **royal/indigo blue** base with a **bright lighter-blue radial glow at the top-center** of each card. This is not the current teal/cyan — it's more of a cobalt/royal blue (`#1e3a8a` range) with a white-blue inner bloom. The `pp-card` and `pp-icon` need to adopt this style.
 
-## Root Cause: Logo Repeats the Slogan
-
-The logo image file (`preppit-logo.png`) contains the "P" icon + "Preppit Pacing" wordmark + "Train Your Brain. Crush the ACT." tagline underneath. Since only one logo file exists, we'll use CSS `object-fit` + `object-position` + fixed height to crop only the icon+name portion, cutting the tagline off the bottom.
+3. **Logo**: The `overflow-hidden` crop container is showing as a visible box because the background inside it doesn't match the page background. Since the logo PNG has the slogan embedded, the cleanest fix is to remove the crop box entirely and make the logo larger — the "Train Your Brain" headline below it provides the same message context so the repetition is less of an issue at a larger size, OR we accept that the logo will include the tagline and just size it properly without a visible container.
 
 ---
 
 ## Changes
 
-### 1. `src/styles/preppit.css` — Fix the grid
+### 1. `src/index.css` — Shift body background to true deep navy
 
-Change `.pp-feature-grid` from:
+Current gradient goes `#0b1220 → #070b13 → #030508` (near-black at the bottom). Replace with a richer navy that stays blue:
+
 ```css
-.pp-feature-grid {
-  display: grid;
-  grid-template-columns: 1fr;   /* ← mobile: 1 col */
-  gap: 14px;
-}
-@media (min-width: 640px) {
-  .pp-feature-grid { grid-template-columns: repeat(2, 1fr); }
-}
-@media (min-width: 1024px) {
-  .pp-feature-grid { grid-template-columns: repeat(3, 1fr); }
+body {
+  background:
+    radial-gradient(900px 600px at 50% -10%, rgba(34,211,238,0.14), transparent 60%),
+    radial-gradient(700px 500px at 10% 30%, rgba(45,212,191,0.10), transparent 55%),
+    radial-gradient(800px 600px at 85% 70%, rgba(244,63,94,0.07), transparent 60%),
+    linear-gradient(180deg, #0f1f3d 0%, #0a1628 50%, #071020 100%);
 }
 ```
 
-To:
+The key change: `#0f1f3d` (deep navy) → `#0a1628` (dark navy) → `#071020` (very dark navy-blue). This keeps the blue character visible instead of going to near-black.
+
+### 2. `src/styles/preppit.css` — Sync `pp-page-bg` and `app-bg` to the same navy
+
+Both `.pp-page-bg` and `.app-bg` need the same gradient update to match the body:
+
 ```css
-.pp-feature-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);   /* ← 2 cols always, including mobile */
-  gap: 12px;
+/* same gradient as body */
+linear-gradient(180deg, #0f1f3d 0%, #0a1628 50%, #071020 100%)
+```
+
+### 3. `src/styles/preppit.css` — Restyle `pp-card` with royal blue inner glow
+
+The reference screenshot shows feature cards with:
+- A deep royal/navy blue base (darker than the background)
+- A **bright blue-white radial glow at the top-center** of each card
+- A subtle blue border
+
+Update `.pp-card` (and the FeatureCard's card style):
+
+```css
+.pp-card {
+  background: linear-gradient(180deg, rgba(30, 58, 138, 0.45), rgba(15, 31, 61, 0.65));
+  border: 1px solid rgba(96, 165, 250, 0.20);
+  border-radius: 1.25rem;
+  box-shadow: 0 18px 60px rgba(0,0,0,0.50);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  position: relative;
+  overflow: hidden;
 }
-@media (min-width: 1024px) {
-  .pp-feature-grid { grid-template-columns: repeat(3, 1fr); }
+
+/* The radial glow at top-center of each card */
+.pp-card::before {
+  content: "";
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70%;
+  height: 100px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(147, 197, 253, 0.35), transparent 65%);
+  pointer-events: none;
 }
 ```
 
-This is the only CSS change needed for the grid — removes the single-column default entirely.
+The `::before` pseudo-element creates the bright center-top blue bloom visible in the reference image.
 
-### 2. `src/pages/LandingPage.tsx` — Crop the logo
+### 4. `src/styles/preppit.css` — Update `pp-stat-card` to match
 
-Change the logo `<img>` from a simple sized image to a cropped container that hides the slogan portion:
+Stat cards at the top (129+ Skills, etc.) should use the same royal blue treatment:
+
+```css
+.pp-stat-card {
+  background: linear-gradient(180deg, rgba(30, 58, 138, 0.40), rgba(15, 31, 61, 0.60));
+  border: 1px solid rgba(96, 165, 250, 0.18);
+  border-radius: 1rem;
+  backdrop-filter: blur(16px);
+  position: relative;
+  overflow: hidden;
+}
+```
+
+### 5. `src/pages/LandingPage.tsx` — Remove the crop box, make logo bigger and natural
+
+Remove the `overflow-hidden` div wrapper entirely. Show the full logo at a natural size. The crop box creates a visible rectangle because its background doesn't blend with the page:
 
 ```tsx
-{/* Before */}
-<img src={preppitLogo} alt="Preppit Pacing" className="h-24 w-auto" />
+{/* Remove this wrapper entirely */}
+<div className="overflow-hidden" style={{ height: '72px' }}>  ← DELETE
 
-{/* After — clipped container hides the bottom tagline */}
-<div className="overflow-hidden" style={{ height: '72px' }}>
-  <img
-    src={preppitLogo}
-    alt="Preppit Pacing"
-    className="w-auto"
-    style={{ height: '90px', marginTop: '-4px', objectFit: 'cover', objectPosition: 'top' }}
-  />
-</div>
+{/* Replace with simple larger img */}
+<img
+  src={preppitLogo}
+  alt="Preppit Pacing"
+  className="h-20 w-auto"   {/* or h-24 — larger and natural */}
+/>
 ```
 
-The `overflow: hidden` container acts as a crop window — showing the P icon and "Preppit Pacing" wordmark while the slogan at the bottom is clipped off. The exact pixel values may need a small tweak depending on how the logo is laid out internally, but this approach is the standard CSS crop technique.
+If the logo tagline shows ("Train Your Brain"), we can either remove the h1 headline below it to avoid repetition, or keep it since the logo branding reinforces the headline. The box artifact is worse than the tagline repetition.
 
 ---
 
 ## Files Modified
 
-- `src/styles/preppit.css` — 3-line grid fix (remove 1fr default, keep only 2-col default + 3-col desktop breakpoint)
-- `src/pages/LandingPage.tsx` — wrap logo in a crop container to hide the slogan
-
-No new files, no new dependencies.
+| File | Change |
+|------|--------|
+| `src/index.css` | Body background gradient → true deep navy blues |
+| `src/styles/preppit.css` | `pp-page-bg`, `app-bg` → same navy gradient; `pp-card` → royal blue + top center glow; `pp-stat-card` → royal blue |
+| `src/pages/LandingPage.tsx` | Remove overflow-hidden crop box, restore natural logo img |
