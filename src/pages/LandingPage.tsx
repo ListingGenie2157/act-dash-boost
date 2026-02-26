@@ -27,7 +27,13 @@ const LandingPage = () => {
               src={preppitLogo}
               alt="Preppit Pacing"
               className="w-auto"
-              style={{ height: '160px', mixBlendMode: 'screen' }}
+              style={{ 
+                height: '180px', 
+                mixBlendMode: 'lighten',
+                filter: 'brightness(1.1)',
+                mask: 'radial-gradient(ellipse 70% 70% at 50% 45%, black 40%, transparent 80%)',
+                WebkitMask: 'radial-gradient(ellipse 70% 70% at 50% 45%, black 40%, transparent 80%)',
+              }}
             />
           </div>
 
