@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { reportError } from '@/lib/errorReporter';
 
 export const ParentBanner = () => {
   const [potentialEarnings, setPotentialEarnings] = useState<number>(0);
@@ -68,7 +69,7 @@ export const ParentBanner = () => {
 
       setPotentialEarnings(potential);
     } catch (error) {
-      console.error('Error fetching potential earnings:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { component: 'ParentBanner' });
     } finally {
       setLoading(false);
     }

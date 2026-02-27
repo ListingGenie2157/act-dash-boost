@@ -8,6 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+import { reportError } from '@/lib/errorReporter';
 import { useWeakAreasDb } from '@/hooks/useWeakAreasDb';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { toast } from 'sonner';
@@ -89,7 +90,7 @@ export default function DrillSetup() {
           setSelectedSkill(enrichedSkills[0].id);
         }
       } catch (error) {
-        console.error('Error fetching skills:', error);
+        reportError(error instanceof Error ? error : new Error(String(error)), { page: 'DrillSetup' });
         toast.error('Failed to load skills');
       } finally {
         setLoading(false);

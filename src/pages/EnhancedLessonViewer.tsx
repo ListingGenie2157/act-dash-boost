@@ -32,6 +32,7 @@ import { YouTubeEmbed, extractYouTubeId } from '@/components/lesson/YouTubeEmbed
 import { TutorTrigger } from '@/components/tutor/TutorTrigger';
 import { mapToTutorSubject } from '@/lib/tutorSubjectMapper';
 import { logger } from '@/lib/logger';
+import { reportError } from '@/lib/errorReporter';
 
 export default function EnhancedLessonViewer() {
   const { topic } = useParams<{ topic?: string }>();
@@ -58,7 +59,7 @@ export default function EnhancedLessonViewer() {
     try {
       return lesson?.concept_explanation ? parseConceptRules(lesson.concept_explanation) : [];
     } catch (err) {
-      console.error('Error parsing concept rules:', err);
+      reportError(err instanceof Error ? err : new Error(String(err)), { page: 'EnhancedLessonViewer', source: 'parseConceptRules' });
       return [];
     }
   }, [lesson?.concept_explanation]);
@@ -67,7 +68,7 @@ export default function EnhancedLessonViewer() {
     try {
       return lesson?.guided_practice ? parseGuidedPractice(lesson.guided_practice) : [];
     } catch (err) {
-      console.error('Error parsing guided practice:', err);
+      reportError(err instanceof Error ? err : new Error(String(err)), { page: 'EnhancedLessonViewer', source: 'parseGuidedPractice' });
       return [];
     }
   }, [lesson?.guided_practice]);
@@ -76,7 +77,7 @@ export default function EnhancedLessonViewer() {
     try {
       return lesson?.common_traps ? parseCommonTraps(lesson.common_traps) : [];
     } catch (err) {
-      console.error('Error parsing common traps:', err);
+      reportError(err instanceof Error ? err : new Error(String(err)), { page: 'EnhancedLessonViewer', source: 'parseCommonTraps' });
       return [];
     }
   }, [lesson?.common_traps]);
@@ -87,7 +88,7 @@ export default function EnhancedLessonViewer() {
         ? parseIndependentPractice(lesson.independent_practice, lesson.independent_practice_answers || null)
         : [];
     } catch (err) {
-      console.error('Error parsing independent practice:', err);
+      reportError(err instanceof Error ? err : new Error(String(err)), { page: 'EnhancedLessonViewer', source: 'parseIndependentPractice' });
       return [];
     }
   }, [lesson?.independent_practice, lesson?.independent_practice_answers]);
@@ -112,7 +113,7 @@ export default function EnhancedLessonViewer() {
           setLesson(data);
         }
       } catch (err: unknown) {
-        console.error('Error fetching lesson:', err);
+        reportError(err instanceof Error ? err : new Error(String(err)), { page: 'EnhancedLessonViewer', source: 'fetchLesson' });
         const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
         setError(errorMessage);
         setLesson(null);

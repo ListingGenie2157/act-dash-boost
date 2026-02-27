@@ -6,6 +6,7 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { reportError } from '@/lib/errorReporter';
 import preppitLogo from '@/assets/preppit-logo.png';
 import { Monitor, FileText, School, Globe, HelpCircle } from 'lucide-react';
 
@@ -58,7 +59,7 @@ export default function Onboarding() {
       toast.success('Welcome to Preppit Pacing!');
       navigate('/');
     } catch (error) {
-      console.error('Error completing onboarding:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'Onboarding' });
       toast.error('Failed to complete setup. Please try again.');
     } finally {
       setLoading(false);

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { reportError } from '@/lib/errorReporter';
 import { format } from 'date-fns';
 
 interface AttemptWithQuestion {
@@ -82,7 +83,7 @@ export default function DrillDetail() {
           .order('question_ord');
 
         if (attemptsError) {
-          console.error('Error fetching attempts:', attemptsError);
+          reportError(attemptsError instanceof Error ? attemptsError : new Error(String(attemptsError)), { page: 'DrillDetail' });
           setAttempts([]);
         } else if (attemptsData && attemptsData.length > 0) {
           // Fetch question details from staging_items
@@ -110,7 +111,7 @@ export default function DrillDetail() {
           setAttempts(merged);
         }
       } catch (err) {
-        console.error('Error loading drill detail:', err);
+        reportError(err instanceof Error ? err : new Error(String(err)), { page: 'DrillDetail' });
         setError('Failed to load drill details');
       } finally {
         setLoading(false);

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import type { TutorMessage, TutorContextData, TutorChatRequest, TutorChatResponse, TutorChatErrorResponse, TutorChatSuccessResponse } from '@/types/tutor';
+import { reportError } from '@/lib/errorReporter';
 
 function isTutorError(data: TutorChatResponse | null): data is TutorChatErrorResponse {
   return data !== null && 'error' in data && typeof data.error === 'string';
@@ -124,7 +125,7 @@ export function TutorProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch (error: unknown) {
-      console.error('Error sending message:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { component: 'useTutor' });
       
       const errorMessage = error instanceof Error ? error.message : String(error);
       

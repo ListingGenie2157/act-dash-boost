@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { reportError } from '@/lib/errorReporter';
 
 interface WeakAreaDb {
   skill_id: string | null;
@@ -32,7 +33,7 @@ export function useWeakAreasDb(limit: number = 3) {
         .limit(limit);
 
       if (error) {
-        console.error('Error fetching weak areas:', error);
+        reportError(error instanceof Error ? error : new Error(String(error)), { component: 'useWeakAreasDb' });
         return [];
       }
 

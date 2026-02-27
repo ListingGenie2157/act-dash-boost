@@ -4,6 +4,7 @@ import { getQuestionsBySkill } from '@/lib/content';
 import { supabase } from '@/integrations/supabase/client';
 import type { Question } from '@/types';
 import { shuffleQuestionChoices } from '@/lib/shuffle';
+import { reportError } from '@/lib/errorReporter';
 
 export default function QuizRunner() {
   const { section } = useParams<{ section?: string }>();
@@ -82,7 +83,7 @@ export default function QuizRunner() {
         });
       }
     } catch (err) {
-      console.error(err);
+      reportError(err instanceof Error ? err : new Error(String(err)), { page: 'QuizRunner' });
     }
     if (current + 1 < questions.length) {
       setCurrent(current + 1);

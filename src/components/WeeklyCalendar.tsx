@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { BookOpen, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { format, isToday, differenceInDays } from 'date-fns';
 import type { PlanTaskJson } from '@/types/studyPlan';
+import { reportError } from '@/lib/errorReporter';
 
 interface StudyTask {
   type: string;
@@ -91,7 +92,7 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
           setDaysUntilTest(days);
         }
       } catch (err) {
-        console.error('Error fetching weekly plan:', err);
+        reportError(err instanceof Error ? err : new Error(String(err)), { component: 'WeeklyCalendar' });
       } finally {
         setLoading(false);
       }

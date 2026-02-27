@@ -1,5 +1,6 @@
 // Temporary script to import lesson E1.C
 import { supabase } from '@/integrations/supabase/client';
+import { reportError } from '@/lib/errorReporter';
 
 export async function importLessonE1C() {
   const lessonData = {
@@ -111,7 +112,7 @@ export async function importLessonE1C() {
   });
 
   if (error) {
-    console.error('Import error:', error);
+    reportError(error instanceof Error ? error : new Error(String(error)), { source: 'importLesson' });
     throw error;
   }
 

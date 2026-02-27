@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { getWeakAreas, getPriorityColor, getPriorityLabel, type WeakArea } from '@/lib/weakAreas';
+import { reportError } from '@/lib/errorReporter';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function WeakAreas() {
@@ -24,7 +25,7 @@ export default function WeakAreas() {
         const areas = await getWeakAreas(user.id, 50); // Get more for dedicated page
         setWeakAreas(areas);
       } catch (error) {
-        console.error('Error fetching weak areas:', error);
+        reportError(error instanceof Error ? error : new Error(String(error)), { page: 'WeakAreas' });
       } finally {
         setLoading(false);
       }

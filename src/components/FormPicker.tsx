@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { getCodeFromFormId } from '@/lib/sectionMapping';
+import { reportError } from '@/lib/errorReporter';
 
 interface Form {
   id: string;
@@ -49,7 +50,7 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
            .eq('form_id', formId);
 
         if (error) {
-          console.error('Error counting questions for form', formId, error);
+          reportError(error instanceof Error ? error : new Error(String(error)), { component: 'FormPicker' });
         }
 
         const actual = count ?? 0;
@@ -65,7 +66,7 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
 
         setForms(formData);
       } catch (error) {
-        console.error('Error fetching form availability:', error);
+        reportError(error instanceof Error ? error : new Error(String(error)), { component: 'FormPicker' });
         // Fallback to empty array on error
         setForms([]);
       } finally {

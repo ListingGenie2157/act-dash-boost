@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getWeakAreas, getPriorityColor, getPriorityLabel, type WeakArea } from '@/lib/weakAreas';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from 'react-router-dom';
+import { reportError } from '@/lib/errorReporter';
 
 interface WeakAreasCardProps {
   limit?: number;
@@ -27,7 +28,7 @@ export function WeakAreasCard({ limit = 5, showActions = true }: WeakAreasCardPr
         const areas = await getWeakAreas(user.id, limit);
         setWeakAreas(areas);
       } catch (error) {
-        console.error('Error fetching weak areas:', error);
+        reportError(error instanceof Error ? error : new Error(String(error)), { component: 'WeakAreasCard' });
       } finally {
         setLoading(false);
       }

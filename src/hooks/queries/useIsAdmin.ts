@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { reportError } from '@/lib/errorReporter';
 
 export function useIsAdmin() {
   return useQuery({
@@ -16,7 +17,7 @@ export function useIsAdmin() {
         .maybeSingle();
 
       if (error) {
-        console.error('Error checking admin status:', error);
+        reportError(error instanceof Error ? error : new Error(String(error)), { component: 'useIsAdmin' });
         return false;
       }
 

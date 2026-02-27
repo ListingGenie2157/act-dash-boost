@@ -5,6 +5,7 @@ import { Play, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
+import { reportError } from '@/lib/errorReporter';
 
 export const AdminCronButton = () => {
   const [loading, setLoading] = useState(false);
@@ -18,7 +19,7 @@ export const AdminCronButton = () => {
       });
 
       if (error) {
-        console.error('Cron function error:', error);
+        reportError(error instanceof Error ? error : new Error(error.message), { component: 'AdminCronButton' });
         toast.error('Failed to run cron job: ' + error.message);
         return;
       }

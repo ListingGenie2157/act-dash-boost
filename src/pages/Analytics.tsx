@@ -5,6 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { TrendingUp, Clock, Target, CheckCircle, Zap } from 'lucide-react';
+import { reportError } from '@/lib/errorReporter';
 
 interface AnalyticsData {
   studyStreak: number;
@@ -173,7 +174,7 @@ const Analytics = () => {
         baselineVsLatest
       });
     } catch (error) {
-      console.error('Error fetching analytics:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'Analytics' });
     } finally {
       setLoading(false);
     }

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { reportError } from '@/lib/errorReporter';
 import { ArrowLeft, Wand2, Check, X, Loader2, Save } from "lucide-react";
 
 interface GeneratedQuestion {
@@ -155,7 +156,7 @@ export default function AdminQuestionGenerator() {
       setGeneratedQuestions(questionsWithState);
       toast.success(`Generated ${data.count} questions!`);
     } catch (error) {
-      console.error("Generation error:", error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'AdminQuestionGenerator' });
       toast.error(error instanceof Error ? error.message : "Failed to generate questions");
     } finally {
       setIsGenerating(false);
@@ -209,7 +210,7 @@ export default function AdminQuestionGenerator() {
       toast.success(`Inserted ${data.inserted} questions into ${data.form_id}`);
       setGeneratedQuestions([]);
     } catch (error) {
-      console.error("Insert error:", error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'AdminQuestionGenerator', source: 'insert' });
       toast.error(error instanceof Error ? error.message : "Failed to insert questions");
     } finally {
       setIsInserting(false);

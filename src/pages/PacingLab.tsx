@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Timer, Clock, Brain, TrendingUp, Zap, Target, BookOpen, History, PlayCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { reportError } from '@/lib/errorReporter';
 
 type SubjectStats = { subject: string; questionCount: number };
 
@@ -26,11 +27,11 @@ const PacingLab = () => {
       try {
         const drillForms = ['DR_RD', 'DR_MA', 'DR_EN', 'DR_SC'];
         const { data, error } = await supabase.from('staging_items').select('section, form_id').in('form_id', drillForms);
-        if (error) { console.error('Error fetching questions:', error); setLoading(false); return; }
+        if (error) { reportError(error instanceof Error ? error : new Error(String(error)), { page: 'PacingLab' }); setLoading(false); return; }
         const counts: Record<string, number> = {};
         data.forEach(item => { if (item.section) counts[item.section] = (counts[item.section] || 0) + 1; });
         setSubjects(Object.entries(counts).map(([subject, count]) => ({ subject, questionCount: count })).sort((a, b) => a.subject.localeCompare(b.subject)));
-      } catch (err) { console.error('Error loading drill subjects:', err); }
+      } catch (err) { reportError(err instanceof Error ? err : new Error(String(err)), { page: 'PacingLab' }); }
       finally { setLoading(false); }
     }
     void fetchSubjects();

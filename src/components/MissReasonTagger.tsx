@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { reportError } from '@/lib/errorReporter';
 import { cn } from '@/lib/utils';
 
 const MISS_REASONS = [
@@ -47,7 +48,7 @@ export function MissReasonTagger({
       setSelectedReason(reason);
       onTagged(reason);
     } catch (error) {
-      console.error('Failed to save miss reason:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { component: 'MissReasonTagger' });
       toast.error('Failed to save reason');
     } finally {
       setSaving(false);

@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { PlanTaskJson } from '@/types/studyPlan';
+import { reportError } from '@/lib/errorReporter';
 
 interface StudyTask {
   type: 'LEARN' | 'DRILL' | 'REVIEW' | 'SIM' | 'FLASH';
@@ -145,7 +146,7 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
 
       setTasks(mappedTasks);
     } catch (error) {
-      console.error('Error loading tasks:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { component: 'StudyPlanWidget' });
       setTasks([]);
     } finally {
       setLoading(false);
@@ -168,7 +169,7 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
 
       await loadTodaysTasks();
     } catch (error) {
-      console.error('Error generating plan:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { component: 'StudyPlanWidget', source: 'generatePlan' });
       toast({
         title: 'Generation Failed',
         description: 'Could not generate study plan. Please try again.',

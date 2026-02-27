@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { reportError } from '@/lib/errorReporter';
 import { format } from 'date-fns';
 
 interface DrillHistory {
@@ -73,7 +74,7 @@ export default function DrillHistory() {
           });
         }
       } catch (error) {
-        console.error('Error fetching drill history:', error);
+        reportError(error instanceof Error ? error : new Error(String(error)), { page: 'DrillHistory' });
       } finally {
         setLoading(false);
       }

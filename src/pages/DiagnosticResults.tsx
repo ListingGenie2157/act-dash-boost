@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { reportError } from '@/lib/errorReporter';
 
 interface DiagnosticResultsState {
   results: {
@@ -32,7 +33,7 @@ export default function DiagnosticResults() {
         try {
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) {
-            console.error('No user found for diagnostic results fallback');
+            reportError(new Error('No user found for diagnostic results fallback'), { page: 'DiagnosticResults' });
             navigate('/', { replace: true });
             return;
           }
@@ -47,7 +48,7 @@ export default function DiagnosticResults() {
             .limit(1);
 
           if (error || !diagnostics || diagnostics.length === 0) {
-            console.error('No diagnostic found:', error);
+            reportError(error instanceof Error ? error : new Error('No diagnostic found'), { page: 'DiagnosticResults' });
             toast.error('No diagnostic results found. Please take the diagnostic test.');
             navigate('/diagnostic', { replace: true });
             return;
@@ -81,7 +82,7 @@ export default function DiagnosticResults() {
             replace: true
           });
         } catch (error) {
-          console.error('Error fetching diagnostic:', error);
+          reportError(error instanceof Error ? error : new Error(String(error)), { page: 'DiagnosticResults' });
           toast.error('Failed to load diagnostic results');
           navigate('/', { replace: true });
         }

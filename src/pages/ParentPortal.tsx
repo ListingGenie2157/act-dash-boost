@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, DollarSign, Check, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { reportError } from '@/lib/errorReporter';
 
 interface RewardRule {
   id: string;
@@ -62,7 +63,7 @@ export default function ParentPortal() {
           .single();
 
         if (error) {
-          console.error('Error creating parent:', error);
+          reportError(error instanceof Error ? error : new Error(String(error)), { page: 'ParentPortal', source: 'createParent' });
           toast.error('Failed to initialize parent portal');
           return;
         }
@@ -75,7 +76,7 @@ export default function ParentPortal() {
         void fetchLedger(currentParentId);
       }
     } catch (error) {
-      console.error('Error initializing parent portal:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'ParentPortal', source: 'init' });
       toast.error('Failed to load parent portal');
     } finally {
       setLoading(false);
@@ -94,7 +95,7 @@ export default function ParentPortal() {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching rules:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'ParentPortal', source: 'fetchRules' });
       return;
     }
 
@@ -113,7 +114,7 @@ export default function ParentPortal() {
       .order('earned_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching ledger:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'ParentPortal', source: 'fetchLedger' });
       return;
     }
 
@@ -134,7 +135,7 @@ export default function ParentPortal() {
         });
 
       if (error) {
-        console.error('Error creating rule:', error);
+        reportError(error instanceof Error ? error : new Error(String(error)), { page: 'ParentPortal', source: 'createRule' });
         toast.error('Failed to create rule');
         return;
       }
@@ -143,7 +144,7 @@ export default function ParentPortal() {
       fetchRules(parentId);
       setNewRule({ type: 'DRILL', amount_cents: 50, threshold: { days: 5 } });
     } catch (error) {
-      console.error('Error creating rule:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'ParentPortal', source: 'createRule' });
       toast.error('Failed to create rule');
     }
   };
@@ -156,7 +157,7 @@ export default function ParentPortal() {
         .eq('id', ledgerId);
 
       if (error) {
-        console.error('Error updating ledger:', error);
+        reportError(error instanceof Error ? error : new Error(String(error)), { page: 'ParentPortal', source: 'updateLedger' });
         toast.error('Failed to update status');
         return;
       }
@@ -164,7 +165,7 @@ export default function ParentPortal() {
       toast.success(`Entry ${status.toLowerCase()}`);
       if (parentId) fetchLedger(parentId);
     } catch (error) {
-      console.error('Error updating ledger:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'ParentPortal', source: 'updateLedger' });
       toast.error('Failed to update status');
     }
   };
@@ -177,7 +178,7 @@ export default function ParentPortal() {
         .eq('id', ruleId);
 
       if (error) {
-        console.error('Error deleting rule:', error);
+        reportError(error instanceof Error ? error : new Error(String(error)), { page: 'ParentPortal', source: 'deleteRule' });
         toast.error('Failed to delete rule');
         return;
       }
@@ -185,7 +186,7 @@ export default function ParentPortal() {
       toast.success('Rule deleted');
       if (parentId) fetchRules(parentId);
     } catch (error) {
-      console.error('Error deleting rule:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'ParentPortal', source: 'deleteRule' });
       toast.error('Failed to delete rule');
     }
   };

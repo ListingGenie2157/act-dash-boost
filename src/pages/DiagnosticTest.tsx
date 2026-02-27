@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getAccommodatedTime } from '@/utils/accommodations';
 import { diagnosticFormIdSchema, validateInput } from '@/lib/validation/edgeFunctionSchemas';
+import { reportError } from '@/lib/errorReporter';
 
 interface Question {
   ord: number;
@@ -170,7 +171,7 @@ export default function DiagnosticTest() {
       }
 
     } catch (error) {
-      console.error('Error submitting diagnostic:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'DiagnosticTest', source: 'submit' });
       toast({
         title: "Error",
         description: "Failed to submit diagnostic test",
@@ -313,7 +314,7 @@ export default function DiagnosticTest() {
 
       setAttempts(existingAttempts);
     } catch (error) {
-      console.error('Error loading diagnostic:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'DiagnosticTest', source: 'load' });
       toast({
         title: "Error",
         description: "Failed to load diagnostic test",
@@ -360,7 +361,7 @@ export default function DiagnosticTest() {
         .eq('form_id', formId)
         .eq('question_id', question.question_id);
     } catch (error) {
-      console.error('Error saving answer:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'DiagnosticTest', source: 'saveAnswer' });
     }
   };
 

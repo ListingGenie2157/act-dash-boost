@@ -8,6 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { BackButton } from '@/components/BackButton';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { reportError } from '@/lib/errorReporter';
 import { toast } from 'sonner';
 import { calculateNextReview, ReviewGrade, type ReviewCard } from '@/lib/spacedRepetition';
 
@@ -102,7 +103,7 @@ export default function ReviewSpaced() {
         setCurrentCard(cards[0]);
       }
     } catch (error) {
-      console.error('Error loading due cards:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'ReviewSpaced', source: 'loadDueCards' });
       toast.error('Failed to load review cards');
     } finally {
       setLoading(false);
@@ -135,7 +136,7 @@ export default function ReviewSpaced() {
         } : null);
       }
     } catch (error) {
-      console.error('Error fetching answer:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'ReviewSpaced', source: 'fetchAnswer' });
     }
     
     setShowAnswer(true);
@@ -172,7 +173,7 @@ export default function ReviewSpaced() {
         toast.error('Review again tomorrow');
       }
     } catch (error) {
-      console.error('Error updating review card:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'ReviewSpaced', source: 'updateReview' });
       toast.error('Failed to save review');
     }
   };

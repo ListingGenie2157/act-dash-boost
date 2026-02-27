@@ -1,6 +1,7 @@
 /**
  * Shuffle choices for a question while tracking the correct answer
  */
+import { reportError } from '@/lib/errorReporter';
 
 export interface ShuffledQuestion<T> {
   original: T;
@@ -25,7 +26,7 @@ export function shuffleQuestionChoices<T extends {
   // Validate answer field
   const answer = question.answer?.toUpperCase() || '';
   if (!['A', 'B', 'C', 'D'].includes(answer)) {
-    console.error(`Invalid answer "${question.answer}" in shuffleQuestionChoices. Defaulting to 'A'.`);
+    reportError(new Error(`Invalid answer "${question.answer}" in shuffleQuestionChoices`), { source: 'shuffle' });
     // Return unshuffled with answer defaulted to 'A' as fallback
     return {
       original: question,
