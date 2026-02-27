@@ -204,7 +204,7 @@ serve(async (req) => {
       validRows: 0,
       invalidRows: 0,
       errors: [],
-      dryRun
+      dryRun: dryRun as boolean
     };
 
     const validRows: StagingRow[] = [];

@@ -74,7 +74,7 @@ serve(async (req) => {
     let customerId: string | undefined;
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
-      logStep("Found existing customer", { customerId });
+      logStep("Found existing customer", { customerId: customerId ?? '' });
     }
 
     const origin = req.headers.get("origin") || "https://act-dash-boost.lovable.app";
