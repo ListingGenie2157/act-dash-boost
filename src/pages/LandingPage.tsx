@@ -23,28 +23,27 @@ const LandingPage = () => {
         {/* Hero Section */}
         <div className="max-w-5xl mx-auto text-center space-y-8 mb-16 pp-halo">
           <div className="flex justify-center mb-4 animate-fade-in">
+            <div style={{ background: '#0a111f', display: 'inline-block', borderRadius: '16px' }}>
               <img
-              src={preppitLogo}
-              alt="Preppit Pacing"
-              className="w-auto"
-              style={{ 
-                height: '180px', 
-                mixBlendMode: 'lighten',
-                filter: 'brightness(1.1)',
-                mask: 'radial-gradient(ellipse 70% 70% at 50% 45%, black 40%, transparent 80%)',
-                WebkitMask: 'radial-gradient(ellipse 70% 70% at 50% 45%, black 40%, transparent 80%)',
-              }}
-            />
+                src={preppitLogo}
+                alt="Preppit Pacing"
+                className="w-auto"
+                style={{ height: '180px', display: 'block' }}
+              />
+            </div>
           </div>
 
           <div className="space-y-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
-            <h1 className="text-6xl md:text-8xl font-bold tracking-tight">
-              <span className="bg-gradient-to-r from-[hsl(170,78%,39%)] to-[hsl(195,81%,31%)] bg-clip-text text-transparent">
+            <h1 className="text-6xl md:text-8xl font-bold tracking-tighter">
+              <span className="text-gradient-hero">
                 Train Your Brain.
               </span>
               <br />
-              <span className="text-foreground">Crush The ACT.</span>
+              <span className="text-gradient-silver">Crush The ACT.</span>
             </h1>
+            <p className="text-base md:text-lg max-w-xl mx-auto" style={{ color: 'var(--pp-muted)' }}>
+              Full Simulations. AI Coaching. Parent Accountability.
+            </p>
           </div>
 
           {/* Stats Bar */}

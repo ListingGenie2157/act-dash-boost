@@ -3,9 +3,8 @@
    Imported only by LandingPage.tsx
    ============================================ */
 
-/* Deep black scene container with noise texture overlay */
 .landing-scene {
-  background: #0c1829;
+  background: #0a111f;
   position: relative;
 }
 
@@ -13,7 +12,7 @@
   content: '';
   position: fixed;
   inset: 0;
-  opacity: 0.04;
+  opacity: 0.035;
   mix-blend-mode: overlay;
   pointer-events: none;
   z-index: 0;
@@ -22,7 +21,6 @@
   background-size: 256px 256px;
 }
 
-/* Radial teal glow behind hero headline */
 .hero-glow {
   position: absolute;
   top: -10%;
@@ -30,63 +28,58 @@
   transform: translateX(-50%);
   width: 120%;
   height: 70%;
-  background: radial-gradient(ellipse at 50% 40%, rgba(20, 184, 166, 0.09), rgba(14, 116, 144, 0.04) 40%, transparent 70%);
+  background: radial-gradient(ellipse at 50% 40%, rgba(45,212,191,0.08), rgba(20,184,166,0.035) 40%, transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
 
-/* Faint coral ambient bleed behind features section */
 .features-glow {
   position: absolute;
   bottom: 10%;
   right: -10%;
   width: 60%;
   height: 50%;
-  background: radial-gradient(ellipse at 70% 50%, rgba(240, 68, 82, 0.04), transparent 55%);
+  background: radial-gradient(ellipse at 70% 50%, rgba(244,63,94,0.035), transparent 55%);
   pointer-events: none;
   z-index: 0;
 }
 
-/* Button bloom — teal glow halo */
 .btn-bloom {
   box-shadow:
-    0 0 20px rgba(20, 184, 166, 0.3),
-    0 0 60px rgba(20, 184, 166, 0.1);
+    0 0 24px rgba(45,212,191,0.25),
+    0 0 60px rgba(45,212,191,0.08);
   transition: box-shadow 0.3s ease;
 }
 .btn-bloom:hover {
   box-shadow:
-    0 0 30px rgba(20, 184, 166, 0.45),
-    0 0 80px rgba(20, 184, 166, 0.18);
+    0 0 35px rgba(45,212,191,0.40),
+    0 0 80px rgba(45,212,191,0.15);
 }
 
-/* Feature card cinematic depth */
 .feature-card-cinematic {
   box-shadow:
-    0 4px 40px rgba(0, 0, 0, 0.6),
-    0 0 12px rgba(20, 184, 166, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+    0 4px 40px rgba(0,0,0,0.6),
+    0 0 12px rgba(45,212,191,0.05),
+    inset 0 1px 0 rgba(255,255,255,0.05) !important;
   transition: box-shadow 0.4s ease, transform 0.2s ease-out;
 }
 .feature-card-cinematic:hover {
   box-shadow:
-    0 8px 50px rgba(0, 0, 0, 0.7),
-    0 0 25px rgba(20, 184, 166, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+    0 8px 50px rgba(0,0,0,0.7),
+    0 0 25px rgba(45,212,191,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.07) !important;
 }
 
-/* Stats card cinematic style */
 .stat-card-cinematic {
   box-shadow:
-    0 4px 30px rgba(0, 0, 0, 0.5),
-    0 0 8px rgba(20, 184, 166, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    0 4px 30px rgba(0,0,0,0.5),
+    0 0 8px rgba(45,212,191,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
-/* Social proof card cinematic */
 .social-card-cinematic {
   box-shadow:
-    0 4px 30px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  background: linear-gradient(180deg, hsl(225 44% 16%) 0%, hsl(225 44% 13%) 100%) !important;
+    0 4px 30px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.04);
+  background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.015) 100%) !important;
 }
