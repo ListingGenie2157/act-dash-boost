@@ -1,9 +1,28 @@
-# Production Readiness Audit Report
+# Production Readiness Audit Report (Rev 2)
 
 **Application:** ACT Prep Platform (Preppit)
 **Audit Date:** February 25, 2026
+**Revised:** February 25, 2026 — after Lovable rebuttal review
 **Auditor:** Principal Software Engineer & Security Auditor
 **Branch:** `cursor/codebase-production-readiness-aaa6`
+
+---
+
+## Revision Notes
+
+Seven critical findings were submitted. Lovable responded with rebuttals for five of them. Each rebuttal was verified against source code. Results:
+
+| Original | Lovable Claim | Auditor Verdict | Disposition |
+|----------|---------------|-----------------|-------------|
+| CRIT-1 console.error | "Sentry catches unhandled errors globally — skip" | **REJECTED — finding stands (Critical)** | Caught errors in try/catch never reach Sentry's global handler. See detailed analysis below. |
+| CRIT-2 No CSP | "Valid — fixed" | Accepted | Resolved. Moved to "Fixed" section. |
+| CRIT-3 Default salt | "Valid — fixed with requireEnv()" | Accepted | Resolved. Moved to "Fixed" section. |
+| CRIT-4 Rate limit fails open | "By design — availability-first, industry standard" | **Accepted with caveat** | Downgraded to Tech Debt. Availability-first is a legitimate pattern, but the trade-off should be documented and monitored. |
+| CRIT-5 cron-daily swallows errors | "False positive — errors are caught, logged, counted" | **Accepted** | Code-verified: `.catch(() => ({}))` on line 25 only handles empty request bodies (GET/cron invocations). Actual processing errors are caught at lines 84-87, 144-146, 152-155, 169, 193-201 and counted in the summary response. Withdrawn. |
+| CRIT-6 Admin client-side only | "False positive — all 3 admin functions check server-side" | **Accepted** | Code-verified: `generate-questions` uses `has_role` (line 252), `import-questions` uses `is_admin` RPC (line 136), `import-lesson-content` uses `is_admin` RPC (line 135). All return 403 on failure. Withdrawn. |
+| CRIT-7 Timing attack on === | "False positive — server-to-server cron only" | **Accepted with downgrade** | The `===` comparison at `generate-study-plan:416` is on a publicly-callable endpoint, but the service role key is a full JWT (~200 chars). Network jitter dwarfs any timing signal over HTTPS. Downgraded from Critical to Tech Debt. |
+
+**Net result: 1 remaining Critical blocker (CRIT-1). CRIT-2 and CRIT-3 have been fixed by Lovable.**
 
 ---
 
@@ -30,130 +49,126 @@
 
 ## 1. Executive Summary
 
-### Verdict: CONDITIONAL GO — with Critical Blockers resolved first
+### Verdict: CONDITIONAL GO — 1 Critical blocker remaining
 
-This codebase demonstrates solid architectural foundations: strict TypeScript, RLS on all database tables, PKCE auth flow, Zod validation schemas, DOMPurify for HTML sanitization, and an offline queue for resilience. The team has clearly invested in security and correctness.
+After Lovable's fixes (CSP meta tag, `requireEnv()` for salt) and verified rebuttals (server-side admin checks, cron error handling), the codebase is significantly closer to production-ready.
 
-However, the platform is **not production-ready in its current state** due to a small number of critical issues that must be addressed before launch. The most urgent are: (1) the vast majority of error handlers route to `console.error` instead of the existing `reportError()` infrastructure — meaning production errors will be invisible, (2) the absence of Content-Security-Policy headers, and (3) a weak default salt in the lead capture function.
+The remaining **Critical blocker** is CRIT-1: the vast majority of error handlers route to `console.error` instead of the existing `reportError()` infrastructure. This means production failures in test-taking, study plan generation, and lesson loading will be completely invisible to the team. This is not theoretical — it is a concrete operational blindspot.
 
-Once the 7 critical blockers below are resolved (estimated 2–3 engineering days), the platform can ship. The high-priority items should be scheduled for the first post-launch sprint.
+Once CRIT-1 is resolved (estimated 1 engineering day), the platform can launch. The High-priority items should be the first post-launch sprint.
 
 ---
 
 ## 2. Critical Blockers (Must Fix Before Launch)
 
-### CRIT-1: Production error monitoring is effectively disabled
+### CRIT-1: Production error monitoring is effectively disabled [STANDS — rebuttal rejected]
 
 **Severity:** Critical | **Pillar:** Error Handling
-**Impact:** Crashes, failed test submissions, and data-loss scenarios will be invisible in production.
+**Lovable's rebuttal:** "Sentry catches unhandled errors globally — skip"
+**Why the rebuttal is wrong:**
 
-The codebase has a well-designed `reportError()` function (`src/lib/errorReporter.ts`) that integrates with Sentry. However, only **5 files** call it. Meanwhile, **48+ files** across `src/` use raw `console.error` — totaling ~100 call sites. In production, these errors vanish.
+Sentry's global handler (configured in `main.tsx:8-19`) only catches **unhandled** errors and **unhandled promise rejections**. Every error inside a `try/catch` block is, by definition, a **handled** error — it never propagates to `window.addEventListener('unhandledrejection')`.
 
-**Affected files (sample):**
-- `src/components/StudyPlanWizard.tsx` — 8 catch blocks with `console.error` only
-- `src/pages/ParentPortal.tsx` — 10 catch blocks with `console.error` only
-- `src/pages/EnhancedLessonViewer.tsx` — 5 catch blocks with `console.error` only
-- `src/pages/Simulation.tsx` — 5 catch blocks with `console.error` only
-- `src/pages/DiagnosticTest.tsx` — 3 catch blocks with `console.error` only
+Here is a concrete proof from the codebase. In `Simulation.tsx:312-319`:
 
-**Fix:** Replace all `console.error` in catch blocks with `reportError(error, { component: '...' })`. The infrastructure is already built — it just needs to be wired up.
-
----
-
-### CRIT-2: No Content-Security-Policy (CSP) headers
-
-**Severity:** Critical | **Pillar:** Security
-**Impact:** Without CSP, even with DOMPurify, a single bypass could allow XSS execution across the entire app. For a platform handling student PII, this is a regulatory and trust risk.
-
-`dangerouslySetInnerHTML` is used in 10 files (lesson content, cheatsheets, passages, charts). DOMPurify sanitizes the input — which is good — but CSP is the defense-in-depth layer that prevents execution even if sanitization fails.
-
-**Affected files using `dangerouslySetInnerHTML`:**
-- `src/components/PassageLayout.tsx`
-- `src/components/lesson/RuleCard.tsx`
-- `src/components/lesson/GuidedExampleCard.tsx`
-- `src/pages/EnhancedLessonViewer.tsx`
-- `src/pages/Cheatsheets/English.tsx`, `Math.tsx`, `Reading.tsx`, `Science.tsx`
-- `src/components/ui/chart.tsx`
-
-**Fix:** Add CSP meta tag to `index.html` or configure CSP headers at the hosting/CDN level. At minimum: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;`
-
----
-
-### CRIT-3: Default salt weakens IP hashing in lead capture
-
-**Severity:** Critical | **Pillar:** Security
-**Impact:** If `LEAD_IP_SALT` env var is not set, the function falls back to `"default-salt"`, making IP hashes predictable and reversible via rainbow table.
-
-```1:8:supabase/functions/capture-lead/index.ts
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getCorsHeaders } from "../_shared/cors.ts";
-import { requireEnv } from "../_shared/env.ts";
-import { parseBodyWithLimit } from "../_shared/mod.ts";
-
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "https://hhbkmxrzxcswwokmbtbz.supabase.co";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const LEAD_IP_SALT = Deno.env.get("LEAD_IP_SALT") || "default-salt";
+```312:319:src/pages/Simulation.tsx
+    } catch (error) {
+      console.error('Error starting session:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to start session. Please try again.",
+        variant: "destructive",
+      });
+      setState('start-dialog');
 ```
 
-**Fix:** Remove the `"default-salt"` fallback. Use `requireEnv("LEAD_IP_SALT")` to fail loudly if the salt is missing, rather than silently using a weak value.
+This catch block:
+1. Catches the error (so Sentry's global handler never sees it)
+2. Logs it to `console.error` (invisible in production — no console access)
+3. Shows a toast to the user (good UX, but the team has zero visibility)
 
----
+The same pattern exists in **48+ files** with **~100 catch-block call sites**. Every one of these is a handled error that Sentry will never capture.
 
-### CRIT-4: Rate limiting fails open when env vars are missing
+**What goes invisible in production:**
+- Failed session starts during a simulation (`Simulation.tsx:312`)
+- Failed answer submissions mid-test (`Simulation.tsx:354, 358`)
+- Failed session finishes — student completes test but results aren't saved (`Simulation.tsx:412`)
+- Failed study plan generation (`StudyPlanWizard.tsx:193`)
+- Failed parent portal operations — 10 separate catch blocks (`ParentPortal.tsx`)
+- Failed lesson loading (`EnhancedLessonViewer.tsx:61,69,78,89,114,142`)
+- Failed diagnostic test operations (`DiagnosticTest.tsx` — 3 catch blocks)
+- Failed subscription checks (`useSubscription.ts:30`)
+- Failed admin operations (`AdminImport.tsx`, `AdminQuestionGenerator.tsx`)
 
-**Severity:** Critical | **Pillar:** Security
-**Impact:** If `SUPABASE_URL` or `SUPABASE_SERVICE_ROLE_KEY` is not set on the edge function, rate limiting is silently disabled. An attacker could abuse this to brute-force or spam endpoints.
+The infrastructure to fix this already exists — `reportError()` in `src/lib/errorReporter.ts` correctly routes to Sentry in production and console in development. It is called in only 5 files. It needs to be wired into the other 48.
 
-```34:37:supabase/functions/_shared/rateLimit.ts
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.warn('Rate limit: Missing env vars, allowing request');
-      return true;
-    }
-```
+**Fix:** In every catch block that currently has `console.error(...)`, add a call to `reportError()`:
 
-**Fix:** Fail closed instead of open. If rate-limit infrastructure is unavailable, return `false` (deny) or return a 503 response. At minimum, log this as a critical alert.
-
----
-
-### CRIT-5: Silent error swallowing in cron-daily edge function
-
-**Severity:** Critical | **Pillar:** Error Handling
-**Impact:** The daily cron job silently swallows JSON parse errors with `.catch(() => ({}))`. If the cron payload is malformed, the entire job silently no-ops — streak resets, cleanup, and other daily tasks don't execute, and no alert is raised.
-
-**Fix:** Replace `.catch(() => ({}))` with proper error logging and alerting.
-
----
-
-### CRIT-6: Admin routes lack server-side enforcement
-
-**Severity:** Critical | **Pillar:** Security
-**Impact:** `ProtectedAdminRoute` is a client-side React component. A determined user can bypass it by calling edge functions or Supabase RPC directly. Admin operations (question generation, imports, simulation generation) must validate admin role server-side.
-
-```5:12:src/components/ProtectedAdminRoute.tsx
-export function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
-  const { data: isAdmin, isLoading } = useIsAdmin();
-  
-  if (isLoading) return <PageLoadingSpinner />;
-  if (!isAdmin) return <Navigate to="/" replace />;
-  
-  return <>{children}</>;
+```typescript
+} catch (error) {
+  const err = error instanceof Error ? error : new Error(String(error));
+  reportError(err, { component: 'Simulation', page: 'simulation' });
+  toast({ title: "Error", description: err.message, variant: "destructive" });
 }
 ```
 
-**Fix:** Every admin edge function must independently verify the caller has an admin role via `has_role` RPC or equivalent before processing requests.
+**Effort estimate:** ~1 day. The pattern is mechanical — search for `console.error` in catch blocks, add `reportError()` alongside.
 
 ---
 
-### CRIT-7: Service role key comparison vulnerable to timing attack
+## 3. Fixed Issues (Verified)
 
-**Severity:** Critical | **Pillar:** Security
-**Impact:** The `generate-study-plan` edge function compares the auth token against the service role key using `===`, which is vulnerable to timing attacks.
-
-**Fix:** Use a constant-time comparison function (e.g., `crypto.subtle.timingSafeEqual` or a manual constant-time compare).
+| ID | Issue | Resolution |
+|----|-------|------------|
+| CRIT-2 | No Content-Security-Policy headers | Lovable added CSP meta tag to `index.html` |
+| CRIT-3 | Default salt in lead capture | Lovable replaced fallback with `requireEnv()` — function now fails fast if salt is missing |
 
 ---
 
-## 3. High Priority (Should Fix — First Sprint Post-Launch)
+## 4. Withdrawn Findings (Rebuttals Accepted)
+
+### ~~CRIT-5~~ cron-daily error swallowing — WITHDRAWN
+
+**Lovable's rebuttal:** "Errors are caught, logged, and counted in summary"
+**Verification:** Confirmed. The `.catch(() => ({}))` on line 25 only handles empty `req.json()` for GET/cron invocations where no body is expected. All actual processing errors are properly caught:
+- User fetch errors: lines 84-87 (throws, caught by outer try/catch)
+- Plan generation HTTP errors: lines 143-146 (logged, tracked in `errorCount`)
+- Plan generation exceptions: lines 152-154 (logged, returned with success=false)
+- Batch promise rejections: line 169 (logged, increments `errorCount`)
+- Outer catch: lines 193-201 (returns 500 with error message)
+
+The summary response includes `failed_generations: errorCount`, giving visibility into failures.
+
+### ~~CRIT-6~~ Admin routes lack server-side enforcement — WITHDRAWN
+
+**Lovable's rebuttal:** "All 3 admin edge functions verify is_admin/has_role server-side"
+**Verification:** Confirmed. All three admin edge functions enforce server-side role checks:
+- `generate-questions/index.ts:251-252` — calls `has_role` RPC with `_role: "admin"`, returns 403 if not admin
+- `import-questions/index.ts:136` — calls `is_admin` RPC, returns 403 on failure
+- `import-lesson-content/index.ts:135` — calls `is_admin` RPC, returns 403 on failure
+
+The client-side `ProtectedAdminRoute` is correctly a UX convenience, not the security boundary.
+
+---
+
+## 5. Downgraded Findings (Rebuttals Partially Accepted)
+
+### CRIT-4 → DEBT-9: Rate limiting fails open (downgraded to Tech Debt)
+
+**Lovable's rebuttal:** "Availability-first, industry standard"
+**Assessment:** Fair. Failing open on rate-limit infrastructure failure is a common pattern to prevent self-DoS. However:
+- The `console.warn` should be upgraded to a structured alert so the team knows rate limiting is degraded
+- Consider adding a fallback in-memory rate limiter for when the DB is unreachable
+- Document this as an accepted risk in an ADR (Architecture Decision Record)
+
+### CRIT-7 → DEBT-10: Timing attack on `===` (downgraded to Tech Debt)
+
+**Lovable's rebuttal:** "Server-to-server cron only"
+**Assessment:** Partially fair. The `generate-study-plan` endpoint is publicly callable (any authenticated user can invoke it), and the `===` comparison at line 416 does check the Bearer token against the service role key. However, the service role key is a full JWT (~200 characters), and extracting timing signal over an HTTPS network connection is not practically exploitable. Downgraded to tech debt — still worth fixing with `crypto.subtle.timingSafeEqual` as a best practice, but not a launch blocker.
+
+---
+
+## 6. High Priority (Should Fix — First Sprint Post-Launch)
 
 ### HIGH-1: Missing route-level error boundaries
 
@@ -232,7 +247,7 @@ Referrer-Policy: strict-origin-when-cross-origin
 **Pillar:** Performance
 **Impact:** Images in `PassageLayout.tsx` and `QuestionCard.tsx` load eagerly, adding unnecessary payload on initial page load — especially in test sessions with many passage images.
 
-**Fix:** Add `loading="lazy"` to all `<img>` tags below the fold. Consider migrating to a `next/image`-like component or an `<img>` wrapper with lazy loading defaults.
+**Fix:** Add `loading="lazy"` to all `<img>` tags below the fold.
 
 ---
 
@@ -254,7 +269,7 @@ Referrer-Policy: strict-origin-when-cross-origin
 
 ---
 
-## 4. Tech Debt (Fix Later — Scheduled Sprints)
+## 7. Tech Debt (Fix Later — Scheduled Sprints)
 
 ### DEBT-1: Large files need decomposition
 
@@ -337,7 +352,19 @@ Sentry only initializes if `VITE_SENTRY_DSN` is set **and** `@sentry/react` is i
 
 ---
 
-## 5. What's Done Well
+### DEBT-9: Rate limiting fails open (downgraded from CRIT-4)
+
+Availability-first is an accepted pattern. However, add a structured alert (not just `console.warn`) when rate limiting degrades, and document the trade-off in an ADR.
+
+---
+
+### DEBT-10: Service role key comparison uses `===` (downgraded from CRIT-7)
+
+Not practically exploitable over HTTPS with a 200-char JWT, but worth fixing with `crypto.subtle.timingSafeEqual` as a defense-in-depth best practice.
+
+---
+
+## 8. What's Done Well
 
 Credit where due — these areas demonstrate strong engineering:
 
@@ -345,8 +372,10 @@ Credit where due — these areas demonstrate strong engineering:
 |------|---------|
 | **Row Level Security** | RLS enabled on all tables with 27+ migration files configuring policies. RLS test suite (`rls.test.ts`) validates cross-user isolation. |
 | **Auth Architecture** | PKCE flow, auto-refresh tokens, session persistence, `RequireAuth` wrapper on all protected routes. |
+| **Server-Side Admin Checks** | All 3 admin edge functions independently verify admin role via `is_admin`/`has_role` RPC before processing. |
 | **Input Validation** | Zod schemas in `lib/validation/edgeFunctionSchemas.ts` for edge function inputs. |
 | **HTML Sanitization** | DOMPurify configured and used consistently for all `dangerouslySetInnerHTML` instances. |
+| **CSP Headers** | Content-Security-Policy meta tag added to `index.html` (recently fixed). |
 | **Offline Resilience** | IndexedDB-backed offline queue for attempts — students don't lose work if connectivity drops mid-test. |
 | **Error Boundary** | App-level error boundary with production-safe error messages (no stack traces exposed to users). |
 | **Code Splitting** | Lazy loading for heavy routes (analytics, cheatsheets, review, parent portal). Vendor/Supabase chunk splitting in Vite config. |
@@ -354,47 +383,44 @@ Credit where due — these areas demonstrate strong engineering:
 | **Type Safety** | Strict TypeScript with near-zero `any` usage. Generated Supabase types. |
 | **Global Error Handlers** | `unhandledrejection` and `error` event listeners in `main.tsx` route to `reportError`. |
 | **Production Logger** | `logger.ts` suppresses debug/info/warn in production and sanitizes error objects. |
+| **Cron Job Resilience** | `cron-daily` processes users in batches, catches per-user errors, and returns a summary with success/failure counts. |
 
 ---
 
-## 6. Summary Scorecard
+## 9. Revised Summary Scorecard
 
-| Pillar | Score | Notes |
-|--------|-------|-------|
-| **Security & Data Privacy** | 6/10 | Strong RLS and auth, but missing CSP, security headers, and server-side admin enforcement |
-| **Error Handling & Resilience** | 4/10 | Good infrastructure exists but is not wired up — 95% of errors go to console.error |
-| **Performance & Scalability** | 7/10 | Good code splitting and lazy loading; needs pagination and memoization |
-| **Code Quality & Maintainability** | 6/10 | Strong types and validation; large files need refactoring; test coverage gaps on critical paths |
-| **UX & Accessibility** | 5/10 | Semantic HTML is decent; missing aria-labels, keyboard nav, and skip links for an educational platform |
+| Pillar | Score | Change | Notes |
+|--------|-------|--------|-------|
+| **Security & Data Privacy** | 7.5/10 | +1.5 | CSP fixed, salt fixed, server-side admin checks verified |
+| **Error Handling & Resilience** | 4.5/10 | +0.5 | Cron rebuttal accepted; CRIT-1 still stands as the primary gap |
+| **Performance & Scalability** | 7/10 | — | Good code splitting and lazy loading; needs pagination and memoization |
+| **Code Quality & Maintainability** | 6/10 | — | Strong types and validation; large files need refactoring; test coverage gaps |
+| **UX & Accessibility** | 5/10 | — | Semantic HTML is decent; missing aria-labels, keyboard nav, and skip links |
 
-**Overall: 5.6/10 — Conditional Go with 7 critical fixes required**
+**Overall: 6.0/10 — Conditional Go with 1 critical fix remaining (CRIT-1)**
 
 ---
 
-## 7. Prioritized Fix Plan
+## 10. Revised Prioritized Fix Plan
 
-### Week 1 (Pre-Launch — Blockers)
-1. Wire up `reportError()` across all 48+ files (CRIT-1)
-2. Add CSP headers (CRIT-2)
-3. Fix default salt fallback (CRIT-3)
-4. Make rate limiting fail-closed (CRIT-4)
-5. Fix cron-daily silent failure (CRIT-5)
-6. Add server-side admin role checks (CRIT-6)
-7. Fix timing-safe comparison (CRIT-7)
+### Pre-Launch (1 day)
+1. Wire up `reportError()` across all 48+ files with `console.error` in catch blocks (CRIT-1)
 
-### Week 2 (Post-Launch Sprint 1)
-8. Add route-level error boundaries (HIGH-1)
-9. Configure security headers (HIGH-2)
-10. Tighten CORS allowlist (HIGH-3)
-11. Add pagination to list queries (HIGH-4)
-12. Add `aria-labels` to test UI (HIGH-7, HIGH-8)
-13. Add image lazy loading (HIGH-6)
+### Sprint 1 (Post-Launch)
+2. Add route-level error boundaries (HIGH-1)
+3. Configure security headers at CDN/hosting level (HIGH-2)
+4. Tighten CORS allowlist — remove wildcard subdomain matching (HIGH-3)
+5. Add pagination to list queries (HIGH-4)
+6. Add `aria-labels` to test UI (HIGH-7, HIGH-8)
+7. Add image lazy loading (HIGH-6)
 
-### Week 3–4 (Post-Launch Sprint 2)
-14. Write integration tests for critical flows (HIGH-5)
-15. Decompose large files (DEBT-1)
-16. Establish `no-console` lint rule (DEBT-2)
-17. Add `React.memo` optimizations (DEBT-3)
-18. Add keyboard navigation (DEBT-5)
-19. Add skip-to-content link (DEBT-6)
-20. Install and configure Sentry properly (DEBT-8)
+### Sprint 2 (Post-Launch)
+8. Write integration tests for critical flows (HIGH-5)
+9. Decompose large files (DEBT-1)
+10. Establish `no-console` lint rule (DEBT-2)
+11. Add `React.memo` optimizations (DEBT-3)
+12. Add keyboard navigation (DEBT-5)
+13. Add skip-to-content link (DEBT-6)
+14. Install and configure Sentry properly (DEBT-8)
+15. Add structured alerting for rate-limit degradation (DEBT-9)
+16. Switch to `crypto.subtle.timingSafeEqual` for key comparison (DEBT-10)
