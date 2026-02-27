@@ -3,9 +3,9 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 import { requireEnv } from "../_shared/env.ts";
 import { parseBodyWithLimit } from "../_shared/mod.ts";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "https://hhbkmxrzxcswwokmbtbz.supabase.co";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const LEAD_IP_SALT = Deno.env.get("LEAD_IP_SALT") || "default-salt";
+const SUPABASE_URL = requireEnv("SUPABASE_URL");
+const SUPABASE_SERVICE_ROLE_KEY = requireEnv("SUPABASE_SERVICE_ROLE_KEY");
+const LEAD_IP_SALT = requireEnv("LEAD_IP_SALT");
 
 // Rate limit: 10 submissions per 10 minutes per IP
 const RATE_LIMIT = 10;
