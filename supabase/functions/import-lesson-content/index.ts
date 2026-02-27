@@ -3,7 +3,8 @@ import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 import { parseBodyWithLimit } from '../_shared/mod.ts';
 
-type SupabaseClientLike = ReturnType<typeof createClient>;
+// deno-lint-ignore no-explicit-any
+type SupabaseClientLike = any;
 
 // Normalize skill codes to handle formatting issues
 function normalizeSkillCode(code: string): string {

@@ -420,7 +420,7 @@ serve(async (req) => {
 
     if (isServiceRole && cronUserId) {
       // Cron job call - use service role key and specified userId
-      userId = cronUserId;
+      userId = cronUserId as string;
       if (!supabaseServiceKey) {
         throw new Error('Service role key required for cron job calls');
       }
@@ -524,7 +524,7 @@ serve(async (req) => {
 
         return new Response(
           JSON.stringify({
-            days: existingPlans.map((p) => ({
+            days: (existingPlans || []).map((p: { the_date: string; tasks_json?: unknown[] }) => ({
               the_date: p.the_date,
               tasks: p.tasks_json || [],
             })),
@@ -758,7 +758,7 @@ serve(async (req) => {
               user_id: userId,
               the_date: dateStr,
               type: task.type,
-              skill_id: task.skill_id ?? null,
+              skill_id: (task as Record<string, unknown>).skill_id as string ?? null,
               size: task.size,
               status: "PENDING",
               reward_cents: task.type === "SIM"

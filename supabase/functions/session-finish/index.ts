@@ -158,7 +158,8 @@ serve(async (req) => {
         .select('staging_id, skill_code, question, answer, explanation, choice_a, choice_b, choice_c, choice_d')
         .in('staging_id', stagingIds);
       
-      const stagingItemMap = new Map<number, typeof stagingItems[0]>();
+      // deno-lint-ignore no-explicit-any
+      const stagingItemMap = new Map<number, any>();
       stagingItems?.forEach(item => {
         stagingItemMap.set(item.staging_id, item);
       });

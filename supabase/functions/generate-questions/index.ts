@@ -279,7 +279,12 @@ serve(async (req) => {
     const parsed = await parseBodyWithLimit(req, corsHeaders);
     if ('error' in parsed) return parsed.error;
     const body = parsed.data as Record<string, unknown>;
-    const { action = "generate", section, skill_codes, count = 5, difficulty_distribution, questions: questionsToInsert } = body;
+    const action = (body.action as string) || "generate";
+    const section = body.section as string | undefined;
+    const skill_codes = body.skill_codes as string[] | undefined;
+    const count = (body.count as number) || 5;
+    const difficulty_distribution = body.difficulty_distribution;
+    const questionsToInsert = body.questions as GeneratedQuestion[] | undefined;
 
     // Handle diagnostic insert action
     if (action === "insert") {
@@ -376,9 +381,10 @@ serve(async (req) => {
 
     // Handle simulation insert action
     if (action === "insert-simulation") {
-      const { form_id, questions: questionsToInsert } = body;
+      const form_id = body.form_id as string | undefined;
+      const simQuestionsToInsert = body.questions as GeneratedQuestion[] | undefined;
       
-      if (!form_id || !questionsToInsert || questionsToInsert.length === 0) {
+      if (!form_id || !simQuestionsToInsert || simQuestionsToInsert.length === 0) {
         return new Response(JSON.stringify({ error: "form_id and questions are required" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -413,9 +419,9 @@ serve(async (req) => {
         : 1;
 
       // Prepare items for insertion
-      const items = questionsToInsert.map((q: GeneratedQuestion, idx: number) => ({
+      const items = simQuestionsToInsert.map((q: GeneratedQuestion, idx: number) => ({
         form_id: form_id,
-        section: sectionMap[section.toLowerCase()] || section,
+        section: (section ? sectionMap[section.toLowerCase()] : undefined) || section || '',
         ord: startOrd + idx,
         question: q.question,
         choice_a: q.choice_a,
@@ -457,12 +463,12 @@ serve(async (req) => {
 
     // Handle simulation generation action
     if (action === "generate-simulation") {
-      const { form_id, passage_index, passage_type, questions_per_passage, batch_index, count: batchCount } = body;
-      const sectionLower = section.toLowerCase();
+      const { form_id, passage_index, passage_type, questions_per_passage, batch_index, count: batchCount } = body as Record<string, unknown>;
+      const sectionLower = (section as string || '').toLowerCase();
       
       // For passage-based sections
       if (passage_type && questions_per_passage) {
-        const passagePrompt = SIMULATION_PASSAGE_PROMPTS[sectionLower]?.[passage_type];
+        const passagePrompt = SIMULATION_PASSAGE_PROMPTS[sectionLower]?.[passage_type as string];
         if (!passagePrompt) {
           return new Response(JSON.stringify({ error: `Invalid passage type: ${passage_type}` }), {
             status: 400,
@@ -612,7 +618,7 @@ Each question must:
         return `- ${code}: ${desc}`;
       }).join("\n");
 
-      const questionCount = batchCount || 10;
+      const questionCount = (batchCount as number) || 10;
       const systemPrompt = SECTION_PROMPTS[sectionLower];
       const userPrompt = `Generate exactly ${questionCount} ACT ${section} questions for a full simulation test.
 
@@ -733,14 +739,14 @@ Each question must have:
     }
 
     // Generate action (default - for diagnostic questions)
-    if (!section || !skill_codes || skill_codes.length === 0) {
+    if (!section || !skill_codes || !Array.isArray(skill_codes) || skill_codes.length === 0) {
       return new Response(JSON.stringify({ error: "section and skill_codes are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const sectionLower = section.toLowerCase();
+    const sectionLower = (section as string).toLowerCase();
     const systemPrompt = SECTION_PROMPTS[sectionLower];
     if (!systemPrompt) {
       return new Response(JSON.stringify({ error: `Invalid section: ${section}` }), {
@@ -768,7 +774,7 @@ ${difficultyInstructions}
 
 CRITICAL - ANSWER DISTRIBUTION:
 - Distribute correct answers EVENLY across A, B, C, and D
-- For ${count} questions, aim for approximately ${Math.ceil(count/4)} correct answers per letter
+- For ${count} questions, aim for approximately ${Math.ceil((count as number)/4)} correct answers per letter
 - Do NOT cluster correct answers on A or B - this is a common AI bias you must avoid
 - Real ACT tests have roughly 25% of answers for each letter
 - Randomize where you place the correct answer for each question
@@ -781,7 +787,7 @@ IMPORTANT:
 - Make questions authentic to the ACT test format and difficulty
 - Explanations should teach WHY the answer is correct and why others are wrong`;
 
-    console.log(`Generating ${count} ${section} questions for skills: ${skill_codes.join(", ")}`);
+    console.log(`Generating ${count} ${section} questions for skills: ${(skill_codes as string[]).join(", ")}`);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
