@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
+import { reportError } from '@/lib/errorReporter';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CalendarIcon, CheckCircle2, ArrowLeft, ArrowRight } from 'lucide-react';
 import { format, addYears, startOfToday } from 'date-fns';
@@ -70,7 +71,7 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
           body: { testDate: format(form.testDate, 'yyyy-MM-dd') },
         });
         if (testDateError) {
-          console.error('Error setting test date:', testDateError);
+          reportError(testDateError instanceof Error ? testDateError : new Error(String(testDateError)), { component: 'StudyPlanWizard', source: 'setTestDate' });
           toast.error('Failed to set test date');
           return;
         }
@@ -95,7 +96,7 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
           }
         });
         if (baselineError) {
-          console.error('Error saving baseline:', baselineError);
+          reportError(baselineError instanceof Error ? baselineError : new Error(String(baselineError)), { component: 'StudyPlanWizard', source: 'setBaseline' });
         }
       }
 
@@ -110,7 +111,7 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
           }, { onConflict: 'user_id' });
 
         if (accommodationsError) {
-          console.error('Error saving accommodations:', accommodationsError);
+          reportError(accommodationsError instanceof Error ? accommodationsError : new Error(String(accommodationsError)), { component: 'StudyPlanWizard', source: 'accommodations' });
         }
       }
 
@@ -123,7 +124,7 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
         }, { onConflict: 'user_id' });
 
       if (preferencesError) {
-        console.error('Error saving preferences:', preferencesError);
+        reportError(preferencesError instanceof Error ? preferencesError : new Error(String(preferencesError)), { component: 'StudyPlanWizard', source: 'preferences' });
       }
 
       // 5. Update profile with daily time cap
@@ -135,7 +136,7 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
         .eq('id', user.id);
 
       if (profileError) {
-        console.error('Error updating profile:', profileError);
+        reportError(profileError instanceof Error ? profileError : new Error(String(profileError)), { component: 'StudyPlanWizard', source: 'profile' });
       }
 
       toast.success('Study plan preferences saved!');
@@ -163,7 +164,7 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
           });
 
           if (defaultBaselineError) {
-            console.error('Error saving default baseline:', defaultBaselineError);
+            reportError(defaultBaselineError instanceof Error ? defaultBaselineError : new Error(String(defaultBaselineError)), { component: 'StudyPlanWizard', source: 'defaultBaseline' });
             toast.error('Failed to create baseline');
             return;
           }
@@ -175,7 +176,7 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
         });
 
         if (planError) {
-          console.error('Error generating plan:', planError);
+          reportError(planError instanceof Error ? planError : new Error(String(planError)), { component: 'StudyPlanWizard', source: 'generatePlan' });
           toast.error(planError.message || 'Failed to generate study plan');
         } else {
           toast.success('Your personalized study plan is ready!');
@@ -191,7 +192,7 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
         navigate('/diagnostic');
       }
     } catch (error) {
-      console.error('Error setting up study plan:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { component: 'StudyPlanWizard' });
       toast.error('Failed to set up study plan. Please try again.');
     } finally {
       setLoading(false);

@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Brain, TrendingUp, Target, Clock, XCircle, CheckCircle, ChevronDown } from 'lucide-react';
 import { MissReasonTagger, type MissReason } from '@/components/MissReasonTagger';
+import { reportError } from '@/lib/errorReporter';
 
 interface SkillResult {
   skill_id: string;
@@ -178,7 +179,7 @@ export default function SimulationResults() {
         });
       }
     } catch (error) {
-      console.error('Error loading simulation results:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'SimulationResults' });
       toast.error('Failed to load results');
       navigate('/', { replace: true });
     } finally {
@@ -218,7 +219,7 @@ export default function SimulationResults() {
         navigate('/');
       }, 1500);
     } catch (error) {
-      console.error('Error generating study plan:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'SimulationResults', source: 'generateStudyPlan' });
       toast.error('Failed to generate study plan');
     }
   };

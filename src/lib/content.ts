@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { reportError } from '@/lib/errorReporter';
 
 /**
  * Resolve a skill reference (code or id) to a skill id
@@ -13,7 +14,7 @@ export async function resolveSkillId(ref: string): Promise<string | null> {
     .maybeSingle();
     
   if (error || !skill) {
-    console.error('Skill resolution failed for:', ref, error);
+    reportError(error instanceof Error ? error : new Error(`Skill resolution failed for: ${ref}`), { source: 'content' });
     return null;
   }
   

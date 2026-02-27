@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Brain, TrendingUp, Target } from 'lucide-react';
+import { reportError } from '@/lib/errorReporter';
 
 interface SectionResult {
   section: string;
@@ -182,7 +183,7 @@ export default function DiagnosticResultsComplete() {
       setWeakSkills(sortedWeakSkills);
 
     } catch (error) {
-      console.error('Error fetching diagnostic results:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'DiagnosticResultsComplete' });
       toast.error('Failed to load results');
     } finally {
       setLoading(false);
@@ -207,7 +208,7 @@ export default function DiagnosticResultsComplete() {
         navigate('/');
       }, 1500);
     } catch (error) {
-      console.error('Error generating study plan:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'DiagnosticResultsComplete', source: 'generateStudyPlan' });
       toast.error('Failed to generate study plan');
     }
   };

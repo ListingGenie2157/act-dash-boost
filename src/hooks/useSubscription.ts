@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
+import { reportError } from '@/lib/errorReporter';
 
 export interface SubscriptionStatus {
   subscribed: boolean;
@@ -27,7 +28,7 @@ export function useSubscription() {
       const { data, error } = await supabase.functions.invoke('check-subscription');
       
       if (error) {
-        console.error('Error checking subscription:', error);
+        reportError(error instanceof Error ? error : new Error(String(error)), { component: 'useSubscription' });
         return { subscribed: false, error: error.message };
       }
       

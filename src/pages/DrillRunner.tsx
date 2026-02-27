@@ -12,6 +12,7 @@ import { BreakModal } from '@/components/BreakModal';
 import { getRunStyle, type RunStyle } from '@/lib/runStyles';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
+import { reportError } from '@/lib/errorReporter';
 
 export default function DrillRunner() {
   const navigate = useNavigate();
@@ -262,7 +263,7 @@ export default function DrillRunner() {
         });
       }
     } catch (err) {
-      console.error('Error tracking drill answer:', err);
+      reportError(err instanceof Error ? err : new Error(String(err)), { page: 'DrillRunner' });
     } finally {
       setIsSubmitting(false);
     }

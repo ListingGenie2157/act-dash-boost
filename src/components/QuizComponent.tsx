@@ -8,6 +8,7 @@ import { updateMastery } from '@/lib/mastery';
 import { supabase } from '@/integrations/supabase/client';
 import { seededRandom } from '@/lib/shuffle';
 import { logger } from '@/lib/logger';
+import { reportError } from '@/lib/errorReporter';
 
 interface QuizComponentProps {
   questions: LegacyQuestion[];
@@ -183,7 +184,7 @@ export const QuizComponent = ({
         }
       }
     } catch (error) {
-      console.error('Error updating mastery:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { component: 'QuizComponent' });
     }
 
     const masteryThreshold = 80;

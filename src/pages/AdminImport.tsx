@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, FileText, CheckCircle, AlertTriangle, Download, Play } from 'lucide-react';
 import { logger } from '@/lib/logger';
+import { reportError } from '@/lib/errorReporter';
 
 interface ImportRecord {
   id?: string;
@@ -339,7 +340,7 @@ export default function AdminImport() {
         .in('form_id', formIds);
 
       if (deleteError) {
-        console.error('Delete error:', deleteError);
+        reportError(deleteError instanceof Error ? deleteError : new Error(String(deleteError)), { page: 'AdminImport' });
         warnings.push(`Warning: Could not clear existing data: ${deleteError.message}`);
       }
 
@@ -380,7 +381,7 @@ export default function AdminImport() {
       });
 
     } catch (error) {
-      console.error('Import error:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'AdminImport' });
       toast({
         title: "Import failed",
         description: error instanceof Error ? error.message : "An unexpected error occurred.",

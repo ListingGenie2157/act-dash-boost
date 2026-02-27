@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Target, GraduationCap, RotateCcw, Zap, Clock, Calendar, TrendingUp, type LucideIcon } from 'lucide-react';
 import { CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
+import { reportError } from '@/lib/errorReporter';
 
 const TASK_CONFIG: Record<string, { icon: LucideIcon; gradient: string; label: string }> = {
   LEARN: { icon: GraduationCap, gradient: 'from-primary to-primary/80', label: 'Lesson' },
@@ -75,7 +76,7 @@ export default function Plan() {
       });
 
       if (planError) {
-        console.error('Error generating plan:', planError);
+        reportError(planError instanceof Error ? planError : new Error(String(planError)), { page: 'Plan' });
         toast.error(planError.message || 'Failed to generate study plan');
       } else {
         toast.success('Your study plan is ready!');
@@ -105,7 +106,7 @@ export default function Plan() {
         setPlans(typedPlans);
       }
     } catch (err) {
-      console.error('Error:', err);
+      reportError(err instanceof Error ? err : new Error(String(err)), { page: 'Plan' });
       toast.error('Failed to generate study plan');
     } finally {
       setGenerating(false);

@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserMastery } from '@/hooks/useMastery';
+import { reportError } from '@/lib/errorReporter';
 
 interface Lesson {
   skill_code: string;
@@ -85,7 +86,7 @@ export function LessonsQuickAccess() {
 
       setRecommendedLessons(recommended);
     } catch (error) {
-      console.error('Error loading lessons:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { component: 'LessonsQuickAccess' });
     } finally {
       setLoading(false);
     }

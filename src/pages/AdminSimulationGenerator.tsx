@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { reportError } from '@/lib/errorReporter';
 import { ArrowLeft, Wand2, Check, X, Loader2, Save, FileText, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -250,7 +251,7 @@ export default function AdminSimulationGenerator() {
         toast.success(`Generated ${allQuestions.length} questions!`);
       }
     } catch (error) {
-      console.error("Generation error:", error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'AdminSimulationGenerator' });
       toast.error(error instanceof Error ? error.message : "Failed to generate questions");
     } finally {
       setIsGenerating(false);
@@ -337,7 +338,7 @@ export default function AdminSimulationGenerator() {
       setGeneratedPassages([]);
       setGeneratedQuestions([]);
     } catch (error) {
-      console.error("Insert error:", error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'AdminSimulationGenerator', source: 'insert' });
       toast.error(error instanceof Error ? error.message : "Failed to insert questions");
     } finally {
       setIsInserting(false);

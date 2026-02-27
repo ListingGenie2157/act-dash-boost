@@ -13,6 +13,7 @@ import { getAllLessons } from '@/lib/lessons';
 import { useUserMastery } from '@/hooks/useMastery';
 import { MasteryBadge } from '@/components/MasteryBadge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { reportError } from '@/lib/errorReporter';
 
 // Subject-specific design system
 const subjectConfig = {
@@ -66,12 +67,12 @@ export default function LessonsLibrary() {
     try {
       const { data, error } = await getAllLessons();
       if (error) {
-        console.error('Error fetching lessons:', error);
+        reportError(error instanceof Error ? error : new Error(String(error)), { page: 'LessonsLibrary' });
       } else {
         setLessons(data);
       }
     } catch (error) {
-      console.error('Error fetching lessons:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'LessonsLibrary' });
     } finally {
       setLoading(false);
       setRefreshing(false);

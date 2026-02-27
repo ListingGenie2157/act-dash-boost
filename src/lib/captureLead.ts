@@ -1,4 +1,5 @@
 import { isValidEmail, normalizeEmail } from '@/utils/validation';
+import { reportError } from '@/lib/errorReporter';
 
 const SUPABASE_URL = 'https://hhbkmxrzxcswwokmbtbz.supabase.co';
 
@@ -67,7 +68,7 @@ export async function captureLead(data: LeadData): Promise<CaptureLeadResult> {
 
     return result;
   } catch (error) {
-    console.error('Lead capture error:', error);
+    reportError(error instanceof Error ? error : new Error(String(error)), { source: 'captureLead' });
     return { ok: false, error: 'Network error' };
   }
 }

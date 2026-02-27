@@ -18,6 +18,7 @@ import {
   sessionFinishSchema,
   validateInput 
 } from '@/lib/validation/edgeFunctionSchemas';
+import { reportError } from '@/lib/errorReporter';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -236,7 +237,7 @@ export default function Simulation() {
           }
         }
       } catch (error) {
-        console.error('Error loading existing responses:', error);
+        reportError(error instanceof Error ? error : new Error(String(error)), { page: 'Simulation', source: 'loadExistingResponses' });
       }
     };
 
@@ -310,7 +311,7 @@ export default function Simulation() {
       });
 
     } catch (error) {
-      console.error('Error starting session:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'Simulation', source: 'startSession' });
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to start session. Please try again.",
@@ -351,14 +352,14 @@ export default function Simulation() {
       });
 
       if (error) {
-        console.error('Error saving response:', error);
+        reportError(error instanceof Error ? error : new Error(String(error)), { page: 'Simulation', source: 'submitAnswer' });
         // Show non-blocking warning — don't halt timed test, but alert student
         sonnerToast.warning('Answer may not have saved. It will be retried when you finish.', {
           duration: 3000,
         });
       }
     } catch (validationError) {
-      console.error('Validation error:', validationError);
+      reportError(validationError instanceof Error ? validationError : new Error(String(validationError)), { page: 'Simulation', source: 'submitAnswer-validation' });
       sonnerToast.warning('Answer format issue — your progress is still tracked locally.', {
         duration: 3000,
       });
@@ -415,7 +416,7 @@ export default function Simulation() {
       });
 
     } catch (error) {
-      console.error('Error finishing session:', error);
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'Simulation', source: 'finishSession' });
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to submit test. Please try again.",
