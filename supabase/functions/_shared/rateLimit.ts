@@ -19,6 +19,19 @@ interface RateLimitResult {
  * @param windowMs - Time window in milliseconds (default: 60000 = 1 minute)
  * @returns true if request is allowed, false if rate limit exceeded
  */
+/**
+ * Sensitive endpoints that should fail closed (deny on error).
+ * All others fail open for availability.
+ */
+const SENSITIVE_ENDPOINTS = new Set([
+  'create-checkout',
+  'customer-portal',
+  'generate-questions',
+  'submit-response',
+  'session-start',
+  'session-finish',
+]);
+
 export async function checkRateLimit(
   userId: string | null,
   ip: string,
@@ -26,14 +39,16 @@ export async function checkRateLimit(
   limit = 100,
   windowMs = 60000
 ): Promise<boolean> {
+  const failClosed = SENSITIVE_ENDPOINTS.has(endpoint);
+
   try {
     // Create service role client for rate limit table access
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.warn('Rate limit: Missing env vars, allowing request');
-      return true;
+      console.error('Rate limit: Missing env vars — ' + (failClosed ? 'DENYING' : 'allowing') + ' request');
+      return !failClosed;
     }
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -49,9 +64,8 @@ export async function checkRateLimit(
     });
     
     if (error) {
-      console.error('Rate limit check error:', error);
-      // On error, allow the request (fail open for availability)
-      return true;
+      console.error('Rate limit check error:', error, '— ' + (failClosed ? 'DENYING' : 'allowing'));
+      return !failClosed;
     }
     
     const result = data as RateLimitResult;
@@ -62,9 +76,8 @@ export async function checkRateLimit(
     
     return result.allowed;
   } catch (err) {
-    console.error('Rate limit exception:', err);
-    // Fail open on errors
-    return true;
+    console.error('Rate limit exception:', err, '— ' + (failClosed ? 'DENYING' : 'allowing'));
+    return !failClosed;
   }
 }
 

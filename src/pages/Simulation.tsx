@@ -101,6 +101,13 @@ export default function Simulation() {
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
   
+  // Failed answer queue for retry on finish
+  const [failedSaves, setFailedSaves] = useState<Array<{
+    question_id: string;
+    selected: string;
+    time_ms: number;
+  }>>([]);
+  
   // Two-Pass Strategy State (Coached Mode)
   const [currentPass, setCurrentPass] = useState<PassMode>('quick');
   const [hasTransitionedToDeep, setHasTransitionedToDeep] = useState(false);
@@ -353,14 +360,19 @@ export default function Simulation() {
 
       if (error) {
         reportError(error instanceof Error ? error : new Error(String(error)), { page: 'Simulation', source: 'submitAnswer' });
-        // Show non-blocking warning — don't halt timed test, but alert student
+        // Queue for retry on finish
+        setFailedSaves(prev => [...prev.filter(f => f.question_id !== questionId), { question_id: questionId, selected: selectedAnswer, time_ms: timeMs }]);
         sonnerToast.warning('Answer may not have saved. It will be retried when you finish.', {
           duration: 3000,
         });
+      } else {
+        // Clear from failed queue if re-save succeeded
+        setFailedSaves(prev => prev.filter(f => f.question_id !== questionId));
       }
     } catch (validationError) {
       reportError(validationError instanceof Error ? validationError : new Error(String(validationError)), { page: 'Simulation', source: 'submitAnswer-validation' });
-      sonnerToast.warning('Answer format issue — your progress is still tracked locally.', {
+      setFailedSaves(prev => [...prev.filter(f => f.question_id !== questionId), { question_id: questionId, selected: selectedAnswer, time_ms: timeMs }]);
+      sonnerToast.warning('Answer format issue — will retry when you finish.', {
         duration: 3000,
       });
     }
@@ -392,6 +404,28 @@ export default function Simulation() {
 
     setLoading(true);
     try {
+      // Retry any failed saves before finishing
+      if (failedSaves.length > 0) {
+        const retryResults = await Promise.allSettled(
+          failedSaves.map(async (fs) =>
+            supabase.functions.invoke('submit-response', {
+              headers: await getAuthHeaders(),
+              body: {
+                session_id: sessionData.session_id,
+                question_id: fs.question_id,
+                selected: fs.selected,
+                time_ms: fs.time_ms,
+              },
+            })
+          )
+        );
+        const stillFailed = retryResults.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && r.value.error));
+        if (stillFailed.length > 0) {
+          reportError(new Error(`${stillFailed.length} answer(s) failed to save after retry`), { page: 'Simulation', source: 'finishSession-retry' });
+          sonnerToast.error(`${stillFailed.length} answer(s) could not be saved. Your score may be affected.`, { duration: 6000 });
+        }
+      }
+
       // Validate input before calling edge function
       const validatedInput = validateInput(
         sessionFinishSchema,
