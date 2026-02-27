@@ -171,17 +171,13 @@ const Dashboard = () => {
                     <h3 className="text-lg font-semibold">Quick Access</h3>
                   </div>
                   <div className="grid gap-3 md:grid-cols-2">
-                    <Link to="/lessons">
-                      <button className="btn-pill w-full justify-start gap-3">
+                    <Link to="/lessons" className="btn-pill w-full justify-start gap-3">
                         <BookOpen className="w-4 h-4 text-primary" />
                         <span>Browse All Lessons</span>
-                      </button>
                     </Link>
-                    <Link to="/calculator-lab">
-                      <button className="btn-pill w-full justify-start gap-3">
+                    <Link to="/calculator-lab" className="btn-pill w-full justify-start gap-3">
                         <Calculator className="w-4 h-4 text-primary" />
                         <span>Calculator Lab</span>
-                      </button>
                     </Link>
                   </div>
                 </CardContent>
@@ -201,11 +197,9 @@ const Dashboard = () => {
                         <p className="text-muted-foreground mb-4">
                           Identify strengths and weaknesses across all ACT sections. Get a personalized plan.
                         </p>
-                        <Link to="/diagnostic">
-                          <button className="btn-pill primary gap-2">
+                        <Link to="/diagnostic" className="btn-pill primary gap-2">
                             Take Diagnostic
                             <ArrowRight className="w-4 h-4" />
-                          </button>
                         </Link>
                       </div>
                     </div>
@@ -229,11 +223,9 @@ const Dashboard = () => {
                     Self-directed or AI-planned. Your call.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
-                    <Link to="/lessons">
-                      <button className="btn-pill gap-3 w-full sm:w-auto">
+                    <Link to="/lessons" className="btn-pill gap-3 w-full sm:w-auto">
                         <BookOpen className="w-5 h-5" />
                         Browse Lessons
-                      </button>
                     </Link>
                     <button
                       className="btn-pill primary gap-3"
@@ -324,11 +316,9 @@ const Dashboard = () => {
                         <p className="text-muted-foreground mb-4">
                           Identify strengths and weaknesses across all ACT sections. Get a personalized plan.
                         </p>
-                        <Link to="/diagnostic">
-                          <button className="btn-pill primary gap-2">
+                        <Link to="/diagnostic" className="btn-pill primary gap-2">
                             Take Diagnostic
                             <ArrowRight className="w-4 h-4" />
-                          </button>
                         </Link>
                       </div>
                     </div>

@@ -33,36 +33,39 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
           'FC_EN', 'FC_MA', 'FC_RD', 'FC_SC'
         ];
 
-        const formData: Form[] = await Promise.all(
-          formIds.map(async (formId) => {
-            const [prefix, section] = formId.split('_');
-            const sectionNames: Record<string, string> = {
-              'EN': 'ACT English',
-              'MA': 'ACT Math',
-              'RD': 'ACT Reading',
-              'SC': 'ACT Science'
-            };
-
-         // Count questions for this form/section
-         const { count, error } = await supabase
-           .from('staging_items')
-           .select('*', { count: 'exact', head: true })
-           .eq('form_id', formId);
+        // Single query: count questions grouped by form_id
+        const { data: counts, error } = await supabase
+          .from('staging_items')
+          .select('form_id')
+          .in('form_id', formIds);
 
         if (error) {
           reportError(error instanceof Error ? error : new Error(String(error)), { component: 'FormPicker' });
         }
 
-        const actual = count ?? 0;
+        // Aggregate counts client-side from the flat list
+        const countMap: Record<string, number> = {};
+        (counts ?? []).forEach(row => {
+          countMap[row.form_id] = (countMap[row.form_id] || 0) + 1;
+        });
 
-            return {
-              id: formId,
-              label: `${sectionNames[section]} – Form ${prefix.replace('F', '')}`,
-              questionCount: actual,
-              isAvailable: actual > 0,
-            };
-          })
-        );
+        const sectionNames: Record<string, string> = {
+          'EN': 'ACT English',
+          'MA': 'ACT Math',
+          'RD': 'ACT Reading',
+          'SC': 'ACT Science'
+        };
+
+        const formData: Form[] = formIds.map((formId) => {
+          const [prefix, section] = formId.split('_');
+          const actual = countMap[formId] || 0;
+          return {
+            id: formId,
+            label: `${sectionNames[section]} – Form ${prefix.replace('F', '')}`,
+            questionCount: actual,
+            isAvailable: actual > 0,
+          };
+        });
 
         setForms(formData);
       } catch (error) {
