@@ -71,9 +71,12 @@ export default {
       },
       boxShadow: {
         'card': '0 8px 24px rgba(0,0,0,0.2)',
+        'glass': '0 24px 80px rgba(0,0,0,0.65), 0 0 0 0.5px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.07)',
+        'glow-teal': '0 0 30px rgba(45,212,191,0.15), 0 0 60px rgba(45,212,191,0.05)',
+        'glow-coral': '0 0 30px rgba(244,63,94,0.15), 0 0 60px rgba(244,63,94,0.05)',
       },
       backgroundImage: {
-        'gradient-primary': 'linear-gradient(135deg, #14B8A6 0%, #0E7490 100%)',
+        'gradient-primary': 'linear-gradient(135deg, #2dd4bf 0%, #14b8a6 100%)',
       },
     }
   },
