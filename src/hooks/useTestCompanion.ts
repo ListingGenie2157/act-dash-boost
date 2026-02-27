@@ -9,7 +9,7 @@ interface CompanionState {
   firedTips: Set<string>;
 }
 
-interface UseTestCompanionParams {
+export interface UseTestCompanionParams {
   enabled: boolean;
   section: string;
   currentQuestionIndex: number;
