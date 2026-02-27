@@ -352,11 +352,16 @@ export default function Simulation() {
 
       if (error) {
         console.error('Error saving response:', error);
-        // Continue anyway - don't block user from proceeding
+        // Show non-blocking warning — don't halt timed test, but alert student
+        sonnerToast.warning('Answer may not have saved. It will be retried when you finish.', {
+          duration: 3000,
+        });
       }
     } catch (validationError) {
       console.error('Validation error:', validationError);
-      // Continue anyway - user can still complete test
+      sonnerToast.warning('Answer format issue — your progress is still tracked locally.', {
+        duration: 3000,
+      });
     }
   }, [sessionData, questionStartTime]);
 
