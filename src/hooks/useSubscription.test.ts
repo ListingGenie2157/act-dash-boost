@@ -152,9 +152,9 @@ describe('PLAN_NAMES', () => {
 
 describe('PLAN_PRICES', () => {
   it('has correct pricing', () => {
-    expect(PLAN_PRICES.monthly.amount).toBe(29.99);
-    expect(PLAN_PRICES['90_day'].amount).toBe(119);
-    expect(PLAN_PRICES['12_month'].amount).toBe(249);
+    expect(PLAN_PRICES.monthly.amount).toBe(39);
+    expect(PLAN_PRICES['90_day'].amount).toBe(89);
+    expect(PLAN_PRICES['12_month'].amount).toBe(199);
   });
 
   it('has savings labels for multi-month plans', () => {
