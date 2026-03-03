@@ -11,6 +11,7 @@ import { TutorProvider } from './hooks/useTutor';
 import { TutorPanel } from './components/tutor/TutorPanel';
 import { AppLayout } from './components/AppLayout';
 import { RequireAuth } from './components/RequireAuth';
+import { RequireSubscription } from './components/RequireSubscription';
 import { ProtectedAdminRoute } from './components/ProtectedAdminRoute';
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
@@ -114,14 +115,14 @@ const App = () => (
                   <Route path="/diagnostic-results-complete" element={<LazyLoader><LazyDiagnosticResultsComplete /></LazyLoader>} />
                   
                   {/* Simulation system */}
-                  <Route path="/simulation" element={<LazyLoader><LazySimulation /></LazyLoader>} />
-                  <Route path="/simulation-results" element={<LazyLoader><LazySimulationResults /></LazyLoader>} />
+                  <Route path="/simulation" element={<RequireSubscription><LazyLoader><LazySimulation /></LazyLoader></RequireSubscription>} />
+                  <Route path="/simulation-results" element={<RequireSubscription><LazyLoader><LazySimulationResults /></LazyLoader></RequireSubscription>} />
                   
                   {/* Cheatsheet routes */}
-                  <Route path="/cheatsheets/english" element={<LazyLoader><LazyEnglishCheatsheet /></LazyLoader>} />
-                  <Route path="/cheatsheets/math" element={<LazyLoader><LazyMathCheatsheet /></LazyLoader>} />
-                  <Route path="/cheatsheets/reading" element={<LazyLoader><LazyReadingCheatsheet /></LazyLoader>} />
-                  <Route path="/cheatsheets/science" element={<LazyLoader><LazyScienceCheatsheet /></LazyLoader>} />
+                  <Route path="/cheatsheets/english" element={<RequireSubscription><LazyLoader><LazyEnglishCheatsheet /></LazyLoader></RequireSubscription>} />
+                  <Route path="/cheatsheets/math" element={<RequireSubscription><LazyLoader><LazyMathCheatsheet /></LazyLoader></RequireSubscription>} />
+                  <Route path="/cheatsheets/reading" element={<RequireSubscription><LazyLoader><LazyReadingCheatsheet /></LazyLoader></RequireSubscription>} />
+                  <Route path="/cheatsheets/science" element={<RequireSubscription><LazyLoader><LazyScienceCheatsheet /></LazyLoader></RequireSubscription>} />
                   
                   {/* Analytics route */}
                   <Route path="/analytics" element={<LazyLoader><LazyAnalytics /></LazyLoader>} />
@@ -137,31 +138,31 @@ const App = () => (
                   <Route path="/parent-portal" element={<LazyLoader><LazyParentPortal /></LazyLoader>} />
                   
                   {/* Study plan and tasks */}
-                  <Route path="/plan" element={<LazyLoader><LazyPlan /></LazyLoader>} />
-                  <Route path="/task/:date/:idx" element={<LazyLoader><LazyTaskLauncher /></LazyLoader>} />
+                  <Route path="/plan" element={<RequireSubscription><LazyLoader><LazyPlan /></LazyLoader></RequireSubscription>} />
+                  <Route path="/task/:date/:idx" element={<RequireSubscription><LazyLoader><LazyTaskLauncher /></LazyLoader></RequireSubscription>} />
                   
                   {/* Lessons */}
-                  <Route path="/lesson/:topic" element={<LazyLoader><LazyEnhancedLessonViewer /></LazyLoader>} />
-                  <Route path="/lessons" element={<LazyLoader><LazyLessonsLibrary /></LazyLoader>} />
+                  <Route path="/lesson/:topic" element={<RequireSubscription><LazyLoader><LazyEnhancedLessonViewer /></LazyLoader></RequireSubscription>} />
+                  <Route path="/lessons" element={<RequireSubscription><LazyLoader><LazyLessonsLibrary /></LazyLoader></RequireSubscription>} />
                   
                   {/* Drills - redirect legacy routes to Pacing Lab */}
                   <Route path="/drills" element={<PacingLabRedirect />} />
                   <Route path="/drill-runner" element={<PacingLabRedirect />} />
-                  <Route path="/drill/:subject/setup" element={<LazyLoader><LazyDrillSetup /></LazyLoader>} />
-                  <Route path="/drill/:subject/play" element={<LazyLoader><LazyDrillPlayer /></LazyLoader>} />
-                  <Route path="/drill-history" element={<LazyLoader><LazyDrillHistory /></LazyLoader>} />
-                  <Route path="/drill-detail/:taskId" element={<LazyLoader><LazyDrillDetail /></LazyLoader>} />
-                  <Route path="/drill/:subject" element={<LazyLoader><LazyDrillRunner /></LazyLoader>} />
+                  <Route path="/drill/:subject/setup" element={<RequireSubscription><LazyLoader><LazyDrillSetup /></LazyLoader></RequireSubscription>} />
+                  <Route path="/drill/:subject/play" element={<RequireSubscription><LazyLoader><LazyDrillPlayer /></LazyLoader></RequireSubscription>} />
+                  <Route path="/drill-history" element={<RequireSubscription><LazyLoader><LazyDrillHistory /></LazyLoader></RequireSubscription>} />
+                  <Route path="/drill-detail/:taskId" element={<RequireSubscription><LazyLoader><LazyDrillDetail /></LazyLoader></RequireSubscription>} />
+                  <Route path="/drill/:subject" element={<RequireSubscription><LazyLoader><LazyDrillRunner /></LazyLoader></RequireSubscription>} />
                   
                   {/* Quiz and practice */}
-                  <Route path="/quiz/:section" element={<LazyLoader><LazyQuizRunner /></LazyLoader>} />
-                  <Route path="/weak-areas" element={<LazyLoader><LazyWeakAreas /></LazyLoader>} />
-                  <Route path="/calculator-lab" element={<LazyLoader><LazyCalculatorLab /></LazyLoader>} />
-                  <Route path="/pacing-lab" element={<LazyLoader><LazyPacingLab /></LazyLoader>} />
+                  <Route path="/quiz/:section" element={<RequireSubscription><LazyLoader><LazyQuizRunner /></LazyLoader></RequireSubscription>} />
+                  <Route path="/weak-areas" element={<RequireSubscription><LazyLoader><LazyWeakAreas /></LazyLoader></RequireSubscription>} />
+                  <Route path="/calculator-lab" element={<RequireSubscription><LazyLoader><LazyCalculatorLab /></LazyLoader></RequireSubscription>} />
+                  <Route path="/pacing-lab" element={<RequireSubscription><LazyLoader><LazyPacingLab /></LazyLoader></RequireSubscription>} />
                   
                   {/* Review */}
-                  <Route path="/review/missed" element={<LazyLoader><LazyReviewMissed /></LazyLoader>} />
-                  <Route path="/review/spaced" element={<LazyLoader><LazyReviewSpaced /></LazyLoader>} />
+                  <Route path="/review/missed" element={<RequireSubscription><LazyLoader><LazyReviewMissed /></LazyLoader></RequireSubscription>} />
+                  <Route path="/review/spaced" element={<RequireSubscription><LazyLoader><LazyReviewSpaced /></LazyLoader></RequireSubscription>} />
                 </Route>
                 
                 {/* Health check route */}
