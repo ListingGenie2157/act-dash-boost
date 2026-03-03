@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button, Label, Card, CardContent, CardDescription, CardHeader, CardTitle, Checkbox, Input
@@ -9,10 +9,34 @@ import { toast } from 'sonner';
 import { reportError } from '@/lib/errorReporter';
 import preppitLogo from '@/assets/preppit-logo.png';
 import { Monitor, FileText, School, Globe, HelpCircle } from 'lucide-react';
+import { PageLoadingSpinner } from '@/components/LoadingSpinner';
 
 export default function Onboarding() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setChecking(false); return; }
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('onboarding_complete')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (profile?.onboarding_complete) {
+          navigate('/dashboard', { replace: true });
+          return;
+        }
+      } catch {
+        // proceed to onboarding form
+      }
+      setChecking(false);
+    };
+    checkOnboarding();
+  }, [navigate]);
   const [form, setForm] = useState({
     firstName: '',
     ageVerified: false,
@@ -57,7 +81,7 @@ export default function Onboarding() {
       }
 
       toast.success('Welcome to Preppit Pacing!');
-      navigate('/');
+      navigate('/dashboard');
     } catch (error) {
       reportError(error instanceof Error ? error : new Error(String(error)), { page: 'Onboarding' });
       toast.error('Failed to complete setup. Please try again.');
@@ -65,6 +89,8 @@ export default function Onboarding() {
       setLoading(false);
     }
   };
+
+  if (checking) return <PageLoadingSpinner />;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/5 flex items-center justify-center p-4">
