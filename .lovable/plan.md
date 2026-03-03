@@ -1,44 +1,54 @@
 
 
-## Problem
+## QA-001 Analysis: Signup + Email Confirmation
 
-Two issues causing the question shortfall:
+I reviewed the full auth flow (`Login.tsx`, `RequireAuth.tsx`, `App.tsx`, `Onboarding.tsx`) against your test plan. Here is what is solid and what needs fixing before this test case can pass.
 
-1. **Outdated question counts**: `AdminSimulationGenerator.tsx` uses old ACT targets (EN:75, MA:60, RD:40) but the app uses Enhanced ACT format (EN:50, MA:45, RD:36, SC:40). The generator is trying to produce the wrong number.
+### Current State
 
-2. **AI under-generates per passage**: When asked for "exactly 15 questions," the AI often returns 12-13. Over 5 passages, that gap compounds (e.g., 62 instead of 75).
+**Working correctly:**
+- Sign Up form with first/last name, email, password, confirm password
+- Client-side validation: empty fields, invalid email, short password (<8 chars), name length (<2 chars), password mismatch
+- Password strength indicator (weak/medium/strong)
+- "Check Your Email" success screen after signup
+- Profile auto-creation via `handle_new_user()` DB trigger
+- Sign-in redirects to `/onboarding` or `/dashboard` based on `onboarding_complete`
 
-## Plan
+**Validation error states covered:**
+- Missing fields: "Please fill in all fields"
+- Invalid email: "Please enter a valid email address"
+- Short name: "Names must be at least 2 characters"
+- Short password: "Password must be at least 8 characters"
+- Mismatch: "Passwords do not match" (inline + on submit)
+- Duplicate email: Supabase returns error message, displayed in error banner
 
-### 1. Update SECTION_CONFIG to Enhanced ACT format
-In `AdminSimulationGenerator.tsx`, change the config to match the Enhanced format:
-- English: 50 questions, 5 passages, 10 questions/passage
-- Math: 45 questions, 0 passages, batch size 10
-- Reading: 36 questions, 4 passages, 9 questions/passage
-- Science: 40 questions, 7 passages, ~6 questions/passage (unchanged)
+### Issue Found: Post-Confirmation Redirect
 
-### 2. Add validation + retry in the edge function
-After the AI returns questions for a passage, check the count. If fewer than requested, make a second call asking for only the missing questions for that same passage. Cap at 1 retry to avoid infinite loops.
+The test plan expects: *"Click confirmation link → redirect to `/onboarding`"*
 
-### 3. Add a post-generation warning in the UI
-After all batches complete, if total generated count is less than the target, show a warning badge: "Generated X of Y target questions — consider regenerating missing passages."
+**Current behavior:** `emailRedirectTo` is set to `window.location.origin + '/'` (the landing page). After clicking the confirmation link, the user lands on `/` (LandingPage), not `/onboarding`. They would need to manually navigate to `/login` and sign in.
 
-### Technical details
+This needs to be fixed so the confirmation link redirects to a route that detects the new session and routes the user to `/onboarding`.
 
-**SECTION_CONFIG update** (AdminSimulationGenerator.tsx):
-```
-english: { totalQuestions: 50, passageCount: 5, questionsPerPassage: 10, batchSize: 10, hasPassages: true }
-math: { totalQuestions: 45, passageCount: 0, questionsPerPassage: 0, batchSize: 10, hasPassages: false }
-reading: { totalQuestions: 36, passageCount: 4, questionsPerPassage: 9, batchSize: 9, hasPassages: true }
-science: { totalQuestions: 40, passageCount: 7, questionsPerPassage: 6, batchSize: 6, hasPassages: true }
-```
+### Plan
 
-**Edge function retry logic** (generate-questions/index.ts, inside the `generate-simulation` passage handler):
-- After parsing the AI response, check `args.questions.length < questions_per_passage`
-- If short, make one supplemental AI call asking for the missing count referencing the same passage text
-- Merge results before returning
+#### 1. Fix the email confirmation redirect URL
+In `Login.tsx` line 64, change `emailRedirectTo` from `window.location.origin + '/'` to `window.location.origin + '/dashboard'`. Since `/dashboard` is behind `RequireAuth`, the confirmed user will be authenticated (Supabase sets the session from the confirmation link's token), and the dashboard page already checks `onboarding_complete` — but actually, it doesn't redirect to onboarding automatically.
 
-**UI warning** (AdminSimulationGenerator.tsx):
-- After generation completes, compare `totalCount` vs `config.totalQuestions`
-- If under target, show an `Alert` with the shortfall count
+**Better approach:** Change redirect to `window.location.origin + '/onboarding'`. Since `/onboarding` is behind `RequireAuth`, unauthenticated users get bounced to `/login`, and confirmed users land directly on onboarding. The onboarding page should also handle the case where `onboarding_complete` is already true (redirect to dashboard).
+
+#### 2. Add onboarding guard for already-completed users
+In `Onboarding.tsx`, add a check: if the user's profile already has `onboarding_complete === true`, redirect to `/dashboard` instead of showing the form again.
+
+#### 3. No other code changes needed
+All validation paths, error states, and the success screen are already implemented correctly per the test plan.
+
+### Technical Details
+
+**File changes:**
+
+| File | Change |
+|---|---|
+| `src/pages/Login.tsx` (line 64) | Change `emailRedirectTo` to `${window.location.origin}/onboarding` |
+| `src/pages/Onboarding.tsx` | Add profile query on mount; if `onboarding_complete === true`, `navigate('/dashboard')` |
 
