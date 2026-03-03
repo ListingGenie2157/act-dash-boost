@@ -1,22 +1,61 @@
 
 
-## QA-002 Analysis: Login + Session Persistence
+## QA-006 Analysis: Subscription Gating Enforcement
 
-### Current State: All Steps Should Pass
+### Current State: Partially Implemented — Client-Side Gating Component Exists But Is Not Used
 
-**Step 1 — Login with onboarding-complete account → /dashboard:** In `Login.tsx`, after successful `signInWithPassword`, the code queries `profiles.onboarding_complete`. If `true`, it calls `navigate('/dashboard')`. Correct.
+**Finding: `RequireSubscription` component is defined but never imported or used anywhere in the app.**
 
-**Step 2 — Login with onboarding-incomplete account → /onboarding:** Same code path — if `profile?.onboarding_complete` is falsy, it calls `navigate('/onboarding')`. Correct.
+The component exists in `src/components/RequireSubscription.tsx` and correctly redirects unsubscribed users to `/pricing`. However, it is not wrapped around any route in `App.tsx`. No route uses `RequireSubscription`.
 
-**Step 3 — Session persistence across tab close:** The Supabase client in `client.ts` is configured with `persistSession: true`. The session is stored in localStorage automatically. On reopen, `RequireAuth` calls `getSession()` which reads from localStorage. Correct.
+This means **client-side gating is not enforced** — any authenticated user can navigate to any protected route regardless of subscription status.
 
-**Step 4 — Auto token refresh:** The client has `autoRefreshToken: true`. Supabase JS SDK handles this internally — it schedules a refresh before the JWT expires (default 1 hour). The `onAuthStateChange` listener in `RequireAuth` will pick up the refreshed session. Correct.
+### Server-Side Gating: Correctly Implemented
 
-**Step 5 — Wrong password error:** `signInWithPassword` returns an error object from Supabase (e.g., "Invalid login credentials"). The code sets `setError(error.message)` which renders in the red error banner with `AlertCircle` icon. No session is created. Correct.
+The `session-fetch` edge function (lines 93-113) properly enforces server-side gating:
+- Exempts diagnostic (`D2`) and onboarding (`ONB`) form IDs
+- Checks `subscriptions` table for `active` or `trialing` status
+- Validates `current_period_end` hasn't passed
+- Returns 403 if subscription is missing or expired
 
-### Verdict: No Code Changes Needed
+The `check-subscription` edge function correctly returns `subscribed: true/false` with `plan_type`.
 
-All five steps are correctly implemented. The auth configuration (`persistSession`, `autoRefreshToken`, `detectSessionInUrl`, PKCE flow) and the routing logic in `Login.tsx` and `RequireAuth` align with every requirement in this test case.
+### What Needs to Change
 
-The only operational prerequisite is having two test accounts — one with `onboarding_complete = true` and one with `false` — in the Supabase auth system.
+The `RequireSubscription` wrapper needs to be added to premium routes in `App.tsx`. Based on the server-side exemptions (diagnostic and onboarding are free), the following routes should be gated:
+
+- `/simulation`, `/simulation-results`
+- `/drill/:subject/setup`, `/drill/:subject/play`, `/drill-history`, `/drill-detail/:taskId`, `/drill/:subject`
+- `/quiz/:section`
+- `/weak-areas`
+- `/calculator-lab`
+- `/pacing-lab`
+- `/review/missed`, `/review/spaced`
+- `/plan`, `/task/:date/:idx`
+- `/lesson/:topic`, `/lessons`
+- `/cheatsheets/*`
+
+Routes that should remain free (no subscription required):
+- `/dashboard` — needs to be accessible to show upsell
+- `/onboarding` — onboarding flow
+- `/diagnostic`, `/diagnostic-test/*`, `/diagnostic-results/*` — diagnostic assessment
+- `/analytics` — could go either way, but dashboard-adjacent
+- `/parent-portal` — parent access
+- Admin routes — admin access
+
+### Implementation Plan
+
+1. **Wrap premium routes with `RequireSubscription`** in `App.tsx`. Import `RequireSubscription` and wrap each premium route's element, e.g.:
+   ```
+   <Route path="/simulation" element={<RequireSubscription><LazyLoader><LazySimulation /></LazyLoader></RequireSubscription>} />
+   ```
+
+2. No changes needed to edge functions or the `RequireSubscription` component itself — they are correctly implemented.
+
+### Technical Details
+
+- `RequireSubscription` uses the `useSubscription` hook which calls `check-subscription` edge function
+- The hook has a 1-minute stale time and refetches on window focus
+- The component shows a loading spinner while checking, then redirects to `/pricing` if not subscribed
+- Server-side enforcement in `session-fetch` provides defense-in-depth
 
