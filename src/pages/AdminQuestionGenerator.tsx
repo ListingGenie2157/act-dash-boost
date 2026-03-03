@@ -83,10 +83,34 @@ const SECTION_SKILLS: Record<string, { code: string; name: string }[]> = {
   ],
 };
 
+const FORM_TARGETS: Record<string, { id: string; label: string }[]> = {
+  math: [
+    { id: "D2MA", label: "Diagnostic – Math (D2MA)" },
+    { id: "DR_MA", label: "Drill – Math (DR_MA)" },
+    { id: "ONB", label: "Onboarding Quick (ONB)" },
+  ],
+  science: [
+    { id: "D2SC", label: "Diagnostic – Science (D2SC)" },
+    { id: "DR_SC", label: "Drill – Science (DR_SC)" },
+    { id: "ONB", label: "Onboarding Quick (ONB)" },
+  ],
+  reading: [
+    { id: "D2RD", label: "Diagnostic – Reading (D2RD)" },
+    { id: "DR_RD", label: "Drill – Reading (DR_RD)" },
+    { id: "ONB", label: "Onboarding Quick (ONB)" },
+  ],
+  english: [
+    { id: "D2EN", label: "Diagnostic – English (D2EN)" },
+    { id: "DR_EN", label: "Drill – English (DR_EN)" },
+    { id: "ONB", label: "Onboarding Quick (ONB)" },
+  ],
+};
+
 export default function AdminQuestionGenerator() {
   const navigate = useNavigate();
   const [section, setSection] = useState<string>("");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [targetFormId, setTargetFormId] = useState<string>("");
   const [count, setCount] = useState(5);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isInserting, setIsInserting] = useState(false);
@@ -196,6 +220,7 @@ export default function AdminQuestionGenerator() {
           body: JSON.stringify({
             action: "insert",
             section,
+            form_id: targetFormId,
             questions: approvedQuestions,
           }),
         }
@@ -249,6 +274,7 @@ export default function AdminQuestionGenerator() {
               <Select value={section} onValueChange={(v) => {
                 setSection(v);
                 setSelectedSkills([]);
+                setTargetFormId("");
               }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select section" />
@@ -300,6 +326,21 @@ export default function AdminQuestionGenerator() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label>Target Form</Label>
+                  <Select value={targetFormId} onValueChange={setTargetFormId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select target form" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(FORM_TARGETS[section] || []).map((f) => (
+                        <SelectItem key={f.id} value={f.id}>{f.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Where generated questions will be inserted</p>
+                </div>
+
+                <div className="space-y-2">
                   <Label>Number of Questions</Label>
                   <Input
                     type="number"
@@ -314,7 +355,7 @@ export default function AdminQuestionGenerator() {
                 <Button
                   className="w-full"
                   onClick={handleGenerate}
-                  disabled={isGenerating || selectedSkills.length === 0}
+                  disabled={isGenerating || selectedSkills.length === 0 || !targetFormId}
                 >
                   {isGenerating ? (
                     <>
