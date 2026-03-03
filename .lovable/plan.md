@@ -1,32 +1,22 @@
 
 
-## QA-003 Analysis: Monthly Subscription Stripe Checkout
+## QA-002 Analysis: Login + Session Persistence
 
 ### Current State: All Steps Should Pass
 
-The full checkout flow is correctly implemented end-to-end. Here is the verification:
+**Step 1 — Login with onboarding-complete account → /dashboard:** In `Login.tsx`, after successful `signInWithPassword`, the code queries `profiles.onboarding_complete`. If `true`, it calls `navigate('/dashboard')`. Correct.
 
-**Step 1 — Navigate to /pricing:** The `Pricing.tsx` page renders three plan cards (monthly, 90_day, 12_month) with correct prices from `PLAN_PRICES`. The monthly card shows a "7-day free trial" badge and a "Start Free Trial" button.
+**Step 2 — Login with onboarding-incomplete account → /onboarding:** Same code path — if `profile?.onboarding_complete` is falsy, it calls `navigate('/onboarding')`. Correct.
 
-**Step 2 — Click subscribe:** `handleSelectPlan` checks for auth (redirects to `/login` if not signed in), then calls `createCheckout('monthly')` which invokes the `create-checkout` edge function.
+**Step 3 — Session persistence across tab close:** The Supabase client in `client.ts` is configured with `persistSession: true`. The session is stored in localStorage automatically. On reopen, `RequireAuth` calls `getSession()` which reads from localStorage. Correct.
 
-**Step 3 — Stripe Checkout loads:** The `create-checkout` edge function sets `mode: "subscription"` for monthly, includes `trial_period_days: 7` in `subscription_data`, and uses the price from `STRIPE_PRICE_MONTHLY` env var. The trial label will appear in Stripe's hosted checkout.
+**Step 4 — Auto token refresh:** The client has `autoRefreshToken: true`. Supabase JS SDK handles this internally — it schedules a refresh before the JWT expires (default 1 hour). The `onAuthStateChange` listener in `RequireAuth` will pick up the refreshed session. Correct.
 
-**Step 4 — Complete payment:** Stripe handles this entirely.
-
-**Step 5 — Redirect to /subscription-success:** The `success_url` is set to `${origin}/subscription-success?session_id={CHECKOUT_SESSION_ID}`. The route exists in `App.tsx`.
-
-**Step 6 — Polling resolves:** `SubscriptionSuccess.tsx` polls via `refetch()` every 3 seconds for up to 10 attempts. The `check-subscription` edge function checks both the local `subscriptions` table (populated by webhook) and falls back to querying Stripe directly. It correctly handles `trialing` status.
-
-**Step 7 — Database row:** The `stripe-webhook` handles `customer.subscription.created` and upserts into `subscriptions` with the correct plan_type and status from Stripe (which will be `trialing` during the trial period).
+**Step 5 — Wrong password error:** `signInWithPassword` returns an error object from Supabase (e.g., "Invalid login credentials"). The code sets `setError(error.message)` which renders in the red error banner with `AlertCircle` icon. No session is created. Correct.
 
 ### Verdict: No Code Changes Needed
 
-The entire QA-003 flow is correctly wired. The only prerequisites are operational:
-- Stripe test mode is enabled with valid test API keys
-- `STRIPE_PRICE_MONTHLY` secret is set to a valid Stripe price ID
-- `STRIPE_WEBHOOK_SECRET` is set and the webhook endpoint is registered in the Stripe Dashboard for the required events
-- The Supabase project is unpaused
+All five steps are correctly implemented. The auth configuration (`persistSession`, `autoRefreshToken`, `detectSessionInUrl`, PKCE flow) and the routing logic in `Login.tsx` and `RequireAuth` align with every requirement in this test case.
 
-All code paths — pricing UI, checkout creation, webhook processing, subscription polling, and success page — are aligned and should pass this test case without modifications.
+The only operational prerequisite is having two test accounts — one with `onboarding_complete = true` and one with `false` — in the Supabase auth system.
 
