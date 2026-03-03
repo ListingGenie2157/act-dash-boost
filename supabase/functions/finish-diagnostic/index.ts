@@ -13,7 +13,8 @@ const QuestionSchema = z.object({
 const AnswerSchema = z.object({
   questionId: z.string().min(1),
   selectedAnswer: z.string().min(1).max(1),
-  isCorrect: z.boolean()
+  // isCorrect is now ignored — server computes correctness
+  isCorrect: z.boolean().optional()
 });
 
 const DiagnosticBlockSchema = z.object({
@@ -26,6 +27,14 @@ const DiagnosticRequestSchema = z.object({
   blocks: z.array(DiagnosticBlockSchema).min(1).max(10)
 });
 
+// Map section names to staging_items form_id prefixes for answer lookup
+const SECTION_TO_FORM_PREFIX: Record<string, string[]> = {
+  'English': ['D2EN', 'ONB'],
+  'Math': ['D2MA', 'ONB'],
+  'Reading': ['D2RD', 'ONB'],
+  'Science': ['D2SC', 'ONB'],
+};
+
 interface DiagnosticBlock {
   questions: Array<{
     id: string;
@@ -34,7 +43,7 @@ interface DiagnosticBlock {
   answers: Array<{
     questionId: string;
     selectedAnswer: string;
-    isCorrect: boolean;
+    isCorrect?: boolean;
   }>;
 }
 
@@ -43,42 +52,15 @@ interface DiagnosticRequest {
   blocks: DiagnosticBlock[];
 }
 
-function getSkillFromTags(tags: string[] = []): string | null {
-  return tags.length > 0 ? tags[0] : null;
+interface ScoredAnswer {
+  questionId: string;
+  selectedAnswer: string;
+  isCorrect: boolean;
+  skillId: string | null;
 }
 
-function scoreDiagnostic(blocks: DiagnosticBlock[]): { score: number; skillAccuracy: Record<string, { correct: number; total: number }> } {
-  let totalCorrect = 0;
-  let totalQuestions = 0;
-  const skillAccuracy: Record<string, { correct: number; total: number }> = {};
-
-  for (const block of blocks) {
-    for (let i = 0; i < block.questions.length; i++) {
-      const question = block.questions[i];
-      const answer = block.answers[i];
-      
-      if (answer) {
-        totalQuestions++;
-        if (answer.isCorrect) {
-          totalCorrect++;
-        }
-
-        const skill = getSkillFromTags(question.skill_tags);
-        if (skill) {
-          if (!skillAccuracy[skill]) {
-            skillAccuracy[skill] = { correct: 0, total: 0 };
-          }
-          skillAccuracy[skill].total++;
-          if (answer.isCorrect) {
-            skillAccuracy[skill].correct++;
-          }
-        }
-      }
-    }
-  }
-
-  const score = totalQuestions > 0 ? (totalCorrect / totalQuestions) * 100 : 0;
-  return { score, skillAccuracy };
+function getSkillFromTags(tags: string[] = []): string | null {
+  return tags.length > 0 ? tags[0] : null;
 }
 
 Deno.serve(async (req) => {
@@ -143,15 +125,111 @@ Deno.serve(async (req) => {
 
     const body: DiagnosticRequest = validationResult.data;
 
-    const { score, skillAccuracy } = scoreDiagnostic(body.blocks);
+    // ── SERVER-SIDE ANSWER VALIDATION ──
+    // Collect all staging_ids from client answers
+    const allStagingIds = body.blocks.flatMap(b => 
+      b.answers.map(a => parseInt(a.questionId, 10))
+    ).filter(id => !isNaN(id));
 
+    // Fetch real answers from staging_items (service role bypasses RLS)
+    const answerMap = new Map<string, string>();
+    if (allStagingIds.length > 0) {
+      const { data: stagingRows, error: stagingError } = await supabase
+        .from('staging_items')
+        .select('staging_id, answer')
+        .in('staging_id', allStagingIds);
+
+      if (stagingError) {
+        console.error('Error fetching staging answers:', stagingError);
+      } else {
+        for (const row of stagingRows || []) {
+          answerMap.set(String(row.staging_id), row.answer.toUpperCase());
+        }
+      }
+    }
+
+    // Map selectedAnswer index (0-3) to letter
+    const IDX_TO_LETTER = ['A', 'B', 'C', 'D'];
+
+    // Score with server-validated correctness
+    let totalCorrect = 0;
+    let totalQuestions = 0;
+    const skillAccuracy: Record<string, { correct: number; total: number }> = {};
+    const scoredAnswers: ScoredAnswer[] = [];
+    const missedQuestions: Array<{ questionId: string; skill: string | null }> = [];
+
+    // Build server-validated blocks for storage
+    const validatedBlocks: DiagnosticBlock[] = [];
+
+    for (const block of body.blocks) {
+      const validatedAnswers: Array<{ questionId: string; selectedAnswer: string; isCorrect: boolean }> = [];
+
+      for (let i = 0; i < block.questions.length; i++) {
+        const question = block.questions[i];
+        const answer = block.answers[i];
+        
+        if (answer) {
+          totalQuestions++;
+
+          // Determine correctness server-side
+          const realAnswer = answerMap.get(answer.questionId);
+          let selectedLetter = answer.selectedAnswer.toUpperCase();
+          // If client sends a numeric index, convert to letter
+          const numIdx = parseInt(selectedLetter, 10);
+          if (!isNaN(numIdx) && numIdx >= 0 && numIdx <= 3) {
+            selectedLetter = IDX_TO_LETTER[numIdx];
+          }
+
+          const isCorrect = realAnswer ? selectedLetter === realAnswer : false;
+          
+          if (isCorrect) totalCorrect++;
+
+          const skill = getSkillFromTags(question.skill_tags);
+          if (skill) {
+            if (!skillAccuracy[skill]) {
+              skillAccuracy[skill] = { correct: 0, total: 0 };
+            }
+            skillAccuracy[skill].total++;
+            if (isCorrect) {
+              skillAccuracy[skill].correct++;
+            }
+          }
+
+          scoredAnswers.push({
+            questionId: answer.questionId,
+            selectedAnswer: selectedLetter,
+            isCorrect,
+            skillId: skill
+          });
+
+          validatedAnswers.push({
+            questionId: answer.questionId,
+            selectedAnswer: selectedLetter,
+            isCorrect
+          });
+
+          if (!isCorrect) {
+            missedQuestions.push({ questionId: answer.questionId, skill });
+          }
+        }
+      }
+
+      validatedBlocks.push({
+        questions: block.questions,
+        answers: validatedAnswers
+      });
+    }
+
+    const score = totalQuestions > 0 ? (totalCorrect / totalQuestions) * 100 : 0;
+
+    // ── SAVE DIAGNOSTIC ──
     const { data: diagnostic, error: insertError } = await supabase
       .from('diagnostics')
       .insert({
         user_id: user.id,
         section: body.section,
         block: 1,
-        responses: body.blocks,
+        responses: validatedBlocks, // Store server-validated results
         score: score,
         completed_at: new Date().toISOString()
       })
@@ -166,23 +244,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const missedQuestions: Array<{ questionId: string; skill: string | null }> = [];
-    
-    for (const block of body.blocks) {
-      for (let i = 0; i < block.questions.length; i++) {
-        const question = block.questions[i];
-        const answer = block.answers[i];
-        
-        if (answer && !answer.isCorrect) {
-          const skill = getSkillFromTags(question.skill_tags);
-          missedQuestions.push({
-            questionId: answer.questionId,
-            skill
-          });
-        }
-      }
-    }
-
+    // ── UPDATE REVIEW QUEUE for missed questions ──
     if (missedQuestions.length > 0) {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       
@@ -204,6 +266,62 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── UPDATE ERROR BANK for missed questions ──
+    for (const missed of missedQuestions) {
+      if (missed.skill) {
+        // Use the increment_error_bank function (handles upsert)
+        await supabase.rpc('increment_error_bank', {
+          p_user_id: user.id,
+          p_question_id: missed.questionId
+        });
+      }
+    }
+
+    // ── UPDATE MASTERY for each skill ──
+    for (const [skillId, data] of Object.entries(skillAccuracy)) {
+      const { error: masteryError } = await supabase
+        .from('mastery')
+        .upsert({
+          user_id: user.id,
+          skill_id: skillId,
+          total: data.total,
+          correct: data.correct,
+          avg_time_ms: 0, // diagnostic doesn't track per-question time
+          last_updated: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,skill_id'
+        });
+
+      if (masteryError) {
+        console.error('Error upserting mastery:', masteryError);
+      }
+    }
+
+    // ── UPDATE PROGRESS for each skill ──
+    for (const [skillId, data] of Object.entries(skillAccuracy)) {
+      const accuracy = data.total > 0 ? data.correct / data.total : 0;
+      const masteryLevel = accuracy >= 0.8 ? 3 : accuracy >= 0.5 ? 2 : 1;
+
+      const { error: progressError } = await supabase
+        .from('progress')
+        .upsert({
+          user_id: user.id,
+          skill_id: skillId,
+          seen: data.total,
+          correct: data.correct,
+          mastery_level: masteryLevel,
+          median_time_ms: 0,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,skill_id'
+        });
+
+      if (progressError) {
+        console.error('Error upserting progress:', progressError);
+      }
+    }
+
+    // ── RESPONSE ──
     const predictedSectionScore = Math.round(score);
 
     const weakSkills = Object.entries(skillAccuracy)

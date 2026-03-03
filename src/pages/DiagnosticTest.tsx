@@ -122,10 +122,18 @@ export default function DiagnosticTest() {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) return;
 
-      // Call finish-diagnostic edge function with real skill IDs
+      // Map form ID abbreviation to full section name for server validation
+      const SECTION_MAP: Record<string, string> = {
+        'EN': 'English', 'MA': 'Math', 'RD': 'Reading', 'SC': 'Science',
+        'ONB': 'English' // ONB is a mixed diagnostic, server handles accordingly
+      };
+      const sectionCode = formId.startsWith('D2') ? formId.slice(2) : formId;
+      const sectionName = SECTION_MAP[sectionCode] || sectionCode;
+
+      // Call finish-diagnostic edge function — server validates correctness
       const { error } = await supabase.functions.invoke('finish-diagnostic', {
         body: {
-          section: formId.startsWith('D2') ? formId.slice(2) : formId,
+          section: sectionName,
           blocks: [{
             questions: questions.map(q => ({ 
               id: q.question_id, 
@@ -133,8 +141,7 @@ export default function DiagnosticTest() {
             })),
             answers: Object.entries(attempts).map(([questionId, attempt]) => ({
               questionId,
-              selectedAnswer: attempt.selected_idx?.toString() || '',
-              isCorrect: attempt.selected_idx === attempt.correct_idx
+              selectedAnswer: attempt.selected_idx?.toString() || ''
             }))
           }]
         }
