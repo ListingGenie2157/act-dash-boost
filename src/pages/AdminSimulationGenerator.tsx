@@ -44,9 +44,9 @@ const SECTION_CONFIG: Record<string, {
   batchSize: number;
   hasPassages: boolean;
 }> = {
-  english: { totalQuestions: 75, passageCount: 5, questionsPerPassage: 15, batchSize: 15, hasPassages: true },
-  math: { totalQuestions: 60, passageCount: 0, questionsPerPassage: 0, batchSize: 10, hasPassages: false },
-  reading: { totalQuestions: 40, passageCount: 4, questionsPerPassage: 10, batchSize: 10, hasPassages: true },
+  english: { totalQuestions: 50, passageCount: 5, questionsPerPassage: 10, batchSize: 10, hasPassages: true },
+  math: { totalQuestions: 45, passageCount: 0, questionsPerPassage: 0, batchSize: 10, hasPassages: false },
+  reading: { totalQuestions: 36, passageCount: 4, questionsPerPassage: 9, batchSize: 9, hasPassages: true },
   science: { totalQuestions: 40, passageCount: 7, questionsPerPassage: 6, batchSize: 6, hasPassages: true },
 };
 
@@ -450,6 +450,15 @@ export default function AdminSimulationGenerator() {
                   </div>
                   <Progress value={generationProgress} />
                 </div>
+              )}
+
+              {!isGenerating && totalCount > 0 && config && totalCount < config.totalQuestions && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Generated {totalCount} of {config.totalQuestions} target questions — consider regenerating missing passages.
+                  </AlertDescription>
+                </Alert>
               )}
 
               <Button
