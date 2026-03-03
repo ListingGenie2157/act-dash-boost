@@ -295,7 +295,8 @@ serve(async (req) => {
         });
       }
 
-      const formIds: Record<string, string> = {
+      // Accept explicit form_id, fall back to diagnostic form mapping
+      const fallbackFormIds: Record<string, string> = {
         math: "D2MA",
         science: "D2SC",
         reading: "D2RD",
@@ -309,7 +310,8 @@ serve(async (req) => {
         english: "English",
       };
 
-      const formId = formIds[section.toLowerCase()];
+      const explicitFormId = body.form_id as string | undefined;
+      const formId = explicitFormId || fallbackFormIds[section.toLowerCase()];
       if (!formId) {
         return new Response(JSON.stringify({ error: `Invalid section: ${section}` }), {
           status: 400,
