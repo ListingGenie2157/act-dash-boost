@@ -61,7 +61,7 @@ export default function Login() {
         const normalizedEmail = normalizeEmail(email);
         const { data, error } = await supabase.auth.signUp({
           email: normalizedEmail, password,
-          options: { emailRedirectTo: `${window.location.origin}/`, data: { first_name: firstName.trim(), last_name: lastName.trim() } }
+          options: { emailRedirectTo: `${window.location.origin}/onboarding`, data: { first_name: firstName.trim(), last_name: lastName.trim() } }
         });
         if (error) setError(error.message);
         else if (data.user) setSuccess(true);
