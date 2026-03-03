@@ -1,61 +1,52 @@
 
 
-## QA-006 Analysis: Subscription Gating Enforcement
+## QA-007 Analysis: Row-Level Security Cross-User Data Isolation
 
-### Current State: Partially Implemented — Client-Side Gating Component Exists But Is Not Used
+### Current State: All Steps Should Pass — No Code Changes Needed
 
-**Finding: `RequireSubscription` component is defined but never imported or used anywhere in the app.**
+**Step 1 — User A queries User B's data (sessions, responses, mastery, profiles, error_bank, review_queue):**
+All these tables use `USING (auth.uid() = user_id)` for SELECT policies (responses uses a subquery through sessions). Querying with `user_id = <User B's ID>` will return 0 rows because the RLS filter overrides the WHERE clause. Correct.
 
-The component exists in `src/components/RequireSubscription.tsx` and correctly redirects unsubscribed users to `/pricing`. However, it is not wrapped around any route in `App.tsx`. No route uses `RequireSubscription`.
+**Step 2 — User A attempts UPDATE on User B's profile:**
+The `profiles` UPDATE policy uses `USING (auth.uid() = id)`. Since User A's JWT UID does not match User B's profile `id`, the update is silently rejected (0 rows affected). Correct.
 
-This means **client-side gating is not enforced** — any authenticated user can navigate to any protected route regardless of subscription status.
+**Step 3 — User A attempts DELETE on User B's session:**
+The `sessions` table has no DELETE policy at all — DELETE is completely blocked for all users. Correct.
 
-### Server-Side Gating: Correctly Implemented
+**Step 4 — Non-admin queries staging_items:**
+The SELECT policy `authenticated_users_read_drills_and_forms` allows reading rows where `form_id LIKE 'DR_%' OR 'FA_%' OR 'FB_%' OR 'FC_%'`. This means non-admin users CAN read drill/form staging items (by design — these are the question content for drills). The test step says "Verify 0 rows" which is incorrect for this table. If there are staging items with DR_/FA_/FB_/FC_ prefixed form_ids, non-admin users will see them. Currently the table is empty so 0 rows would be returned, but this is data-dependent, not policy-enforced for those prefixes. Admin-only content (other form_ids) is correctly blocked.
 
-The `session-fetch` edge function (lines 93-113) properly enforces server-side gating:
-- Exempts diagnostic (`D2`) and onboarding (`ONB`) form IDs
-- Checks `subscriptions` table for `active` or `trialing` status
-- Validates `current_period_end` hasn't passed
-- Returns 403 if subscription is missing or expired
+**Step 5 — Non-admin queries leads:**
+The `leads` table SELECT policy uses `is_admin()`. Non-admin users get 0 rows. Correct.
 
-The `check-subscription` edge function correctly returns `subscribed: true/false` with `plan_type`.
+**Step 6 — Non-admin queries user_roles:**
+The `user_roles` table has two policies: `Users can view own roles` with `USING (auth.uid() = user_id)` and `Admins can manage all roles`. A non-admin user will only see their own role row(s). Correct.
 
-### What Needs to Change
+### Existing Test Coverage
 
-The `RequireSubscription` wrapper needs to be added to premium routes in `App.tsx`. Based on the server-side exemptions (diagnostic and onboarding are free), the following routes should be gated:
+The `src/tests/rls.test.ts` file already covers several of these scenarios but has gaps:
+- It tests anonymous access and basic authenticated access
+- It does NOT test cross-user isolation (User A reading User B's data)
+- It does NOT test UPDATE/DELETE rejection across users
+- It does NOT test `user_roles` visibility
 
-- `/simulation`, `/simulation-results`
-- `/drill/:subject/setup`, `/drill/:subject/play`, `/drill-history`, `/drill-detail/:taskId`, `/drill/:subject`
-- `/quiz/:section`
-- `/weak-areas`
-- `/calculator-lab`
-- `/pacing-lab`
-- `/review/missed`, `/review/spaced`
-- `/plan`, `/task/:date/:idx`
-- `/lesson/:topic`, `/lessons`
-- `/cheatsheets/*`
+### Verdict: No Code Changes Needed
 
-Routes that should remain free (no subscription required):
-- `/dashboard` — needs to be accessible to show upsell
-- `/onboarding` — onboarding flow
-- `/diagnostic`, `/diagnostic-test/*`, `/diagnostic-results/*` — diagnostic assessment
-- `/analytics` — could go either way, but dashboard-adjacent
-- `/parent-portal` — parent access
-- Admin routes — admin access
+All RLS policies are correctly configured for cross-user data isolation. The existing policies use restrictive (not permissive) mode consistently, which means access is denied by default unless explicitly granted.
 
-### Implementation Plan
+**One clarification for the test plan:** Step 4 (staging_items returning 0 rows for non-admin) is only true when querying non-drill form_ids. Drill content (`DR_*`, `FA_*`, `FB_*`, `FC_*`) is intentionally readable by all authenticated users — this is by design for the drill/quiz feature to function.
 
-1. **Wrap premium routes with `RequireSubscription`** in `App.tsx`. Import `RequireSubscription` and wrap each premium route's element, e.g.:
-   ```
-   <Route path="/simulation" element={<RequireSubscription><LazyLoader><LazySimulation /></LazyLoader></RequireSubscription>} />
-   ```
+### Technical Summary
 
-2. No changes needed to edge functions or the `RequireSubscription` component itself — they are correctly implemented.
-
-### Technical Details
-
-- `RequireSubscription` uses the `useSubscription` hook which calls `check-subscription` edge function
-- The hook has a 1-minute stale time and refetches on window focus
-- The component shows a loading spinner while checking, then redirects to `/pricing` if not subscribed
-- Server-side enforcement in `session-fetch` provides defense-in-depth
+| Table | SELECT Policy | Cross-User Blocked? |
+|-------|--------------|---------------------|
+| sessions | `auth.uid() = user_id` | Yes |
+| responses | subquery through sessions | Yes |
+| mastery | `user_id = auth.uid()` | Yes |
+| profiles | `auth.uid() = id` | Yes |
+| error_bank | `auth.uid() = user_id` | Yes |
+| review_queue | `auth.uid() = user_id` | Yes |
+| leads | `is_admin()` | Yes |
+| user_roles | `auth.uid() = user_id` | Yes (own only) |
+| staging_items | DR/FA/FB/FC readable; rest admin-only | Partial (by design) |
 
