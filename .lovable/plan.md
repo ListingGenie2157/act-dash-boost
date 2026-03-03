@@ -1,54 +1,32 @@
 
 
-## QA-001 Analysis: Signup + Email Confirmation
+## QA-003 Analysis: Monthly Subscription Stripe Checkout
 
-I reviewed the full auth flow (`Login.tsx`, `RequireAuth.tsx`, `App.tsx`, `Onboarding.tsx`) against your test plan. Here is what is solid and what needs fixing before this test case can pass.
+### Current State: All Steps Should Pass
 
-### Current State
+The full checkout flow is correctly implemented end-to-end. Here is the verification:
 
-**Working correctly:**
-- Sign Up form with first/last name, email, password, confirm password
-- Client-side validation: empty fields, invalid email, short password (<8 chars), name length (<2 chars), password mismatch
-- Password strength indicator (weak/medium/strong)
-- "Check Your Email" success screen after signup
-- Profile auto-creation via `handle_new_user()` DB trigger
-- Sign-in redirects to `/onboarding` or `/dashboard` based on `onboarding_complete`
+**Step 1 — Navigate to /pricing:** The `Pricing.tsx` page renders three plan cards (monthly, 90_day, 12_month) with correct prices from `PLAN_PRICES`. The monthly card shows a "7-day free trial" badge and a "Start Free Trial" button.
 
-**Validation error states covered:**
-- Missing fields: "Please fill in all fields"
-- Invalid email: "Please enter a valid email address"
-- Short name: "Names must be at least 2 characters"
-- Short password: "Password must be at least 8 characters"
-- Mismatch: "Passwords do not match" (inline + on submit)
-- Duplicate email: Supabase returns error message, displayed in error banner
+**Step 2 — Click subscribe:** `handleSelectPlan` checks for auth (redirects to `/login` if not signed in), then calls `createCheckout('monthly')` which invokes the `create-checkout` edge function.
 
-### Issue Found: Post-Confirmation Redirect
+**Step 3 — Stripe Checkout loads:** The `create-checkout` edge function sets `mode: "subscription"` for monthly, includes `trial_period_days: 7` in `subscription_data`, and uses the price from `STRIPE_PRICE_MONTHLY` env var. The trial label will appear in Stripe's hosted checkout.
 
-The test plan expects: *"Click confirmation link → redirect to `/onboarding`"*
+**Step 4 — Complete payment:** Stripe handles this entirely.
 
-**Current behavior:** `emailRedirectTo` is set to `window.location.origin + '/'` (the landing page). After clicking the confirmation link, the user lands on `/` (LandingPage), not `/onboarding`. They would need to manually navigate to `/login` and sign in.
+**Step 5 — Redirect to /subscription-success:** The `success_url` is set to `${origin}/subscription-success?session_id={CHECKOUT_SESSION_ID}`. The route exists in `App.tsx`.
 
-This needs to be fixed so the confirmation link redirects to a route that detects the new session and routes the user to `/onboarding`.
+**Step 6 — Polling resolves:** `SubscriptionSuccess.tsx` polls via `refetch()` every 3 seconds for up to 10 attempts. The `check-subscription` edge function checks both the local `subscriptions` table (populated by webhook) and falls back to querying Stripe directly. It correctly handles `trialing` status.
 
-### Plan
+**Step 7 — Database row:** The `stripe-webhook` handles `customer.subscription.created` and upserts into `subscriptions` with the correct plan_type and status from Stripe (which will be `trialing` during the trial period).
 
-#### 1. Fix the email confirmation redirect URL
-In `Login.tsx` line 64, change `emailRedirectTo` from `window.location.origin + '/'` to `window.location.origin + '/dashboard'`. Since `/dashboard` is behind `RequireAuth`, the confirmed user will be authenticated (Supabase sets the session from the confirmation link's token), and the dashboard page already checks `onboarding_complete` — but actually, it doesn't redirect to onboarding automatically.
+### Verdict: No Code Changes Needed
 
-**Better approach:** Change redirect to `window.location.origin + '/onboarding'`. Since `/onboarding` is behind `RequireAuth`, unauthenticated users get bounced to `/login`, and confirmed users land directly on onboarding. The onboarding page should also handle the case where `onboarding_complete` is already true (redirect to dashboard).
+The entire QA-003 flow is correctly wired. The only prerequisites are operational:
+- Stripe test mode is enabled with valid test API keys
+- `STRIPE_PRICE_MONTHLY` secret is set to a valid Stripe price ID
+- `STRIPE_WEBHOOK_SECRET` is set and the webhook endpoint is registered in the Stripe Dashboard for the required events
+- The Supabase project is unpaused
 
-#### 2. Add onboarding guard for already-completed users
-In `Onboarding.tsx`, add a check: if the user's profile already has `onboarding_complete === true`, redirect to `/dashboard` instead of showing the form again.
-
-#### 3. No other code changes needed
-All validation paths, error states, and the success screen are already implemented correctly per the test plan.
-
-### Technical Details
-
-**File changes:**
-
-| File | Change |
-|---|---|
-| `src/pages/Login.tsx` (line 64) | Change `emailRedirectTo` to `${window.location.origin}/onboarding` |
-| `src/pages/Onboarding.tsx` | Add profile query on mount; if `onboarding_complete === true`, `navigate('/dashboard')` |
+All code paths — pricing UI, checkout creation, webhook processing, subscription polling, and success page — are aligned and should pass this test case without modifications.
 
