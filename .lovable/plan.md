@@ -1,46 +1,50 @@
 
 
-## QA-008: Diagnostic Score Calculation Integrity — Issues Found
+## QA-009: Diagnostic Test End-to-End Flow — Issues Found
 
-### Bug 1: Shuffled Index Not De-shuffled Before Submission (CRITICAL)
+### Bug 1: ONB 'Mixed' Section Fails Server Validation (BLOCKER)
 
-The client stores `selected_idx` as the position within the **shuffled** choice order, not the original A/B/C/D index. When submitting, it sends `attempt.selected_idx?.toString()` directly (line 144 of DiagnosticTest.tsx).
+The client sends `section: 'Mixed'` for ONB diagnostics (line 131 of DiagnosticTest.tsx), but the `finish-diagnostic` edge function validates with `z.enum(['English', 'Math', 'Reading', 'Science'])` (line 25 of index.ts). This means **every ONB quick diagnostic submission returns a 400 error**.
 
-The server receives this numeric string, converts it via `IDX_TO_LETTER[numIdx]` (0→A, 1→B, 2→C, 3→D), and compares against the real answer from `staging_items`.
-
-**Problem:** If `choice_order = [2, 0, 3, 1]` and the user taps position 0 (which displays choice C), the server converts `0 → A` instead of `0 → C`. This means scoring is essentially random when choices are shuffled.
-
-**Fix:** In `handleSubmit`, map `selected_idx` through `choice_order` to recover the original choice index before sending:
+**Fix:** Add `'Mixed'` to the Zod enum in `finish-diagnostic/index.ts`:
 ```
-selectedAnswer: IDX_TO_LETTER[attempt.choice_order[attempt.selected_idx]]
+section: z.enum(['English', 'Math', 'Reading', 'Science', 'Mixed'])
 ```
-This converts the shuffled position back to the original letter (A/B/C/D) so the server comparison works correctly.
 
-### Bug 2: Questions/Answers Index Mismatch
+### Bug 2: DiagnosticResults Page Never Receives State (Navigation Gap)
 
-The server matches questions to answers by array index (`block.questions[i]` paired with `block.answers[i]`). But the client builds these arrays differently:
-- `questions` array: built from `questions.map(...)` — ordered by question ord
-- `answers` array: built from `Object.entries(attempts).map(...)` — ordered by object key insertion order (questionId strings)
+After submitting a thorough diagnostic section (D2EN/D2MA/D2RD/D2SC), the client navigates back to `/diagnostic` (line 187). It never navigates to `/diagnostic-results/:formId` with results state. The `DiagnosticResults` page expects `location.state` containing `results` and `formId`, but nothing in the flow provides this.
 
-These two arrays may not be in the same order, causing skill tags to be attributed to the wrong answers.
+For ONB, the client navigates directly to `/diagnostic-results-complete` (line 185), also without passing state.
 
-**Fix:** Build the answers array by iterating over `questions` (same order as the questions array) instead of `Object.entries(attempts)`.
+**Fix:** After the `finish-diagnostic` edge function call, capture the response data and either:
+- For thorough: navigate to `/diagnostic` as before (individual section results are viewed on the complete page)
+- For ONB: already goes to `/diagnostic-results-complete` which fetches from DB — this path works
 
-### Bug 3: ONB Section Mapping
+The edge function response includes `predicted_section_score`, `top_5_weak_skills`, and `diagnostic_id`, but the client discards this data (`const { error } = await supabase.functions.invoke(...)` — only destructures `error`). We should capture the response `data` and optionally pass it as navigation state.
 
-`ONB` maps to `'English'` in `SECTION_MAP`, but ONB is a mixed-section diagnostic. This means all ONB results get stored as section "English" in the diagnostics table, which corrupts the results-complete page that groups by section. This is a minor issue compared to the scoring bugs.
+**Fix:** Change to `const { data: responseData, error }` and for thorough diagnostics, store section results in localStorage so the orchestrator page can show per-section scores as they complete.
+
+### Bug 3: DiagnosticResultsComplete Section Label Mismatch
+
+`getSectionLabel()` in DiagnosticResultsComplete.tsx (line 222) maps abbreviations (`EN`, `MA`, `RD`, `SCI`) but the `diagnostics` table now stores full names (`English`, `Math`, `Reading`, `Science`, `Mixed`). So the labels will fall through to the raw string, which actually works — but the function is dead code. Minor cleanup.
+
+### Bug 4: Thorough Diagnostic Never Marks `diagnostic_completed` on Profile
+
+When completing the thorough flow, the user clicks "View Complete Results" on `/diagnostic` (line 60 of Diagnostic.tsx), which calls `handleContinue()`. This marks `diagnostic_completed: true` on the profile. However, if the user navigates directly to `/diagnostic-results-complete` or refreshes, the flag may not be set, causing the dashboard to keep showing the diagnostic CTA.
+
+**Fix:** Have `DiagnosticResultsComplete` also set `diagnostic_completed: true` when it loads and finds completed diagnostics.
 
 ### Implementation Plan
 
-1. **Fix DiagnosticTest.tsx `handleSubmit`** — Two changes:
-   - Map `selected_idx` through `choice_order` to get original letter
-   - Build answers array by iterating `questions` array (not `Object.entries(attempts)`) to maintain index alignment
-
-2. **No server changes needed** — The server's `IDX_TO_LETTER` conversion and index-based matching will work correctly once the client sends properly de-shuffled letters and aligned arrays.
-
-3. **Update finish-diagnostic test** — Add a test case verifying that shuffled-then-de-shuffled indices produce correct letter mapping.
+1. **Fix `finish-diagnostic` edge function** — Add `'Mixed'` to the section enum
+2. **Fix `DiagnosticTest.tsx` submit handler** — Capture response data from edge function; for thorough diagnostics, store last section result in localStorage
+3. **Fix `DiagnosticResultsComplete.tsx`** — Update `getSectionLabel` to handle full section names; set `diagnostic_completed: true` on profile load
+4. **Update `finish-diagnostic/test.ts`** — Add test for 'Mixed' section validation
 
 ### Files to Edit
-- `src/pages/DiagnosticTest.tsx` (handleSubmit function)
-- `supabase/functions/finish-diagnostic/test.ts` (add shuffle de-mapping test)
+- `supabase/functions/finish-diagnostic/index.ts` (add 'Mixed' to enum)
+- `src/pages/DiagnosticTest.tsx` (capture response data)
+- `src/pages/DiagnosticResultsComplete.tsx` (fix labels, set profile flag)
+- `supabase/functions/finish-diagnostic/test.ts` (add enum test)
 
