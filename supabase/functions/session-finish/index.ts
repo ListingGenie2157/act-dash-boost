@@ -211,6 +211,28 @@ serve(async (req) => {
       avg_time_ms: avgTimeMs,
     };
 
+    // Persist sim_results row for analytics / history
+    const timeStatsJson = {
+      avg_time_ms: avgTimeMs,
+      per_skill: perSkill,
+    };
+
+    const { error: simInsertError } = await supabase
+      .from('sim_results')
+      .insert({
+        user_id: user.id,
+        section: session.section,
+        raw_score: rawScore,
+        started_at: session.started_at,
+        ended_at: new Date().toISOString(),
+        time_stats_json: timeStatsJson,
+      });
+
+    if (simInsertError) {
+      console.error('Failed to insert sim_results:', simInsertError);
+      // Non-blocking — still return results to user
+    }
+
     return new Response(JSON.stringify({
       summary,
       per_skill: perSkill,

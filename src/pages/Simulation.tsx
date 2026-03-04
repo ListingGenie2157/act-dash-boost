@@ -440,12 +440,16 @@ export default function Simulation() {
 
       if (error) throw error;
 
-      // Navigate to results page with session data
+      // Map snake_case edge fn response → camelCase SimulationSummary expected by results page
       navigate('/simulation-results', { 
         state: { 
           sessionId: sessionData.session_id,
-          summary: data.summary,
-          perSkill: data.per_skill
+          totalQuestions: data.summary.total_questions,
+          correctAnswers: data.summary.correct_answers,
+          accuracy: data.summary.accuracy,
+          avgTimeMs: data.summary.avg_time_ms,
+          perSkill: data.per_skill,
+          missedQuestions: data.missed_questions || [],
         }
       });
 
