@@ -23,7 +23,7 @@ const DiagnosticBlockSchema = z.object({
 });
 
 const DiagnosticRequestSchema = z.object({
-  section: z.enum(['English', 'Math', 'Reading', 'Science']),
+  section: z.enum(['English', 'Math', 'Reading', 'Science', 'Mixed']),
   blocks: z.array(DiagnosticBlockSchema).min(1).max(10)
 });
 
@@ -33,6 +33,7 @@ const SECTION_TO_FORM_PREFIX: Record<string, string[]> = {
   'Math': ['D2MA', 'ONB'],
   'Reading': ['D2RD', 'ONB'],
   'Science': ['D2SC', 'ONB'],
+  'Mixed': ['ONB'],
 };
 
 interface DiagnosticBlock {

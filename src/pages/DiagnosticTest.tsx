@@ -134,7 +134,7 @@ export default function DiagnosticTest() {
       const IDX_TO_LETTER = ['A', 'B', 'C', 'D'];
 
       // Call finish-diagnostic edge function — server validates correctness
-      const { error } = await supabase.functions.invoke('finish-diagnostic', {
+      const { data: responseData, error } = await supabase.functions.invoke('finish-diagnostic', {
         body: {
           section: sectionName,
           blocks: [{
@@ -159,11 +159,22 @@ export default function DiagnosticTest() {
 
       if (error) throw error;
 
-      // Mark this section as complete in localStorage
+      // Mark this section as complete in localStorage with score data
       const completed = JSON.parse(localStorage.getItem('diagnostic_completed_sections') || '[]');
       if (!completed.includes(formId)) {
         completed.push(formId);
         localStorage.setItem('diagnostic_completed_sections', JSON.stringify(completed));
+      }
+
+      // Store section result for the orchestrator page to display
+      if (responseData) {
+        const sectionResults = JSON.parse(localStorage.getItem('diagnostic_section_results') || '{}');
+        sectionResults[sectionName] = {
+          score: responseData.predicted_section_score,
+          weakSkills: responseData.top_5_weak_skills,
+          diagnosticId: responseData.diagnostic_id
+        };
+        localStorage.setItem('diagnostic_section_results', JSON.stringify(sectionResults));
       }
 
       toast({
