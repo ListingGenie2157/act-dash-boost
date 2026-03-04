@@ -1,50 +1,54 @@
 
 
-## QA-009: Diagnostic Test End-to-End Flow — Issues Found
+## QA-010: Study Plan Generation + Task Completion — Issues Found
 
-### Bug 1: ONB 'Mixed' Section Fails Server Validation (BLOCKER)
+### Bug 1: Task Index Mismatch (BLOCKER)
 
-The client sends `section: 'Mixed'` for ONB diagnostics (line 131 of DiagnosticTest.tsx), but the `finish-diagnostic` edge function validates with `z.enum(['English', 'Math', 'Reading', 'Science'])` (line 25 of index.ts). This means **every ONB quick diagnostic submission returns a 400 error**.
-
-**Fix:** Add `'Mixed'` to the Zod enum in `finish-diagnostic/index.ts`:
+**Plan.tsx** filters out SIM tasks before rendering:
+```js
+const tasks = allTasks.filter(t => t.type !== 'SIM');
 ```
-section: z.enum(['English', 'Math', 'Reading', 'Science', 'Mixed'])
-```
+Then uses the **filtered** array index in the link: `/task/${plan.the_date}/${taskIdx}`.
 
-### Bug 2: DiagnosticResults Page Never Receives State (Navigation Gap)
+**TaskLauncher** reads the **unfiltered** `tasks_json` array and uses the raw index `i`. If `tasks_json = [LEARN, SIM, DRILL]`, Plan shows `[LEARN, DRILL]` with indices 0 and 1. Clicking DRILL sends index 1, but TaskLauncher reads `tasks_json[1]` which is SIM — wrong task.
 
-After submitting a thorough diagnostic section (D2EN/D2MA/D2RD/D2SC), the client navigates back to `/diagnostic` (line 187). It never navigates to `/diagnostic-results/:formId` with results state. The `DiagnosticResults` page expects `location.state` containing `results` and `formId`, but nothing in the flow provides this.
+**Fix:** Instead of using the filtered index, use the **original** index from `allTasks`. Change Plan.tsx to track each task's original position in `tasks_json` and pass that as the URL index.
 
-For ONB, the client navigates directly to `/diagnostic-results-complete` (line 185), also without passing state.
+### Bug 2: DrillRunner Creates Duplicate Tasks Instead of Using Plan Task
 
-**Fix:** After the `finish-diagnostic` edge function call, capture the response data and either:
-- For thorough: navigate to `/diagnostic` as before (individual section results are viewed on the complete page)
-- For ONB: already goes to `/diagnostic-results-complete` which fetches from DB — this path works
+When launched via `/task/:date/:idx` → TaskLauncher → `/drill/:subject?...`, the DrillRunner always creates a **new** `study_tasks` row (line 175-185). The original plan task is never updated, so the plan never shows completion.
 
-The edge function response includes `predicted_section_score`, `top_5_weak_skills`, and `diagnostic_id`, but the client discards this data (`const { error } = await supabase.functions.invoke(...)` — only destructures `error`). We should capture the response `data` and optionally pass it as navigation state.
+**Fix:** TaskLauncher should pass the existing `study_tasks` ID (looked up by `user_id + the_date + type + skill_id`) or a task reference via URL params. DrillRunner should accept an optional `taskId` param and skip creating a new task if one is provided.
 
-**Fix:** Change to `const { data: responseData, error }` and for thorough diagnostics, store section results in localStorage so the orchestrator page can show per-section scores as they complete.
+### Bug 3: No Completion Checkmarks on Plan Page
 
-### Bug 3: DiagnosticResultsComplete Section Label Mismatch
+Plan.tsx renders tasks from `tasks_json` but never cross-references `study_tasks` for completion status. There's no visual indication of which tasks have been completed.
 
-`getSectionLabel()` in DiagnosticResultsComplete.tsx (line 222) maps abbreviations (`EN`, `MA`, `RD`, `SCI`) but the `diagnostics` table now stores full names (`English`, `Math`, `Reading`, `Science`, `Mixed`). So the labels will fall through to the raw string, which actually works — but the function is dead code. Minor cleanup.
+**Fix:** Fetch `study_tasks` for the 7-day range and match by `(the_date, type, skill_id)`. Show a checkmark or completed state on cards where `status = 'DONE'` or `'COMPLETED'`.
 
-### Bug 4: Thorough Diagnostic Never Marks `diagnostic_completed` on Profile
+### Bug 4: DrillRunner Bypasses complete-task Edge Function
 
-When completing the thorough flow, the user clicks "View Complete Results" on `/diagnostic` (line 60 of Diagnostic.tsx), which calls `handleContinue()`. This marks `diagnostic_completed: true` on the profile. However, if the user navigates directly to `/diagnostic-results-complete` or refreshes, the flag may not be set, causing the dashboard to keep showing the diagnostic CTA.
+DrillRunner does a direct client-side `.update()` on `study_tasks` (line 291-298) instead of calling the `complete-task` edge function. This means:
+- Mastery/progress tables aren't updated
+- Review queue isn't updated via the spaced repetition logic
+- Error bank atomic increment isn't triggered through the server path
 
-**Fix:** Have `DiagnosticResultsComplete` also set `diagnostic_completed: true` when it loads and finds completed diagnostics.
+**Fix:** After drill completion, call `supabase.functions.invoke('complete-task', ...)` with the task data, similar to how it's defined in `src/lib/supabase-client.ts`. Remove the direct client-side update.
 
 ### Implementation Plan
 
-1. **Fix `finish-diagnostic` edge function** — Add `'Mixed'` to the section enum
-2. **Fix `DiagnosticTest.tsx` submit handler** — Capture response data from edge function; for thorough diagnostics, store last section result in localStorage
-3. **Fix `DiagnosticResultsComplete.tsx`** — Update `getSectionLabel` to handle full section names; set `diagnostic_completed: true` on profile load
-4. **Update `finish-diagnostic/test.ts`** — Add test for 'Mixed' section validation
+**Files to edit:**
 
-### Files to Edit
-- `supabase/functions/finish-diagnostic/index.ts` (add 'Mixed' to enum)
-- `src/pages/DiagnosticTest.tsx` (capture response data)
-- `src/pages/DiagnosticResultsComplete.tsx` (fix labels, set profile flag)
-- `supabase/functions/finish-diagnostic/test.ts` (add enum test)
+1. **`src/pages/Plan.tsx`** — Fix task index to use original `tasks_json` position; fetch `study_tasks` completion status and show checkmarks on completed task cards.
+
+2. **`src/pages/TaskLauncher.tsx`** — Look up matching `study_tasks` row by `(user_id, the_date, type, skill_id)` and pass its ID as a URL param (`taskId`) to drill/quiz/lesson routes.
+
+3. **`src/pages/DrillRunner.tsx`** — Accept optional `taskId` from URL params; skip creating a new task if provided; call `complete-task` edge function instead of direct client-side update on completion.
+
+### Technical Details
+
+- Plan.tsx index fix: Map filtered tasks back to their original indices via `.map()` before filtering, preserving `originalIdx`.
+- TaskLauncher task lookup: Query `study_tasks` table with `eq('the_date', date).eq('type', type).eq('skill_id', skillId)` to find the matching row.
+- DrillRunner completion: Use the `completeTask()` helper from `src/lib/supabase-client.ts` which already wraps the edge function call.
+- Completion status: Add a `completedTasks` state in Plan.tsx populated from `study_tasks` where `status IN ('DONE', 'COMPLETED')`.
 
