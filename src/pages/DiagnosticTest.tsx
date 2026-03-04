@@ -125,10 +125,13 @@ export default function DiagnosticTest() {
       // Map form ID abbreviation to full section name for server validation
       const SECTION_MAP: Record<string, string> = {
         'EN': 'English', 'MA': 'Math', 'RD': 'Reading', 'SC': 'Science',
-        'ONB': 'English' // ONB is a mixed diagnostic, server handles accordingly
       };
       const sectionCode = formId.startsWith('D2') ? formId.slice(2) : formId;
-      const sectionName = SECTION_MAP[sectionCode] || sectionCode;
+      // ONB is a mixed-section diagnostic — send 'Mixed' so server handles per-question sections
+      const sectionName = formId === 'ONB' ? 'Mixed' : (SECTION_MAP[sectionCode] || sectionCode);
+
+      // De-shuffle selected_idx back to original letter (A/B/C/D)
+      const IDX_TO_LETTER = ['A', 'B', 'C', 'D'];
 
       // Call finish-diagnostic edge function — server validates correctness
       const { error } = await supabase.functions.invoke('finish-diagnostic', {
@@ -139,10 +142,17 @@ export default function DiagnosticTest() {
               id: q.question_id, 
               skill_tags: q.skill_id ? [q.skill_id] : []
             })),
-            answers: Object.entries(attempts).map(([questionId, attempt]) => ({
-              questionId,
-              selectedAnswer: attempt.selected_idx?.toString() || ''
-            }))
+            // Build answers in same order as questions array to maintain index alignment
+            answers: questions.map(q => {
+              const attempt = attempts[q.question_id];
+              const originalIdx = attempt?.selected_idx != null
+                ? attempt.choice_order[attempt.selected_idx]
+                : undefined;
+              return {
+                questionId: q.question_id,
+                selectedAnswer: originalIdx != null ? IDX_TO_LETTER[originalIdx] : ''
+              };
+            })
           }]
         }
       });

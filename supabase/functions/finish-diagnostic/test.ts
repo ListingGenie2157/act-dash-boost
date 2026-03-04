@@ -28,6 +28,46 @@ Deno.test('finish-diagnostic - answer matching is case-insensitive', () => {
   assertEquals(selectedLetter === realAnswer, true);
 });
 
+Deno.test('finish-diagnostic - shuffle de-mapping produces correct letter', () => {
+  const IDX_TO_LETTER = ['A', 'B', 'C', 'D'];
+  
+  // Scenario: choice_order = [2, 0, 3, 1]
+  // UI position 0 shows original choice C (index 2)
+  // UI position 1 shows original choice A (index 0)
+  // UI position 2 shows original choice D (index 3)
+  // UI position 3 shows original choice B (index 1)
+  const choiceOrder = [2, 0, 3, 1];
+  
+  // User taps position 0 → selected_idx = 0
+  // De-shuffle: choiceOrder[0] = 2 → IDX_TO_LETTER[2] = 'C'
+  const selected0 = IDX_TO_LETTER[choiceOrder[0]];
+  assertEquals(selected0, 'C');
+  
+  // User taps position 1 → selected_idx = 1
+  // De-shuffle: choiceOrder[1] = 0 → IDX_TO_LETTER[0] = 'A'
+  const selected1 = IDX_TO_LETTER[choiceOrder[1]];
+  assertEquals(selected1, 'A');
+  
+  // User taps position 2 → selected_idx = 2
+  // De-shuffle: choiceOrder[2] = 3 → IDX_TO_LETTER[3] = 'D'
+  const selected2 = IDX_TO_LETTER[choiceOrder[2]];
+  assertEquals(selected2, 'D');
+  
+  // User taps position 3 → selected_idx = 3
+  // De-shuffle: choiceOrder[3] = 1 → IDX_TO_LETTER[1] = 'B'
+  const selected3 = IDX_TO_LETTER[choiceOrder[3]];
+  assertEquals(selected3, 'B');
+});
+
+Deno.test('finish-diagnostic - identity shuffle produces same letter', () => {
+  const IDX_TO_LETTER = ['A', 'B', 'C', 'D'];
+  const choiceOrder = [0, 1, 2, 3]; // no shuffle
+  
+  for (let i = 0; i < 4; i++) {
+    assertEquals(IDX_TO_LETTER[choiceOrder[i]], IDX_TO_LETTER[i]);
+  }
+});
+
 Deno.test('finish-diagnostic - skill accuracy aggregation', () => {
   const skillAccuracy: Record<string, { correct: number; total: number }> = {};
   
