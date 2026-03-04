@@ -103,7 +103,7 @@ const Analytics = () => {
         if (skill && task.accuracy !== null && task.size) {
           const cluster = skill.cluster;
           const existing = clusterMap.get(cluster) || { correct: 0, total: 0 };
-          existing.correct += Math.round((task.accuracy / 100) * task.size);
+          existing.correct += Math.round(task.accuracy * task.size);
           existing.total += task.size;
           clusterMap.set(cluster, existing);
         }
@@ -139,7 +139,7 @@ const Analytics = () => {
       // Calculate baseline vs latest scores
       const baselineVsLatest: AnalyticsData['baselineVsLatest'] = [];
       if (diagnostics && diagnostics.length > 0) {
-        const sections = ['math', 'english', 'reading', 'science'];
+        const sections = ['Math', 'English', 'Reading', 'Science'];
         
         sections.forEach(section => {
           const sectionDiagnostics = diagnostics.filter(d => d.section === section);
