@@ -11,13 +11,10 @@ export default function TaskLauncher() {
 
   useEffect(() => {
     const launchTask = async () => {
-      // Validate date format (YYYY-MM-DD)
       if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         navigate('/plan', { replace: true });
         return;
       }
-
-      // Validate idx is an integer
       if (idx == null || !/^\d+$/.test(idx)) {
         navigate('/plan', { replace: true });
         return;
@@ -25,16 +22,10 @@ export default function TaskLauncher() {
 
       const i = Number(idx);
 
-      // Get authenticated user
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        navigate('/plan', { replace: true });
-        return;
-      }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { navigate('/plan', { replace: true }); return; }
 
-      // Fetch tasks for the date from study_plan_days table
+      // Fetch plan day tasks
       const { data: planDay, error } = await supabase
         .from('study_plan_days')
         .select('tasks_json')
@@ -51,17 +42,13 @@ export default function TaskLauncher() {
         ? (planDay.tasks_json as unknown as PlanTaskJson[])
         : [];
       
-      // Validate idx is in range
       if (i < 0 || i >= tasks.length) {
         navigate('/plan', { replace: true });
         return;
       }
 
       const task = tasks[i];
-      if (!task) {
-        navigate('/plan', { replace: true });
-        return;
-      }
+      if (!task) { navigate('/plan', { replace: true }); return; }
 
       const type = String(task.type || '').toUpperCase();
       const code = task.skill_id || '';
@@ -74,22 +61,38 @@ export default function TaskLauncher() {
       
       const n = task.size ?? 10;
 
+      // Look up existing study_tasks row to pass its ID downstream
+      let existingTaskId: string | undefined;
+      const { data: existingTask } = await supabase
+        .from('study_tasks')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('the_date', date)
+        .eq('type', type)
+        .eq('skill_id', code || '')
+        .maybeSingle();
+      
+      if (existingTask?.id) {
+        existingTaskId = existingTask.id;
+      }
+
+      const taskIdParam = existingTaskId ? `&taskId=${existingTaskId}` : '';
+
       switch (type) {
         case 'LEARN':
-          navigate(`/lesson/${code}?date=${encodeURIComponent(date)}&i=${i}`, { replace: true });
+          navigate(`/lesson/${code}?date=${encodeURIComponent(date)}&i=${i}${taskIdParam}`, { replace: true });
           break;
         case 'DRILL': {
-          // Reverse-lookup subject from skill prefix (M->Math, E->English, etc.)
           const prefix = code[0]?.toUpperCase() ?? '';
           const subject = Object.entries(SKILL_PREFIX).find(([, p]) => p === prefix)?.[0] ?? 'Math';
-          navigate(`/drill/${subject}?n=${n}&skill=${encodeURIComponent(code)}&date=${encodeURIComponent(date)}&i=${i}`, { replace: true });
+          navigate(`/drill/${subject}?n=${n}&skill=${encodeURIComponent(code)}&date=${encodeURIComponent(date)}&i=${i}${taskIdParam}`, { replace: true });
           break;
         }
         case 'QUIZ':
-          navigate(`/quiz/${code}?n=${n}&date=${encodeURIComponent(date)}&i=${i}`, { replace: true });
+          navigate(`/quiz/${code}?n=${n}&date=${encodeURIComponent(date)}&i=${i}${taskIdParam}`, { replace: true });
           break;
         case 'SIM':
-          navigate(`/simulation?date=${encodeURIComponent(date)}&i=${i}`, { replace: true });
+          navigate(`/simulation?date=${encodeURIComponent(date)}&i=${i}${taskIdParam}`, { replace: true });
           break;
         default:
           navigate('/plan', { replace: true });
