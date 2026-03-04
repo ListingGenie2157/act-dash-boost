@@ -5,7 +5,7 @@ import type { StudyPlanDay, StudyPlanTask } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Target, GraduationCap, RotateCcw, Zap, Clock, Calendar, TrendingUp, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, Target, GraduationCap, RotateCcw, Zap, Clock, Calendar, TrendingUp, CheckCircle2, type LucideIcon } from 'lucide-react';
 import { CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { reportError } from '@/lib/errorReporter';
@@ -18,55 +18,66 @@ const TASK_CONFIG: Record<string, { icon: LucideIcon; gradient: string; label: s
   SIM: { icon: Clock, gradient: 'from-destructive to-rose-500', label: 'Test' }
 };
 
+/** Key for matching a study_task to a plan task */
+function taskKey(date: string, type: string, skillId: string | null | undefined): string {
+  return `${date}|${type}|${skillId ?? ''}`;
+}
+
 export default function Plan() {
   const navigate = useNavigate();
   const [plans, setPlans] = useState<StudyPlanDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [completedKeys, setCompletedKeys] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    const fetchPlans = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setPlans([]);
-          setLoading(false);
-          return;
-        }
-        const today = new Date().toISOString().split('T')[0];
-        // Use 6 days from now for a proper 7-day range (today + 6 = 7 days inclusive)
-        const sixDaysFromNow = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0];
-        const { data: planDays, error: fetchError } = await supabase
+  const today = new Date().toISOString().split('T')[0];
+  const sixDaysFromNow = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  const fetchPlans = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setPlans([]); setLoading(false); return; }
+
+      const [plansRes, tasksRes] = await Promise.all([
+        supabase
           .from('study_plan_days')
           .select('the_date, tasks_json, generated_at, user_id')
           .eq('user_id', user.id)
           .gte('the_date', today)
           .lte('the_date', sixDaysFromNow)
-          .order('the_date');
-        
-        if (fetchError) {
-          throw fetchError;
-        }
+          .order('the_date'),
+        supabase
+          .from('study_tasks')
+          .select('the_date, type, skill_id, status')
+          .eq('user_id', user.id)
+          .gte('the_date', today)
+          .lte('the_date', sixDaysFromNow)
+          .in('status', ['DONE', 'COMPLETED'])
+      ]);
 
-        // Type cast and validate tasks_json
-        const typedPlans: StudyPlanDay[] = (planDays || []).map(day => ({
-          ...day,
-          tasks_json: Array.isArray(day.tasks_json) ? day.tasks_json as unknown as StudyPlanTask[] : []
-        }));
+      if (plansRes.error) throw plansRes.error;
 
-        setPlans(typedPlans);
-      } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load plan';
-        setError(errorMessage);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPlans();
-  }, []);
+      const typedPlans: StudyPlanDay[] = (plansRes.data || []).map(day => ({
+        ...day,
+        tasks_json: Array.isArray(day.tasks_json) ? day.tasks_json as unknown as StudyPlanTask[] : []
+      }));
+      setPlans(typedPlans);
+
+      // Build completion lookup
+      const keys = new Set<string>();
+      (tasksRes.data || []).forEach(t => {
+        keys.add(taskKey(t.the_date, t.type, t.skill_id));
+      });
+      setCompletedKeys(keys);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load plan');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchPlans(); }, []);
 
   const handleGeneratePlan = async () => {
     setGenerating(true);
@@ -74,36 +85,12 @@ export default function Plan() {
       const { error: planError } = await supabase.functions.invoke('generate-study-plan', {
         body: { force: true }
       });
-
       if (planError) {
         reportError(planError instanceof Error ? planError : new Error(String(planError)), { page: 'Plan' });
         toast.error(planError.message || 'Failed to generate study plan');
       } else {
         toast.success('Your study plan is ready!');
-        // Refetch plans
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        
-        const today = new Date().toISOString().split('T')[0];
-        // Use 6 days from now for a proper 7-day range (today + 6 = 7 days inclusive)
-        const sixDaysFromNow = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0];
-        const { data: planDays } = await supabase
-          .from('study_plan_days')
-          .select('the_date, tasks_json, generated_at, user_id')
-          .eq('user_id', user.id)
-          .gte('the_date', today)
-          .lte('the_date', sixDaysFromNow)
-          .order('the_date');
-
-        // Type cast and validate tasks_json
-        const typedPlans: StudyPlanDay[] = (planDays || []).map(day => ({
-          ...day,
-          tasks_json: Array.isArray(day.tasks_json) ? day.tasks_json as unknown as StudyPlanTask[] : []
-        }));
-
-        setPlans(typedPlans);
+        await fetchPlans();
       }
     } catch (err) {
       reportError(err instanceof Error ? err : new Error(String(err)), { page: 'Plan' });
@@ -142,8 +129,6 @@ export default function Plan() {
     );
   }
 
-  const today = new Date().toISOString().split('T')[0];
-
   return (
     <div className="min-h-screen bg-background">
       <div className="bg-gradient-to-br from-primary/5 via-background to-secondary/5 border-b">
@@ -164,76 +149,8 @@ export default function Plan() {
 
       <div className="max-w-5xl mx-auto p-6">
         {/* Subject Balance Overview */}
-        {plans.length > 0 && (() => {
-          // Calculate subject distribution
-          const subjectCounts: Record<string, number> = {
-            Math: 0,
-            English: 0,
-            Reading: 0,
-            Science: 0
-          };
-          
-          plans.forEach(plan => {
-            (plan.tasks_json || []).forEach((task: StudyPlanTask) => {
-              if (task.type === 'LEARN' || task.type === 'DRILL') {
-                // Extract subject from title or use type
-                const subject = task.title?.split(':')[0]?.trim() || 'Other';
-                if (subjectCounts[subject] !== undefined) {
-                  subjectCounts[subject]++;
-                }
-              }
-            });
-          });
-          
-          const total = Object.values(subjectCounts).reduce((a, b) => a + b, 0);
-          
-          if (total > 0) {
-            return (
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    Subject Balance Overview
-                  </CardTitle>
-                  <CardDescription>
-                    Distribution of learning tasks across all 4 ACT subjects
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {Object.entries(subjectCounts).map(([subject, count]) => {
-                      const percentage = total > 0 ? (count / total) * 100 : 0;
-                      const colors: Record<string, string> = {
-                        Math: 'bg-primary',
-                        English: 'bg-success',
-                        Reading: 'bg-secondary',
-                        Science: 'bg-accent'
-                      };
-                      
-                      return (
-                        <div key={subject}>
-                          <div className="flex items-center justify-between mb-1 text-sm">
-                            <span className="font-medium">{subject}</span>
-                            <span className="text-muted-foreground">
-                              {count} task{count !== 1 ? 's' : ''} ({percentage.toFixed(0)}%)
-                            </span>
-                          </div>
-                          <div className="h-2 bg-muted rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full ${colors[subject]} transition-all`}
-                              style={{ width: `${percentage}%` }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          }
-          return null;
-        })()}
+        <SubjectBalanceCard plans={plans} />
+
         {plans.length === 0 ? (
           <Card className="p-12 text-center">
             <Calendar className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
@@ -254,85 +171,86 @@ export default function Plan() {
           <div className="space-y-6">
             {plans.map((plan, idx) => {
               const allTasks: StudyPlanTask[] = plan.tasks_json ?? [];
-              const tasks = allTasks.filter(t => t.type !== 'SIM');
+              // Map tasks with their ORIGINAL index, then filter
+              const tasksWithIdx = allTasks
+                .map((t, originalIdx) => ({ task: t, originalIdx }))
+                .filter(({ task }) => task.type !== 'SIM');
               
-              if (tasks.length === 0) return null;
+              if (tasksWithIdx.length === 0) return null;
 
               const isToday = plan.the_date === today;
               const dayDate = new Date(plan.the_date + 'T00:00:00');
               const dayName = dayDate.toLocaleDateString('en-US', { weekday: 'long' });
-              const dateFormatted = dayDate.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric' 
-              });
+              const dateFormatted = dayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
               
               return (
                 <Card 
                   key={idx} 
-                  className={`overflow-hidden transition-all ${
-                    isToday ? 'ring-2 ring-primary shadow-lg' : ''
-                  }`}
+                  className={`overflow-hidden transition-all ${isToday ? 'ring-2 ring-primary shadow-lg' : ''}`}
                 >
-                  <div className={`p-4 border-b ${
-                    isToday 
-                      ? 'bg-gradient-to-r from-primary/10 to-secondary/10' 
-                      : 'bg-muted/30'
-                  }`}>
+                  <div className={`p-4 border-b ${isToday ? 'bg-gradient-to-r from-primary/10 to-secondary/10' : 'bg-muted/30'}`}>
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="flex items-center gap-2">
                           <h2 className="text-xl font-bold">{dayName}</h2>
-                          {isToday && (
-                            <Badge className="bg-primary">Today</Badge>
-                          )}
+                          {isToday && <Badge className="bg-primary">Today</Badge>}
                         </div>
                         <p className="text-sm text-muted-foreground">{dateFormatted}</p>
                       </div>
                       <Badge variant="outline" className="text-sm">
-                        {tasks.length} task{tasks.length !== 1 ? 's' : ''}
+                        {tasksWithIdx.length} task{tasksWithIdx.length !== 1 ? 's' : ''}
                       </Badge>
                     </div>
                   </div>
                   
                   <div className="p-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {tasks.sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0)).map((task: StudyPlanTask, taskIdx: number) => {
-                        const config = TASK_CONFIG[task.type] || TASK_CONFIG.DRILL;
-                        const Icon = config.icon;
-                        
-                        return (
-                          <Link
-                            key={taskIdx}
-                            to={`/task/${plan.the_date}/${taskIdx}`}
-                            className="block group"
-                          >
-                            <Card
-                              className={`
-                                relative overflow-hidden p-4 text-white transition-all duration-300
-                                bg-gradient-to-br ${config.gradient}
-                                hover:scale-105 hover:shadow-lg border-0
-                              `}
+                      {tasksWithIdx
+                        .sort((a, b) => (a.task.sequence ?? 0) - (b.task.sequence ?? 0))
+                        .map(({ task, originalIdx }) => {
+                          const config = TASK_CONFIG[task.type] || TASK_CONFIG.DRILL;
+                          const Icon = config.icon;
+                          const isDone = completedKeys.has(taskKey(plan.the_date, task.type, task.skill_id));
+                          
+                          return (
+                            <Link
+                              key={originalIdx}
+                              to={`/task/${plan.the_date}/${originalIdx}`}
+                              className="block group"
                             >
-                              <div className="flex items-center gap-3 mb-2">
-                                <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2">
-                                  <Icon className="h-4 w-4" />
+                              <Card
+                                className={`
+                                  relative overflow-hidden p-4 text-white transition-all duration-300
+                                  bg-gradient-to-br ${config.gradient}
+                                  hover:scale-105 hover:shadow-lg border-0
+                                  ${isDone ? 'opacity-70' : ''}
+                                `}
+                              >
+                                {isDone && (
+                                  <div className="absolute top-2 right-2">
+                                    <CheckCircle2 className="h-5 w-5 text-white drop-shadow" />
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2">
+                                    <Icon className="h-4 w-4" />
+                                  </div>
+                                  <Badge className="bg-white/20 backdrop-blur-sm text-white border-0 text-xs">
+                                    {isDone ? '✓ Done' : config.label}
+                                  </Badge>
                                 </div>
-                                <Badge className="bg-white/20 backdrop-blur-sm text-white border-0 text-xs">
-                                  {config.label}
-                                </Badge>
-                              </div>
-                              
-                              <h3 className="text-sm font-semibold mb-1 line-clamp-2">
-                                {task.title || `${config.label} ${taskIdx + 1}`}
-                              </h3>
-                              
-                              <p className="text-white/80 text-xs">
-                                {task.size || 5} questions
-                              </p>
-                            </Card>
-                          </Link>
-                        );
-                      })}
+                                
+                                <h3 className="text-sm font-semibold mb-1 line-clamp-2">
+                                  {task.title || `${config.label} ${originalIdx + 1}`}
+                                </h3>
+                                
+                                <p className="text-white/80 text-xs">
+                                  {task.size || 5} questions
+                                </p>
+                              </Card>
+                            </Link>
+                          );
+                        })}
                     </div>
                   </div>
                 </Card>
@@ -342,5 +260,58 @@ export default function Plan() {
         )}
       </div>
     </div>
+  );
+}
+
+/** Subject balance overview extracted as a component */
+function SubjectBalanceCard({ plans }: { plans: StudyPlanDay[] }) {
+  if (plans.length === 0) return null;
+
+  const subjectCounts: Record<string, number> = { Math: 0, English: 0, Reading: 0, Science: 0 };
+  plans.forEach(plan => {
+    (plan.tasks_json || []).forEach((task: StudyPlanTask) => {
+      if (task.type === 'LEARN' || task.type === 'DRILL') {
+        const subject = task.title?.split(':')[0]?.trim() || 'Other';
+        if (subjectCounts[subject] !== undefined) subjectCounts[subject]++;
+      }
+    });
+  });
+  const total = Object.values(subjectCounts).reduce((a, b) => a + b, 0);
+  if (total === 0) return null;
+
+  const colors: Record<string, string> = {
+    Math: 'bg-primary', English: 'bg-success', Reading: 'bg-secondary', Science: 'bg-accent'
+  };
+
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <TrendingUp className="h-5 w-5" />
+          Subject Balance Overview
+        </CardTitle>
+        <CardDescription>Distribution of learning tasks across all 4 ACT subjects</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {Object.entries(subjectCounts).map(([subject, count]) => {
+            const percentage = (count / total) * 100;
+            return (
+              <div key={subject}>
+                <div className="flex items-center justify-between mb-1 text-sm">
+                  <span className="font-medium">{subject}</span>
+                  <span className="text-muted-foreground">
+                    {count} task{count !== 1 ? 's' : ''} ({percentage.toFixed(0)}%)
+                  </span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div className={`h-full ${colors[subject]} transition-all`} style={{ width: `${percentage}%` }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -13,6 +13,7 @@ import { getRunStyle, type RunStyle } from '@/lib/runStyles';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
 import { reportError } from '@/lib/errorReporter';
+import { completeTask } from '@/lib/supabase-client';
 
 export default function DrillRunner() {
   const navigate = useNavigate();
@@ -49,7 +50,6 @@ export default function DrillRunner() {
       setRunStyle(style);
     }
     
-    // Initialize timer from URL params
     const timeParam = searchParams.get('time');
     if (timeParam) {
       const time = parseInt(timeParam, 10);
@@ -94,7 +94,9 @@ export default function DrillRunner() {
         }
         setUserId(user.id);
 
-        // Validate parameters
+        // Check if a taskId was passed from the study plan
+        const planTaskId = searchParams.get('taskId');
+
         const nParam = searchParams.get('n');
         const validation = safeValidateInput(drillRunnerSchema, {
           subject: subject,
@@ -109,16 +111,11 @@ export default function DrillRunner() {
 
         const { subject: validSubject, n } = validation.data;
 
-        // Map subject to drill form ID (accepts full subject names)
         const formIdMap: Record<string, string> = {
-          'Reading': 'DR_RD',
-          'RD': 'DR_RD',
-          'Math': 'DR_MA',
-          'MA': 'DR_MA',
-          'English': 'DR_EN',
-          'EN': 'DR_EN',
-          'Science': 'DR_SC',
-          'SC': 'DR_SC',
+          'Reading': 'DR_RD', 'RD': 'DR_RD',
+          'Math': 'DR_MA', 'MA': 'DR_MA',
+          'English': 'DR_EN', 'EN': 'DR_EN',
+          'Science': 'DR_SC', 'SC': 'DR_SC',
         };
         const drillFormId = formIdMap[validSubject];
 
@@ -128,20 +125,17 @@ export default function DrillRunner() {
           return;
         }
 
-        // Fetch questions from v_staging_items_public (answer/explanation excluded for security)
         const { data, error: qError } = await supabase
           .from('v_staging_items_public')
           .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, skill_code, form_id')
           .eq('form_id', drillFormId)
-          .limit(n ?? 10); // Use default of 10 if undefined
+          .limit(n ?? 10);
 
         if (qError) {
           setError(qError.message);
         } else if (!data || data.length === 0) {
           setError('No questions found for this section');
         } else {
-          // Map v_staging_items_public to Question type
-          // Note: answer is validated server-side, not available client-side
           const mappedQuestions: Question[] = data.map((q) => ({
             id: String(q.staging_id || ''),
             stem: q.question || '',
@@ -149,12 +143,11 @@ export default function DrillRunner() {
             choice_b: q.choice_b || '',
             choice_c: q.choice_c || '',
             choice_d: q.choice_d || '',
-            answer: 'A' as const, // Placeholder - actual validation is server-side
+            answer: 'A' as const,
             skill_code: q.skill_code ?? undefined,
             form_id: q.form_id ?? undefined,
           }));
           
-          // Filter out questions with invalid answers
           const validQuestions = mappedQuestions.filter(q => {
             const isValid = q.answer && ['A', 'B', 'C', 'D'].includes(q.answer);
             if (!isValid) {
@@ -171,21 +164,31 @@ export default function DrillRunner() {
               logger.debug(`Filtered out ${mappedQuestions.length - validQuestions.length} questions with invalid answers`);
             }
             
-            // Create study_task for tracking
-            const { data: taskData, error: taskError } = await supabase
-              .from('study_tasks')
-              .insert({
-                user_id: user.id,
-                type: 'DRILL',
-                the_date: new Date().toISOString().split('T')[0],
-                size: validQuestions.length,
-                status: 'IN_PROGRESS',
-              })
-              .select('id')
-              .single();
-            
-            if (!taskError && taskData) {
-              setTaskId(taskData.id);
+            // Use existing plan task ID if provided, otherwise create a new one
+            if (planTaskId) {
+              setTaskId(planTaskId);
+              // Update existing task to IN_PROGRESS
+              await supabase
+                .from('study_tasks')
+                .update({ status: 'IN_PROGRESS' })
+                .eq('id', planTaskId)
+                .eq('user_id', user.id);
+            } else {
+              const { data: taskData, error: taskError } = await supabase
+                .from('study_tasks')
+                .insert({
+                  user_id: user.id,
+                  type: 'DRILL',
+                  the_date: new Date().toISOString().split('T')[0],
+                  size: validQuestions.length,
+                  status: 'IN_PROGRESS',
+                })
+                .select('id')
+                .single();
+              
+              if (!taskError && taskData) {
+                setTaskId(taskData.id);
+              }
             }
             
             setLastAnswerTime(Date.now());
@@ -211,12 +214,10 @@ export default function DrillRunner() {
     const now = Date.now();
     const timeSpent = now - lastAnswerTime;
     
-    // Track timing
     setAnswerTimes(prev => [...prev, timeSpent]);
     setLastAnswerTime(now);
     if (isCorrect) {
       setCorrectCount(prev => prev + 1);
-      // Update streak
       setCurrentStreak(prev => {
         const newStreak = prev + 1;
         if (newStreak > bestStreak) setBestStreak(newStreak);
@@ -224,17 +225,14 @@ export default function DrillRunner() {
       });
       setStreakEvent('scored');
     } else {
-      // Break streak
       if (currentStreak > 0) {
         setStreakEvent('broke');
       }
       setCurrentStreak(0);
     }
-    // Clear streak event after animation
     setTimeout(() => setStreakEvent(null), 600);
     
     try {
-      // Track attempt in database with task_id and actual shuffled choice_order
       await supabase.from('attempts').insert({
         user_id: userId,
         question_id: q.id,
@@ -246,7 +244,6 @@ export default function DrillRunner() {
         task_id: taskId,
       });
       
-      // Add to review queue if incorrect (spaced repetition)
       if (!isCorrect) {
         const dueDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
         await supabase.from('review_queue').insert({
@@ -256,7 +253,6 @@ export default function DrillRunner() {
           interval_days: 2,
         });
         
-        // Record in error_bank using atomic RPC (replaces N+1 SELECT/INSERT/UPDATE)
         await supabase.rpc('increment_error_bank', {
           p_user_id: userId,
           p_question_id: q.id,
@@ -268,11 +264,9 @@ export default function DrillRunner() {
       setIsSubmitting(false);
     }
     
-    // Move to next question or complete
     if (current + 1 < questions.length) {
       setCurrent(current + 1);
       
-      // Check for Pomodoro break
       if (runStyle?.id === 'pomodoro' && runStyle.breakAfter) {
         const questionsAnswered = current + 1;
         if (questionsAnswered === runStyle.breakAfter) {
@@ -280,22 +274,28 @@ export default function DrillRunner() {
         }
       }
     } else {
-      // Drill complete - update study_task
+      // Drill complete — call complete-task edge function
       const newAnswerTimes = [...answerTimes, timeSpent];
       const finalCorrectCount = correctCount + (isCorrect ? 1 : 0);
-      const accuracy = finalCorrectCount / questions.length;
       const sortedTimes = [...newAnswerTimes].sort((a, b) => a - b);
       const medianTime = sortedTimes[Math.floor(sortedTimes.length / 2)] || 0;
       
       if (taskId) {
-        await supabase
-          .from('study_tasks')
-          .update({
-            status: 'DONE',
-            accuracy,
-            median_time_ms: medianTime,
-          })
-          .eq('id', taskId);
+        try {
+          await completeTask(supabase, {
+            taskId,
+            correctCount: finalCorrectCount,
+            totalCount: questions.length,
+            medianTimeMs: medianTime,
+          });
+        } catch (err) {
+          reportError(err instanceof Error ? err : new Error(String(err)), { page: 'DrillRunner', context: 'complete-task' });
+          // Fallback: at least try direct update so user sees completion
+          await supabase
+            .from('study_tasks')
+            .update({ status: 'DONE', accuracy: finalCorrectCount / questions.length, median_time_ms: medianTime })
+            .eq('id', taskId);
+        }
       }
       
       setCompleted(true);
@@ -307,19 +307,16 @@ export default function DrillRunner() {
     setIsOnBreak(true);
     setShowBreakModal(false);
     toast.info('Break started! Timer paused for 2 minutes. ☕');
-    
-    // Auto-resume after 2 minutes
     setTimeout(() => {
       setIsOnBreak(false);
       toast.success('Break over! Let\'s finish strong! 💪');
-    }, 120000); // 2 minutes
+    }, 120000);
   };
 
   const handleContinueWithoutBreak = () => {
     setShowBreakModal(false);
   };
 
-  // Shuffle current question's choices
   const shuffled = useMemo(() => {
     if (!questions[current]) return null;
     const seed = userId ? `${userId}-${questions[current].id}` : undefined;
@@ -399,15 +396,12 @@ export default function DrillRunner() {
 
   const handleShuffledAnswer = async (shuffledIndex: number) => {
     if (!shuffled) return;
-    
-    // Map shuffled index back to original index and pass actual choice order for DB persistence
     const originalIndex = shuffled.choiceOrder[shuffledIndex];
     await handleAnswer(originalIndex, shuffled.choiceOrder);
   };
 
   return (
     <div className="container mx-auto p-4">
-      {/* Break Modal for Pomodoro Style */}
       <BreakModal
         open={showBreakModal}
         questionsCompleted={current + 1}
@@ -416,16 +410,11 @@ export default function DrillRunner() {
       />
 
       <div className="flex items-center justify-between mb-4">
-        <Button
-          variant="outline"
-          onClick={() => navigate('/drill-runner')}
-          aria-label="Back to Drills"
-        >
+        <Button variant="outline" onClick={() => navigate('/drill-runner')} aria-label="Back to Drills">
           <ArrowLeft className="h-4 w-4 mr-2" aria-hidden="true" />
           Back to Drills
         </Button>
         <div className="flex items-center gap-3">
-          {/* Timer Display */}
           {timeLeft !== null && timeLeft > 0 && (
             <Badge variant={timeLeft < 60 ? 'destructive' : 'secondary'} className="font-mono flex items-center gap-1" aria-live="polite" aria-atomic="true">
               <Timer className="h-3 w-3" aria-hidden="true" />
@@ -433,11 +422,7 @@ export default function DrillRunner() {
               {isOnBreak && <span className="ml-1 text-xs">(Break)</span>}
             </Badge>
           )}
-          <LiveStreakCounter
-            currentStreak={currentStreak}
-            bestStreak={bestStreak}
-            streakEvent={streakEvent}
-          />
+          <LiveStreakCounter currentStreak={currentStreak} bestStreak={bestStreak} streakEvent={streakEvent} />
         </div>
       </div>
       <h2 className="font-bold mb-4">Drill Question {current + 1} of {questions.length}</h2>
