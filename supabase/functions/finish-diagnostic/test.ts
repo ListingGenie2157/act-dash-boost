@@ -1,11 +1,12 @@
 import { assertEquals } from 'https://deno.land/std@0.192.0/testing/asserts.ts';
 
-Deno.test('finish-diagnostic - section enum validation', () => {
-  // Valid sections
-  const validSections = ['English', 'Math', 'Reading', 'Science'];
+Deno.test('finish-diagnostic - section enum validation includes Mixed', () => {
+  const validSections = ['English', 'Math', 'Reading', 'Science', 'Mixed'];
   for (const section of validSections) {
     assertEquals(validSections.includes(section), true);
   }
+  // ONB quick diagnostic sends 'Mixed'
+  assertEquals(validSections.includes('Mixed'), true);
 });
 
 Deno.test('finish-diagnostic - index to letter conversion', () => {

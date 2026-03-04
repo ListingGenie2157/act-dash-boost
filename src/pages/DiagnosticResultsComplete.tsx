@@ -99,6 +99,12 @@ export default function DiagnosticResultsComplete() {
       const avgScore = latestResults.reduce((sum, r) => sum + r.score, 0) / latestResults.length;
       setOverallScore(Math.round(avgScore));
 
+      // Ensure diagnostic_completed is set on profile
+      await supabase
+        .from('profiles')
+        .update({ diagnostic_completed: true })
+        .eq('id', user.id);
+
       // PHASE 1: Collect all unique skill IDs from responses
       const allSkillIds = new Set<string>();
       
@@ -224,7 +230,12 @@ export default function DiagnosticResultsComplete() {
       'EN': 'English',
       'MA': 'Math',
       'RD': 'Reading',
-      'SCI': 'Science'
+      'SCI': 'Science',
+      'English': 'English',
+      'Math': 'Math',
+      'Reading': 'Reading',
+      'Science': 'Science',
+      'Mixed': 'Mixed (Quick Diagnostic)'
     };
     return labels[section] || section;
   };
