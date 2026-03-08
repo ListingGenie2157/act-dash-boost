@@ -218,10 +218,9 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
       </div>
       <Button
         onClick={() => {
-          // Allow skip if user doesn't know test date
-          if (!form.testDate) {
-            setForm(f => ({ ...f, testDate: addYears(today, 1) })); // Default to 1 year out
-          }
+          // Set default date and advance to next step
+          setForm(f => ({ ...f, testDate: addYears(today, 1) }));
+          setStep(2);
         }}
         variant="ghost"
         className="w-full"
