@@ -121,8 +121,11 @@ export default function ParentPortal() {
     setLedger((data || []) as RewardLedgerEntry[]);
   };
 
+  const [creating, setCreating] = useState(false);
+
   const createRule = async () => {
-    if (!parentId) return;
+    if (!parentId || creating) return;
+    setCreating(true);
 
     try {
       const { error } = await supabase
