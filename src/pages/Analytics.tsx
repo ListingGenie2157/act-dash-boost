@@ -148,8 +148,9 @@ const Analytics = () => {
             const last = sectionDiagnostics[sectionDiagnostics.length - 1];
             
             if (first && last) {
-              const baseline = (first.score || 0) * 100;
-              const latest = (last.score || 0) * 100;
+              // Scores are already on ACT 1-36 scale, don't multiply by 100
+              const baseline = first.score || 0;
+              const latest = last.score || 0;
               const delta = latest - baseline;
               
               baselineVsLatest.push({
