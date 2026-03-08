@@ -336,24 +336,24 @@ const Analytics = () => {
                     <div key={item.section} className="p-4 border border-border rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="font-medium">{item.section}</h4>
-                        <Badge 
+                      <Badge 
                           variant={item.delta >= 0 ? "default" : "destructive"}
                           className={item.delta >= 0 ? "bg-success/10 text-success border-success/20" : ""}
                         >
-                          {item.delta >= 0 ? "+" : ""}{item.delta.toFixed(1)}%
+                          {item.delta >= 0 ? "+" : ""}{item.delta.toFixed(0)} pts
                         </Badge>
                       </div>
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Baseline ({item.baselineSource}):</span>
-                          <span className="font-medium">{item.baseline.toFixed(1)}%</span>
+                          <span className="font-medium">{item.baseline}/36</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Latest ({item.latestSource}):</span>
-                          <span className="font-medium">{item.latest.toFixed(1)}%</span>
+                          <span className="font-medium">{item.latest}/36</span>
                         </div>
                         <Progress 
-                          value={item.latest} 
+                          value={(item.latest / 36) * 100} 
                           className="h-2"
                         />
                       </div>

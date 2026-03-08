@@ -276,7 +276,7 @@ export default function ParentPortal() {
             )}
           </div>
 
-          <Button onClick={createRule} className="w-full md:w-auto">
+          <Button onClick={createRule} disabled={creating} className="w-full md:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Create Rule
           </Button>

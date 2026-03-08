@@ -453,8 +453,25 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
     </div>
   );
 
+  // Reset wizard state when dialog opens
+  const handleOpenChange = (isOpen: boolean) => {
+    if (isOpen) {
+      setStep(1);
+      setForm({
+        testDate: null,
+        previousScores: { English: '', Math: '', Reading: '', Science: '' },
+        targetScore: '',
+        dailyMinutes: '30',
+        diagnosticChoice: 'quick',
+        practiceExamDays: [],
+        accommodations: '100',
+      });
+    }
+    onOpenChange(isOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Your Personalized Study Plan</DialogTitle>

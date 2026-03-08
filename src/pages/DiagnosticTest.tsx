@@ -465,9 +465,14 @@ export default function DiagnosticTest() {
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
-            <p className="text-center">No questions found for this diagnostic.</p>
+            <div className="text-center space-y-3">
+              <p className="font-medium">No questions found for this diagnostic.</p>
+              <p className="text-sm text-muted-foreground">
+                This diagnostic form may not have questions loaded yet. Try selecting "Skip for Now" in the study plan wizard to generate a plan based on estimated scores, or contact support.
+              </p>
+            </div>
             <Button 
-              onClick={() => navigate('/')} 
+              onClick={() => navigate('/')}
               className="w-full mt-4"
             >
               Return Home
