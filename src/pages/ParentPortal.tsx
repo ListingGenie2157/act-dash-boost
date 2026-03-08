@@ -121,8 +121,11 @@ export default function ParentPortal() {
     setLedger((data || []) as RewardLedgerEntry[]);
   };
 
+  const [creating, setCreating] = useState(false);
+
   const createRule = async () => {
-    if (!parentId) return;
+    if (!parentId || creating) return;
+    setCreating(true);
 
     try {
       const { error } = await supabase
@@ -141,11 +144,13 @@ export default function ParentPortal() {
       }
 
       toast.success('Rule created successfully');
-      fetchRules(parentId);
+      await fetchRules(parentId);
       setNewRule({ type: 'DRILL', amount_cents: 50, threshold: { days: 5 } });
     } catch (error) {
       reportError(error instanceof Error ? error : new Error(String(error)), { page: 'ParentPortal', source: 'createRule' });
       toast.error('Failed to create rule');
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -271,7 +276,7 @@ export default function ParentPortal() {
             )}
           </div>
 
-          <Button onClick={createRule} className="w-full md:w-auto">
+          <Button onClick={createRule} disabled={creating} className="w-full md:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Create Rule
           </Button>

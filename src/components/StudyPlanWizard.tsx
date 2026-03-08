@@ -218,10 +218,9 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
       </div>
       <Button
         onClick={() => {
-          // Allow skip if user doesn't know test date
-          if (!form.testDate) {
-            setForm(f => ({ ...f, testDate: addYears(today, 1) })); // Default to 1 year out
-          }
+          // Set default date and advance to next step
+          setForm(f => ({ ...f, testDate: addYears(today, 1) }));
+          setStep(2);
         }}
         variant="ghost"
         className="w-full"
@@ -454,8 +453,25 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
     </div>
   );
 
+  // Reset wizard state when dialog opens
+  const handleOpenChange = (isOpen: boolean) => {
+    if (isOpen) {
+      setStep(1);
+      setForm({
+        testDate: null,
+        previousScores: { English: '', Math: '', Reading: '', Science: '' },
+        targetScore: '',
+        dailyMinutes: '30',
+        diagnosticChoice: 'quick',
+        practiceExamDays: [],
+        accommodations: '100',
+      });
+    }
+    onOpenChange(isOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Your Personalized Study Plan</DialogTitle>

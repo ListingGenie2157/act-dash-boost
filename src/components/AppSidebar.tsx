@@ -29,7 +29,7 @@ const studyItems = [
 const progressItems = [
   { title: 'Analytics', url: '/analytics', icon: BarChart3 },
   { title: 'Drill History', url: '/drill-history', icon: History },
-  { title: 'Mastery Tracker', url: '/', icon: Target, end: true },
+  { title: 'Mastery Tracker', url: '/analytics', icon: Target },
 ];
 
 const reviewItems = [
