@@ -144,11 +144,13 @@ export default function ParentPortal() {
       }
 
       toast.success('Rule created successfully');
-      fetchRules(parentId);
+      await fetchRules(parentId);
       setNewRule({ type: 'DRILL', amount_cents: 50, threshold: { days: 5 } });
     } catch (error) {
       reportError(error instanceof Error ? error : new Error(String(error)), { page: 'ParentPortal', source: 'createRule' });
       toast.error('Failed to create rule');
+    } finally {
+      setCreating(false);
     }
   };
 
