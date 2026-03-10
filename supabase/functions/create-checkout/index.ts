@@ -9,7 +9,7 @@ import { parseBodyWithLimit } from '../_shared/mod.ts';
 const logStep = (step: string, details?: Record<string, string | number | boolean | null>) => {
   // Sanitize: only log specific safe fields, not arbitrary objects
   const safeDetails = details ? Object.entries(details)
-    .filter(([k]) => ['userId', 'planType', 'sessionId', 'customerId'].includes(k))
+    .filter(([k]) => ['userId', 'planType', 'sessionId', 'customerId', 'message'].includes(k))
     .map(([k, v]) => `${k}=${v}`)
     .join(', ') : '';
   console.log(`[CREATE-CHECKOUT] ${step}${safeDetails ? ` - ${safeDetails}` : ''}`);
