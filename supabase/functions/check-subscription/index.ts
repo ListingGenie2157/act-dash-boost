@@ -111,9 +111,20 @@ serve(async (req) => {
       const priceId = subscription.items.data[0].price.id;
       const planType = PRICE_TO_PLAN[priceId] || "monthly";
       const isTrialing = subscription.status === 'trialing';
-      const subscriptionEnd = isTrialing && subscription.trial_end
-        ? new Date(subscription.trial_end * 1000).toISOString()
-        : new Date(subscription.current_period_end * 1000).toISOString();
+      
+      // Safely convert timestamps – guard against null/undefined
+      const periodEndTs = subscription.current_period_end;
+      const trialEndTs = subscription.trial_end;
+      
+      const safeDate = (ts: number | null | undefined): string | null => {
+        if (ts == null) return null;
+        try { return new Date(ts * 1000).toISOString(); } catch { return null; }
+      };
+      
+      const subscriptionEnd = (isTrialing ? safeDate(trialEndTs) : null) ?? safeDate(periodEndTs) ?? new Date().toISOString();
+      const trialEndIso = isTrialing ? safeDate(trialEndTs) : null;
+      
+      logStep("Subscription dates", { periodEndTs, trialEndTs, subscriptionEnd });
       
       await supabaseClient
         .from("subscriptions")
@@ -123,7 +134,7 @@ serve(async (req) => {
           stripe_subscription_id: subscription.id,
           plan_type: planType,
           status: isTrialing ? "trialing" : "active",
-          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+          current_period_start: safeDate(subscription.current_period_start) ?? new Date().toISOString(),
           current_period_end: subscriptionEnd,
           cancel_at_period_end: subscription.cancel_at_period_end,
         }, { onConflict: "user_id" });
@@ -136,7 +147,7 @@ serve(async (req) => {
         subscription_end: subscriptionEnd,
         cancel_at_period_end: subscription.cancel_at_period_end,
         is_trialing: isTrialing,
-        trial_end: isTrialing && subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+        trial_end: trialEndIso,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
