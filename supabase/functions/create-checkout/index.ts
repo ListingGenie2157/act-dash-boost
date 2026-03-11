@@ -65,6 +65,7 @@ serve(async (req) => {
 
     const PRICE_IDS = getPriceIds();
     const priceId = PRICE_IDS[planType];
+    logStep("Price ID resolved", { planType, message: `Using price: ${priceId}` });
     const isSubscription = planType === "monthly";
     
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
