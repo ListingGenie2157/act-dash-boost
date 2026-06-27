@@ -9,7 +9,7 @@ import { z } from 'zod';
  * Valid form IDs for diagnostic tests and simulations
  */
 const VALID_FORM_IDS = [
-  'ONB', 'D2EN', 'D2MA', 'D2RD', 'D2SC',  // Diagnostic forms
+  'D2EN', 'D2MA', 'D2RD', 'D2SC',         // Assessment (diagnostic) forms
   'FA_EN', 'FA_MA', 'FA_RD', 'FA_SC',     // Form A sections
   'FB_EN', 'FB_MA', 'FB_RD', 'FB_SC',     // Form B sections
   'FC_EN', 'FC_MA', 'FC_RD', 'FC_SC',     // Form C sections

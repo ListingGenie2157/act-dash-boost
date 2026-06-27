@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { StudyPlanWidget } from '@/components/StudyPlanWidget';
-import { StudyPlanWizard } from '@/components/StudyPlanWizard';
 import { TestWeekBanner } from '@/components/TestWeekBanner';
 import { ParentBanner } from '@/components/ParentBanner';
 import { MasteryDashboard } from '@/components/MasteryDashboard';
@@ -30,7 +29,6 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [hasStudyPlan, setHasStudyPlan] = useState<boolean | null>(null);
   const [hasDiagnostic, setHasDiagnostic] = useState<boolean>(false);
-  const [wizardOpen, setWizardOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -193,12 +191,12 @@ const Dashboard = () => {
                         <Target className="w-10 h-10 text-primary" />
                       </div>
                       <div className="flex-1 text-center md:text-left">
-                        <h3 className="text-xl font-bold mb-2">Run Diagnostic. Know Your Baseline.</h3>
+                        <h3 className="text-xl font-bold mb-2">Build Your Study Plan</h3>
                         <p className="text-muted-foreground mb-4">
-                          Identify strengths and weaknesses across all ACT sections. Get a personalized plan.
+                          Set your targets and build a personalized plan. Take the full assessment anytime to sharpen it.
                         </p>
                         <Link to="/diagnostic" className="btn-pill primary gap-2">
-                            Take Diagnostic
+                            Build Your Study Plan
                             <ArrowRight className="w-4 h-4" />
                         </Link>
                       </div>
@@ -227,14 +225,11 @@ const Dashboard = () => {
                         <BookOpen className="w-5 h-5" />
                         Browse Lessons
                     </Link>
-                    <button
-                      className="btn-pill primary gap-3"
-                      onClick={() => setWizardOpen(true)}
-                    >
+                    <Link to="/diagnostic" className="btn-pill primary gap-3">
                       <Target className="w-5 h-5" />
-                      Create Study Plan
+                      Build Your Study Plan
                       <ArrowRight className="w-4 h-4" />
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -312,12 +307,12 @@ const Dashboard = () => {
                         <Target className="w-10 h-10 text-primary" />
                       </div>
                       <div className="flex-1 text-center md:text-left">
-                        <h3 className="text-xl font-bold mb-2">Run Diagnostic. Know Your Baseline.</h3>
+                        <h3 className="text-xl font-bold mb-2">Build Your Study Plan</h3>
                         <p className="text-muted-foreground mb-4">
-                          Identify strengths and weaknesses across all ACT sections. Get a personalized plan.
+                          Set your targets and build a personalized plan. Take the full assessment anytime to sharpen it.
                         </p>
                         <Link to="/diagnostic" className="btn-pill primary gap-2">
-                            Take Diagnostic
+                            Build Your Study Plan
                             <ArrowRight className="w-4 h-4" />
                         </Link>
                       </div>
@@ -331,16 +326,6 @@ const Dashboard = () => {
           )}
         </div>
       </div>
-
-      <StudyPlanWizard 
-        open={wizardOpen} 
-        onOpenChange={setWizardOpen}
-        onPlanGenerated={() => {
-          setHasStudyPlan(true);
-          setProfile((prev) => prev ? { ...prev, has_study_plan: true } : prev);
-          queryClient.invalidateQueries({ queryKey: ['profile'] });
-        }}
-      />
     </div>
   );
 };

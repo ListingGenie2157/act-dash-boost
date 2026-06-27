@@ -1,292 +1,246 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Card, Button, Badge,
-  CardContent, CardDescription, CardHeader, CardTitle
+  Card, Button, Label, Input, Calendar, Popover, PopoverContent, PopoverTrigger,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  CardContent, CardDescription, CardHeader, CardTitle,
 } from '@/components/ui';
-import { Brain, Clock, CheckCircle2, ArrowRight, Zap, Timer } from 'lucide-react';
+import { Target, CalendarIcon, ClipboardList, ArrowRight } from 'lucide-react';
+import { format, addYears, startOfToday } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { reportError } from '@/lib/errorReporter';
 
-type DiagnosticMode = 'choice' | 'thorough';
+const SECTIONS = ['English', 'Math', 'Reading', 'Science'] as const;
+const DEFAULT_SECTION_SCORE = 18;
 
 export default function Diagnostic() {
   const navigate = useNavigate();
-  
-  // Check if user has already started a thorough diagnostic
-  const [mode, setMode] = useState<DiagnosticMode>(() => {
-    const stored = localStorage.getItem('diagnostic_completed_sections');
-    const completed = stored ? JSON.parse(stored) : [];
-    // If they've started sections, show thorough mode
-    return completed.length > 0 ? 'thorough' : 'choice';
-  });
-  
-  // Track which diagnostic sections have been completed
-  const [completedSections, setCompletedSections] = useState<string[]>(() => {
-    const stored = localStorage.getItem('diagnostic_completed_sections');
-    return stored ? JSON.parse(stored) : [];
+  const today = startOfToday();
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    currentScore: '',
+    targetScore: '',
+    testDate: null as Date | null,
+    dailyMinutes: '30',
   });
 
-  const sections = [
-    { id: 'D2EN', label: 'English', description: '20 minutes - Grammar, punctuation, and style' },
-    { id: 'D2MA', label: 'Math', description: '25 minutes - Algebra, geometry, and trigonometry' },
-    { id: 'D2RD', label: 'Reading', description: '18 minutes - Comprehension and analysis' },
-    { id: 'D2SC', label: 'Science', description: '18 minutes - Data interpretation and reasoning' }
-  ];
-
-  const currentSectionIndex = completedSections.length;
-  const allComplete = completedSections.length >= 4;
-
-  const handleStartQuick = () => {
-    navigate('/diagnostic-test/ONB');
+  const parseScore = (value: string): number | null => {
+    const num = parseInt(value, 10);
+    return !isNaN(num) && num >= 1 && num <= 36 ? num : null;
   };
 
-  const handleStartThorough = () => {
-    setMode('thorough');
-  };
-
-  const handleStartNext = () => {
-    if (currentSectionIndex < sections.length) {
-      navigate(`/diagnostic-test/${sections[currentSectionIndex].id}`);
+  // Persist the minimum planning inputs. Returns whether a real baseline was saved.
+  const savePlanningInputs = async (userId: string): Promise<boolean> => {
+    if (form.testDate) {
+      const { error } = await supabase.functions.invoke('set-test-date', {
+        body: { testDate: format(form.testDate, 'yyyy-MM-dd') },
+      });
+      if (error) {
+        reportError(error instanceof Error ? error : new Error(String(error)), { page: 'Diagnostic', source: 'setTestDate' });
+      }
     }
+
+    const minutes = parseInt(form.dailyMinutes, 10);
+    await supabase
+      .from('user_preferences')
+      .upsert({ user_id: userId, daily_minutes: minutes }, { onConflict: 'user_id' });
+    await supabase
+      .from('profiles')
+      .update({ daily_time_cap_mins: minutes })
+      .eq('id', userId);
+
+    const current = parseScore(form.currentScore);
+    if (current !== null) {
+      const scores = Object.fromEntries(SECTIONS.map((s) => [s, current]));
+      const { error } = await supabase.functions.invoke('set-baseline', {
+        body: {
+          scores,
+          notes: form.targetScore ? `Target composite: ${form.targetScore}` : undefined,
+        },
+      });
+      if (error) {
+        reportError(error instanceof Error ? error : new Error(String(error)), { page: 'Diagnostic', source: 'setBaseline' });
+      }
+      return true;
+    }
+
+    return false;
   };
 
-  const handleContinue = async () => {
-    if (allComplete) {
-      // Mark diagnostic as complete in profile
+  const handleBuildPlan = async () => {
+    setLoading(true);
+    try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase
-          .from('profiles')
-          .update({ diagnostic_completed: true })
-          .eq('id', user.id);
+      if (!user) throw new Error('User not authenticated');
+
+      const hasBaseline = await savePlanningInputs(user.id);
+
+      // No known score → seed an estimated baseline so the plan has data to work with
+      if (!hasBaseline) {
+        const defaultScores = Object.fromEntries(SECTIONS.map((s) => [s, DEFAULT_SECTION_SCORE]));
+        const { error } = await supabase.functions.invoke('set-baseline', {
+          body: {
+            scores: defaultScores,
+            notes: form.targetScore
+              ? `Estimated baseline; target composite: ${form.targetScore}`
+              : 'Estimated baseline (assessment skipped)',
+          },
+        });
+        if (error) {
+          reportError(error instanceof Error ? error : new Error(String(error)), { page: 'Diagnostic', source: 'defaultBaseline' });
+          toast.error('Failed to create baseline');
+          return;
+        }
       }
-      
-      // Clear localStorage
-      localStorage.removeItem('diagnostic_completed_sections');
-      setCompletedSections([]);
-      
-      // Navigate to aggregate results
-      navigate('/diagnostic-results-complete');
+
+      toast.info('Building your study plan...');
+      const { error: planError } = await supabase.functions.invoke('generate-study-plan', {
+        body: { force: true },
+      });
+      if (planError) {
+        reportError(planError instanceof Error ? planError : new Error(String(planError)), { page: 'Diagnostic', source: 'generatePlan' });
+        toast.error('Failed to generate study plan');
+        return;
+      }
+
+      toast.success('Your study plan is ready!');
+      navigate('/dashboard');
+    } catch (error) {
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'Diagnostic', source: 'buildPlan' });
+      toast.error('Failed to build study plan. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Listen for section completion (set by DiagnosticTest page)
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const stored = localStorage.getItem('diagnostic_completed_sections');
-      if (stored) {
-        setCompletedSections(JSON.parse(stored));
-      }
-    };
+  const handleTakeAssessment = async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+      // Save planning inputs first so they're not lost; the assessment will
+      // overwrite the baseline with measured scores once sections are completed.
+      await savePlanningInputs(user.id);
 
-  // Choice screen - let user pick quick or thorough
-  if (mode === 'choice') {
-    return (
-      <div className="min-h-screen bg-background py-8">
-        <div className="max-w-4xl mx-auto px-4">
-          <Card className="p-6">
-            <CardHeader className="text-center">
-              <CardTitle className="flex items-center justify-center gap-2 text-2xl">
-                <Brain className="w-8 h-8 text-primary" />
-                Choose Your Diagnostic
-              </CardTitle>
-              <CardDescription className="text-base mt-2">
-                Take a diagnostic to identify your strengths and weaknesses across all ACT sections
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 gap-6 mt-4">
-                {/* Quick Diagnostic Option */}
-                <Card 
-                  className="p-6 cursor-pointer border-2 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300"
-                  onClick={handleStartQuick}
-                >
-                  <div className="flex flex-col items-center text-center space-y-4">
-                    <div className="p-4 rounded-full bg-primary/10">
-                      <Zap className="w-8 h-8 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold">Quick Diagnostic</h3>
-                      <p className="text-muted-foreground mt-1">
-                        Get a fast snapshot of your skills
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="w-4 h-4" />
-                      <span>~20 minutes</span>
-                    </div>
-                    <ul className="text-sm text-muted-foreground space-y-1 text-left w-full">
-                      <li>• 30 mixed questions</li>
-                      <li>• All 4 subjects sampled</li>
-                      <li>• Immediate results</li>
-                    </ul>
-                    <Button className="w-full mt-4">
-                      Start Quick Test
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </div>
-                </Card>
+      navigate('/diagnostic-test/D2EN');
+    } catch (error) {
+      reportError(error instanceof Error ? error : new Error(String(error)), { page: 'Diagnostic', source: 'takeAssessment' });
+      toast.error('Failed to start assessment. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-                {/* Thorough Diagnostic Option */}
-                <Card 
-                  className="p-6 cursor-pointer border-2 hover:border-secondary/50 hover:bg-secondary/5 transition-all duration-300"
-                  onClick={handleStartThorough}
-                >
-                  <div className="flex flex-col items-center text-center space-y-4">
-                    <div className="p-4 rounded-full bg-secondary/10">
-                      <Timer className="w-8 h-8 text-secondary" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold">Thorough Diagnostic</h3>
-                      <p className="text-muted-foreground mt-1">
-                        Comprehensive skill assessment
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="w-4 h-4" />
-                      <span>~80 minutes</span>
-                    </div>
-                    <ul className="text-sm text-muted-foreground space-y-1 text-left w-full">
-                      <li>• 4 separate section tests</li>
-                      <li>• Detailed skill breakdown</li>
-                      <li>• Pause between sections</li>
-                    </ul>
-                    <Button variant="secondary" className="w-full mt-4">
-                      Start Full Test
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </div>
-                </Card>
-              </div>
-
-              <div className="mt-8 text-center">
-                <Button variant="ghost" onClick={() => navigate('/')}>
-                  Return to Dashboard
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  // Thorough diagnostic flow - section by section
   return (
     <div className="min-h-screen bg-background py-8">
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="max-w-2xl mx-auto px-4">
         <Card className="p-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Brain className="w-6 h-6 text-primary" />
-              ACT Diagnostic Test
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center gap-2 text-2xl">
+              <Target className="w-7 h-7 text-primary" />
+              Build Your Study Plan
             </CardTitle>
-            <CardDescription>
-              Complete all 4 sections to get your personalized study plan
+            <CardDescription className="text-base mt-2">
+              Tell us a few details and we'll build a personalized plan. You can take the
+              full assessment now or anytime later.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {/* Progress Overview */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-4 border rounded-lg">
-                  <Clock className="w-5 h-5 text-primary" />
-                  <div>
-                    <p className="font-medium">Total Duration</p>
-                    <p className="text-sm text-muted-foreground">~80 minutes (4 sections)</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-4 border rounded-lg">
-                  <CheckCircle2 className="w-5 h-5 text-success" />
-                  <div>
-                    <p className="font-medium">Progress</p>
-                    <p className="text-sm text-muted-foreground">
-                      {completedSections.length} of 4 sections complete
-                    </p>
-                  </div>
-                </div>
+          <CardContent className="space-y-6">
+            {/* Current & Target scores */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="currentScore">Current ACT score (optional)</Label>
+                <Input
+                  id="currentScore"
+                  type="number"
+                  min={1}
+                  max={36}
+                  placeholder="e.g., 22"
+                  value={form.currentScore}
+                  onChange={(e) => setForm((f) => ({ ...f, currentScore: e.target.value }))}
+                />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="targetScore">Target ACT score (optional)</Label>
+                <Input
+                  id="targetScore"
+                  type="number"
+                  min={1}
+                  max={36}
+                  placeholder="e.g., 30"
+                  value={form.targetScore}
+                  onChange={(e) => setForm((f) => ({ ...f, targetScore: e.target.value }))}
+                />
+              </div>
+            </div>
 
-              {/* Section Checklist */}
-              <div className="space-y-3">
-                <h3 className="font-semibold">Test Sections:</h3>
-                {sections.map((section, index) => {
-                  const isCompleted = completedSections.includes(section.id);
-                  const isCurrent = index === currentSectionIndex;
-                  
-                  return (
-                    <div
-                      key={section.id}
-                      className={`p-4 border rounded-lg ${
-                        isCompleted ? 'bg-success/10 border-success/30' : 
-                        isCurrent ? 'bg-primary/10 border-primary/30' : ''
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {isCompleted ? (
-                            <CheckCircle2 className="w-5 h-5 text-success" />
-                          ) : (
-                            <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30" />
-                          )}
-                          <div>
-                            <p className="font-medium">{section.label}</p>
-                            <p className="text-sm text-muted-foreground">{section.description}</p>
-                          </div>
-                        </div>
-                        {isCompleted && (
-                          <Badge variant="secondary">Complete</Badge>
-                        )}
-                        {isCurrent && !isCompleted && (
-                          <Badge>Next</Badge>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              
-              {!allComplete && (
-                <div className="bg-warning/10 border border-warning/30 rounded-lg p-4">
-                  <h3 className="font-medium text-warning-foreground mb-2">
-                    Before You Begin:
-                  </h3>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    <li>• Find a quiet place to take the test</li>
-                    <li>• Each section is timed separately</li>
-                    <li>• You can pause between sections</li>
-                    <li>• Your answers are saved automatically</li>
-                  </ul>
-                </div>
-              )}
+            {/* Test date */}
+            <div className="space-y-2">
+              <Label>Test date (optional)</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {form.testDate ? format(form.testDate, 'PPP') : 'Pick your test date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={form.testDate ?? undefined}
+                    onSelect={(date) => setForm((f) => ({ ...f, testDate: date ?? null }))}
+                    fromDate={today}
+                    toDate={addYears(today, 2)}
+                    disabled={{ before: today }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
 
-              <div className="flex gap-4">
-                {!allComplete ? (
-                  <>
-                    <Button onClick={handleStartNext} className="flex-1">
-                      {completedSections.length === 0 ? 'Start Diagnostic' : 'Continue to Next Section'}
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                    <Button variant="outline" onClick={() => navigate('/')}>
-                      Save & Exit
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button onClick={handleContinue} className="flex-1">
-                      View Complete Results
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                    <Button variant="outline" onClick={() => navigate('/')}>
-                      Return to Dashboard
-                    </Button>
-                  </>
-                )}
-              </div>
+            {/* Daily study time */}
+            <div className="space-y-2">
+              <Label>Daily study time</Label>
+              <Select
+                value={form.dailyMinutes}
+                onValueChange={(v) => setForm((f) => ({ ...f, dailyMinutes: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="15">15 minutes/day</SelectItem>
+                  <SelectItem value="30">30 minutes/day</SelectItem>
+                  <SelectItem value="45">45 minutes/day</SelectItem>
+                  <SelectItem value="60">1 hour/day</SelectItem>
+                  <SelectItem value="90">1.5 hours/day</SelectItem>
+                  <SelectItem value="120">2 hours/day</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Actions */}
+            <div className="space-y-3 pt-2">
+              <Button onClick={handleBuildPlan} disabled={loading} className="w-full" size="lg">
+                {loading ? 'Working...' : 'Build My Study Plan'}
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+              <Button
+                onClick={handleTakeAssessment}
+                disabled={loading}
+                variant="outline"
+                className="w-full"
+                size="lg"
+              >
+                <ClipboardList className="w-4 h-4 mr-2" />
+                Take Full Assessment
+              </Button>
+              <p className="text-xs text-center text-muted-foreground">
+                The full assessment measures all four sections for the most accurate plan.
+                It's optional — you can take it later from your dashboard.
+              </p>
             </div>
           </CardContent>
         </Card>

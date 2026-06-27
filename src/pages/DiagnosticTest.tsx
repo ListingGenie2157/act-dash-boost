@@ -30,7 +30,6 @@ interface Attempt {
 }
 
 const TIMERS: Record<string, number> = {
-  ONB: 20 * 60, // 20 minutes - quick diagnostic
   D2EN: 20 * 60, // 20 minutes  
   D2MA: 25 * 60, // 25 minutes
   D2RD: 18 * 60, // 18 minutes
@@ -40,6 +39,13 @@ const TIMERS: Record<string, number> = {
   MATH_A: 60 * 60, MATH_B: 60 * 60, MATH_C: 60 * 60, // 60 minutes
   RD_A: 35 * 60, RD_B: 35 * 60, RD_C: 35 * 60, // 35 minutes
   SCI_A: 35 * 60, SCI_B: 35 * 60, SCI_C: 35 * 60, // 35 minutes
+};
+
+// The full assessment runs these sections in order, then shows combined results.
+const ASSESSMENT_SEQUENCE = ['D2EN', 'D2MA', 'D2RD', 'D2SC'] as const;
+
+const SECTION_LABELS: Record<string, string> = {
+  D2EN: 'English', D2MA: 'Math', D2RD: 'Reading', D2SC: 'Science',
 };
 
 // Stable hash function for deterministic shuffling
@@ -127,14 +133,13 @@ export default function DiagnosticTest() {
         'EN': 'English', 'MA': 'Math', 'RD': 'Reading', 'SC': 'Science',
       };
       const sectionCode = formId.startsWith('D2') ? formId.slice(2) : formId;
-      // ONB is a mixed-section diagnostic — send 'Mixed' so server handles per-question sections
-      const sectionName = formId === 'ONB' ? 'Mixed' : (SECTION_MAP[sectionCode] || sectionCode);
+      const sectionName = SECTION_MAP[sectionCode] || sectionCode;
 
       // De-shuffle selected_idx back to original letter (A/B/C/D)
       const IDX_TO_LETTER = ['A', 'B', 'C', 'D'];
 
       // Call finish-diagnostic edge function — server validates correctness
-      const { data: responseData, error } = await supabase.functions.invoke('finish-diagnostic', {
+      const { error } = await supabase.functions.invoke('finish-diagnostic', {
         body: {
           section: sectionName,
           blocks: [{
@@ -159,43 +164,30 @@ export default function DiagnosticTest() {
 
       if (error) throw error;
 
-      // Mark this section as complete in localStorage with score data
-      const completed = JSON.parse(localStorage.getItem('diagnostic_completed_sections') || '[]');
-      if (!completed.includes(formId)) {
-        completed.push(formId);
-        localStorage.setItem('diagnostic_completed_sections', JSON.stringify(completed));
-      }
-
-      // Store section result for the orchestrator page to display
-      if (responseData) {
-        const sectionResults = JSON.parse(localStorage.getItem('diagnostic_section_results') || '{}');
-        sectionResults[sectionName] = {
-          score: responseData.predicted_section_score,
-          weakSkills: responseData.top_5_weak_skills,
-          diagnosticId: responseData.diagnostic_id
-        };
-        localStorage.setItem('diagnostic_section_results', JSON.stringify(sectionResults));
-      }
-
       toast({
         title: "Section Complete!",
-        description: `${formId} section saved successfully.`,
+        description: `${SECTION_LABELS[formId] || sectionName} section saved successfully.`,
       });
 
-      // ONB (quick diagnostic) goes straight to results, thorough goes back to orchestrator
-      if (formId === 'ONB') {
-        // Mark diagnostic as complete in profile
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
+      // Advance through the assessment sequence; after the last section, show
+      // combined results and mark the assessment complete.
+      const sequenceIndex = (ASSESSMENT_SEQUENCE as readonly string[]).indexOf(formId);
+      const nextSection =
+        sequenceIndex >= 0 && sequenceIndex < ASSESSMENT_SEQUENCE.length - 1
+          ? ASSESSMENT_SEQUENCE[sequenceIndex + 1]
+          : null;
+
+      if (nextSection) {
+        navigate(`/diagnostic-test/${nextSection}`);
+      } else {
+        const { data: { user: profileUser } } = await supabase.auth.getUser();
+        if (profileUser) {
           await supabase
             .from('profiles')
             .update({ diagnostic_completed: true })
-            .eq('id', user.id);
+            .eq('id', profileUser.id);
         }
-        localStorage.removeItem('diagnostic_completed_sections');
         navigate('/diagnostic-results-complete');
-      } else {
-        navigate('/diagnostic');
       }
 
     } catch (error) {
@@ -212,7 +204,12 @@ export default function DiagnosticTest() {
 
   const loadDiagnostic = useCallback(async () => {
     if (!formId) return;
-    
+
+    // Reset per-section state so advancing between sections renders cleanly
+    setLoading(true);
+    setCurrentIndex(0);
+    setAttempts({});
+
     try {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) {
@@ -452,7 +449,7 @@ export default function DiagnosticTest() {
           <CardContent className="pt-6">
             <p className="text-destructive">Invalid test form</p>
             <Button onClick={() => navigate('/diagnostic')} className="mt-4">
-              Back to Diagnostic
+              Back to Study Plan
             </Button>
           </CardContent>
         </Card>
@@ -468,7 +465,7 @@ export default function DiagnosticTest() {
             <div className="text-center space-y-3">
               <p className="font-medium">No questions found for this diagnostic.</p>
               <p className="text-sm text-muted-foreground">
-                This diagnostic form may not have questions loaded yet. Try selecting "Skip for Now" in the study plan wizard to generate a plan based on estimated scores, or contact support.
+                This assessment section may not have questions loaded yet. Use "Build My Study Plan" to generate a plan based on estimated scores, or contact support.
               </p>
             </div>
             <Button 
@@ -494,7 +491,7 @@ export default function DiagnosticTest() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">
-            {formId || 'Diagnostic'} - Question {currentIndex + 1} of {questions.length}
+            {SECTION_LABELS[formId] ? `${SECTION_LABELS[formId]} Assessment` : 'Assessment'} - Question {currentIndex + 1} of {questions.length}
           </h1>
           <div className="text-lg font-mono">
             {formatTime(timeLeft)}

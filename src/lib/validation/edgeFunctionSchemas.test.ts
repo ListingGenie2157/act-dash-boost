@@ -192,7 +192,7 @@ describe('drillRunnerSchema', () => {
 
 describe('diagnosticFormIdSchema', () => {
   it('accepts valid form IDs', () => {
-    for (const formId of ['FA_EN', 'D2EN', 'ONB', 'DR_MA']) {
+    for (const formId of ['FA_EN', 'D2EN', 'D2SC', 'DR_MA']) {
       const result = diagnosticFormIdSchema.safeParse({ formId });
       expect(result.success).toBe(true);
     }

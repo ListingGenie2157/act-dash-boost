@@ -204,7 +204,9 @@ export default function DiagnosticResultsComplete() {
     try {
       toast.info('✨ Generating your personalized study plan...');
       
-      const { error } = await supabase.functions.invoke('generate-study-plan');
+      const { error } = await supabase.functions.invoke('generate-study-plan', {
+        body: { force: true },
+      });
 
       if (error) throw error;
 
@@ -235,7 +237,6 @@ export default function DiagnosticResultsComplete() {
       'Math': 'Math',
       'Reading': 'Reading',
       'Science': 'Science',
-      'Mixed': 'Mixed (Quick Diagnostic)'
     };
     return labels[section] || section;
   };
@@ -260,7 +261,7 @@ export default function DiagnosticResultsComplete() {
             <div className="flex justify-center mb-4">
               <Brain className="w-16 h-16 text-primary" />
             </div>
-            <CardTitle className="text-4xl mb-2">Diagnostic Complete!</CardTitle>
+            <CardTitle className="text-4xl mb-2">Assessment Complete!</CardTitle>
             <p className="text-muted-foreground">
               Here's your comprehensive performance analysis
             </p>

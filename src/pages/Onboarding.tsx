@@ -81,7 +81,7 @@ export default function Onboarding() {
       }
 
       toast.success('Welcome to Preppit Pacing!');
-      navigate('/dashboard');
+      navigate('/diagnostic');
     } catch (error) {
       reportError(error instanceof Error ? error : new Error(String(error)), { page: 'Onboarding' });
       toast.error('Failed to complete setup. Please try again.');
