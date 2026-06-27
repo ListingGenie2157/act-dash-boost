@@ -1,6 +1,6 @@
 import { 
   Home, BookOpen, Timer, PlayCircle, Calculator, TrendingDown,
-  BarChart3, History, Target, FileText, Settings, Users, FlaskConical,
+  BarChart3, History, Target, FileText, Settings, Users,
   Upload, Code, LogOut, ChevronDown, XCircle, RotateCcw
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
@@ -47,7 +47,7 @@ const resourceItems = [
 const settingsItems = [
   { title: 'Study Plan', url: '/plan', icon: Settings },
   { title: 'Parent Portal', url: '/parent-portal', icon: Users },
-  { title: 'Diagnostic', url: '/diagnostic', icon: FlaskConical },
+  { title: 'Build Study Plan', url: '/diagnostic', icon: Target },
 ];
 
 const adminItems = [

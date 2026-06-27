@@ -23,17 +23,16 @@ const DiagnosticBlockSchema = z.object({
 });
 
 const DiagnosticRequestSchema = z.object({
-  section: z.enum(['English', 'Math', 'Reading', 'Science', 'Mixed']),
+  section: z.enum(['English', 'Math', 'Reading', 'Science']),
   blocks: z.array(DiagnosticBlockSchema).min(1).max(10)
 });
 
 // Map section names to staging_items form_id prefixes for answer lookup
 const SECTION_TO_FORM_PREFIX: Record<string, string[]> = {
-  'English': ['D2EN', 'ONB'],
-  'Math': ['D2MA', 'ONB'],
-  'Reading': ['D2RD', 'ONB'],
-  'Science': ['D2SC', 'ONB'],
-  'Mixed': ['ONB'],
+  'English': ['D2EN'],
+  'Math': ['D2MA'],
+  'Reading': ['D2RD'],
+  'Science': ['D2SC'],
 };
 
 interface DiagnosticBlock {
