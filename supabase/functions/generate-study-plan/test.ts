@@ -1,5 +1,11 @@
 import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
-import { selectPlaylist, calculateDaysLeft, getTodayInChicago } from "./index.ts";
+import {
+  calculateDaysLeft,
+  chooseWeakSkills,
+  getTodayInChicago,
+  selectLessonsForDay,
+  selectPlaylist,
+} from "./index.ts";
 
 interface Task {
   type: 'REVIEW' | 'DRILL' | 'LEARN';
@@ -60,6 +66,142 @@ Deno.test("selectPlaylist - no tasks fit", () => {
   
   const result = selectPlaylist(tasks, 20);
   assertEquals(result.length, 0);
+});
+
+Deno.test("selectPlaylist - optional subject cap prevents monotony", () => {
+  const tasks: Task[] = [
+    {
+      type: "LEARN",
+      skillId: "math-1",
+      size: 1,
+      estimatedMins: 5,
+      priority: 100,
+    },
+    {
+      type: "DRILL",
+      skillId: "math-2",
+      size: 1,
+      estimatedMins: 5,
+      priority: 90,
+    },
+    {
+      type: "DRILL",
+      skillId: "math-3",
+      size: 1,
+      estimatedMins: 5,
+      priority: 80,
+    },
+    {
+      type: "LEARN",
+      skillId: "english-1",
+      size: 1,
+      estimatedMins: 5,
+      priority: 70,
+    },
+  ];
+
+  const result = selectPlaylist(
+    tasks,
+    60,
+    (task) => task.skillId?.startsWith("math") ? "Math" : "English",
+  );
+
+  assertEquals(result.map((task) => task.skillId), [
+    "math-1",
+    "math-2",
+    "english-1",
+  ]);
+});
+
+Deno.test("selectLessonsForDay - weights weak diagnostic subjects with daily cap", () => {
+  const skills = [
+    {
+      id: "math-1",
+      subject: "Math",
+      name: "Linear Equations",
+      cluster: "Algebra",
+      order_index: 1,
+    },
+    {
+      id: "math-2",
+      subject: "Math",
+      name: "Quadratics",
+      cluster: "Algebra",
+      order_index: 2,
+    },
+    {
+      id: "math-3",
+      subject: "Math",
+      name: "Triangles",
+      cluster: "Geometry",
+      order_index: 3,
+    },
+    {
+      id: "english-1",
+      subject: "English",
+      name: "Punctuation",
+      cluster: "Grammar",
+      order_index: 4,
+    },
+    {
+      id: "reading-1",
+      subject: "Reading",
+      name: "Main Ideas",
+      cluster: "Comprehension",
+      order_index: 5,
+    },
+  ];
+
+  const result = selectLessonsForDay(
+    3,
+    0,
+    [{ section: "Math", score: 0.42 }],
+    skills,
+    new Set<string>(),
+  );
+
+  assertEquals(result, ["math-1", "math-2", "english-1"]);
+});
+
+Deno.test("chooseWeakSkills - returns skill ids from low diagnostic sections", () => {
+  const skills = [
+    {
+      id: "math-1",
+      subject: "Math",
+      name: "Linear Equations",
+      cluster: "Algebra",
+      order_index: 1,
+    },
+    {
+      id: "math-2",
+      subject: "Math",
+      name: "Quadratics",
+      cluster: "Algebra",
+      order_index: 2,
+    },
+    {
+      id: "math-3",
+      subject: "Math",
+      name: "Triangles",
+      cluster: "Geometry",
+      order_index: 3,
+    },
+    {
+      id: "english-1",
+      subject: "English",
+      name: "Punctuation",
+      cluster: "Grammar",
+      order_index: 4,
+    },
+  ];
+
+  const result = chooseWeakSkills(
+    [{ section: "Math", score: 0.5 }],
+    [],
+    skills,
+  );
+
+  assertEquals(result, ["math-1", "math-2", "math-3"]);
 });
 
 Deno.test("calculateDaysLeft - future date", () => {
