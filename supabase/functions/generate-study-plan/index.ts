@@ -5,23 +5,120 @@ import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 import { parseBodyWithLimit } from '../_shared/mod.ts';
 
-// Helper function to select lessons for a specific day with subject balancing
-// Now uses round-robin subject selection to ensure variety across all 4 subjects
-function selectLessonsForDay(
+const SUBJECTS = ["Math", "English", "Reading", "Science"] as const;
+type Subject = typeof SUBJECTS[number];
+
+interface DiagnosticScore {
+  section: string;
+  score: number;
+}
+
+interface SkillDefinition {
+  id: string;
+  subject: string;
+  name: string;
+  cluster: string;
+  order_index: number;
+}
+
+interface ProgressSkill {
+  skill_id: string;
+  mastery_level: number;
+  correct: number;
+  seen: number;
+}
+
+const MAX_TASKS_PER_DAY = 3;
+const MAX_TASKS_PER_SUBJECT_PER_DAY = 2;
+const COMPLETED_STUDY_TASK_STATUSES = ["SUCCESS", "COMPLETED", "DONE"];
+
+function normalizeSubject(section: string): Subject | null {
+  const normalized = section.trim().toLowerCase();
+
+  if (normalized === "math") return "Math";
+  if (normalized === "english") return "English";
+  if (normalized === "reading") return "Reading";
+  if (normalized === "science") return "Science";
+
+  return null;
+}
+
+function buildDiagnosticScoreMap(
+  diagnosticResults: DiagnosticScore[],
+): Map<Subject, number> {
+  const scoresBySubject = new Map<Subject, number>();
+
+  diagnosticResults.forEach((diagnostic) => {
+    const subject = normalizeSubject(diagnostic.section);
+    if (!subject) return;
+
+    const currentScore = scoresBySubject.get(subject);
+    if (currentScore === undefined || diagnostic.score < currentScore) {
+      scoresBySubject.set(subject, diagnostic.score);
+    }
+  });
+
+  return scoresBySubject;
+}
+
+function getDiagnosticSubjectWeight(score: number | undefined): number {
+  if (score === undefined) return 1;
+  if (score < 0.6) return 3;
+  if (score < 0.75) return 2;
+  return 1;
+}
+
+function getProgressAccuracy(skill: ProgressSkill): number {
+  return skill.seen > 0 ? skill.correct / skill.seen : 0;
+}
+
+function buildWeightedSubjectCycle(
+  dayOffset: number,
+  scoresBySubject: Map<Subject, number>,
+): Subject[] {
+  const rotatedSubjects = SUBJECTS.map((_, index) =>
+    SUBJECTS[(dayOffset + index) % SUBJECTS.length]
+  );
+  const rotatedIndexBySubject = new Map<Subject, number>(
+    rotatedSubjects.map((subject, index) => [subject, index]),
+  );
+
+  return [...rotatedSubjects]
+    .sort((a, b) => {
+      const weightDiff = getDiagnosticSubjectWeight(scoresBySubject.get(b)) -
+        getDiagnosticSubjectWeight(scoresBySubject.get(a));
+      if (weightDiff !== 0) return weightDiff;
+
+      const scoreDiff = (scoresBySubject.get(a) ?? 1) -
+        (scoresBySubject.get(b) ?? 1);
+      if (scoreDiff !== 0) return scoreDiff;
+
+      return (rotatedIndexBySubject.get(a) ?? 0) -
+        (rotatedIndexBySubject.get(b) ?? 0);
+    })
+    .flatMap((subject) =>
+      Array.from(
+        { length: getDiagnosticSubjectWeight(scoresBySubject.get(subject)) },
+        () => subject,
+      )
+    );
+}
+
+// Select lessons with diagnostic-weighted round-robin subject balancing.
+export function selectLessonsForDay(
   lessonsNeeded: number,
   dayOffset: number, // 0-6 for the 7 days
-  diagnosticResults: Array<{ section: string; score: number }>,
-  availableSkills: Array<
-    { id: string; subject: string; name: string; order_index: number }
-  >,
-  completedSkillIds: Set<string>,
+  diagnosticResults: DiagnosticScore[],
+  availableSkills: SkillDefinition[],
+  trackedSkillIds: Set<string>,
+  diagnosticWeakSkillIds: Set<string> = new Set<string>(),
 ): string[] {
   if (lessonsNeeded <= 0 || !availableSkills || availableSkills.length === 0) {
     return [];
   }
 
   // Group skills by subject
-  const skillsBySubject: Record<string, typeof availableSkills> = {
+  const skillsBySubject: Record<Subject, SkillDefinition[]> = {
     Math: [],
     English: [],
     Reading: [],
@@ -29,49 +126,53 @@ function selectLessonsForDay(
   };
 
   availableSkills.forEach((skill) => {
-    if (skillsBySubject[skill.subject]) {
-      skillsBySubject[skill.subject].push(skill);
+    const subject = normalizeSubject(skill.subject);
+    if (subject) {
+      skillsBySubject[subject].push(skill);
     }
   });
 
-  // Sort each subject's skills by order_index (curriculum order)
+  // Sort each subject by diagnostic cluster priority, then curriculum order.
   Object.values(skillsBySubject).forEach((skills) => {
-    skills.sort((a, b) => a.order_index - b.order_index);
+    skills.sort((a, b) => {
+      const weakDiff = Number(diagnosticWeakSkillIds.has(b.id)) -
+        Number(diagnosticWeakSkillIds.has(a.id));
+      if (weakDiff !== 0) return weakDiff;
+      return a.order_index - b.order_index;
+    });
   });
 
-  // Round-robin subject order, rotated by day for variety
-  const subjects = ["Math", "English", "Reading", "Science"];
+  const scoresBySubject = buildDiagnosticScoreMap(diagnosticResults);
+  const subjectCycle = buildWeightedSubjectCycle(dayOffset, scoresBySubject);
   const result: string[] = [];
-  
-  // Track subjects used THIS day to ensure variety within the day
-  const subjectsUsedToday = new Set<string>();
-  const maxPerSubjectPerDay = 2; // Don't let any subject dominate a single day
-  const subjectCountToday: Record<string, number> = { Math: 0, English: 0, Reading: 0, Science: 0 };
+  const selectedSkillIds = new Set<string>();
+  const subjectCountToday: Record<Subject, number> = {
+    Math: 0,
+    English: 0,
+    Reading: 0,
+    Science: 0,
+  };
 
-  // For each lesson slot, pick from rotating subjects
+  // For each lesson slot, pick from weighted rotating subjects.
   for (let i = 0; i < lessonsNeeded && result.length < lessonsNeeded; i++) {
-    // Rotate starting subject based on dayOffset + slot index for maximum variety
-    const startSubjectIdx = (dayOffset + i) % 4;
-    
-    // Try each subject in rotation order until we find one with available skills
     let found = false;
-    for (let j = 0; j < 4 && !found; j++) {
-      const subjectIdx = (startSubjectIdx + j) % 4;
-      const subject = subjects[subjectIdx];
-      
+
+    for (let j = 0; j < subjectCycle.length && !found; j++) {
+      const subject = subjectCycle[(i + j) % subjectCycle.length];
+
       // Skip if this subject already has too many lessons today
-      if (subjectCountToday[subject] >= maxPerSubjectPerDay) {
+      if (subjectCountToday[subject] >= MAX_TASKS_PER_SUBJECT_PER_DAY) {
         continue;
       }
-      
+
       // Find the next available skill in this subject (not already completed or selected)
-      const availableInSubject = skillsBySubject[subject].filter(
-        (s) => !completedSkillIds.has(s.id) && !result.includes(s.id)
+      const selectedSkill = skillsBySubject[subject].find(
+        (s) => !trackedSkillIds.has(s.id) && !selectedSkillIds.has(s.id),
       );
-      
-      if (availableInSubject.length > 0) {
-        const selectedSkill = availableInSubject[0];
+
+      if (selectedSkill) {
         result.push(selectedSkill.id);
+        selectedSkillIds.add(selectedSkill.id);
         subjectCountToday[subject]++;
         found = true;
       }
@@ -87,15 +188,31 @@ function selectLessonsForDay(
 }
 
 // Pure function for task selection with time cap
-export function selectPlaylist(priorities: Task[], capMins: number): Task[] {
+export function selectPlaylist(
+  priorities: Task[],
+  capMins: number,
+  getSubject?: (task: Task) => string | null,
+): Task[] {
   const selected: Task[] = [];
+  const subjectCounts = new Map<string, number>();
   let remainingMins = capMins;
 
   for (const task of priorities) {
+    const subject = getSubject?.(task) ?? null;
+    if (
+      subject &&
+      (subjectCounts.get(subject) ?? 0) >= MAX_TASKS_PER_SUBJECT_PER_DAY
+    ) {
+      continue;
+    }
+
     if (task.estimatedMins <= remainingMins) {
       selected.push(task);
+      if (subject) {
+        subjectCounts.set(subject, (subjectCounts.get(subject) ?? 0) + 1);
+      }
       remainingMins -= task.estimatedMins;
-      if (selected.length >= 3) break; // Max 3 tasks
+      if (selected.length >= MAX_TASKS_PER_DAY) break;
     }
   }
 
@@ -185,6 +302,7 @@ interface Task {
   size: number;
   estimatedMins: number;
   priority: number;
+  title?: string;
 }
 
 interface StudyTaskInsert {
@@ -294,44 +412,46 @@ function getTestWeekTasks(
 }
 
 // Helper function for choosing weak skills from baseline
-function chooseWeakSkills(
-  baseline: Array<{ section: string; score: number }>,
-  progress: Array<{ section: string; accuracy: number }>,
-  allSkills: Array<
-    {
-      id?: string;
-      subject: string;
-      skill_name?: string;
-      name?: string;
-      cluster: string;
-    }
-  >,
+export function chooseWeakSkills(
+  baseline: DiagnosticScore[],
+  progress: ProgressSkill[],
+  allSkills: SkillDefinition[],
 ): string[] {
   const weakSkillIds: string[] = [];
+  const progressBySkill = new Map(
+    progress.map((skill) => [skill.skill_id, skill]),
+  );
 
-  baseline.forEach((diagnostic) => {
-    if (diagnostic.score < 0.6) {
-      const sectionSkills = allSkills.filter((s) =>
-        s.subject === diagnostic.section
-      );
-      const clusterGroups: { [cluster: string]: string[] } = {};
+  [...baseline]
+    .sort((a, b) => a.score - b.score)
+    .forEach((diagnostic) => {
+      if (diagnostic.score < 0.6) {
+        const diagnosticSubject = normalizeSubject(diagnostic.section);
+        if (!diagnosticSubject) return;
 
-      sectionSkills.forEach((skill) => {
-        if (!clusterGroups[skill.cluster]) clusterGroups[skill.cluster] = [];
-        clusterGroups[skill.cluster].push(
-          skill.skill_name || skill.name || skill.id || "",
+        const sectionSkills = allSkills.filter((s) =>
+          normalizeSubject(s.subject) === diagnosticSubject
         );
-      });
+        const clusterGroups: { [cluster: string]: string[] } = {};
 
-      const clusters = Object.keys(clusterGroups).slice(0, 2);
-      clusters.forEach((cluster) => {
-        const clusterSkillIds = clusterGroups[cluster].slice(0, 2);
-        weakSkillIds.push(...clusterSkillIds);
-      });
-    }
-  });
+        sectionSkills.forEach((skill) => {
+          const progressRow = progressBySkill.get(skill.id);
+          const hasSparseOrNoProgress = !progressRow || progressRow.seen < 20;
+          if (!hasSparseOrNoProgress) return;
 
-  return weakSkillIds.slice(0, 5);
+          if (!clusterGroups[skill.cluster]) clusterGroups[skill.cluster] = [];
+          clusterGroups[skill.cluster].push(skill.id);
+        });
+
+        const clusters = Object.keys(clusterGroups).slice(0, 2);
+        clusters.forEach((cluster) => {
+          const clusterSkillIds = clusterGroups[cluster].slice(0, 2);
+          weakSkillIds.push(...clusterSkillIds);
+        });
+      }
+    });
+
+  return Array.from(new Set(weakSkillIds)).slice(0, 5);
 }
 
 function getTaskTitle(
@@ -602,8 +722,15 @@ serve(async (req) => {
 
     // Create skill name lookup map
     const skillNameMap = new Map<string, string>();
+    const skillOrderMap = new Map<string, number>();
+    const skillSubjectMap = new Map<string, Subject>();
     allSkills?.forEach((skill) => {
       skillNameMap.set(skill.id, skill.name);
+      skillOrderMap.set(skill.id, skill.order_index);
+      const subject = normalizeSubject(skill.subject);
+      if (subject) {
+        skillSubjectMap.set(skill.id, subject);
+      }
     });
 
     const timeMultiplier = accommodations?.time_multiplier || 1.0;
@@ -649,23 +776,66 @@ serve(async (req) => {
 
     const totalLessonsAvailable = lessonsWithContent?.length || 30;
 
-    // Get completed lessons (mastery level >= 3)
+    // Track skills that should not receive duplicate LEARN tasks.
     const { data: masteryData } = await supabase
       .from("mastery")
       .select("skill_id, correct, total")
       .eq("user_id", userId);
 
-    const completedSkillIds = new Set<string>();
+    const { data: progressData } = await supabase
+      .from("progress")
+      .select("skill_id, mastery_level, correct, seen")
+      .eq("user_id", userId);
+
+    const lookbackStart = new Date(today);
+    lookbackStart.setDate(today.getDate() - 7);
+    const lookbackStartStr = lookbackStart.toISOString().split("T")[0];
+
+    const { data: recentlyCompletedStudyTasks } = await supabase
+      .from("study_tasks")
+      .select("skill_id")
+      .eq("user_id", userId)
+      .in("status", COMPLETED_STUDY_TASK_STATUSES)
+      .gte("the_date", lookbackStartStr)
+      .lt("the_date", todayStr)
+      .not("skill_id", "is", null)
+      .limit(100);
+
+    const trackedSkillIds = new Set<string>();
+    const recentlyCompletedSkillIds = new Set<string>();
+
     masteryData?.forEach((m) => {
+      if (!m.skill_id) return;
+
+      if (m.total > 0) {
+        trackedSkillIds.add(m.skill_id);
+      }
+
       if (m.total >= 5 && (m.correct / m.total) >= 0.9) {
-        completedSkillIds.add(m.skill_id);
+        trackedSkillIds.add(m.skill_id);
       }
     });
 
-    const lessonsRemaining = totalLessonsAvailable - completedSkillIds.size;
+    progressData?.forEach((progress) => {
+      if (progress.skill_id && progress.seen > 0) {
+        trackedSkillIds.add(progress.skill_id);
+      }
+    });
+
+    recentlyCompletedStudyTasks?.forEach((task) => {
+      if (task.skill_id) {
+        trackedSkillIds.add(task.skill_id);
+        recentlyCompletedSkillIds.add(task.skill_id);
+      }
+    });
+
+    const lessonsRemaining = Math.max(
+      totalLessonsAvailable - trackedSkillIds.size,
+      0,
+    );
     const lessonsPerDay = daysLeft && daysLeft > 0
-      ? Math.min(Math.ceil(lessonsRemaining / daysLeft), 3)
-      : Math.min(lessonsRemaining, 3);
+      ? Math.min(Math.ceil(lessonsRemaining / daysLeft), MAX_TASKS_PER_DAY)
+      : Math.min(lessonsRemaining, MAX_TASKS_PER_DAY);
 
     // Calculate lessons per day based on remaining content
 
@@ -700,19 +870,55 @@ serve(async (req) => {
       }
     });
 
-    const { data: weakestSkills } = await supabase
-      .from("progress")
-      .select("skill_id, mastery_level, correct, seen")
-      .eq("user_id", userId)
-      .gt("seen", 0)
-      .order("mastery_level", { ascending: true })
-      .limit(10); // More skills for 7 days
+    const baselineDiagnostics = Object.entries(diagnosticsBySection).map((
+      [section, data],
+    ) => ({
+      section,
+      score: data.score,
+    }));
+
+    const diagnosticWeakSkillIds = chooseWeakSkills(
+      baselineDiagnostics,
+      progressData || [],
+      allSkills || [],
+    );
+    const diagnosticWeakSkillIdSet = new Set(diagnosticWeakSkillIds);
+
+    const weakSkillCandidateMap = new Map<string, ProgressSkill>();
+    diagnosticWeakSkillIds.forEach((skillId) => {
+      weakSkillCandidateMap.set(skillId, {
+        skill_id: skillId,
+        mastery_level: 0,
+        correct: 0,
+        seen: 0,
+      });
+    });
+
+    (progressData || [])
+      .filter((skill) => skill.seen > 0)
+      .sort((a, b) => {
+        const masteryDiff = a.mastery_level - b.mastery_level;
+        if (masteryDiff !== 0) return masteryDiff;
+        return getProgressAccuracy(a) - getProgressAccuracy(b);
+      })
+      .forEach((skill) => {
+        if (!weakSkillCandidateMap.has(skill.skill_id)) {
+          weakSkillCandidateMap.set(skill.skill_id, skill);
+        }
+      });
+
+    const weakestSkills = Array.from(weakSkillCandidateMap.values()).slice(
+      0,
+      10,
+    );
 
     // Generate plans for 7 days
     const allPlans: Array<{ the_date: string; tasks: PlanTaskJson[] }> = [];
     const allStudyTasks: StudyTaskInsert[] = [];
     const assignedReviewIds = new Set<string>();
-    const assignedSkillIds = new Set<string>(completedSkillIds);
+    const assignedSkillIds = new Set<string>(trackedSkillIds);
+    const drillEligibleSkillIds = new Set<string>(trackedSkillIds);
+    const drilledSkillIds = new Set<string>(recentlyCompletedSkillIds);
 
     for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
       const targetDate = new Date(today);
@@ -777,6 +983,7 @@ serve(async (req) => {
 
       // Build priority task list for this day
       const priorities: Task[] = [];
+      const drillEligibleBeforeToday = new Set(drillEligibleSkillIds);
       let reviewsUsed = 0;
 
       // 1. REVIEW tasks - distribute across 7 days
@@ -789,64 +996,19 @@ serve(async (req) => {
             estimatedMins: Math.round(2 * timeMultiplier),
             priority: dayMode.reviewWeight * 1000 + (100 - index),
           });
-          assignedReviewIds.add(review.question_id);
           reviewsUsed++;
         }
       });
 
-      // 2. DRILL tasks - cycle through weak skills
-      let availableWeakSkills = weakestSkills?.filter((s) =>
-        !assignedSkillIds.has(s.skill_id)
-      ) || [];
-
-      // If no weak skills (new user), pick 2 skills from each subject
-      if (availableWeakSkills.length === 0) {
-        const subjects = ["Math", "English", "Reading", "Science"];
-        const drillSkills: string[] = [];
-
-        subjects.forEach((subject) => {
-          const subjectSkills = (allSkills || [])
-            .filter((s) => s.subject === subject && !assignedSkillIds.has(s.id))
-            .sort((a, b) => a.order_index - b.order_index)
-            .slice(0, 2)
-            .map((s) => s.id);
-          drillSkills.push(...subjectSkills);
-        });
-
-        availableWeakSkills = drillSkills.slice(0, 8).map((skillId) => ({
-          skill_id: skillId,
-          mastery_level: 0,
-          correct: 0,
-          seen: 0,
-        }));
-      }
-
-      availableWeakSkills.slice(0, 2).forEach((skill, index) => {
-        priorities.push({
-          type: "DRILL",
-          skillId: skill.skill_id,
-          size: 5,
-          estimatedMins: Math.round(8 * timeMultiplier),
-          priority: dayMode.drillWeight * 1000 + (50 - index),
-        });
-        assignedSkillIds.add(skill.skill_id); // Mark as assigned to prevent repetition
-      });
-
-      // 3. LEARN tasks
+      // 2. LEARN tasks must be selected before DRILL tasks.
       if (dayMode.allowLearn && lessonsPerDay > 0) {
-        const baselineDiagnostics = Object.entries(diagnosticsBySection).map((
-          [section, data],
-        ) => ({
-          section,
-          score: data.score,
-        }));
-
         const dailyLessons = selectLessonsForDay(
           lessonsPerDay,
           dayOffset, // Pass day offset for subject rotation
           baselineDiagnostics,
           allSkills || [],
           assignedSkillIds,
+          diagnosticWeakSkillIdSet,
         );
 
         dailyLessons.forEach((skillId, index) => {
@@ -857,56 +1019,111 @@ serve(async (req) => {
             estimatedMins: Math.round(12 * timeMultiplier),
             priority: dayMode.learnWeight * 1000 + (25 - index),
           });
-          assignedSkillIds.add(skillId);
         });
       }
 
+      // 3. DRILL tasks only target progress-tracked or previously learned skills.
+      let availableWeakSkills = weakestSkills.filter((skill) =>
+        drillEligibleBeforeToday.has(skill.skill_id) &&
+        !drilledSkillIds.has(skill.skill_id)
+      );
+
+      if (availableWeakSkills.length === 0) {
+        availableWeakSkills = Array.from(drillEligibleBeforeToday)
+          .filter((skillId) => !drilledSkillIds.has(skillId))
+          .sort((a, b) => {
+            const weakDiff = Number(diagnosticWeakSkillIdSet.has(b)) -
+              Number(diagnosticWeakSkillIdSet.has(a));
+            if (weakDiff !== 0) return weakDiff;
+            return (skillOrderMap.get(a) ?? Number.MAX_SAFE_INTEGER) -
+              (skillOrderMap.get(b) ?? Number.MAX_SAFE_INTEGER);
+          })
+          .slice(0, 8)
+          .map((skillId) => ({
+            skill_id: skillId,
+            mastery_level: 0,
+            correct: 0,
+            seen: 0,
+          }));
+      }
+
+      availableWeakSkills.slice(0, 2).forEach((skill, index) => {
+        priorities.push({
+          type: "DRILL",
+          skillId: skill.skill_id,
+          size: 5,
+          estimatedMins: Math.round(8 * timeMultiplier),
+          priority: dayMode.drillWeight * 1000 + (50 - index),
+        });
+      });
+
       // Sort by priority
-      priorities.sort((a, b) => b.priority - a.priority);
+      priorities.sort((a, b) => {
+        const priorityDiff = b.priority - a.priority;
+        if (priorityDiff !== 0) return priorityDiff;
+
+        const taskOrder: Record<Task["type"], number> = {
+          LEARN: 0,
+          DRILL: 1,
+          REVIEW: 2,
+        };
+        return taskOrder[a.type] - taskOrder[b.type];
+      });
 
       // Select tasks within time cap
-      const selectedTasks = selectPlaylist(priorities, dailyTimeCap);
-      console.log(`Selected ${selectedTasks.length} tasks for ${dateStr}`);
+      const selectedTasks = selectPlaylist(
+        priorities,
+        dailyTimeCap,
+        (task) => task.skillId ? skillSubjectMap.get(task.skillId) ?? null : null,
+      );
+      const tasksForDay: Task[] = selectedTasks.length > 0
+        ? selectedTasks
+        : [{
+          type: "DRILL" as const,
+          size: 5,
+          estimatedMins: Math.max(
+            1,
+            Math.min(
+              Math.round(10 * timeMultiplier),
+              Math.max(dailyTimeCap, 1),
+            ),
+          ),
+          priority: 0,
+          title: "General Performance Drill",
+        }];
+      console.log(`Selected ${tasksForDay.length} tasks for ${dateStr}`);
 
-      // Add DRILL tasks immediately after LEARN tasks for same skill
-      const tasksWithDrills: Task[] = [];
-      selectedTasks.forEach(task => {
-        tasksWithDrills.push(task);
-        
-        // If it's a LEARN task, add a corresponding DRILL task
-        if (task.type === 'LEARN' && task.skillId) {
-          // Check if there's time left in the daily cap
-          const totalMins = tasksWithDrills.reduce((sum, t) => sum + t.estimatedMins, 0);
-          const drillMins = Math.round(8 * timeMultiplier);
-          
-          if (totalMins + drillMins <= dailyTimeCap) {
-            tasksWithDrills.push({
-              type: 'DRILL',
-              skillId: task.skillId,
-              size: 5,
-              estimatedMins: drillMins,
-              priority: task.priority - 0.1, // Slightly lower priority
-            });
-            console.log(`Added DRILL for LEARN skill: ${task.skillId}`);
-          }
+      tasksForDay.forEach((task) => {
+        if (task.questionId) {
+          assignedReviewIds.add(task.questionId);
+        }
+
+        if (!task.skillId) return;
+
+        assignedSkillIds.add(task.skillId);
+        if (task.type === "LEARN") {
+          drillEligibleSkillIds.add(task.skillId);
+        } else if (task.type === "DRILL") {
+          drilledSkillIds.add(task.skillId);
         }
       });
 
       // Convert to JSON format
-      const tasksJson = tasksWithDrills.map((task, index) => ({
+      const tasksJson = tasksForDay.map((task, index) => ({
         sequence: index + 1,
         type: task.type,
         skill_id: task.skillId || null,
         question_id: task.questionId || null,
         size: task.size,
         estimated_mins: task.estimatedMins,
-        title: getTaskTitle(task.type, task.skillId ?? null, skillNameMap, task.size),
+        title: task.title ??
+          getTaskTitle(task.type, task.skillId ?? null, skillNameMap, task.size),
       }));
 
       allPlans.push({ the_date: dateStr, tasks: tasksJson });
 
-      // Add to study tasks (use tasksWithDrills which includes correlated drills)
-      tasksWithDrills.forEach((task) => {
+      // Add to study tasks after time-cap filtering has finalized the playlist.
+      tasksForDay.forEach((task) => {
         const estimatedSeconds =
           typeof task.estimatedMins === "number" && task.estimatedMins > 0
             ? Math.round(task.estimatedMins * 60)
