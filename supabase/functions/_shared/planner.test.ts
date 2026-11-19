@@ -115,6 +115,17 @@ describe('rankLessons', () => {
     }));
     expect(ranked[0].section).toBe('Math');
   });
+  it('without a target, ranks the weakest section first (target = average estimate + 4)', () => {
+    const ranked = rankLessons(makeInput({
+      sectionEstimates: {
+        Math: { score: 18, source: 'self' },
+        English: { score: 25, source: 'self' },
+        Reading: { score: 30, source: 'self' },
+        Science: { score: 25, source: 'self' },
+      },
+    }));
+    expect(ranked[0].section).toBe('Math');
+  });
   it('keeps curriculum order on ties', () => {
     const ranked = rankLessons(makeInput()).filter(l => l.section === 'English').map(l => l.skillId);
     expect(ranked).toEqual(['E1.A', 'E1.B']);

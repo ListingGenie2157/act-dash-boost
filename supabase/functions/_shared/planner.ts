@@ -113,9 +113,16 @@ function skillAccuracy(skillId: string, input: PlannerInput): number {
   return 0.5;
 }
 
+/** No target given: aim 4 points above the average section estimate (a composite goal). */
+function defaultTarget(input: PlannerInput): number {
+  const sections: Section[] = input.scienceRequired ? ['English', 'Math', 'Reading', 'Science'] : ['English', 'Math', 'Reading'];
+  const avg = sections.reduce((sum, s) => sum + currentEstimate(input.sectionEstimates[s]), 0) / sections.length;
+  return Math.min(36, Math.round(avg) + 4);
+}
+
 function priority(lesson: LessonInfo, input: PlannerInput): number {
   const estimate = currentEstimate(input.sectionEstimates[lesson.section]);
-  const target = input.targetScore ?? Math.min(36, estimate + 4);
+  const target = input.targetScore ?? defaultTarget(input);
   const gap = Math.max(0, target - estimate);
   return (gap + 1) * (1.5 - skillAccuracy(lesson.skillId, input));
 }
