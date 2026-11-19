@@ -245,6 +245,33 @@ serve(async (req) => {
       // Non-blocking — still return results to user
     }
 
+    // Study plan: a scheduled practice test (FA/FB/FC) checks off once all 4 sections are finished
+    const formPrefix = String(session.form_id ?? '').slice(0, 2);
+    const planServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (['FA', 'FB', 'FC'].includes(formPrefix) && planServiceKey) {
+      try {
+        const planClient = createClient(supabaseUrl, planServiceKey, { auth: { persistSession: false } });
+        const { data: finishedSessions } = await planClient
+          .from('sessions')
+          .select('form_id')
+          .eq('user_id', user.id)
+          .like('form_id', `${formPrefix}_%`)
+          .not('ended_at', 'is', null);
+        const sectionsDone = new Set((finishedSessions ?? []).map(s => s.form_id));
+        if (sectionsDone.size >= 4) {
+          await planClient
+            .from('study_tasks')
+            .update({ status: 'DONE' })
+            .eq('user_id', user.id)
+            .eq('type', 'SIM')
+            .eq('form_id', formPrefix)
+            .in('status', ['PENDING', 'STARTED']);
+        }
+      } catch (planErr) {
+        console.error('Failed to check off practice test task:', planErr);
+      }
+    }
+
     return new Response(JSON.stringify({
       summary,
       per_skill: perSkill,

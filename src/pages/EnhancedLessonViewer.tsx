@@ -32,6 +32,7 @@ import { mapToTutorSubject } from '@/lib/tutorSubjectMapper';
 import { logger } from '@/lib/logger';
 import { reportError } from '@/lib/errorReporter';
 import { supabase } from '@/integrations/supabase/client';
+import { completeTask } from '@/lib/supabase-client';
 import { getRandomBankQuestions, gradeBankAnswer, recordBankAttempt, subjectFromSkillCode, toLegacyQuestions } from '@/lib/bank';
 import type { LegacyQuestion } from '@/types';
 
@@ -159,6 +160,17 @@ export default function EnhancedLessonViewer() {
     }),
     [lesson?.checkpoint_quiz_questions]
   );
+
+  // Opened from the study plan: finishing the checkpoint quiz checks the lesson off
+  const planTaskId = searchParams.get('taskId');
+  const completePlanTask = async (scorePercent: number) => {
+    if (!planTaskId) return;
+    try {
+      await completeTask(supabase, { taskId: planTaskId, correctCount: scorePercent, totalCount: 100, medianTimeMs: 0 });
+    } catch (err) {
+      reportError(err instanceof Error ? err : new Error(String(err)), { page: 'EnhancedLessonViewer', source: 'completePlanTask' });
+    }
+  };
 
   // Save each graded bank answer with its time (feeds skill buckets in the study plan)
   const saveBankAnswer = (questionList: LegacyQuestion[]) =>
@@ -519,7 +531,7 @@ export default function EnhancedLessonViewer() {
                     onAnswerGraded={useBankCheckpoint ? saveBankAnswer(checkpointQuestions ?? []) : undefined}
                     title="Checkpoint Quiz"
                     skillCode={topic || ''}
-                    onComplete={(score) => setLastScore(score)}
+                    onComplete={(score) => { setLastScore(score); void completePlanTask(score); }}
                     onNeedsPractice={handleNeedsPractice}
                   />
                   {useBankCheckpoint && (

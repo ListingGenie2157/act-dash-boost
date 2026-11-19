@@ -127,11 +127,13 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
         reportError(preferencesError instanceof Error ? preferencesError : new Error(String(preferencesError)), { component: 'StudyPlanWizard', source: 'preferences' });
       }
 
-      // 5. Update profile with daily time cap
+      // 5. Update profile with daily time cap and target score (the planner aims for it)
+      const target = parseInt(form.targetScore, 10);
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
           daily_time_cap_mins: parseInt(form.dailyMinutes, 10),
+          ...(target >= 1 && target <= 36 ? { target_score: target } : {}),
         })
         .eq('id', user.id);
 

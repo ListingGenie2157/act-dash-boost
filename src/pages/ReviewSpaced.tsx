@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { RotateCcw, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { getBankAnswer } from '@/lib/bank';
+import { completeTask } from '@/lib/supabase-client';
 import { BackButton } from '@/components/BackButton';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { reportError } from '@/lib/errorReporter';
@@ -29,6 +30,8 @@ interface ReviewCardWithQuestion extends ReviewCard {
   explanation?: string | null;
 }
 
+const PLAN_REVIEW_BLOCK = 10;
+
 export default function ReviewSpaced() {
   const navigate = useNavigate();
   const [dueCards, setDueCards] = useState<ReviewCardWithQuestion[]>([]);
@@ -37,6 +40,12 @@ export default function ReviewSpaced() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [reviewed, setReviewed] = useState(0);
+  // Opened from the study plan: the review task checks off after its block (max 10 cards) or when nothing is left
+  const [searchParams] = useSearchParams();
+  const planTaskId = searchParams.get('taskId');
+  const planGoal = useRef(0);
+  const planGood = useRef(0);
+  const planDone = useRef(false);
 
   const loadDueCards = useCallback(async () => {
     try {
@@ -98,6 +107,7 @@ export default function ReviewSpaced() {
       const cards = allCards.filter(card => card.staging_question !== null) as ReviewCardWithQuestion[];
 
       setDueCards(cards);
+      planGoal.current = Math.min(PLAN_REVIEW_BLOCK, cards.length);
       if (cards.length > 0) {
         setCurrentCard(cards[0]);
       }
@@ -156,6 +166,13 @@ export default function ReviewSpaced() {
       setShowAnswer(false);
       setSelectedAnswer(null);
       setReviewed(prev => prev + 1);
+      if (grade === ReviewGrade.GOOD || grade === ReviewGrade.EASY) planGood.current++;
+      const gradedCount = reviewed + 1;
+      if (planTaskId && !planDone.current && (gradedCount >= planGoal.current || nextCards.length === 0)) {
+        planDone.current = true;
+        completeTask(supabase, { taskId: planTaskId, correctCount: planGood.current, totalCount: gradedCount, medianTimeMs: 0 })
+          .catch(err => reportError(err instanceof Error ? err : new Error(String(err)), { page: 'ReviewSpaced', source: 'completeTask' }));
+      }
 
       // Show feedback
       if (grade === ReviewGrade.EASY) {

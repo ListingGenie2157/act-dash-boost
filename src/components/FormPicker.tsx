@@ -21,9 +21,11 @@ const SECTIONS = ['EN', 'MA', 'RD', 'SC'] as const;
 
 interface FormPickerProps {
   onFormSelect: (formId: string, section: string, questionCount: number) => void;
+  /** Exam the study plan scheduled (e.g. 'FA'): shown first and highlighted */
+  highlightPrefix?: string | null;
 }
 
-export function FormPicker({ onFormSelect }: FormPickerProps) {
+export function FormPicker({ onFormSelect, highlightPrefix }: FormPickerProps) {
   const [selectedForm, setSelectedForm] = useState<string>('');
   const [forms, setForms] = useState<Form[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,7 +91,7 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
     label: pkg.label,
     coached: pkg.coached,
     forms: forms.filter(f => f.id.startsWith(`${pkg.prefix}_`)),
-  }));
+  })).sort((a, b) => Number(b.id === highlightPrefix) - Number(a.id === highlightPrefix));
 
   const handleFormClick = (form: Form) => {
     if (!form.isAvailable) return;
@@ -124,7 +126,7 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
           const allComplete = pkg.forms.every(f => f.isAvailable);
           
           return (
-            <Card key={pkg.id} className="w-full">
+            <Card key={pkg.id} className={`w-full ${pkg.id === highlightPrefix ? 'ring-2 ring-primary' : ''}`}>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
