@@ -45,6 +45,7 @@
 export type Section = 'English' | 'Math' | 'Reading' | 'Science';
 export interface LessonInfo { skillId: string; section: Section; orderIndex: number; bankQuestions: number }
 export interface SkillStats { correct: number; total: number }          // mastery, per skill
+export type SkillBucket = 'solid' | 'shaky' | 'careless' | 'gap';
 export interface PlannerInput {
   today: string;                       // YYYY-MM-DD
   testDate: string | null;
@@ -58,6 +59,7 @@ export interface PlannerInput {
   completedSkillIds: string[];         // LEARN tasks DONE/COMPLETED
   mastery: Record<string, SkillStats>;
   diagnosticSkillStats: Record<string, SkillStats>;
+  skillBuckets: Record<string, SkillBucket>;   // from timed answers (Task 2b); may be empty
   dueReviewCount: number;
   formQuestionCounts: Record<'FA' | 'FB' | 'FC', number>;
 }
@@ -70,7 +72,11 @@ export interface PlanSummary {
   nextExam: { form: 'FA' | 'FB' | 'FC'; date: string } | null;
 }
 export function currentEstimate(e: { score: number; source: 'diagnostic' | 'self' } | undefined): number;
-export function isStrength(skillId: string, input: PlannerInput): boolean;
+export function isStrength(skillId: string, input: PlannerInput): boolean;   // bucket 'solid' ⇒ true; other buckets ⇒ false; no bucket ⇒ accuracy rule
+export interface TimedAnswer { correct: boolean | null /* null = unanswered */; timeMs: number; targetMs: number }
+export function classifyAnswer(a: TimedAnswer): SkillBucket;
+export function worstBucket(buckets: SkillBucket[]): SkillBucket | null;  // gap > careless > shaky > solid
+export const SECTION_TARGET_MS: Record<Section, number>;  // English 30000, Math 60000, Reading 45000, Science 45000
 export function rankLessons(input: PlannerInput): LessonInfo[];   // excludes completed, strengths, Science when not required
 export function examDates(input: PlannerInput): Array<{ form: 'FA' | 'FB' | 'FC'; date: string }>;
 export function buildPlan(input: PlannerInput, horizonDays?: number /* default 7 */): { days: PlannedDay[]; summary: PlanSummary };
@@ -79,6 +85,8 @@ export function buildPlan(input: PlannerInput, horizonDays?: number /* default 7
 
 - [ ] **Step 1: Write failing tests** in `planner.test.ts`, using a `makeInput(overrides)` helper (today `2026-12-01`, 30 min/day, 1.0×, science required, no scores, 8 lessons: 2 per section, each with 10 bank questions, forms FA/FB/FC with 40 questions):
   - `currentEstimate({score:50,source:'diagnostic'})` → 19; `({score:27,source:'self'})` → 27; `(undefined)` → 18.
+  - `classifyAnswer`: correct & 20s/30s → solid; correct & 40s/30s → shaky; wrong & 20s/30s → careless; wrong & 40s/30s → gap; wrong & 5s/30s (under 25%) → gap; unanswered → gap. `worstBucket(['solid','careless','shaky'])` → careless; `[]` → null.
+  - Buckets: skill with bucket `shaky` or `careless` gets a DRILL but no LEARN; `gap` gets LEARN then DRILL ranked above unbucketed skills; `solid` is excluded.
   - `isStrength` true for mastery `{correct:9,total:10}`; false for `{correct:4,total:4}`; true for diagnostic `{correct:2,total:2}`; false for diagnostic `{correct:1,total:1}`.
   - `rankLessons`: completed and strength skills absent; with `scienceRequired:false` no Science lessons; with Math estimate 15 (self) and English 30 (self), target 28, the first ranked lesson is Math; ties keep `orderIndex` order.
   - `examDates` with test date `2027-02-27` (Sat), dow null → `[FA 2027-02-06, FB 2027-02-13, FC 2027-02-20]`; with `formQuestionCounts.FB = 0` → FB absent; test date `2026-12-10` → only dates ≥ today remain.
@@ -116,6 +124,20 @@ export function buildPlan(input: PlannerInput, horizonDays?: number /* default 7
 - [ ] **Step 3: Regenerate types** with `generate_typescript_types` into `src/integrations/supabase/types.ts`; `npm run typecheck` passes.
 - [ ] **Step 4: Commit** `feat(plan): target score, plan summary, remove AP Chemistry`.
 
+### Task 2b: Record time per question
+
+**Files:**
+- Migration in Task 2's file: `alter table attempts add column time_ms integer check (time_ms >= 0)`.
+- Modify: `src/components/DrillComponent.tsx` (per-question elapsed ms passed in `DrillResult.timesMs: number[]`), `src/pages/DrillPlayer.tsx`, `src/pages/DrillRunner.tsx`, `src/pages/QuizRunner.tsx` + `src/components/QuizComponent.tsx` (`onAnswerGraded` gains `timeMs`), `src/pages/DiagnosticTest.tsx` (accumulate time per question across revisits; write on save)
+
+**Interfaces:**
+- Produces: `attempts.time_ms` written by every client attempt insert/update; time = ms the question was on screen until the answer, summed across revisits.
+
+- [ ] **Step 1:** Add the column (Task 2 migration), regenerate types.
+- [ ] **Step 2:** Track and write `time_ms` in each listed file. DrillPlayer currently writes no attempts: insert one attempts row per graded answer (`form_id` from the question, `task_id` null) so its timing is captured.
+- [ ] **Step 3: Verify** with Playwright: run a 10-question drill and a lesson quiz on localhost, then `select count(*) from attempts where time_ms is not null and created_at > now() - interval '10 minutes'` ≥ 20.
+- [ ] **Step 4: Commit** `feat: record time per question`.
+
 ### Task 3: Generator uses the planner
 
 **Files:**
@@ -125,7 +147,7 @@ export function buildPlan(input: PlannerInput, horizonDays?: number /* default 7
 - Consumes: `buildPlan`, `PlannerInput` from `../_shared/planner.ts`; columns from Task 2.
 - Produces: `study_plan_days.tasks_json` items `{ sequence, type, skill_id, size, estimated_mins, title }` (same shape as today; SIM title `"Practice Test – Form A"` etc., REVIEW `"Review N missed questions"`, WARMUP `"Test-day warm-up"`); `study_tasks` rows with `skill_id` = form prefix for SIM; `profiles.plan_summary` written each run.
 
-- [ ] **Step 1: Load inputs** in parallel: profile (`test_date, target_score, daily_time_cap_mins, science_required, sim_preferred_dow`), `user_preferences.daily_minutes`, `accommodations.time_multiplier` (`maybeSingle`), latest `diagnostics` per section (prefer `diagnostic` over `self`, latest `completed_at`), `lesson_content` joined to `skills` (`order_index`, `subject`), DR_ question counts per `skill_code`, `mastery`, onboarding-exam skill stats (attempts with `form_id` like `D2%` or `ONB%` joined to `staging_items.skill_code`, correct = `selected_idx = correct_idx`), completed LEARN skill ids (`study_tasks` type LEARN status in DONE/COMPLETED), due review count (`review_queue.due_at <= now()`), question counts for FA_/FB_/FC_ forms.
+- [ ] **Step 1: Load inputs** in parallel: profile (`test_date, target_score, daily_time_cap_mins, science_required, sim_preferred_dow`), `user_preferences.daily_minutes`, `accommodations.time_multiplier` (`maybeSingle`), latest `diagnostics` per section (prefer `diagnostic` over `self`, latest `completed_at`), `lesson_content` joined to `skills` (`order_index`, `subject`), DR_ question counts per `skill_code`, `mastery`, onboarding-exam skill stats (attempts with `form_id` like `D2%` or `ONB%` joined to `staging_items.skill_code`, correct = `selected_idx = correct_idx`), skill buckets (per skill, its last 4 attempts with `time_ms` not null joined to `staging_items.skill_code` → `classifyAnswer` with `SECTION_TARGET_MS[section] × timeMultiplier` → `worstBucket`), completed LEARN skill ids (`study_tasks` type LEARN status in DONE/COMPLETED), due review count (`review_queue.due_at <= now()`), question counts for FA_/FB_/FC_ forms.
 - [ ] **Step 2: Write the plan:** delete this user's `study_tasks` with status PENDING/STARTED and `the_date >= today`, and `study_plan_days` with `the_date >= today`; insert days and tasks from `buildPlan`, skipping any task whose `(the_date, type, skill_id)` already exists with status DONE/COMPLETED (insert with `onConflict: 'user_id,the_date,type,skill_id', ignoreDuplicates: true`). Remove the old "skip if 7 days exist" early return except when called by cron without `force` and today's plan was generated today.
 - [ ] **Step 3: Deploy** with `deploy_edge_function` (files: `generate-study-plan/index.ts`, `_shared/planner.ts`, `_shared/cors.ts`, `_shared/rateLimit.ts`, `_shared/mod.ts`).
 - [ ] **Step 4: Verify** by invoking for the admin user (Playwright: `supabase.functions.invoke('generate-study-plan', { body: { force: true } })` from the logged-in page) and querying: 7 `study_plan_days` rows from today; no LEARN for `APCHEM%`; every DRILL skill has ≥ 5 DR_ questions; `profiles.plan_summary` populated; a COMPLETED task from today still COMPLETED.

@@ -135,3 +135,21 @@ Add 15 min/day to cover them.  [Change daily time]
 
 Exact ranking weights, query shapes, the nightly job's batching, and the summary UI styling (follow
 existing Plan page components).
+
+## Addendum (2026-11-19): skill buckets and per-question timing
+
+Agreed with the user after the design was approved:
+
+- **Per-question time is recorded** (`attempts.time_ms`) in drills, lesson/skill quizzes and the diagnostic,
+  from this build onward.
+- **Each skill gets a bucket** from its timed answers: right+fast = **solid**, right+slow = **shaky**,
+  wrong+fast = **careless**, wrong+slow = **gap**. Fast = at or under the section target time
+  (English 30s, Math 60s, Reading 45s, Science 45s, × accommodation multiplier). A wrong answer under 25% of
+  the target is a guess and counts as **gap**; unanswered counts as **gap**. A skill's bucket is the worst of
+  its recent answers (gap > careless > shaky > solid — builder's call).
+- **The plan acts on buckets:** gap → lesson then drill; shaky → timed drill only; careless → accuracy drill
+  only; solid → skipped (strength). Skills with no timed answers fall back to the accuracy rules above.
+- **Diagnostic v2 is a separate, later project.** The user is writing a dedicated diagnostic question pool
+  (4–5 questions per skill). Each sitting will draw ~2 per skill the student hasn't seen; resuming continues
+  the same set; Reading/Science use mini-passages. When that pool is imported it supplies buckets to this
+  planner without changing it.
