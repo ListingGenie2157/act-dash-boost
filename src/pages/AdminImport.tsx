@@ -9,45 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Upload, FileText, CheckCircle, AlertTriangle, Download, Play } from 'lucide-react';
 import { logger } from '@/lib/logger';
 import { reportError } from '@/lib/errorReporter';
-
-interface ImportRecord {
-  id?: string;
-  form_id: string;
-  section: string;
-  ord: number;
-  passage_id?: string | null;
-  passage_title?: string | null;
-  passage_text?: string | null;
-  passage_format?: string | null;
-  passage_type?: string | null;
-  has_charts?: boolean | null;
-  chart_images?: string | null;
-  marked_text?: string | null;
-  line_numbers_enabled?: boolean | null;
-  skill_code: string;
-  difficulty: string;
-  question: string;
-  choice_a: string;
-  choice_b: string;
-  choice_c: string;
-  choice_d: string;
-  choice_e?: string | null;
-  answer: string;
-  explanation?: string | null;
-  calculator_allowed?: boolean | null;
-  underlined_text?: string | null;
-  reference_number?: number | null;
-  position_in_passage?: number | null;
-  image_url?: string | null;
-  image_caption?: string | null;
-  image_position?: string | null;
-}
-
-interface ValidationError {
-  row: number;
-  field: string;
-  message: string;
-}
+import { buildImportRows, onlyNewRows, type ImportError, type StagingInsert } from '@/lib/questionImport';
 
 export default function AdminImport() {
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
@@ -55,139 +17,11 @@ export default function AdminImport() {
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<{
     success: number;
-    errors: ValidationError[];
+    errors: ImportError[];
     warnings: string[];
   } | null>(null);
   const [dryRun, setDryRun] = useState(true);
   const { toast } = useToast();
-
-  const parseCSV = (content: string): ImportRecord[] => {
-    const lines = content.trim().split('\n');
-    
-    // Parse CSV with quoted field support
-    const parseCSVLine = (line: string): string[] => {
-      const values: string[] = [];
-      let current = '';
-      let inQuotes = false;
-      
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        
-        if (char === '"') {
-          inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
-          values.push(current.trim());
-          current = '';
-        } else {
-          current += char;
-        }
-      }
-      values.push(current.trim());
-      return values;
-    };
-    
-    const headers = parseCSVLine(lines[0]);
-    
-    return lines.slice(1).map((line, index) => {
-      const values = parseCSVLine(line);
-      const record: Record<string, string> = {};
-      
-      headers.forEach((header, i) => {
-        const cleanHeader = header.trim().toLowerCase();
-        record[cleanHeader] = values[i]?.trim() || '';
-      });
-
-      // Map to our expected format
-      const passageText = record.passage_text || '';
-      const toBool = (val: string) => val?.toUpperCase() === 'TRUE';
-      
-      return {
-        id: record.id || undefined,
-        form_id: record.form_id,
-        section: record.section,
-        ord: parseInt(record.ord) || index + 1,
-        passage_id: record.passage_id || null,
-        passage_title: record.passage_title || record.title || null,
-        passage_text: passageText || null,
-        passage_format: record.passage_format || null,
-        passage_type: record.passage_type || null,
-        has_charts: record.has_charts ? toBool(record.has_charts) : null,
-        chart_images: record.chart_images || null,
-        marked_text: record.marked_text || null,
-        line_numbers_enabled: record.line_numbers_enabled ? toBool(record.line_numbers_enabled) : null,
-        skill_code: record.skill_code,
-        difficulty: record.difficulty,
-        question: record.question,
-        choice_a: record.choice_a,
-        choice_b: record.choice_b,
-        choice_c: record.choice_c,
-        choice_d: record.choice_d,
-        choice_e: record.choice_e || null,
-        answer: record.answer,
-        explanation: record.explanation || null,
-        calculator_allowed: record.calculator_allowed ? toBool(record.calculator_allowed) : null,
-        underlined_text: record.underlined_text || null,
-        reference_number: record.reference_number ? parseInt(record.reference_number) : null,
-        position_in_passage: record.position_in_passage ? parseInt(record.position_in_passage) : null,
-        image_url: record.image_url || null,
-        image_caption: record.image_caption || null,
-        image_position: record.image_position || 'above_question',
-      };
-    });
-  };
-
-  const validateRecord = (record: ImportRecord, rowIndex: number): ValidationError[] => {
-    const errors: ValidationError[] = [];
-
-    // Required fields
-    if (!record.form_id) errors.push({ row: rowIndex, field: 'form_id', message: 'Form ID is required' });
-    if (!record.section) errors.push({ row: rowIndex, field: 'section', message: 'Section is required' });
-    if (!record.question) errors.push({ row: rowIndex, field: 'question', message: 'Question is required' });
-    if (!record.choice_a) errors.push({ row: rowIndex, field: 'choice_a', message: 'Choice A is required' });
-    if (!record.choice_b) errors.push({ row: rowIndex, field: 'choice_b', message: 'Choice B is required' });
-    if (!record.choice_c) errors.push({ row: rowIndex, field: 'choice_c', message: 'Choice C is required' });
-    if (!record.choice_d) errors.push({ row: rowIndex, field: 'choice_d', message: 'Choice D is required' });
-
-    // Validate answer
-    if (record.section === 'MATH' && record.choice_e) {
-      if (!['A', 'B', 'C', 'D', 'E'].includes(record.answer)) {
-        errors.push({ row: rowIndex, field: 'answer', message: 'Answer must be A, B, C, D, or E for 5-choice Math questions' });
-      }
-    } else {
-      if (!['A', 'B', 'C', 'D'].includes(record.answer)) {
-        errors.push({ row: rowIndex, field: 'answer', message: 'Answer must be A, B, C, or D' });
-      }
-    }
-
-    // Validate section
-    if (!['EN', 'MATH', 'RD', 'SCI'].includes(record.section)) {
-      errors.push({ row: rowIndex, field: 'section', message: 'Section must be EN, MATH, RD, or SCI' });
-    }
-
-    // Validate difficulty
-    if (!['Easy', 'Medium', 'Hard'].includes(record.difficulty)) {
-      errors.push({ row: rowIndex, field: 'difficulty', message: 'Difficulty must be Easy, Medium, or Hard' });
-    }
-
-    // Validate image_position if provided
-    if (record.image_position && !['above_question', 'inline', 'between'].includes(record.image_position)) {
-      errors.push({ row: rowIndex, field: 'image_position', message: 'Image position must be above_question, inline, or between' });
-    }
-
-    // Validate image_url format if provided
-    if (record.image_url) {
-      try {
-        new URL(record.image_url);
-      } catch {
-        // Check if it's a storage path
-        if (!record.image_url.startsWith('/') && !record.image_url.includes('supabase')) {
-          errors.push({ row: rowIndex, field: 'image_url', message: 'Image URL must be a valid URL or storage path' });
-        }
-      }
-    }
-
-    return errors;
-  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedFiles(event.target.files);
@@ -242,150 +76,90 @@ export default function AdminImport() {
     setProgress(0);
     
     try {
-      const allRecords: ImportRecord[] = [];
-      const allErrors: ValidationError[] = [];
+      const allRecords: StagingInsert[] = [];
+      const allErrors: ImportError[] = [];
       const warnings: string[] = [];
       let processedFiles = 0;
 
-      // Process each file
       for (const file of Array.from(selectedFiles)) {
         if (!file.name.endsWith('.csv') && !file.name.endsWith('.txt')) {
           warnings.push(`Skipped non-CSV file: ${file.name}`);
           continue;
         }
-
-        const content = await file.text();
-        const records = parseCSV(content);
-        
-        // Validate each record
-        records.forEach((record: ImportRecord, index: number) => {
-          const errors = validateRecord(record, index + 2); // +2 for header and 1-based indexing
-          allErrors.push(...errors.map(e => ({ 
-            ...e, 
-            row: e.row + (processedFiles * 1000),
-            field: `${file.name}: ${e.field}`
-          })));
-        });
-
-        allRecords.push(...records);
+        const { rows, errors, ignoredColumns } = buildImportRows(await file.text());
+        allErrors.push(...errors.map(e => ({ ...e, field: `${file.name}: ${e.field}` })));
+        if (ignoredColumns.length) {
+          warnings.push(`${file.name}: these columns are not in the question table and were not imported: ${ignoredColumns.join(', ')}`);
+        }
+        allRecords.push(...rows);
         processedFiles++;
-        setProgress((processedFiles / selectedFiles.length) * 50); // First 50% for parsing
+        setProgress((processedFiles / selectedFiles.length) * 40);
       }
 
       logger.debug(`Parsed ${allRecords.length} records with ${allErrors.length} errors`);
 
-      if (allErrors.length > 0 && !dryRun) {
-        setResults({
-          success: 0,
-          errors: allErrors,
-          warnings,
-        });
+      // Nothing is imported while any row has an error
+      if (allErrors.length > 0) {
+        setResults({ success: 0, errors: allErrors, warnings });
         toast({
-          title: "Validation failed",
-          description: `Found ${allErrors.length} validation errors. Please fix them before importing.`,
-          variant: "destructive",
+          title: 'Validation failed',
+          description: `Found ${allErrors.length} errors. Fix them and try again - nothing was imported.`,
+          variant: 'destructive',
         });
-        setImporting(false);
         return;
       }
 
-      // Group records by passage_id for passage insertion
-      const passages = new Map<string, {
-        id: string;
-        form_id: string;
-        section: string;
-        title: string;
-        passage_text: string;
-      }>();
-
-      allRecords.forEach(record => {
-        if (record.passage_id && record.passage_text) {
-          passages.set(record.passage_id, {
-            id: record.passage_id,
-            form_id: record.form_id,
-            section: record.section,
-            title: record.passage_title || '',
-            passage_text: record.passage_text,
-          });
-        }
-      });
+      // Existing questions are never deleted: rows already in a form (same question text) are skipped
+      const formIds = [...new Set(allRecords.map(r => r.form_id))];
+      const existing: Array<{ form_id: string; question: string | null }> = [];
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await supabase
+          .from('staging_items')
+          .select('form_id, question')
+          .in('form_id', formIds)
+          .range(from, from + 999);
+        if (error) throw new Error(`Could not read existing questions: ${error.message}`);
+        existing.push(...(data ?? []));
+        if (!data || data.length < 1000) break;
+      }
+      const { fresh, skipped } = onlyNewRows(allRecords, existing);
+      if (skipped) warnings.push(`${skipped} questions are already in ${formIds.join(', ')} and were skipped`);
+      setProgress(50);
 
       if (dryRun) {
         setResults({
-          success: allRecords.length,
-          errors: allErrors,
-          warnings: [
-            ...warnings,
-            `Would import ${allRecords.length} questions`,
-            `Would import ${passages.size} passages`,
-            'This was a dry run - no data was actually imported'
-          ],
+          success: fresh.length,
+          errors: [],
+          warnings: [...warnings, `Would add ${fresh.length} new questions to ${formIds.join(', ')}`, 'This was a dry run - nothing was imported'],
         });
-        toast({
-          title: "Dry run completed",
-          description: `Validated ${allRecords.length} records with ${allErrors.length} errors.`,
-        });
-        setImporting(false);
+        toast({ title: 'Dry run completed', description: `${fresh.length} new questions ready to add.` });
         return;
       }
 
-      // Clear existing staging items for these forms
-      const formIds = [...new Set(allRecords.map(r => r.form_id))];
-      
-      setProgress(60);
-      
-      const { error: deleteError } = await supabase
-        .from('staging_items')
-        .delete()
-        .in('form_id', formIds);
-
-      if (deleteError) {
-        reportError(deleteError instanceof Error ? deleteError : new Error(String(deleteError)), { page: 'AdminImport' });
-        warnings.push(`Warning: Could not clear existing data: ${deleteError.message}`);
-      }
-
-      setProgress(80);
-
-      // Insert staging items in batches
       const batchSize = 100;
       let insertedCount = 0;
-      
-      for (let i = 0; i < allRecords.length; i += batchSize) {
-        const batch = allRecords.slice(i, i + batchSize);
-        const { error: insertError } = await supabase
-          .from('staging_items')
-          .insert(batch);
-
+      for (let i = 0; i < fresh.length; i += batchSize) {
+        const batch = fresh.slice(i, i + batchSize);
+        const { error: insertError } = await supabase.from('staging_items').insert(batch);
         if (insertError) {
-          throw new Error(`Failed to insert batch ${Math.floor(i/batchSize) + 1}: ${insertError.message}`);
+          throw new Error(`Added ${insertedCount} questions, then batch ${Math.floor(i / batchSize) + 1} failed: ${insertError.message}. Existing questions were not touched; re-running skips the ones already added.`);
         }
-        
         insertedCount += batch.length;
-        setProgress(80 + (insertedCount / allRecords.length) * 20);
+        setProgress(50 + (insertedCount / Math.max(fresh.length, 1)) * 50);
       }
 
       setResults({
-        success: allRecords.length,
-        errors: allErrors,
-        warnings: [
-          ...warnings,
-          `Successfully imported ${allRecords.length} questions to staging`,
-          `Imported ${passages.size} unique passages`,
-          `Data imported for forms: ${formIds.join(', ')}`,
-        ],
+        success: insertedCount,
+        errors: [],
+        warnings: [...warnings, `Added ${insertedCount} new questions to ${formIds.join(', ')}`],
       });
-
-      toast({
-        title: "Import successful",
-        description: `Imported ${allRecords.length} questions to staging table.`,
-      });
-
+      toast({ title: 'Import successful', description: `Added ${insertedCount} new questions.` });
     } catch (error) {
       reportError(error instanceof Error ? error : new Error(String(error)), { page: 'AdminImport' });
       toast({
-        title: "Import failed",
-        description: error instanceof Error ? error.message : "An unexpected error occurred.",
-        variant: "destructive",
+        title: 'Import failed',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred.',
+        variant: 'destructive',
       });
     } finally {
       setImporting(false);
@@ -394,99 +168,30 @@ export default function AdminImport() {
 
   const downloadTemplate = () => {
     const headers = [
-      // Core required fields
       'ord', 'form_id', 'section', 'skill_code', 'difficulty',
-      'question', 'choice_a', 'choice_b', 'choice_c', 'choice_d', 'choice_e', 'answer',
-      'explanation',
-      // English-specific fields
-      'underlined_text', 'reference_number', 'position_in_passage',
-      // Math-specific fields
-      'calculator_allowed',
-      // Passage fields (include on first question of passage only)
-      'passage_id', 'passage_title', 'passage_text', 'passage_format', 'passage_type',
-      'has_charts', 'chart_images', 'marked_text', 'line_numbers_enabled',
-      // Image fields
-      'image_url', 'image_caption', 'image_position'
+      'question', 'choice_a', 'choice_b', 'choice_c', 'choice_d', 'answer', 'explanation',
+      'underlined_text', 'reference_number', 'position_in_passage', 'calculator_allowed',
+      'passage_id', 'passage_title', 'passage_text',
+      'image_url', 'image_caption', 'image_position',
     ].join(',');
-    
-    // Comment lines explaining the format
+
     const comments = [
       '# ACT Question Import CSV Template',
-      '# Required: ord, form_id, section, skill_code, difficulty, question, choice_a-d, answer',
-      '# Optional: choice_e (Math 5-option), explanation, image fields',
-      '# English: underlined_text, reference_number, position_in_passage',
-      '# Math: calculator_allowed (TRUE/FALSE)',
-      '# Passages: passage_id, passage_title, passage_text (include on FIRST question only)',
-      '# Boolean fields: Use TRUE or FALSE',
-      '# JSON arrays: Use ["item1","item2"] format for chart_images',
-      '# Sections: EN (English), MATH (Math), RD (Reading), SCI (Science)',
-      '# Difficulty: Easy, Medium, or Hard',
-      '# Answer: A, B, C, D, or E (E for Math only)',
+      '# Required: form_id, section, skill_code, difficulty, question, choice_a-d, answer',
+      '# Sections: English, Math, Reading, Science (EN, MATH, RD, SCI also accepted)',
+      '# Difficulty: Easy, Medium or Hard. Answer: A, B, C or D (4 choices only)',
+      '# Passages: same passage_id on every question of the group; passage_title and passage_text on the FIRST question',
+      '# Importing adds new questions only; it never deletes. Questions already in the form are skipped.',
       '',
     ].join('\n');
 
-    // Example rows for each section
+    const q = (v: string) => `"${v.replace(/"/g, '""')}"`;
     const examples = [
-      // English example with underlined text
-      [
-        '1', 'FA_EN', 'EN', 'ENG.001', 'Easy',
-        '"Choose the best alternative for the underlined portion."', 'goes to', 'is going to', 'went to', 'has gone to', '',
-        'B', '"The present progressive ""is going to"" indicates ongoing action."',
-        'goes to', '5', '12',
-        '',
-        'P001', '', '', '', '',
-        '', '', '', '',
-        '', '', 'above_question'
-      ].join(','),
-      
-      // Math example with 5 choices and calculator
-      [
-        '1', 'FA_MA', 'MATH', 'MATH.001', 'Medium',
-        '"What is the value of x if 2x + 5 = 15?"', '3', '5', '7', '10', '12',
-        'B', '"Subtract 5 from both sides: 2x = 10. Divide by 2: x = 5"',
-        '', '', '',
-        'TRUE',
-        '', '', '', '', '',
-        '', '', '', '',
-        '', '', ''
-      ].join(','),
-      
-      // Reading example with passage (first question of passage)
-      [
-        '1', 'FA_RE', 'RD', 'READ.001', 'Hard',
-        '"The main purpose of the passage is to:"', 'describe a historical event', 'analyze a literary technique', 'argue for a policy change', 'explain a scientific concept', '',
-        'D', '',
-        '', '', '',
-        '',
-        'P001', 'The Nature of Light', '"Light behaves as both a wave and a particle..."', 'Single', 'Natural Science',
-        'FALSE', '', '', 'TRUE',
-        '', '', 'above_question'
-      ].join(','),
-      
-      // Reading example (subsequent question - no passage data)
-      [
-        '2', 'FA_RE', 'RD', 'READ.002', 'Medium',
-        '"According to the passage, which is true?"', 'Light is only a wave', 'Light is only a particle', 'Light has dual nature', 'Light has no mass', '',
-        'C', '',
-        '', '', '',
-        '',
-        'P001', '', '', '', '',
-        '', '', '', '',
-        '', '', ''
-      ].join(','),
-      
-      // Science example with charts
-      [
-        '1', 'FA_SC', 'SCI', 'SCI.001', 'Medium',
-        '"Based on Figure 1, what is the relationship between temperature and pressure?"', 'directly proportional', 'inversely proportional', 'no relationship', 'exponential', '',
-        'A', '',
-        '', '', '',
-        '',
-        'P001', 'Experiment 1: Gas Properties', '"Students conducted an experiment..."', 'Data Representation', 'Natural Science',
-        'TRUE', '["https://example.com/chart1.png"]', '', 'FALSE',
-        '', '', 'above_question'
-      ].join(',')
-    ];
+      ['1', 'D3EN', 'English', 'E1.A', 'Easy', q('Choose the best alternative for the underlined portion.'), 'goes', 'go', 'going', 'gone', 'A', q('Singular subject takes "goes".'), 'goes', '1', '', '', '', '', '', '', '', 'above_question'],
+      ['2', 'D3MA', 'Math', 'M2.A', 'Medium', q('If 2x + 5 = 15, what is x?'), '3', '5', '7', '10', 'B', q('2x = 10, so x = 5.'), '', '', '', 'TRUE', '', '', '', '', '', 'above_question'],
+      ['3', 'D3RD', 'Reading', 'R1.A', 'Hard', q('The main purpose of the passage is to:'), 'describe', 'analyze', 'argue', 'explain', 'D', '', '', '', '', '', 'P001', 'The Nature of Light', q('Light behaves as both a wave and a particle...'), '', '', 'above_question'],
+      ['4', 'D3RD', 'Reading', 'R1.B', 'Medium', q('According to the passage, light:'), 'is only a wave', 'is only a particle', 'has a dual nature', 'has mass', 'C', '', '', '', '', '', 'P001', '', '', '', '', 'above_question'],
+    ].map(r => r.join(','));
 
     const content = comments + headers + '\n' + examples.join('\n');
     const blob = new Blob([content], { type: 'text/csv' });
