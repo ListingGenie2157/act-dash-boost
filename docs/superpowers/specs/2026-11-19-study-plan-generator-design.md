@@ -164,3 +164,12 @@ Agreed with the user after the design was approved:
   - Science (1): S5.B Time Management & Section Strategy
   Used: English 35, Math 43, Reading 15, Science 10. Left-out skills keep their lessons; the study plan still
   ranks them using mastery and drill/quiz timing, just never a diagnostic result.
+- **Passages in the thorough diagnostic pool (Reading and Science).** Each skill's 2 drawn questions share one
+  passage, and the passage text is stored only on the first question of its group (`passage_id` links them).
+  Rules for the picker and the test screen:
+  - The picker draws a passage group as a unit: for a passage-based skill it picks one unseen group and takes
+    both of its questions together, never one question from a group alone.
+  - The test screen resolves the passage by `passage_id` (from whichever question in the group carries the
+    text), so every question shows it regardless of which row stores it. Questions in a group are shown
+    back to back.
+  - "Unseen" for a passage skill means the student hasn't answered any question from that group.
