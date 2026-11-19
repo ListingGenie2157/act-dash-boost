@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { createQuestionTimer } from '@/lib/questionTimer';
+import { sharePassages } from '@/lib/passageGroups';
 import { diagnosticFormIdSchema, validateInput } from '@/lib/validation/edgeFunctionSchemas';
 import { reportError } from '@/lib/errorReporter';
 
@@ -17,6 +18,7 @@ interface Question {
   choice_b: string;
   choice_c: string;
   choice_d: string;
+  passage_id?: string | null;
   passage_text?: string;
   passage_title?: string;
 }
@@ -254,13 +256,19 @@ export default function DiagnosticTest() {
           choice_b: q.choice_b ?? '',
           choice_c: q.choice_c ?? '',
           choice_d: q.choice_d ?? '',
+          passage_id: q.passage_id ?? null,
           passage_text: q.passage_text ?? undefined,
           passage_title: q.passage_title ?? undefined,
           skill_id
         };
       });
 
-      setQuestions(mappedQuestions);
+      // A passage is stored on one question of its group; show it on every question in the group
+      setQuestions(sharePassages(mappedQuestions).map(q => ({
+        ...q,
+        passage_text: q.passage_text ?? undefined,
+        passage_title: q.passage_title ?? undefined,
+      })));
 
       // Load or create attempts with choice shuffling
       const existingAttempts: Record<string, Attempt> = {};
