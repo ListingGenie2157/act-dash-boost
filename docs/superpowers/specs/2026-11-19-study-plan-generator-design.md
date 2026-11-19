@@ -153,3 +153,14 @@ Agreed with the user after the design was approved:
   (4–5 questions per skill). Each sitting will draw ~2 per skill the student hasn't seen; resuming continues
   the same set; Reading/Science use mini-passages. When that pool is imported it supplies buckets to this
   planner without changing it.
+- **Skills the thorough diagnostic measures: 103 of 120.** Source of truth: `Preppit_skill_ids_diagnostic.csv`
+  (repo root; one row per skill ID, `in_thorough_diagnostic` Yes/No, `reason_if_not` for every No; checked
+  against the live `skills` table on 2026-11-19 — all 120 IDs match). The picker draws only from Yes skills.
+  Left out (17), because one question can't measure them:
+  - English (12): 6 Review skills (E1.F4, E2.T, E3.D, E6.E, E7.D, E8.D — covered by the skills they review);
+    3 Mixed Practice (E9.A, E9.B, E9.C); 3 Practice Test/Capstone (E10.A, E10.B, E10.C)
+  - Math (3): Practice Test/Capstone (M10.F, M10.G, M10.H)
+  - Reading (1): R5.A Timing & Order Strategy
+  - Science (1): S5.B Time Management & Section Strategy
+  Used: English 35, Math 43, Reading 15, Science 10. Left-out skills keep their lessons; the study plan still
+  ranks them using mastery and drill/quiz timing, just never a diagnostic result.
