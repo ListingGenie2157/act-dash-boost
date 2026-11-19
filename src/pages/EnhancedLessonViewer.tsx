@@ -31,7 +31,8 @@ import { TutorTrigger } from '@/components/tutor/TutorTrigger';
 import { mapToTutorSubject } from '@/lib/tutorSubjectMapper';
 import { logger } from '@/lib/logger';
 import { reportError } from '@/lib/errorReporter';
-import { getRandomBankQuestions, gradeBankAnswer, subjectFromSkillCode, toLegacyQuestions } from '@/lib/bank';
+import { supabase } from '@/integrations/supabase/client';
+import { getRandomBankQuestions, gradeBankAnswer, recordBankAttempt, subjectFromSkillCode, toLegacyQuestions } from '@/lib/bank';
 import type { LegacyQuestion } from '@/types';
 
 /** Checkpoint quiz size, and the minimum bank size before falling back to the lesson's fixed quiz */
@@ -158,6 +159,29 @@ export default function EnhancedLessonViewer() {
     }),
     [lesson?.checkpoint_quiz_questions]
   );
+
+  // Save each graded bank answer with its time (feeds skill buckets in the study plan)
+  const saveBankAnswer = (questionList: LegacyQuestion[]) =>
+    (questionId: string, selectedIdx: number, correctIdx: number, choiceOrder: number[], timeMs: number) => {
+      void (async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session?.user) return;
+          await recordBankAttempt({
+            userId: session.user.id,
+            questionId,
+            skillCode: topic || '',
+            questionOrd: questionList.findIndex(q => String(q.id) === questionId) + 1,
+            choiceOrder,
+            selectedIdx,
+            correctIdx,
+            timeMs,
+          });
+        } catch (err) {
+          reportError(err instanceof Error ? err : new Error(String(err)), { page: 'EnhancedLessonViewer', source: 'saveBankAnswer' });
+        }
+      })();
+    };
 
   const handleNeedsPractice = async (_skillCode: string, score: number, wrongCount: number) => {
     setLastScore(score);
@@ -467,6 +491,7 @@ export default function EnhancedLessonViewer() {
               <CardContent>
                 <QuizComponent
                   gradeAnswer={(id) => gradeBankAnswer(id)}
+                  onAnswerGraded={saveBankAnswer(practiceQuestions)}
                   questions={practiceQuestions}
                   title={`Practice: ${lesson?.skill_name}`}
                   skillCode={topic || ''}
@@ -491,6 +516,7 @@ export default function EnhancedLessonViewer() {
                     key={`checkpoint-${quizRound}`}
                     questions={useBankCheckpoint ? (checkpointQuestions ?? []) : fixedCheckpointQuestions}
                     gradeAnswer={useBankCheckpoint ? (id) => gradeBankAnswer(id) : undefined}
+                    onAnswerGraded={useBankCheckpoint ? saveBankAnswer(checkpointQuestions ?? []) : undefined}
                     title="Checkpoint Quiz"
                     skillCode={topic || ''}
                     onComplete={(score) => setLastScore(score)}

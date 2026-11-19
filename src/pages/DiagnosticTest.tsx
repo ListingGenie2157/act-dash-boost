@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { getAccommodatedTime } from '@/utils/accommodations';
+import { createQuestionTimer } from '@/lib/questionTimer';
 import { diagnosticFormIdSchema, validateInput } from '@/lib/validation/edgeFunctionSchemas';
 import { reportError } from '@/lib/errorReporter';
 
@@ -29,18 +29,6 @@ interface Attempt {
   question_ord: number;
 }
 
-const TIMERS: Record<string, number> = {
-  ONB: 20 * 60, // 20 minutes - quick diagnostic
-  D2EN: 20 * 60, // 20 minutes  
-  D2MA: 25 * 60, // 25 minutes
-  D2RD: 18 * 60, // 18 minutes
-  D2SC: 18 * 60, // 18 minutes - fixed from D2SCI
-  // Official ACT section timers
-  EN_A: 45 * 60, EN_B: 45 * 60, EN_C: 45 * 60, // 45 minutes
-  MATH_A: 60 * 60, MATH_B: 60 * 60, MATH_C: 60 * 60, // 60 minutes
-  RD_A: 35 * 60, RD_B: 35 * 60, RD_C: 35 * 60, // 35 minutes
-  SCI_A: 35 * 60, SCI_B: 35 * 60, SCI_C: 35 * 60, // 35 minutes
-};
 
 // Stable hash function for deterministic shuffling
 function hashCode(str: string): number {
@@ -79,8 +67,9 @@ export default function DiagnosticTest() {
   const [questions, setQuestions] = useState<(Question & { skill_id?: string | null })[]>([]);
   const [attempts, setAttempts] = useState<Record<string, Attempt>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
-  // null = timer not started yet (prevents auto-submitting before the time limit is set)
-  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  // Untimed for the student: time per question is recorded silently (feeds skill buckets)
+  const questionTimer = useRef(createQuestionTimer());
+  const priorTimeMs = useRef<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -272,9 +261,6 @@ export default function DiagnosticTest() {
       });
 
       setQuestions(mappedQuestions);
-      const baseTime = TIMERS[formId as keyof typeof TIMERS] || 1200;
-      const accommodatedTime = await getAccommodatedTime(baseTime);
-      setTimeLeft(accommodatedTime);
 
       // Load or create attempts with choice shuffling
       const existingAttempts: Record<string, Attempt> = {};
@@ -298,6 +284,7 @@ export default function DiagnosticTest() {
         const existing = attemptMap.get(question.question_id);
 
         if (existing) {
+          priorTimeMs.current[question.question_id] = existing.time_ms ?? 0;
           existingAttempts[question.question_id] = {
             question_id: String(existing.question_id),
             choice_order: existing.choice_order,
@@ -362,15 +349,13 @@ export default function DiagnosticTest() {
     }
   }, [formId, validationError, loadDiagnostic]);
 
+  // Count time only while a question is on screen
   useEffect(() => {
-    if (timeLeft === null || loading) return;
-    if (timeLeft > 0) {
-      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && questions.length > 0 && formId) {
-      handleSubmit();
-    }
-  }, [timeLeft, loading, questions.length, handleSubmit, formId]);
+    const timer = questionTimer.current;
+    const question = questions[currentIndex];
+    if (!loading && question) timer.show(question.question_id);
+    return () => timer.pause();
+  }, [currentIndex, questions, loading]);
 
   const handleAnswerSelect = async (choiceIndex: number) => {
     const question = questions[currentIndex];
@@ -386,9 +371,11 @@ export default function DiagnosticTest() {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) return;
       
+      const timeMs = (priorTimeMs.current[question.question_id] ?? 0)
+        + questionTimer.current.elapsed(question.question_id);
       await supabase
         .from('attempts')
-        .update({ selected_idx: choiceIndex })
+        .update({ selected_idx: choiceIndex, time_ms: Math.round(timeMs) })
         .eq('user_id', user.user.id)
         .eq('form_id', formId)
         .eq('question_id', Number(question.question_id));
@@ -398,11 +385,6 @@ export default function DiagnosticTest() {
   };
 
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
 
   const getShuffledChoices = (question: Question) => {
     const attempt = attempts[question.question_id];
@@ -500,9 +482,6 @@ export default function DiagnosticTest() {
           <h1 className="text-2xl font-bold">
             {formId || 'Diagnostic'} - Question {currentIndex + 1} of {questions.length}
           </h1>
-          <div className="text-lg font-mono">
-            {formatTime(timeLeft ?? 0)}
-          </div>
         </div>
 
         {/* Progress */}

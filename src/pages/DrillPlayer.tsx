@@ -8,6 +8,14 @@ import { toast } from 'sonner';
 import type { DrillSession, LegacyQuestion } from '@/types';
 import { logger } from '@/lib/logger';
 
+/** Drill bank form for each subject (accepts full names and codes) */
+const DRILL_FORM_BY_SUBJECT: Record<string, string> = {
+  Reading: 'DR_RD', RD: 'DR_RD',
+  Math: 'DR_MA', MA: 'DR_MA',
+  English: 'DR_EN', EN: 'DR_EN',
+  Science: 'DR_SC', SC: 'DR_SC',
+};
+
 export default function DrillPlayer() {
   const { subject } = useParams<{ subject: string }>();
   const navigate = useNavigate();
@@ -31,18 +39,7 @@ export default function DrillPlayer() {
           return;
         }
 
-        // Map subject to drill form ID (accepts full subject names)
-        const formIdMap: Record<string, string> = {
-          'Reading': 'DR_RD',
-          'RD': 'DR_RD',
-          'Math': 'DR_MA',
-          'MA': 'DR_MA',
-          'English': 'DR_EN',
-          'EN': 'DR_EN',
-          'Science': 'DR_SC',
-          'SC': 'DR_SC',
-        };
-        const drillFormId = formIdMap[subject];
+        const drillFormId = DRILL_FORM_BY_SUBJECT[subject];
 
         if (!drillFormId) {
           toast.error('Invalid drill subject');
@@ -246,7 +243,7 @@ export default function DrillPlayer() {
     return { correctIdx: result.correctIdx, explanation: result.explanation };
   };
 
-  const handleComplete = async ({ score, answers, correctIdxs, elapsedSeconds }: DrillResult) => {
+  const handleComplete = async ({ score, answers, correctIdxs, elapsedSeconds, timesMs }: DrillResult) => {
     if (!drill) return;
 
     // Calculate stats from drill
@@ -260,6 +257,25 @@ export default function DrillPlayer() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      // One attempt per graded answer, with time on the question (feeds skill buckets in the study plan)
+      const attemptRows = drill.questions
+        .map((q, i) => ({ q, i }))
+        .filter(({ i }) => answers[i] !== -1 && correctIdxs[i] !== -1)
+        .map(({ q, i }) => ({
+          user_id: user.id,
+          question_id: Number(q.id),
+          form_id: DRILL_FORM_BY_SUBJECT[subject ?? ''] ?? 'DR_EN',
+          question_ord: i + 1,
+          choice_order: [0, 1, 2, 3],
+          correct_idx: correctIdxs[i],
+          selected_idx: answers[i],
+          time_ms: timesMs[i] ?? null,
+        }));
+      if (attemptRows.length > 0) {
+        const { error: attemptsError } = await supabase.from('attempts').insert(attemptRows);
+        if (attemptsError) logger.error('Failed to save drill attempts:', attemptsError);
+      }
 
       // Record missed questions to error_bank (only answers that were actually graded)
       for (let i = 0; i < drill.questions.length; i++) {

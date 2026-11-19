@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { createQuestionTimer } from '@/lib/questionTimer';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -23,7 +24,7 @@ interface QuizComponentProps {
    */
   gradeAnswer?: (questionId: string, originalIdx: number) => Promise<{ correctIdx: number; explanation?: string | null }>;
   /** Called after each graded answer (original indices), e.g. to persist attempts. */
-  onAnswerGraded?: (questionId: string, selectedOriginalIdx: number, correctOriginalIdx: number, choiceOrder: number[]) => void;
+  onAnswerGraded?: (questionId: string, selectedOriginalIdx: number, correctOriginalIdx: number, choiceOrder: number[], timeMs: number) => void;
 }
 
 export const QuizComponent = ({
@@ -95,12 +96,21 @@ export const QuizComponent = ({
     });
   }, [questions, userId, graded, gradeAnswer]);
 
+  // Time each question while it is on screen (summed across revisits)
+  const questionTimer = useRef(createQuestionTimer());
+  useEffect(() => {
+    const q = shuffledQuestions[currentQuestion];
+    if (q && !showResults && answers[currentQuestion] === -1) questionTimer.current.show(String(q.id));
+    else questionTimer.current.pause();
+  }, [currentQuestion, showResults, answers, shuffledQuestions]);
+
   const handleAnswerSelect = async (answerIndex: number) => {
     if (submitted) return;
     // one attempt per question
     if (answers[currentQuestion] !== -1) return;
 
     const questionIndex = currentQuestion;
+    const timeMs = questionTimer.current.elapsed(String(shuffledQuestions[questionIndex].id));
     const newAnswers = [...answers];
     newAnswers[questionIndex] = answerIndex;
     setAnswers(newAnswers);
@@ -115,7 +125,7 @@ export const QuizComponent = ({
         const result = await gradeAnswer(String(question.id), originalIdx);
         setGraded(prev => ({ ...prev, [questionIndex]: { correctIdx: result.correctIdx, explanation: result.explanation ?? null } }));
         correctShuffledIdx = question.choiceOrder.indexOf(result.correctIdx);
-        onAnswerGraded?.(String(question.id), originalIdx, result.correctIdx, question.choiceOrder);
+        onAnswerGraded?.(String(question.id), originalIdx, result.correctIdx, question.choiceOrder, timeMs);
       } catch (error) {
         reportError(error instanceof Error ? error : new Error(String(error)), { component: 'QuizComponent', source: 'grade' });
         correctShuffledIdx = -1;

@@ -247,6 +247,7 @@ export default function DrillRunner() {
         correct_idx: correctIdx,
         selected_idx: selectedIdx,
         task_id: taskId,
+        time_ms: timeSpent,
       });
       
       if (!isCorrect && correctIdx !== -1) {

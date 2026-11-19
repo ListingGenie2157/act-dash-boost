@@ -143,3 +143,42 @@ export function skillDrillPath(skillCode: string): string {
   const params = new URLSearchParams({ mode: 'skill', skill: skillCode.toUpperCase(), questions: '10', time: '450' });
   return `/drill/${subject}/play?${params.toString()}`;
 }
+
+const BANK_FORM_BY_PREFIX: Record<string, string> = { E: 'DR_EN', M: 'DR_MA', R: 'DR_RD', S: 'DR_SC' };
+
+/**
+ * Save one graded bank answer (attempt with time on question); wrong answers also go to the review queue.
+ * Errors are reported, never thrown, so grading UI is not interrupted.
+ */
+export async function recordBankAttempt(params: {
+  userId: string;
+  questionId: string;
+  skillCode: string;
+  questionOrd: number;
+  choiceOrder: number[];
+  selectedIdx: number;
+  correctIdx: number;
+  timeMs: number;
+  formId?: string;
+}): Promise<void> {
+  const formId = params.formId ?? BANK_FORM_BY_PREFIX[params.skillCode.trim().charAt(0).toUpperCase()] ?? 'DR_EN';
+  const { error } = await supabase.from('attempts').insert({
+    user_id: params.userId,
+    question_id: Number(params.questionId),
+    form_id: formId,
+    question_ord: params.questionOrd,
+    choice_order: params.choiceOrder,
+    correct_idx: params.correctIdx,
+    selected_idx: params.selectedIdx,
+    time_ms: Math.max(0, Math.round(params.timeMs)),
+  });
+  if (error) throw error;
+  if (params.selectedIdx !== params.correctIdx) {
+    await supabase.from('review_queue').insert({
+      user_id: params.userId,
+      question_id: Number(params.questionId),
+      due_at: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+      interval_days: 2,
+    });
+  }
+}

@@ -7,6 +7,7 @@ import { Timer, Play, Pause, RotateCcw, ArrowLeft, CheckCircle, XCircle, BookOpe
 import type { DrillSession } from '@/types';
 import { useTimer } from '@/hooks/useTimer';
 import { useToast } from '@/hooks/use-toast';
+import { createQuestionTimer } from '@/lib/questionTimer';
 
 export interface DrillResult {
   score: number;
@@ -15,6 +16,8 @@ export interface DrillResult {
   /** correct option index per question (-1 if unknown) */
   correctIdxs: number[];
   elapsedSeconds: number;
+  /** ms each question was on screen before it was answered (0 = unanswered) */
+  timesMs: number[];
 }
 
 interface DrillComponentProps {
@@ -39,6 +42,8 @@ export const DrillComponent = ({ drill, onComplete, onBack, gradeAnswer }: Drill
   const [hasStarted, setHasStarted] = useState(false);
   const pendingGrades = useRef<Map<number, Promise<number>>>(new Map());
   const finishedRef = useRef(false);
+  const questionTimer = useRef(createQuestionTimer());
+  const timesMs = useRef<number[]>(new Array(drill.questions.length).fill(0));
 
   const { timeLeft, isActive, isCompleted, startTimer, pauseTimer, resetTimer, formatTime } = useTimer(drill.timeLimit);
 
@@ -61,7 +66,8 @@ export const DrillComponent = ({ drill, onComplete, onBack, gradeAnswer }: Drill
 
     const correctCount = finalAnswers.filter((answer, index) => answer !== -1 && answer === resolved[index]).length;
     const score = Math.round((correctCount / drill.questions.length) * 100);
-    onComplete({ score, answers: finalAnswers, correctIdxs: resolved, elapsedSeconds });
+    questionTimer.current.pause();
+    onComplete({ score, answers: finalAnswers, correctIdxs: resolved, elapsedSeconds, timesMs: [...timesMs.current] });
   }, [pauseTimer, drill.questions, drill.timeLimit, timeLeft, correctIdxs, onComplete]);
 
   useEffect(() => {
@@ -69,6 +75,13 @@ export const DrillComponent = ({ drill, onComplete, onBack, gradeAnswer }: Drill
       handleFinish(answers);
     }
   }, [isCompleted, hasStarted, answers, handleFinish]);
+
+  // Count time only while the current question is on screen and the drill is running
+  useEffect(() => {
+    const question = drill.questions[currentQuestion];
+    if (hasStarted && isActive && !showResults && question) questionTimer.current.show(question.id);
+    else questionTimer.current.pause();
+  }, [currentQuestion, hasStarted, isActive, showResults, drill.questions]);
 
   const handleStart = () => {
     setHasStarted(true);
@@ -86,6 +99,7 @@ export const DrillComponent = ({ drill, onComplete, onBack, gradeAnswer }: Drill
     if (!isActive || showResults) return;
 
     const questionIndex = currentQuestion;
+    timesMs.current[questionIndex] = questionTimer.current.elapsed(drill.questions[questionIndex].id);
     const newAnswers = [...answers];
     newAnswers[questionIndex] = answerIndex;
     setAnswers(newAnswers);
@@ -219,6 +233,8 @@ export const DrillComponent = ({ drill, onComplete, onBack, gradeAnswer }: Drill
               setCorrectIdxs(drill.questions.map(q => (gradeAnswer ? -1 : q.correctAnswer)));
               setExplanations(new Array(drill.questions.length).fill(null));
               pendingGrades.current = new Map();
+              questionTimer.current = createQuestionTimer();
+              timesMs.current = new Array(drill.questions.length).fill(0);
               finishedRef.current = false;
               setShowResults(false);
               setHasStarted(false);

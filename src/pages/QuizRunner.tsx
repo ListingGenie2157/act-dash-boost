@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { QuizComponent } from '@/components/QuizComponent';
 import { Button } from '@/components/ui/button';
-import { getRandomBankQuestions, gradeBankAnswer, toLegacyQuestions, type BankQuestion } from '@/lib/bank';
+import { getRandomBankQuestions, gradeBankAnswer, recordBankAttempt, toLegacyQuestions, type BankQuestion } from '@/lib/bank';
 import { reportError } from '@/lib/errorReporter';
 
 /**
@@ -51,26 +51,20 @@ export default function QuizRunner() {
     [bankQuestions]
   );
 
-  const persistAnswer = async (questionId: string, selectedIdx: number, correctIdx: number, choiceOrder: number[]) => {
+  const persistAnswer = async (questionId: string, selectedIdx: number, correctIdx: number, choiceOrder: number[], timeMs: number) => {
     if (!userId) return;
     try {
-      await supabase.from('attempts').insert({
-        user_id: userId,
-        question_id: Number(questionId),
-        form_id: formIdById.get(questionId) ?? 'DR_EN',
-        question_ord: questions.findIndex(q => q.id === questionId) + 1,
-        choice_order: choiceOrder,
-        correct_idx: correctIdx,
-        selected_idx: selectedIdx,
+      await recordBankAttempt({
+        userId,
+        questionId,
+        skillCode,
+        formId: formIdById.get(questionId),
+        questionOrd: questions.findIndex(q => q.id === questionId) + 1,
+        choiceOrder,
+        selectedIdx,
+        correctIdx,
+        timeMs,
       });
-      if (selectedIdx !== correctIdx) {
-        await supabase.from('review_queue').insert({
-          user_id: userId,
-          question_id: Number(questionId),
-          due_at: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-          interval_days: 2,
-        });
-      }
     } catch (err) {
       reportError(err instanceof Error ? err : new Error(String(err)), { page: 'QuizRunner', source: 'persist' });
     }
@@ -94,7 +88,7 @@ export default function QuizRunner() {
         title={`Skill Quiz – ${skillCode}`}
         skillCode={skillCode}
         gradeAnswer={(id) => gradeBankAnswer(id)}
-        onAnswerGraded={(id, selected, correct, order) => void persistAnswer(id, selected, correct, order)}
+        onAnswerGraded={(id, selected, correct, order, timeMs) => void persistAnswer(id, selected, correct, order, timeMs)}
         onComplete={() => { /* results are shown by QuizComponent */ }}
         onBack={() => navigate(-1)}
       />
