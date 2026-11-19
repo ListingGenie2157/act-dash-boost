@@ -1,4 +1,4 @@
-export type TutorSubject = 'AP_CHEM' | 'ACT_MATH' | 'ENGLISH' | 'SCIENCE' | 'MATH' | 'READING';
+export type TutorSubject = 'ACT_MATH' | 'ENGLISH' | 'SCIENCE' | 'MATH' | 'READING';
 export type TutorMode = 'practice' | 'quiz' | 'test';
 export type TutorRole = 'user' | 'assistant' | 'system';
 

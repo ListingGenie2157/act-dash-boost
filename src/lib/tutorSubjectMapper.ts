@@ -38,8 +38,6 @@ export function getSubjectDisplayName(subject: TutorSubject): string {
       return 'Science';
     case 'READING':
       return 'Reading';
-    case 'AP_CHEM':
-      return 'AP Chemistry';
     default:
       return subject;
   }

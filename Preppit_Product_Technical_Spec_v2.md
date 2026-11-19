@@ -15,7 +15,7 @@
 ### 1.1 Product Name & Positioning
 **Preppit** is an ACT prep platform whose flagship feature is **Coach Mode** — an embedded AI‑style "voice in your head" that delivers context‑aware nudges, pacing alerts, and strategy reminders **inside live timed simulations and drills**. Coach Mode is what students experience first and what they re‑subscribe for: it trains test‑day instincts (flag and move on, two‑pass, guess blanks at T‑2:00, watch the Desmos mode) until they fire automatically without prompting.
 
-Around Coach Mode, Preppit ships a complete ACT engine: authentic Enhanced‑ACT simulations (50/45/36/40), an AI study planner, an AI tutor, a 129‑skill mastery system, a parent portal, and the well‑known **"Calculator Hacks"** library — a supporting differentiator (not the core), used both as a top‑of‑funnel hook and as the proof point that Preppit teaches *how to take* the test, not just the content.
+Around Coach Mode, Preppit ships a complete ACT engine: authentic Enhanced‑ACT simulations (50/45/36/40), an AI study planner, an AI tutor, a 120‑skill mastery system, a parent portal, and the well‑known **"Calculator Hacks"** library — a supporting differentiator (not the core), used both as a top‑of‑funnel hook and as the proof point that Preppit teaches *how to take* the test, not just the content.
 
 ### 1.2 Mission / Problem Solved
 The ACT is a high‑stakes, **pace‑constrained** exam. Most prep tools (Khan Academy, prep books, $200/hr tutors) drill *content* but ignore *how a real teen performs under a 35–50 minute timer* — especially teens with ADHD, anxiety, or weak time‑management. Knowing the math isn't the same as knowing when to bail on a problem at 0:75, when to start the second pass, when to fill bubbles, or when to switch Desmos out of radian mode. Preppit solves three specific problems:
@@ -117,47 +117,11 @@ Every shipped feature, audited from the codebase. Status legend: ✅ Shipped · 
 | **ACT Math** | **46** |
 | **ACT Reading** | **16** |
 | **ACT Science** | **10** |
-| **AP Chemistry** (pilot / cross‑sell track) | **12** |
-| **Total full lessons in DB** | **131** |
+| **Total full lessons in DB** | **119** |
 
-In addition to DB lessons, Preppit ships two **structured curriculum modules** in code (`src/data/curriculum.ts`, 2,841 lines) used by the daily Study Plan, plus a **calculator lesson library** (`src/data/calculatorLessons.ts`, 872 lines).
+In addition to DB lessons, Preppit ships a **calculator lesson library** (`src/data/calculatorLessons.ts`, 872 lines). The daily Study Plan is built from the DB lessons by the study planner (see the study plan design doc).
 
-#### 3.5.2 Structured Curriculum (`curriculum.ts`)
-
-**A. Rapid‑Fire Foundations** (used during onboarding & catch‑up):
-- *Math Basics Rapid Fire* — 18 micro‑items (arithmetic, fractions, percents, exponents, order of ops)
-- *Grammar Rules Rapid Fire* — 10 micro‑items (commas, apostrophes, subject‑verb)
-
-**B. ACT 4‑Day Intensive (Math)**
-1. **Math Day 1–3:** Fundamentals — Percentages, Fractions & Ratios
-2. **Math Day 2:** Algebra Essentials and Exponents
-3. **Math Day 3:** Functions, Graphs & Inequalities
-4. **Math Day 4:** Geometry & Trigonometry Basics
-5. **Math Day 5:** Statistics & Probability
-6. **Math Day 6:** Word Problems & Matrices
-7. **Math Day 7:** Mixed Math Review
-8. **Math Capstone:** Full ACT Math Practice Test
-
-**C. ACT 4‑Day Intensive (English)**
-1. **English Day 1–3:** Core Grammar & Punctuation
-2. **English Day 2:** Pronouns & Verb Tense
-3. **English Day 3:** Parallel Structure & Modifiers
-4. **English Day 4:** Run‑ons and Fragments
-5. **English Day 5:** Sentence Clarity & Conciseness
-6. **English Day 6:** Rhetorical Skills & Organization
-7. **English Day 7:** Comprehensive Grammar Review
-8. **English Capstone:** Full ACT English Practice
-
-**D. ACT 1‑Week Crash Course** (delivered when test date < 7 days)
-- Percentages & Proportions / Grammar Review
-- Linear Equations & Systems / Punctuation Rules
-- Essential Geometry & Functions / Advanced Grammar
-- Word Problems & Statistics / Reading Comprehension Strategies
-- Comprehensive Math Review / Comprehensive English Review
-
-Each curriculum module contains practice items and quiz items (e.g., `p1c1…p1c5` practice + `q1c1…q1c5` quiz) and is automatically slotted into `study_plan_days.tasks_json` by the study plan algorithm.
-
-#### 3.5.3 Calculator Hacks Library (`calculatorLessons.ts`)
+#### 3.5.2 Calculator Hacks Library (`calculatorLessons.ts`)
 
 15 lessons, each shipped with a `VirtualCalculator` interactive walkthrough and a Timed Challenge (`calculator_practice` table records `time_saved_ms`).
 
@@ -188,9 +152,8 @@ Each curriculum module contains practice items and quiz items (e.g., `p1c1…p1c
 | **Math** (46 lessons) | M1 — Arithmetic & Number Properties · M2 — Algebra (Linear) · M3 — Algebra (Quadratics, Polynomials) · M4 — Functions · M5 — Coordinate Geometry · M6 — Plane Geometry · M7 — Trigonometry · M8 — Statistics & Probability · M9 — Word Problems & Modeling · M10 — Advanced / Pre‑Calc topics |
 | **Reading** (16 lessons) | Passage mapping, evidence finding, inference, vocab in context, comparative passages, paired Q&A timing |
 | **Science** (10 lessons) | Data representation, research summaries, conflicting viewpoints, axis/graph reading, experimental design |
-| **AP Chemistry** (12 lessons) | Units 4 & 5 (Reactions, Kinetics) — cross‑sell track for high achievers |
 
-> **Content gap (documented honestly):** the 129‑row `skills` taxonomy is broader than the 131 published lessons. Many skills are covered as a sub‑section of a larger lesson; a small number of skills have no dedicated lesson yet — closing this gap is the #1 content roadmap item (see §13).
+> **Content gap (documented honestly):** the 120‑row `skills` taxonomy is broader than the 119 published lessons. Many skills are covered as a sub‑section of a larger lesson; a small number of skills have no dedicated lesson yet — closing this gap is the #1 content roadmap item (see §13).
 
 ### 3.6 Drills (timed, single‑skill)
 - **Purpose:** Short pacing‑focused practice on a single skill or subject.
@@ -279,7 +242,7 @@ Each curriculum module contains practice items and quiz items (e.g., `p1c1…p1c
 - **Logic:** `src/lib/mastery.ts`. Auto‑updated by DB trigger `update_mastery_on_response()`.
 - **Components:** `MasteryBadge.tsx`, `MasteryDashboard.tsx`, `MasteryProgressBar.tsx`.
 - **Tables:** `mastery` (user_id, skill_id, total, correct, avg_time_ms, last_updated).
-- **Status:** ✅ Shipped. 129 skills tracked in aggregate dashboard mastery progress.
+- **Status:** ✅ Shipped. 120 skills tracked in aggregate dashboard mastery progress.
 
 ### 3.14 Spaced Repetition Review
 - **Components:** `ReviewSpaced.tsx`, `lib/spacedRepetition.ts`.
@@ -375,7 +338,7 @@ Parent signs up separately → links to student via `parent_links` → `/parent-
 
 ### 5.1 ACT Skill System
 - **Subjects:** English, Math, Reading, Science (mapped from short codes `EN`, `MATH`, `RD`, `SCI` in `src/lib/sectionMapping.ts`).
-- **Skills table:** 129 distinct skill rows, each with `name`, `subject`, `cluster`, `order_index`, `prereq_skill_ids[]`.
+- **Skills table:** 120 distinct skill rows, each with `name`, `subject`, `cluster`, `order_index`, `prereq_skill_ids[]`.
 - **Clusters** group related skills (e.g., English → Punctuation, Sentence Structure, Rhetorical Skills).
 
 ### 5.2 Mastery Calculation (`src/lib/mastery.ts` + DB trigger)
@@ -424,7 +387,7 @@ Driven by study plan algorithm; cadence scales with `days_to_test` (from `days-l
 | Layer | Table | Notes |
 |---|---|---|
 | Subjects | hardcoded enum (EN/MATH/RD/SCI) | Section standardization in `src/lib/sectionMapping.ts` |
-| Skills | `skills` | 129 rows, clustered, ordered, prereqs |
+| Skills | `skills` | 120 rows, clustered, ordered, prereqs |
 | Forms | `forms` (`FA_*` simulations, `D2_*` diagnostics, `DR_*` drills, `ONB_*` onboarding) | `is_active` flag |
 | Form questions | `form_questions` (form_id, section, ord, question_id, passage_id) | Defines test order |
 | Questions | `questions` (20 cols incl. choice_a–e, calculator_allowed, underlined_text, line_numbers_enabled, passage_format) | UUID PK |
@@ -476,7 +439,7 @@ Edge functions (Supabase secrets): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
 | accommodations | 6 | Extended time | user_id, time_multiplier |
 | user_preferences | 10 | Study prefs / ADHD toggles | user_id, run_style, two_pass_enabled |
 | user_goals | 5 | Target score, target date | user_id, target_score |
-| skills | 9 | Taxonomy (129 rows) | id, name, subject, cluster, prereq_skill_ids |
+| skills | 9 | Taxonomy (120 rows) | id, name, subject, cluster, prereq_skill_ids |
 | forms | 4 | Test forms | id (FA_/DR_/D2_/ONB_), label, is_active |
 | form_questions | 5 | Ordered questions per form | form_id, section, ord, question_id |
 | questions | 20 | Question bank | id (uuid), stem, choice_a–e, answer, skill_code, calculator_allowed |
@@ -655,14 +618,14 @@ Supabase email/password JWT. Auth header forwarded to all edge functions. No MFA
 Everything in §3, including: auth, onboarding, quick + thorough diagnostics, study plan (cron + auto‑regen), lessons (3‑tab), drills (Sprint/Marathon/Pomodoro), quizzes, simulations (Timed + Coached + ADHD tools), pacing lab, calculator lab (TI‑84 + Desmos), cheatsheets, weak areas, mastery, spaced repetition, error bank, AI tutor, parent portal + rewards, streak/achievements, analytics, full Stripe billing with 7‑day trial, lead capture, admin import/generation/cron, health monitoring, offline persistence, log sanitization, answer pinning.
 
 ### 🟡 In Progress / Partial
-- **Content coverage:** not all 129 skills have full `lesson_content` populated.
+- **Content coverage:** not all 120 skills have full `lesson_content` populated.
 - **Admin user management:** read‑only — no in‑app CRUD.
 - **Per‑user admin analytics drilldown:** aggregate only.
 - **GDPR/COPPA deletion endpoint:** specified, not implemented.
 
 ### 🟢 Recommended Next
 1. **Google OAuth + magic link signup** — reduce signup friction.
-2. **Lesson content gap fill** — 129 skills × 24 columns.
+2. **Lesson content gap fill** — 120 skills × 24 columns.
 3. **Admin per‑user drilldown + cohort analytics**.
 4. **In‑app referral / sharing loop** (esp. parent‑to‑parent).
 5. **Mobile PWA install prompt** + push notifications for daily streak.
@@ -682,7 +645,7 @@ Everything in §3, including: auth, onboarding, quick + thorough diagnostics, st
 ## 14. Investor / Sale Summary
 
 ### What Has Been Built
-A production‑grade, subscription SaaS for ACT prep. The flagship product is **Coach Mode** — the embedded "voice in your head" that nudges pacing, two‑pass strategy, and digital‑navigation moves *inside* live timed simulations until those behaviors become automatic. Coach Mode is wrapped in a complete learning engine: 21 edge functions, 38 Postgres tables, 40+ React pages, 129‑skill taxonomy, 131 published lessons (English 47, Math 46, Reading 16, Science 10, AP Chem 12) plus a structured ACT curriculum (4‑Day Intensive + 1‑Week Crash Course) and a 15‑lesson **Calculator Hacks** library (TI‑84 + Desmos) used as the top‑of‑funnel hook. Full Enhanced‑ACT (50/45/36/40) simulation engine, AI tutor, AI study planner, AI question generator, Stripe billing live with 7‑day trial, parent portal with rewards ledger. Domain live at **getpreppit.com**.
+A production‑grade, subscription SaaS for ACT prep. The flagship product is **Coach Mode** — the embedded "voice in your head" that nudges pacing, two‑pass strategy, and digital‑navigation moves *inside* live timed simulations until those behaviors become automatic. Coach Mode is wrapped in a complete learning engine: 21 edge functions, 38 Postgres tables, 40+ React pages, 120‑skill taxonomy, 119 published lessons (English 47, Math 46, Reading 16, Science 10) and a 15‑lesson **Calculator Hacks** library (TI‑84 + Desmos) used as the top‑of‑funnel hook. Full Enhanced‑ACT (50/45/36/40) simulation engine, AI tutor, AI study planner, AI question generator, Stripe billing live with 7‑day trial, parent portal with rewards ledger. Domain live at **getpreppit.com**.
 
 ### Technology Assets
 - **Codebase:** ~40k LOC TypeScript (strict mode), 6,071 LOC Deno edge functions, fully typed Supabase schema.
@@ -705,7 +668,7 @@ A production‑grade, subscription SaaS for ACT prep. The flagship product is **
 - **Defensible niche:** Coach Mode + ADHD‑native UX is unique in the market — no incumbent speaks to the student *while the timer is running*. ~15% of US teens have an ADHD diagnosis — a large underserved segment that incumbents ignore. Calculator Hacks library widens the funnel beyond that niche.
 
 ### Remaining Work Before Public Launch
-- Complete `lesson_content` for all 129 skills (highest‑leverage gap).
+- Complete `lesson_content` for all 120 skills (highest‑leverage gap).
 - Ship GDPR / COPPA deletion endpoint.
 - Add Google OAuth.
 - Add admin per‑user drilldown + cohort retention reporting.
