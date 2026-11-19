@@ -126,6 +126,29 @@ describe('rankLessons', () => {
     }));
     expect(ranked[0].section).toBe('Math');
   });
+  it('never schedules practice-test lessons (the plan has its own practice tests)', () => {
+    const withTests: LessonInfo[] = [
+      ...lessons,
+      { skillId: 'E10.A', section: 'English', orderIndex: 90, bankQuestions: 10 },
+      { skillId: 'M10.F', section: 'Math', orderIndex: 90, bankQuestions: 10 },
+    ];
+    const ranked = rankLessons(makeInput({ lessons: withTests })).map(l => l.skillId);
+    expect(ranked).not.toContain('E10.A');
+    expect(ranked).not.toContain('M10.F');
+  });
+  it('puts capstone and mixed-review lessons after every other lesson', () => {
+    const withCapstones: LessonInfo[] = [
+      { skillId: 'M10.H', section: 'Math', orderIndex: 0, bankQuestions: 10 },
+      { skillId: 'E9.A', section: 'English', orderIndex: 0, bankQuestions: 10 },
+      ...lessons,
+    ];
+    const ranked = rankLessons(makeInput({
+      lessons: withCapstones,
+      targetScore: 30,
+      sectionEstimates: { Math: { score: 10, source: 'self' } },
+    })).map(l => l.skillId);
+    expect(ranked.slice(-2).sort()).toEqual(['E9.A', 'M10.H']);
+  });
   it('keeps curriculum order on ties', () => {
     const ranked = rankLessons(makeInput()).filter(l => l.section === 'English').map(l => l.skillId);
     expect(ranked).toEqual(['E1.A', 'E1.B']);
@@ -222,6 +245,18 @@ describe('buildPlan', () => {
     expect(tasks.some(t => t.type === 'DRILL' && t.skillId === 'E1.A')).toBe(true);
     expect(tasks.some(t => t.type === 'DRILL' && t.skillId === 'M1.A')).toBe(true);
     expect(learnSkills(days)[0]).toBe('R1.B');
+  });
+
+  it('schedules capstone lessons after all other lessons', () => {
+    const { days } = buildPlan(makeInput({
+      lessons: [{ skillId: 'M10.H', section: 'Math', orderIndex: 0, bankQuestions: 10 }, ...lessons],
+      targetScore: 30,
+      sectionEstimates: { Math: { score: 10, source: 'self' } },
+      dailyMinutes: 120,
+    }));
+    const order = learnSkills(days);
+    expect(order).toContain('M10.H');
+    expect(order[order.length - 1]).toBe('M10.H');
   });
 
   it('puts only the practice test on an exam day', () => {

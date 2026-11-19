@@ -127,9 +127,15 @@ function priority(lesson: LessonInfo, input: PlannerInput): number {
   return (gap + 1) * (1.5 - skillAccuracy(lesson.skillId, input));
 }
 
+/** Full practice tests set up as lessons: never planned (the plan schedules its own practice tests). */
+export const PRACTICE_TEST_LESSONS = new Set(['E10.A', 'E10.B', 'M10.F', 'M10.G']);
+/** Capstones and mixed reviews: planned only after every other lesson. */
+export const CAPSTONE_LESSONS = new Set(['E9.A', 'E9.B', 'E9.C', 'E10.C', 'M10.H']);
+
 function eligible(input: PlannerInput): LessonInfo[] {
   const completed = new Set(input.completedSkillIds);
   return input.lessons.filter(l =>
+    !PRACTICE_TEST_LESSONS.has(l.skillId) &&
     (input.scienceRequired || l.section !== 'Science') &&
     !completed.has(l.skillId) &&
     !isStrength(l.skillId, input)
@@ -139,7 +145,9 @@ function eligible(input: PlannerInput): LessonInfo[] {
 function byPriority(list: LessonInfo[], input: PlannerInput): LessonInfo[] {
   return list
     .map(l => ({ l, p: priority(l, input) }))
-    .sort((a, b) => b.p - a.p || a.l.orderIndex - b.l.orderIndex || a.l.skillId.localeCompare(b.l.skillId))
+    .sort((a, b) =>
+      Number(CAPSTONE_LESSONS.has(a.l.skillId)) - Number(CAPSTONE_LESSONS.has(b.l.skillId)) ||
+      b.p - a.p || a.l.orderIndex - b.l.orderIndex || a.l.skillId.localeCompare(b.l.skillId))
     .map(x => x.l);
 }
 
@@ -206,7 +214,9 @@ function fillLearningDay(
   // Interleave by rank: lessons (up to the pace target) and drill-only skills.
   const queue = [...state.lessons.map(l => ({ l, kind: 'learn' as const })), ...state.drills.map(l => ({ l, kind: 'drill' as const }))]
     .map(x => ({ ...x, p: priority(x.l, input) }))
-    .sort((a, b) => b.p - a.p || a.l.orderIndex - b.l.orderIndex);
+    .sort((a, b) =>
+      Number(CAPSTONE_LESSONS.has(a.l.skillId)) - Number(CAPSTONE_LESSONS.has(b.l.skillId)) ||
+      b.p - a.p || a.l.orderIndex - b.l.orderIndex);
 
   for (const item of queue) {
     if (item.kind === 'drill') {
