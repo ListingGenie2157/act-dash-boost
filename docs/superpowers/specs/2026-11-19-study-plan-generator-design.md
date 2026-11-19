@@ -173,3 +173,13 @@ Agreed with the user after the design was approved:
     text), so every question shows it regardless of which row stores it. Questions in a group are shown
     back to back.
   - "Unseen" for a passage skill means the student hasn't answered any question from that group.
+- **Quick diagnostic (approved 2026-11-19).** Replaces the fixed 30-question `ONB` form (same 30 for everyone,
+  24 of 103 skills). Draws from the same diagnostic pool and picker as the thorough diagnostic:
+  - ~30–35 questions split like the ACT: English ~10, Math ~12, Reading ~6–7, Science ~6–7, spread at random
+    across the 103 Yes skills (passage groups drawn whole, as above).
+  - Unseen questions first, so a retake — or a later thorough diagnostic — does not repeat them.
+  - Feeds the plan section estimates only. Each answer counts like a single drill answer toward that
+    skill's timing/accuracy; one question never marks a skill a gap or a strength.
+  - Untimed for the student (time per question recorded); both diagnostic screens show matching time
+    estimates (today the wizard says thorough = 60 min and the Diagnostic page says ~80).
+  - Built right after the thorough picker, once the new pool is imported.
