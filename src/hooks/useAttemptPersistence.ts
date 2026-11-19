@@ -37,7 +37,7 @@ export function useUpsertAttempt() {
         .from('attempts')
         .upsert({
           user_id: attempt.userId,
-          question_id: attempt.questionId,
+          question_id: Number(attempt.questionId),
           choice_order: attempt.choiceOrder,
           correct_idx: attempt.correctIdx,
           selected_idx: attempt.selectedIdx,

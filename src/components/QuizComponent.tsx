@@ -17,6 +17,13 @@ interface QuizComponentProps {
   onComplete: (score: number, wrongAnswers: QuizAnswers) => void;
   onBack?: () => void;
   onNeedsPractice?: (skillCode: string, score: number, wrongCount: number) => void;
+  /**
+   * Server-side grading for questions whose answer key is not on the client.
+   * Receives the ORIGINAL (unshuffled) option index; returns the original correct index.
+   */
+  gradeAnswer?: (questionId: string, originalIdx: number) => Promise<{ correctIdx: number; explanation?: string | null }>;
+  /** Called after each graded answer (original indices), e.g. to persist attempts. */
+  onAnswerGraded?: (questionId: string, selectedOriginalIdx: number, correctOriginalIdx: number, choiceOrder: number[]) => void;
 }
 
 export const QuizComponent = ({
@@ -26,10 +33,14 @@ export const QuizComponent = ({
   onComplete,
   onBack,
   onNeedsPractice,
+  gradeAnswer,
+  onAnswerGraded,
 }: QuizComponentProps) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<number[]>(new Array(questions.length).fill(-1));
+  // Server-graded results by question index: correct ORIGINAL index + explanation
+  const [graded, setGraded] = useState<Record<number, { correctIdx: number; explanation: string | null }>>({});
   const [everWrong, setEverWrong] = useState<boolean[]>(new Array(questions.length).fill(false));
   const [showResults, setShowResults] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -68,31 +79,55 @@ export const QuizComponent = ({
       const shuffledOptions = choiceOrder.map(index => q.options[index]);
       const newCorrectIndex = choiceOrder.indexOf(normalizedAnswer);
 
+      const gradedResult = graded[idx];
+      const correctAnswerIdx = gradeAnswer
+        ? (gradedResult ? choiceOrder.indexOf(gradedResult.correctIdx) : -1)
+        : newCorrectIndex;
+
       return {
         ...q,
         options: shuffledOptions,
-        correctAnswer: newCorrectIndex,
-        originalCorrectAnswer: normalizedAnswer,
+        correctAnswer: correctAnswerIdx,
+        originalCorrectAnswer: gradeAnswer ? (gradedResult?.correctIdx ?? -1) : normalizedAnswer,
+        explanation: gradeAnswer ? (gradedResult?.explanation ?? q.explanation) : q.explanation,
         choiceOrder,
       };
     });
-  }, [questions, userId]);
+  }, [questions, userId, graded, gradeAnswer]);
 
-  const handleAnswerSelect = (answerIndex: number) => {
+  const handleAnswerSelect = async (answerIndex: number) => {
     if (submitted) return;
     // one attempt per question
     if (answers[currentQuestion] !== -1) return;
 
+    const questionIndex = currentQuestion;
     const newAnswers = [...answers];
-    newAnswers[currentQuestion] = answerIndex;
+    newAnswers[questionIndex] = answerIndex;
     setAnswers(newAnswers);
 
-    const isCorrect = answerIndex === shuffledQuestions[currentQuestion].correctAnswer;
+    const question = shuffledQuestions[questionIndex];
+    let correctShuffledIdx = question.correctAnswer;
+
+    if (gradeAnswer) {
+      setIsFeedbackLock(true);
+      const originalIdx = question.choiceOrder[answerIndex];
+      try {
+        const result = await gradeAnswer(String(question.id), originalIdx);
+        setGraded(prev => ({ ...prev, [questionIndex]: { correctIdx: result.correctIdx, explanation: result.explanation ?? null } }));
+        correctShuffledIdx = question.choiceOrder.indexOf(result.correctIdx);
+        onAnswerGraded?.(String(question.id), originalIdx, result.correctIdx, question.choiceOrder);
+      } catch (error) {
+        reportError(error instanceof Error ? error : new Error(String(error)), { component: 'QuizComponent', source: 'grade' });
+        correctShuffledIdx = -1;
+      }
+    }
+
+    const isCorrect = answerIndex === correctShuffledIdx;
 
     if (!isCorrect) {
       setEverWrong(prev => {
         const next = [...prev];
-        next[currentQuestion] = true;
+        next[questionIndex] = true;
         return next;
       });
     }
@@ -100,7 +135,7 @@ export const QuizComponent = ({
     setFeedback(isCorrect ? 'correct' : 'incorrect');
     setIsFeedbackLock(true);
 
-    const isLastQuestion = currentQuestion === shuffledQuestions.length - 1;
+    const isLastQuestion = questionIndex === shuffledQuestions.length - 1;
 
     if (!isLastQuestion) {
       // mid-quiz: show feedback text on Next button for 2s, then clear and re-enable Next
@@ -255,15 +290,17 @@ export const QuizComponent = ({
                           <span className="font-medium">Your answer:</span>{' '}
                           {userAnswer >= 0 ? question.options[userAnswer] : 'No answer'}
                         </p>
-                        {!isCorrect && (
+                        {!isCorrect && question.correctAnswer >= 0 && (
                           <p className="text-sm">
                             <span className="font-medium">Correct answer:</span>{' '}
                             {question.options[question.correctAnswer]}
                           </p>
                         )}
-                        <p className="text-sm text-muted-foreground mt-2">
-                          <span className="font-medium">Explanation:</span> {question.explanation}
-                        </p>
+                        {question.explanation && (
+                          <p className="text-sm text-muted-foreground mt-2">
+                            <span className="font-medium">Explanation:</span> {question.explanation}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { skillDrillPath } from '@/lib/bank';
 import { useNavigate } from 'react-router-dom';
 import { XCircle, Target, Filter } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -68,7 +69,7 @@ export default function ReviewMissed() {
 
       // Fetch corresponding questions from staging_items
       let stagingQuery = supabase
-        .from('staging_items')
+        .from('v_staging_items_public')
         .select('staging_id, question, section, skill_code, difficulty')
         .in('staging_id', stagingIds);
 
@@ -83,7 +84,9 @@ export default function ReviewMissed() {
 
       // Create a map for quick lookup
       const stagingMap = new Map(
-        (stagingData || []).map(s => [s.staging_id.toString(), s])
+        (stagingData || [])
+          .filter(s => s.staging_id !== null)
+          .map(s => [String(s.staging_id), s])
       );
 
       // Merge error_bank with staging_items data
@@ -95,11 +98,11 @@ export default function ReviewMissed() {
             question_id: err.question_id,
             miss_count: err.miss_count || 1,
             last_missed_at: err.last_missed_at,
-            staging_id: staging.staging_id,
-            question: staging.question,
-            section: staging.section,
-            skill_code: staging.skill_code,
-            difficulty: staging.difficulty
+            staging_id: staging.staging_id ?? 0,
+            question: staging.question ?? '',
+            section: staging.section ?? '',
+            skill_code: staging.skill_code ?? '',
+            difficulty: staging.difficulty ?? ''
           });
         }
       }
@@ -237,13 +240,8 @@ export default function ReviewMissed() {
                     variant="outline" 
                     size="sm"
                     onClick={() => {
-                      navigate('/drill-runner', { 
-                        state: { 
-                          mode: 'targeted',
-                          stagingIds: [item.staging_id],
-                          source: 'missed-review'
-                        } 
-                      });
+                      // Drill the skill this question tests
+                      navigate(skillDrillPath(item.skill_code));
                     }}
                   >
                     <Target className="h-4 w-4 mr-2" />

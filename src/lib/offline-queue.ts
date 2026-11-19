@@ -67,7 +67,7 @@ export async function flushOfflineQueue() {
         .from('attempts')
         .upsert({
           user_id: item.userId,
-          question_id: item.questionId,
+          question_id: Number(item.questionId),
           choice_order: item.choiceOrder,
           correct_idx: item.correctIdx,
           selected_idx: item.selectedIdx,

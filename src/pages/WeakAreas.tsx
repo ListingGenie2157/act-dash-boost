@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { skillDrillPath } from '@/lib/bank';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, AlertTriangle, Target, TrendingUp, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -216,7 +217,7 @@ export default function WeakAreas() {
                                 className="flex-1"
                                 asChild
                               >
-                                <Link to={`/drill/${area.skill_id}`}>
+                                <Link to={skillDrillPath(area.skill_id)}>
                                   🎯 Practice
                                 </Link>
                               </Button>

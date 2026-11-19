@@ -23,7 +23,7 @@ export default function TimedDrills() {
         // Query staging_items for drill forms only (DR_RD, DR_MA, DR_EN, DR_SC)
         const drillForms = ['DR_RD', 'DR_MA', 'DR_EN', 'DR_SC'];
         const { data, error } = await supabase
-          .from('staging_items')
+          .from('v_staging_items_public')
           .select('section, form_id')
           .in('form_id', drillForms);
 

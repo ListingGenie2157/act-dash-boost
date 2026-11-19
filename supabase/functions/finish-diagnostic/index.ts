@@ -12,7 +12,7 @@ const QuestionSchema = z.object({
 
 const AnswerSchema = z.object({
   questionId: z.string().min(1),
-  selectedAnswer: z.string().min(1).max(1),
+  selectedAnswer: z.string().max(1), // '' = unanswered (e.g. time ran out); scored as incorrect
   // isCorrect is now ignored — server computes correctness
   isCorrect: z.boolean().optional()
 });
@@ -125,6 +125,17 @@ Deno.serve(async (req) => {
     }
 
     const body: DiagnosticRequest = validationResult.data;
+
+    // Reject submissions with no answered questions at all (e.g. an accidental submit on page load)
+    const answeredCount = body.blocks.reduce(
+      (n, b) => n + b.answers.filter(a => a.selectedAnswer !== '').length, 0
+    );
+    if (answeredCount === 0) {
+      return new Response(
+        JSON.stringify({ error: 'No questions answered' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // ── SERVER-SIDE ANSWER VALIDATION ──
     // Collect all staging_ids from client answers

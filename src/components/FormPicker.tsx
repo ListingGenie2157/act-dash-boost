@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { getCodeFromFormId } from '@/lib/sectionMapping';
 import { reportError } from '@/lib/errorReporter';
+import { EXAM_PACKAGES } from '@/lib/exams';
 
 interface Form {
   id: string;
@@ -13,6 +14,10 @@ interface Form {
   questionCount: number;
   isAvailable: boolean;
 }
+
+const SECTIONS = ['EN', 'MA', 'RD', 'SC'] as const;
+
+
 
 interface FormPickerProps {
   onFormSelect: (formId: string, section: string, questionCount: number) => void;
@@ -27,15 +32,11 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
     const fetchFormAvailability = async () => {
       try {
         // Query actual question counts from database
-        const formIds = [
-          'FA_EN', 'FA_MA', 'FA_RD', 'FA_SC',
-          'FB_EN', 'FB_MA', 'FB_RD', 'FB_SC',
-          'FC_EN', 'FC_MA', 'FC_RD', 'FC_SC'
-        ];
+        const formIds = EXAM_PACKAGES.flatMap(pkg => SECTIONS.map(section => `${pkg.prefix}_${section}`));
 
         // Single query: count questions grouped by form_id
         const { data: counts, error } = await supabase
-          .from('staging_items')
+          .from('v_staging_items_public')
           .select('form_id')
           .in('form_id', formIds);
 
@@ -46,6 +47,7 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
         // Aggregate counts client-side from the flat list
         const countMap: Record<string, number> = {};
         (counts ?? []).forEach(row => {
+          if (!row.form_id) return;
           countMap[row.form_id] = (countMap[row.form_id] || 0) + 1;
         });
 
@@ -59,9 +61,10 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
         const formData: Form[] = formIds.map((formId) => {
           const [prefix, section] = formId.split('_');
           const actual = countMap[formId] || 0;
+          const pkg = EXAM_PACKAGES.find(p => p.prefix === prefix);
           return {
             id: formId,
-            label: `${sectionNames[section]} – Form ${prefix.replace('F', '')}`,
+            label: `${sectionNames[section]} – ${pkg?.label ?? prefix}`,
             questionCount: actual,
             isAvailable: actual > 0,
           };
@@ -80,24 +83,13 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
     fetchFormAvailability();
   }, []);
 
-  // Group forms by test package
-  const testPackages = [
-    {
-      id: 'FA',
-      label: 'Full ACT – Form A',
-      forms: forms.filter(f => f.id.startsWith('FA_'))
-    },
-    {
-      id: 'FB', 
-      label: 'Full ACT – Form B',
-      forms: forms.filter(f => f.id.startsWith('FB_'))
-    },
-    {
-      id: 'FC',
-      label: 'Full ACT – Form C', 
-      forms: forms.filter(f => f.id.startsWith('FC_'))
-    },
-  ];
+  // Group forms by exam: 3 timed full simulations, then 5 coach-mode exams
+  const testPackages = EXAM_PACKAGES.map(pkg => ({
+    id: pkg.prefix,
+    label: pkg.label,
+    coached: pkg.coached,
+    forms: forms.filter(f => f.id.startsWith(`${pkg.prefix}_`)),
+  }));
 
   const handleFormClick = (form: Form) => {
     if (!form.isAvailable) return;
@@ -138,11 +130,13 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
                   <div>
                     <CardTitle className="text-xl">{pkg.label}</CardTitle>
                     <CardDescription>
-                      Select a section to begin
+                      {pkg.coached
+                        ? 'Coach Mode: strategy tips and pacing feedback as you go'
+                        : 'Timed, test-day conditions'}
                     </CardDescription>
                   </div>
                   <Badge variant={allComplete ? 'default' : 'secondary'}>
-                    {allComplete ? 'Complete' : 'Partial'}
+                    {allComplete ? 'Complete' : pkg.forms.some(f => f.isAvailable) ? 'Partial' : 'Coming Soon'}
                   </Badge>
                 </div>
               </CardHeader>
@@ -157,11 +151,12 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
                       'SC': 'Science'
                     };
                     
+                    // Must match session-start (ACT enhanced format)
                     const timeLimits: Record<string, string> = {
-                      'EN': '45 min',
-                      'MA': '60 min',
-                      'RD': '35 min', 
-                      'SC': '35 min'
+                      'EN': '35 min',
+                      'MA': '50 min',
+                      'RD': '40 min',
+                      'SC': '40 min'
                     };
 
                     return (
@@ -195,7 +190,7 @@ export function FormPicker({ onFormSelect }: FormPickerProps) {
 
       <div className="mt-8 text-center">
         <div className="text-sm text-muted-foreground">
-          <p>Available tests are loaded from the database in real-time</p>
+          <p>Sections marked Coming Soon don't have questions loaded yet.</p>
         </div>
       </div>
     </div>

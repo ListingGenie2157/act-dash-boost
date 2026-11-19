@@ -122,8 +122,8 @@ serve(async (req) => {
 
     const hasPinned = pinnedRows && pinnedRows.length > 0;
 
-    const useStaging = session.form_id.startsWith('F') || session.form_id.startsWith('DR_')
-      || session.form_id.startsWith('D2') || session.form_id.startsWith('ONB');
+    const useStaging = session.form_id.startsWith('F') || /^C[1-5]_/.test(session.form_id)
+      || session.form_id.startsWith('DR_') || session.form_id.startsWith('D2') || session.form_id.startsWith('ONB');
     const sectionVariants = getAllSectionVariants(session.section);
 
     let questionsData: QuestionRow[] = [];

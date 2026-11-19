@@ -268,7 +268,7 @@ const Dashboard = () => {
                   </div>
                 </Link>
                 
-                <Link to="/drill-runner">
+                <Link to="/pacing-lab">
                   <div className="glass-card group p-6 h-full card-hover">
                     <div className="space-y-4">
                       <div className="glass-icon">

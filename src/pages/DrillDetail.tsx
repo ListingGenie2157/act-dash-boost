@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
+import { getBankAnswers, type BankAnswer } from '@/lib/bank';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { reportError } from '@/lib/errorReporter';
 import { format } from 'date-fns';
@@ -86,25 +87,29 @@ export default function DrillDetail() {
           reportError(attemptsError instanceof Error ? attemptsError : new Error(String(attemptsError)), { page: 'DrillDetail' });
           setAttempts([]);
         } else if (attemptsData && attemptsData.length > 0) {
-          // Fetch question details from staging_items
+          // Question text from the public view; explanations from the bank (answers never read directly)
           const questionIds = attemptsData.map(a => a.question_id);
-          const { data: questionsData } = await supabase
-            .from('staging_items')
-            .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, explanation, skill_code')
-            .in('staging_id', questionIds.map(id => parseInt(id, 10)).filter(id => !isNaN(id)));
+          const [{ data: questionsData }, bankAnswers] = await Promise.all([
+            supabase
+              .from('v_staging_items_public')
+              .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, skill_code')
+              .in('staging_id', questionIds),
+            getBankAnswers(questionIds).catch(() => new Map<string, BankAnswer>()),
+          ]);
 
           // Merge attempts with question data
           const merged = attemptsData.map(attempt => {
-            const question = questionsData?.find(q => String(q.staging_id) === attempt.question_id);
+            const question = questionsData?.find(q => q.staging_id === attempt.question_id);
             return {
               ...attempt,
-              question: question?.question,
-              choice_a: question?.choice_a,
-              choice_b: question?.choice_b,
-              choice_c: question?.choice_c,
-              choice_d: question?.choice_d,
-              explanation: question?.explanation,
-              skill_code: question?.skill_code,
+              question_id: String(attempt.question_id),
+              question: question?.question ?? undefined,
+              choice_a: question?.choice_a ?? undefined,
+              choice_b: question?.choice_b ?? undefined,
+              choice_c: question?.choice_c ?? undefined,
+              choice_d: question?.choice_d ?? undefined,
+              explanation: bankAnswers.get(String(attempt.question_id))?.explanation ?? null,
+              skill_code: question?.skill_code ?? undefined,
             };
           });
 

@@ -8,9 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { 
   getEnhancedLesson, 
-  getPracticeQuestions,
   type EnhancedLesson,
-  type CheckpointQuestion,
   parseConceptRules,
   parseGuidedPractice,
   parseCommonTraps,
@@ -33,6 +31,12 @@ import { TutorTrigger } from '@/components/tutor/TutorTrigger';
 import { mapToTutorSubject } from '@/lib/tutorSubjectMapper';
 import { logger } from '@/lib/logger';
 import { reportError } from '@/lib/errorReporter';
+import { getRandomBankQuestions, gradeBankAnswer, subjectFromSkillCode, toLegacyQuestions } from '@/lib/bank';
+import type { LegacyQuestion } from '@/types';
+
+/** Checkpoint quiz size, and the minimum bank size before falling back to the lesson's fixed quiz */
+const CHECKPOINT_SIZE = 10;
+const MIN_BANK_QUESTIONS = 5;
 
 export default function EnhancedLessonViewer() {
   const { topic } = useParams<{ topic?: string }>();
@@ -43,7 +47,10 @@ export default function EnhancedLessonViewer() {
   const [error, setError] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState('learn');
   const [showPracticeQuiz, setShowPracticeQuiz] = useState(false);
-  const [practiceQuestions, setPracticeQuestions] = useState<CheckpointQuestion[]>([]);
+  const [practiceQuestions, setPracticeQuestions] = useState<LegacyQuestion[]>([]);
+  // Random checkpoint quiz drawn from the question bank (null = still loading)
+  const [checkpointQuestions, setCheckpointQuestions] = useState<LegacyQuestion[] | null>(null);
+  const [quizRound, setQuizRound] = useState(0);
   const [needsMorePractice, setNeedsMorePractice] = useState(false);
   const [lastScore, setLastScore] = useState<number>(0);
 
@@ -124,6 +131,34 @@ export default function EnhancedLessonViewer() {
     void fetchLesson();
   }, [topic]);
 
+  // Draw a fresh random checkpoint quiz from the bank for this skill (new set on every round)
+  useEffect(() => {
+    if (!topic) return;
+    let cancelled = false;
+    setCheckpointQuestions(null);
+    getRandomBankQuestions(topic.toUpperCase(), CHECKPOINT_SIZE)
+      .then(qs => { if (!cancelled) setCheckpointQuestions(toLegacyQuestions(qs)); })
+      .catch(err => {
+        reportError(err instanceof Error ? err : new Error(String(err)), { page: 'EnhancedLessonViewer', source: 'checkpointBank' });
+        if (!cancelled) setCheckpointQuestions([]);
+      });
+    return () => { cancelled = true; };
+  }, [topic, quizRound]);
+
+  const useBankCheckpoint = (checkpointQuestions?.length ?? 0) >= MIN_BANK_QUESTIONS;
+  const fixedCheckpointQuestions = useMemo<LegacyQuestion[]>(
+    () => (lesson?.checkpoint_quiz_questions ?? []).map(q => {
+      const answer = q.correctAnswer as unknown;
+      return {
+        ...q,
+        correctAnswer: typeof answer === 'string'
+          ? answer.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0)
+          : q.correctAnswer,
+      } as LegacyQuestion;
+    }),
+    [lesson?.checkpoint_quiz_questions]
+  );
+
   const handleNeedsPractice = async (_skillCode: string, score: number, wrongCount: number) => {
     setLastScore(score);
     setNeedsMorePractice(true);
@@ -136,8 +171,9 @@ export default function EnhancedLessonViewer() {
   
   const handlePracticeMore = async () => {
     try {
-      const questions = await getPracticeQuestions(topic || '', 10);
-      setPracticeQuestions(questions);
+      const questions = await getRandomBankQuestions((topic || '').toUpperCase(), 10);
+      if (questions.length === 0) throw new Error('No bank questions for this skill');
+      setPracticeQuestions(toLegacyQuestions(questions));
       setShowPracticeQuiz(true);
       setNeedsMorePractice(false);
     } catch (error) {
@@ -161,7 +197,7 @@ export default function EnhancedLessonViewer() {
             size="sm" 
             onClick={() => {
               // Navigate to the correct drill route pattern: /drill/:subject/setup
-              const subject = lesson?.subject?.toLowerCase() || 'math';
+              const subject = subjectFromSkillCode(topic || '') ?? 'Math';
               navigate(`/drill/${subject}/setup?skill=${topic}&mode=learned`);
             }}
           >
@@ -430,6 +466,7 @@ export default function EnhancedLessonViewer() {
               </CardHeader>
               <CardContent>
                 <QuizComponent
+                  gradeAnswer={(id) => gradeBankAnswer(id)}
                   questions={practiceQuestions}
                   title={`Practice: ${lesson?.skill_name}`}
                   skillCode={topic || ''}
@@ -438,7 +475,11 @@ export default function EnhancedLessonViewer() {
                 />
               </CardContent>
             </Card>
-          ) : lesson.checkpoint_quiz_questions && lesson.checkpoint_quiz_questions.length > 0 ? (
+          ) : checkpointQuestions === null ? (
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">Loading quiz…</CardContent>
+            </Card>
+          ) : useBankCheckpoint || fixedCheckpointQuestions.length > 0 ? (
             <>
               <Card>
                 <CardHeader>
@@ -446,21 +487,20 @@ export default function EnhancedLessonViewer() {
                   <CardDescription>Test your mastery</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <QuizComponent 
-                    questions={lesson.checkpoint_quiz_questions.map(q => {
-                      const answer = q.correctAnswer as unknown;
-                      return {
-                        ...q,
-                        correctAnswer: typeof answer === 'string' 
-                          ? (answer as string).toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0)
-                          : q.correctAnswer
-                      };
-                    })} 
+                  <QuizComponent
+                    key={`checkpoint-${quizRound}`}
+                    questions={useBankCheckpoint ? (checkpointQuestions ?? []) : fixedCheckpointQuestions}
+                    gradeAnswer={useBankCheckpoint ? (id) => gradeBankAnswer(id) : undefined}
                     title="Checkpoint Quiz"
                     skillCode={topic || ''}
                     onComplete={(score) => setLastScore(score)}
                     onNeedsPractice={handleNeedsPractice}
                   />
+                  {useBankCheckpoint && (
+                    <Button variant="ghost" className="w-full mt-4" onClick={() => setQuizRound(r => r + 1)}>
+                      Take a new set of questions
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
               

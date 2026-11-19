@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
+import { getBankAnswer } from '@/lib/bank';
 import { BackButton } from '@/components/BackButton';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { reportError } from '@/lib/errorReporter';
@@ -65,10 +66,8 @@ export default function ReviewSpaced() {
         return;
       }
 
-      // question_id in review_queue stores staging_id as text
-      const stagingIds = reviewItems
-        .map(item => parseInt(item.question_id as unknown as string, 10))
-        .filter(id => !isNaN(id));
+      // review_queue.question_id is the numeric staging_id
+      const stagingIds = reviewItems.map(item => Number(item.question_id));
 
       // Fetch staging items using safe view (excludes answer/explanation for security)
       const { data: stagingItems, error: stagingError } = await supabase
@@ -87,13 +86,13 @@ export default function ReviewSpaced() {
 
       // Merge review items with staging questions
       const allCards = reviewItems.map(item => ({
-        question_id: item.question_id,
+        question_id: String(item.question_id),
         user_id: item.user_id,
         due_at: item.due_at,
         interval_days: item.interval_days,
         ease: item.ease ?? 250,
         lapses: item.lapses ?? 0,
-        staging_question: stagingMap.get(parseInt(item.question_id as unknown as string, 10)) || null,
+        staging_question: stagingMap.get(Number(item.question_id)) || null,
       }));
 
       const cards = allCards.filter(card => card.staging_question !== null) as ReviewCardWithQuestion[];
@@ -121,11 +120,7 @@ export default function ReviewSpaced() {
     
     // Fetch answer and explanation after user attempts (security: only available post-attempt)
     try {
-      const { data: fullQuestion } = await supabase
-        .from('staging_items')
-        .select('answer, explanation')
-        .eq('staging_id', currentCard.staging_question.staging_id)
-        .single();
+      const fullQuestion = await getBankAnswer(currentCard.staging_question.staging_id);
       
       if (fullQuestion) {
         // Update current card with answer/explanation
@@ -146,12 +141,12 @@ export default function ReviewSpaced() {
     if (!currentCard) return;
 
     try {
-      const updates = calculateNextReview(currentCard, grade);
+      const { question_id: _questionId, ...updates } = calculateNextReview(currentCard, grade);
 
       await supabase
         .from('review_queue')
         .update(updates)
-        .eq('question_id', currentCard.question_id)
+        .eq('question_id', Number(currentCard.question_id))
         .eq('user_id', currentCard.user_id);
 
       // Move to next card

@@ -26,7 +26,7 @@ const PacingLab = () => {
     async function fetchSubjects() {
       try {
         const drillForms = ['DR_RD', 'DR_MA', 'DR_EN', 'DR_SC'];
-        const { data, error } = await supabase.from('staging_items').select('section, form_id').in('form_id', drillForms);
+        const { data, error } = await supabase.from('v_staging_items_public').select('section, form_id').in('form_id', drillForms);
         if (error) { reportError(error instanceof Error ? error : new Error(String(error)), { page: 'PacingLab' }); setLoading(false); return; }
         const counts: Record<string, number> = {};
         data.forEach(item => { if (item.section) counts[item.section] = (counts[item.section] || 0) + 1; });

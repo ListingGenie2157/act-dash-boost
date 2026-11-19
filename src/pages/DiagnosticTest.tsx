@@ -79,7 +79,8 @@ export default function DiagnosticTest() {
   const [questions, setQuestions] = useState<(Question & { skill_id?: string | null })[]>([]);
   const [attempts, setAttempts] = useState<Record<string, Attempt>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(0);
+  // null = timer not started yet (prevents auto-submitting before the time limit is set)
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -286,10 +287,11 @@ export default function DiagnosticTest() {
         .select('*')
         .eq('user_id', user.user.id)
         .eq('form_id', formId)
-        .in('question_id', questionIds);
+        .in('question_id', questionIds.map(Number));
 
+      // attempts.question_id is the numeric staging_id; the page keys questions by string id
       const attemptMap = new Map(
-        (existingAttemptsData || []).map(a => [a.question_id, a])
+        (existingAttemptsData || []).map(a => [String(a.question_id), a])
       );
 
       for (const question of mappedQuestions) {
@@ -297,7 +299,7 @@ export default function DiagnosticTest() {
 
         if (existing) {
           existingAttempts[question.question_id] = {
-            question_id: existing.question_id,
+            question_id: String(existing.question_id),
             choice_order: existing.choice_order,
             correct_idx: existing.correct_idx,
             selected_idx: existing.selected_idx ?? undefined,
@@ -333,7 +335,8 @@ export default function DiagnosticTest() {
             newAttempts.map(attempt => ({
               user_id: user.user.id,
               form_id: formId,
-              ...attempt
+              ...attempt,
+              question_id: Number(attempt.question_id),
             }))
           );
 
@@ -360,13 +363,14 @@ export default function DiagnosticTest() {
   }, [formId, validationError, loadDiagnostic]);
 
   useEffect(() => {
+    if (timeLeft === null || loading) return;
     if (timeLeft > 0) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
       return () => clearTimeout(timer);
     } else if (timeLeft === 0 && questions.length > 0 && formId) {
       handleSubmit();
     }
-  }, [timeLeft, questions.length, handleSubmit, formId]);
+  }, [timeLeft, loading, questions.length, handleSubmit, formId]);
 
   const handleAnswerSelect = async (choiceIndex: number) => {
     const question = questions[currentIndex];
@@ -387,7 +391,7 @@ export default function DiagnosticTest() {
         .update({ selected_idx: choiceIndex })
         .eq('user_id', user.user.id)
         .eq('form_id', formId)
-        .eq('question_id', question.question_id);
+        .eq('question_id', Number(question.question_id));
     } catch (error) {
       reportError(error instanceof Error ? error : new Error(String(error)), { page: 'DiagnosticTest', source: 'saveAnswer' });
     }
@@ -497,7 +501,7 @@ export default function DiagnosticTest() {
             {formId || 'Diagnostic'} - Question {currentIndex + 1} of {questions.length}
           </h1>
           <div className="text-lg font-mono">
-            {formatTime(timeLeft)}
+            {formatTime(timeLeft ?? 0)}
           </div>
         </div>
 

@@ -1,10 +1,7 @@
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { ArrowLeft, Clock, Play, Sparkles, Brain, Target } from 'lucide-react';
+import { EXAM_PACKAGES, isCoachExamForm } from '@/lib/exams';
 
 interface SimulationStartDialogProps {
   formId: string;
@@ -27,10 +24,12 @@ export function SimulationStartDialog({
   onStart, 
   onBack 
 }: SimulationStartDialogProps) {
-  const [coachMode, setCoachMode] = useState(false);
-  
+  // Coach exams (C1–C5) always run in Coach Mode; the 3 full simulations run timed
+  const coachMode = isCoachExamForm(formId);
+
   const config = SECTION_CONFIG[section] || { name: section, timeMinutes: 45, icon: '📋' };
-  const formLabel = formId.replace('F', 'Form ').replace('_', ' - ');
+  const pkg = EXAM_PACKAGES.find(p => formId.startsWith(`${p.prefix}_`));
+  const formLabel = pkg ? pkg.label : formId;
 
   return (
     <div className="container mx-auto p-6 max-w-2xl">
@@ -62,24 +61,14 @@ export function SimulationStartDialog({
             </div>
           </div>
 
-          {/* Coach Mode Toggle */}
+          {/* Mode */}
           <div className="border rounded-lg p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                <Label htmlFor="coach-mode" className="font-semibold cursor-pointer">
-                  Coach Mode
-                </Label>
-                <Badge variant="secondary" className="text-xs">Recommended</Badge>
-              </div>
-              <Switch 
-                id="coach-mode"
-                checked={coachMode}
-                onCheckedChange={setCoachMode}
-              />
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <span className="font-semibold">{coachMode ? 'Coach Mode' : 'Timed Simulation'}</span>
             </div>
-            
-            {coachMode && (
+
+            {coachMode ? (
               <div className="space-y-2 text-sm text-muted-foreground pl-7">
                 <div className="flex items-start gap-2">
                   <Brain className="h-4 w-4 mt-0.5 text-primary" />
@@ -94,6 +83,10 @@ export function SimulationStartDialog({
                   <span>Personalized tips as you go</span>
                 </div>
               </div>
+            ) : (
+              <p className="text-sm text-muted-foreground pl-7">
+                Test-day conditions: no hints, just the clock.
+              </p>
             )}
           </div>
 

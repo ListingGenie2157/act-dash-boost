@@ -110,24 +110,19 @@ serve(async (req) => {
     let realQuestionId: string | null = null;
     
     if (isNumericId) {
-      // Look up from staging_items using staging_id
+      // Look up the answer from staging_items (service role: students cannot read answers).
+      // responses.question_id is text, so the staging_id is persisted below like any other id.
       const stagingId = parseInt(question_id);
-      const { data, error } = await supabase
+      const { data, error } = await serviceClient
         .from('staging_items')
         .select('answer')
         .eq('staging_id', stagingId)
         .eq('form_id', session.form_id)
         .single();
-      
+
       if (!error && data) {
         questionData = data;
-        // For staging items, we can't store in responses table (requires UUID)
-        // Just validate and return correctness without persisting
-        const correct = selected === questionData.answer;
-        return new Response(
-          JSON.stringify({ success: true, correct, persisted: false }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        realQuestionId = String(stagingId);
       }
     }
     

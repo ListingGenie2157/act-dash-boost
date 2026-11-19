@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
 import { reportError } from '@/lib/errorReporter';
 import { completeTask } from '@/lib/supabase-client';
+import { gradeBankAnswer, shuffleArray } from '@/lib/bank';
 
 export default function DrillRunner() {
   const navigate = useNavigate();
@@ -125,11 +126,16 @@ export default function DrillRunner() {
           return;
         }
 
-        const { data, error: qError } = await supabase
+        // Optional skill filter (study-plan tasks pass ?skill=E1.F1)
+        const skillParam = searchParams.get('skill');
+        let query = supabase
           .from('v_staging_items_public')
           .select('staging_id, question, choice_a, choice_b, choice_c, choice_d, skill_code, form_id')
-          .eq('form_id', drillFormId)
-          .limit(n ?? 10);
+          .eq('form_id', drillFormId);
+        if (skillParam) query = query.eq('skill_code', skillParam.toUpperCase());
+        const { data: allData, error: qError } = await query;
+        // Random selection so repeated drills don't serve the same first N questions
+        const data = allData ? shuffleArray(allData).slice(0, n ?? 10) : allData;
 
         if (qError) {
           setError(qError.message);
@@ -143,18 +149,12 @@ export default function DrillRunner() {
             choice_b: q.choice_b || '',
             choice_c: q.choice_c || '',
             choice_d: q.choice_d || '',
-            answer: 'A' as const,
+            answer: 'A' as const, // unused: graded per answer via get_bank_answers
             skill_code: q.skill_code ?? undefined,
             form_id: q.form_id ?? undefined,
           }));
           
-          const validQuestions = mappedQuestions.filter(q => {
-            const isValid = q.answer && ['A', 'B', 'C', 'D'].includes(q.answer);
-            if (!isValid) {
-              logger.debug(`Skipping question ${q.id} with invalid answer: "${q.answer}"`);
-            }
-            return isValid;
-          });
+          const validQuestions = mappedQuestions.filter(q => q.id !== '' && q.stem !== '');
           
           if (validQuestions.length === 0) {
             setError('No valid questions found for this section');
@@ -209,8 +209,13 @@ export default function DrillRunner() {
     if (!q) return;
     
     setIsSubmitting(true);
-    const correctIdx = ['A', 'B', 'C', 'D'].indexOf(q.answer);
-    const isCorrect = selectedIdx === correctIdx;
+    let correctIdx = -1;
+    try {
+      correctIdx = (await gradeBankAnswer(q.id)).correctIdx;
+    } catch (err) {
+      reportError(err instanceof Error ? err : new Error(String(err)), { page: 'DrillRunner', source: 'grade' });
+    }
+    const isCorrect = correctIdx !== -1 && selectedIdx === correctIdx;
     const now = Date.now();
     const timeSpent = now - lastAnswerTime;
     
@@ -235,8 +240,8 @@ export default function DrillRunner() {
     try {
       await supabase.from('attempts').insert({
         user_id: userId,
-        question_id: q.id,
-        form_id: q.form_id ?? 'drill',
+        question_id: Number(q.id),
+        form_id: q.form_id ?? 'DR_EN',
         question_ord: current + 1,
         choice_order: choiceOrder,
         correct_idx: correctIdx,
@@ -244,11 +249,11 @@ export default function DrillRunner() {
         task_id: taskId,
       });
       
-      if (!isCorrect) {
+      if (!isCorrect && correctIdx !== -1) {
         const dueDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
         await supabase.from('review_queue').insert({
           user_id: userId,
-          question_id: q.id,
+          question_id: Number(q.id),
           due_at: dueDate.toISOString(),
           interval_days: 2,
         });
@@ -325,7 +330,7 @@ export default function DrillRunner() {
 
   if (loading) return (
     <div className="container mx-auto p-4">
-      <Button variant="outline" onClick={() => navigate('/drill-runner')}>
+      <Button variant="outline" onClick={() => navigate('/pacing-lab')}>
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back to Drills
       </Button>
@@ -335,7 +340,7 @@ export default function DrillRunner() {
 
   if (error) return (
     <div className="container mx-auto p-4">
-      <Button variant="outline" onClick={() => navigate('/drill-runner')}>
+      <Button variant="outline" onClick={() => navigate('/pacing-lab')}>
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back to Drills
       </Button>
@@ -348,7 +353,7 @@ export default function DrillRunner() {
               ? 'We\'re working on adding questions for this section. Check back soon!'
               : error}
           </p>
-          <Button onClick={() => navigate('/drill-runner')} className="mt-4">
+          <Button onClick={() => navigate('/pacing-lab')} className="mt-4">
             Browse Other Drills
           </Button>
         </div>
@@ -358,7 +363,7 @@ export default function DrillRunner() {
 
   if (completed) return (
     <div className="container mx-auto p-4">
-      <Button variant="outline" onClick={() => navigate('/drill-runner')}>
+      <Button variant="outline" onClick={() => navigate('/pacing-lab')}>
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back to Drills
       </Button>
@@ -375,7 +380,7 @@ export default function DrillRunner() {
             <div className="text-sm text-muted-foreground">Best Streak</div>
           </div>
         </div>
-        <Button onClick={() => navigate('/drill-runner')} className="mt-6">
+        <Button onClick={() => navigate('/pacing-lab')} className="mt-6">
           Back to Drills
         </Button>
       </div>
@@ -384,7 +389,7 @@ export default function DrillRunner() {
 
   if (questions.length === 0) return (
     <div className="container mx-auto p-4">
-      <Button variant="outline" onClick={() => navigate('/drill-runner')}>
+      <Button variant="outline" onClick={() => navigate('/pacing-lab')}>
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back to Drills
       </Button>
@@ -410,7 +415,7 @@ export default function DrillRunner() {
       />
 
       <div className="flex items-center justify-between mb-4">
-        <Button variant="outline" onClick={() => navigate('/drill-runner')} aria-label="Back to Drills">
+        <Button variant="outline" onClick={() => navigate('/pacing-lab')} aria-label="Back to Drills">
           <ArrowLeft className="h-4 w-4 mr-2" aria-hidden="true" />
           Back to Drills
         </Button>

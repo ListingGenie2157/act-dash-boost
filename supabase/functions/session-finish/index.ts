@@ -147,13 +147,24 @@ serve(async (req) => {
 
     // Get staging_items data for skill codes and missed question details
     const questionIds = responses?.map(r => r.question_id) || [];
-    const stagingIds = questionIds.map(id => parseInt(id)).filter(id => !isNaN(id));
+    // Only purely numeric ids are staging ids (parseInt("35d5...-uuid") would wrongly yield 35)
+    const isStagingId = (id: string) => /^\d+$/.test(id);
+    const stagingIds = questionIds.filter(isStagingId).map(id => Number(id));
     
     const skillStats: Record<string, { correct: number; total: number; totalTime: number }> = {};
     const missedQuestions: MissedQuestion[] = [];
     
     if (stagingIds.length > 0) {
-      const { data: stagingItems } = await supabase
+      // Service role: answers/explanations are not readable by students directly.
+      const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+      if (!serviceKey) {
+        return new Response(JSON.stringify({ error: 'Server misconfigured' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const serviceClient = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
+      const { data: stagingItems } = await serviceClient
         .from('staging_items')
         .select('staging_id, skill_code, question, answer, explanation, choice_a, choice_b, choice_c, choice_d')
         .in('staging_id', stagingIds);
@@ -165,7 +176,8 @@ serve(async (req) => {
       });
       
       responses?.forEach(response => {
-        const stagingId = parseInt(response.question_id);
+        if (!isStagingId(response.question_id)) return;
+        const stagingId = Number(response.question_id);
         const stagingItem = stagingItemMap.get(stagingId);
         
         if (stagingItem) {

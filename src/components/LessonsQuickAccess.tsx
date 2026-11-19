@@ -4,6 +4,7 @@ import { GraduationCap, ArrowRight, PenTool, Calculator, BookOpen, Microscope } 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import { BANK_FORM_IDS } from '@/lib/bank';
 import { useUserMastery } from '@/hooks/useMastery';
 import { reportError } from '@/lib/errorReporter';
 
@@ -36,13 +37,15 @@ export function LessonsQuickAccess() {
 
       // Get question counts from staging_items
       const { data: itemsData, error: itemsError } = await supabase
-        .from('staging_items')
-        .select('skill_code');
+        .from('v_staging_items_public')
+        .select('skill_code')
+        .in('form_id', BANK_FORM_IDS); // count practice-bank questions only
 
       if (itemsError) throw itemsError;
 
       // Count questions per skill
       const questionCounts = (itemsData || []).reduce((acc, item) => {
+        if (!item.skill_code) return acc;
         acc[item.skill_code] = (acc[item.skill_code] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
