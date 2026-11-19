@@ -74,10 +74,12 @@ export default function DiagnosticResults() {
             diagnostic_id: diagnostic.id
           };
 
-          navigate('/diagnostic-results', {
+          // Stay on this results page (the bare /diagnostic-results path is not a route)
+          const formBySection: Record<string, string> = { English: 'D2EN', Math: 'D2MA', Reading: 'D2RD', Science: 'D2SC' };
+          navigate(location.pathname, {
             state: {
               results: reconstructedResults,
-              formId: `D2${diagnostic.section.slice(0, 2).toUpperCase()}`
+              formId: formBySection[diagnostic.section] ?? 'ONB'
             },
             replace: true
           });
@@ -89,7 +91,7 @@ export default function DiagnosticResults() {
       };
       fetchLatestDiagnostic();
     }
-  }, [state, navigate]);
+  }, [state, navigate, location.pathname]);
 
   if (!state?.results) {
     return (
