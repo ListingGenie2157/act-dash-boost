@@ -295,7 +295,7 @@ export function buildPlan(input: PlannerInput, horizonDays = 7): { days: Planned
   const sim = simulate(input, input.dailyMinutes, horizonDays);
 
   let lessonsThatFit = Math.min(remaining, sim.scheduledLessons);
-  let lessonsLeftOut = test ? remaining - lessonsThatFit : 0;
+  const lessonsLeftOut = test ? remaining - lessonsThatFit : 0;
   let extraMinutesPerDay = 0;
   if (lessonsLeftOut > 0) {
     for (let mins = input.dailyMinutes + 5; mins <= MAX_DAILY_MINUTES; mins += 5) {
