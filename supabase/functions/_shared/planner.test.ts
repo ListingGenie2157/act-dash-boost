@@ -234,7 +234,7 @@ describe('buildPlan', () => {
     days.forEach(d => expect(d.tasks.filter(t => t.type === 'LEARN').length).toBeLessThanOrEqual(2));
   });
 
-  it('gives shaky and careless skills a drill but no lesson, and ranks gaps first', () => {
+  it('gives shaky and careless skills a drill but no lesson; a gap puts its subject first, in order', () => {
     const { days } = buildPlan(makeInput({
       dailyMinutes: 60,
       skillBuckets: { 'E1.A': 'shaky', 'M1.A': 'careless', 'R1.B': 'gap' },
@@ -244,7 +244,8 @@ describe('buildPlan', () => {
     expect(learnSkills(days)).not.toContain('M1.A');
     expect(tasks.some(t => t.type === 'DRILL' && t.skillId === 'E1.A')).toBe(true);
     expect(tasks.some(t => t.type === 'DRILL' && t.skillId === 'M1.A')).toBe(true);
-    expect(learnSkills(days)[0]).toBe('R1.B');
+    // Reading has the gap, so Reading goes first, but R1.A is taught before R1.B
+    expect(learnSkills(days).slice(0, 2)).toEqual(['R1.A', 'R1.B']);
   });
 
   it('schedules capstone lessons after all other lessons', () => {
@@ -274,5 +275,61 @@ describe('buildPlan', () => {
     expect(summary.extraMinutesPerDay).toBe(0);
     expect(summary.daysUntilTest).toBe(88);
     expect(summary.nextExam).toEqual({ form: 'FA', date: '2027-02-06' });
+  });
+});
+
+describe('curriculum order', () => {
+  const math: LessonInfo[] = [
+    { skillId: 'M1.A', section: 'Math', orderIndex: 1, bankQuestions: 10 },
+    { skillId: 'M1.B', section: 'Math', orderIndex: 2, bankQuestions: 10 },
+    { skillId: 'M2.A', section: 'Math', orderIndex: 6, bankQuestions: 10 },
+    { skillId: 'M3.A', section: 'Math', orderIndex: 10, bankQuestions: 10 },
+  ];
+  const english: LessonInfo[] = [
+    { skillId: 'E1.A', section: 'English', orderIndex: 1, bankQuestions: 10 },
+    { skillId: 'E2.D', section: 'English', orderIndex: 8, bankQuestions: 10 },
+  ];
+  const sectionOrder = (ids: Array<string | null>, all: LessonInfo[]) => {
+    const info = new Map(all.map(l => [l.skillId, l]));
+    const bySection: Record<string, number[]> = {};
+    for (const id of ids) {
+      const l = info.get(id!)!;
+      (bySection[l.section] ??= []).push(l.orderIndex);
+    }
+    return bySection;
+  };
+
+  it('teaches earlier lessons of a subject first, even when a later one is the weakest', () => {
+    // Algebra (M2.A) is a measured gap; the basics have no data yet
+    const input = makeInput({ lessons: math, scienceRequired: false, skillBuckets: { 'M2.A': 'gap' } });
+    expect(rankLessons(input).map(l => l.skillId)).toEqual(['M1.A', 'M1.B', 'M2.A', 'M3.A']);
+  });
+
+  it('keeps every subject in order across the whole plan', () => {
+    const all = [...math, ...english];
+    const input = makeInput({
+      lessons: all, scienceRequired: false, dailyMinutes: 60,
+      skillBuckets: { 'M3.A': 'gap', 'E2.D': 'gap' },
+      sectionEstimates: { Math: { score: 15, source: 'self' }, English: { score: 25, source: 'self' } },
+    });
+    const { days } = buildPlan(input, 14);
+    const order = sectionOrder(learnSkills(days), all);
+    for (const list of Object.values(order)) expect(list).toEqual([...list].sort((a, b) => a - b));
+    expect(learnSkills(days)).toHaveLength(all.length);
+  });
+
+  it('still skips lessons the student already knows', () => {
+    const input = makeInput({ lessons: math, scienceRequired: false, completedSkillIds: ['M1.A'], skillBuckets: { 'M1.B': 'solid' } });
+    expect(rankLessons(input).map(l => l.skillId)).toEqual(['M2.A', 'M3.A']);
+  });
+
+  it('weaker subjects still get more of the early slots', () => {
+    const all = [...math, ...english];
+    const input = makeInput({
+      lessons: all, scienceRequired: false,
+      sectionEstimates: { Math: { score: 14, source: 'self' }, English: { score: 30, source: 'self' } },
+      targetScore: 30,
+    });
+    expect(rankLessons(input).slice(0, 4).map(l => l.section)).toEqual(['Math', 'Math', 'Math', 'Math']);
   });
 });

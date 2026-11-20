@@ -183,3 +183,9 @@ Agreed with the user after the design was approved:
   - Untimed for the student (time per question recorded); both diagnostic screens show matching time
     estimates (today the wizard says thorough = 60 min and the Diagnostic page says ~80).
   - Built right after the thorough picker, once the new pool is imported.
+
+## Lesson order (2026-11-19)
+Need decides which subject gets each lesson slot; within a subject, lessons always follow the
+curriculum order in `skills.order_index` (capstones last). Lessons already completed or shown to be
+strengths are skipped. Diagnostic scores are percent correct and are converted to 1-36 once, in
+`currentEstimate` (shared curve in `_shared/actScore.ts`).

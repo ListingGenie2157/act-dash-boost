@@ -1,7 +1,9 @@
 /**
- * Study planner: pure decisions only (no I/O, no imports) so it runs in Deno edge functions
+ * Study planner: pure decisions only (no I/O) so it runs in Deno edge functions
  * and in vitest. See docs/superpowers/specs/2026-11-19-study-plan-generator-design.md.
  */
+
+import { sectionScoreOnActScale } from './actScore.ts';
 
 export type Section = 'English' | 'Math' | 'Reading' | 'Science';
 export type FormPrefix = 'FA' | 'FB' | 'FC';
@@ -72,8 +74,7 @@ const dow = (d: string) => new Date(toMs(d)).getUTCDay();
 // ── estimates, buckets, strengths ──────────────────────────────────────────
 export function currentEstimate(e: { score: number; source: 'diagnostic' | 'self' } | undefined): number {
   if (!e) return 18;
-  if (e.source === 'self') return e.score;
-  return Math.round(1 + (35 * e.score) / 100);
+  return sectionScoreOnActScale(e.score, e.source) ?? 18;
 }
 
 export function classifyAnswer(a: TimedAnswer): SkillBucket {
@@ -154,9 +155,27 @@ function byPriority(list: LessonInfo[], input: PlannerInput): LessonInfo[] {
 const isDrillOnly = (skillId: string, input: PlannerInput) =>
   input.skillBuckets[skillId] === 'shaky' || input.skillBuckets[skillId] === 'careless';
 
-/** Lessons still to learn, highest priority first. */
+/**
+ * Lessons still to learn. Need decides which SUBJECT gets each slot (weaker subjects get more
+ * early slots); within a subject lessons always come in curriculum order (skills.order_index),
+ * so e.g. algebra never comes before the number basics it builds on.
+ * Each lesson also gets the priority of the slot it fills, for interleaving with drills.
+ */
+function sequenceLessons(input: PlannerInput): Array<{ l: LessonInfo; p: number }> {
+  const ranked = byPriority(eligible(input).filter(l => !isDrillOnly(l.skillId, input)), input);
+  const queues = new Map<Section, LessonInfo[]>();
+  for (const l of ranked) queues.set(l.section, [...(queues.get(l.section) ?? []), l]);
+  for (const q of queues.values()) {
+    q.sort((a, b) =>
+      Number(CAPSTONE_LESSONS.has(a.skillId)) - Number(CAPSTONE_LESSONS.has(b.skillId)) ||
+      a.orderIndex - b.orderIndex || a.skillId.localeCompare(b.skillId));
+  }
+  return ranked.map(slot => ({ l: queues.get(slot.section)!.shift()!, p: priority(slot, input) }));
+}
+
+/** Lessons still to learn, in teaching order. */
 export function rankLessons(input: PlannerInput): LessonInfo[] {
-  return byPriority(eligible(input).filter(l => !isDrillOnly(l.skillId, input)), input);
+  return sequenceLessons(input).map(x => x.l);
 }
 
 /** Skills that need speed/accuracy drills only (shaky, careless), highest priority first. */
@@ -190,7 +209,7 @@ export function examDates(input: PlannerInput): Array<{ form: FormPrefix; date: 
 }
 
 // ── day filling ────────────────────────────────────────────────────────────
-interface FillState { lessons: LessonInfo[]; drills: LessonInfo[] }
+interface FillState { lessons: LessonInfo[]; drills: LessonInfo[]; slotPriority: Map<string, number> }
 
 function fillLearningDay(
   date: string,
@@ -212,11 +231,13 @@ function fillLearningDay(
   const perSection: Record<string, number> = {};
   let placed = 0;
   // Interleave by rank: lessons (up to the pace target) and drill-only skills.
+  // Lessons use their slot's priority, so each subject stays in curriculum order
   const queue = [...state.lessons.map(l => ({ l, kind: 'learn' as const })), ...state.drills.map(l => ({ l, kind: 'drill' as const }))]
-    .map(x => ({ ...x, p: priority(x.l, input) }))
+    .map(x => ({ ...x, p: x.kind === 'learn' ? (state.slotPriority.get(x.l.skillId) ?? 0) : priority(x.l, input) }))
     .sort((a, b) =>
       Number(CAPSTONE_LESSONS.has(a.l.skillId)) - Number(CAPSTONE_LESSONS.has(b.l.skillId)) ||
-      b.p - a.p || a.l.orderIndex - b.l.orderIndex);
+      b.p - a.p ||
+      (a.l.section === b.l.section ? a.l.orderIndex - b.l.orderIndex : 0));
 
   for (const item of queue) {
     if (item.kind === 'drill') {
@@ -265,8 +286,13 @@ interface Simulation { days: PlannedDay[]; scheduledLessons: number; learningDay
 
 function simulate(input: PlannerInput, dailyMinutes: number, horizonDays: number): Simulation {
   const test = activeTestDate(input);
-  const ranked = rankLessons(input);
-  const state: FillState = { lessons: [...ranked], drills: rankDrillOnly(input) };
+  const sequenced = sequenceLessons(input);
+  const ranked = sequenced.map(x => x.l);
+  const state: FillState = {
+    lessons: [...ranked],
+    drills: rankDrillOnly(input),
+    slotPriority: new Map(sequenced.map(x => [x.l.skillId, x.p])),
+  };
   const exams = new Map(examDates(input).map(e => [e.date, e.form]));
   const totalDays = test ? daysBetween(input.today, test) : horizonDays;
 
