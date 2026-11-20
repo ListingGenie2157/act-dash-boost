@@ -579,13 +579,13 @@ export default function DiagnosticTest() {
                   <Button
                     key={index}
                     variant={currentAttempt?.selected_idx === index ? "default" : "outline"}
-                    className="w-full text-left justify-start h-auto p-4"
+                    className="w-full text-left justify-start items-start h-auto p-4 whitespace-normal"
                     onClick={() => handleAnswerSelect(index)}
                   >
-                    <span className="font-medium mr-2">
+                    <span className="font-medium mr-2 shrink-0">
                       {String.fromCharCode(65 + index)}.
                     </span>
-                    {choice}
+                    <span className="min-w-0 break-words">{choice}</span>
                   </Button>
                 ))}
               </div>
@@ -593,46 +593,51 @@ export default function DiagnosticTest() {
           </Card>
         </div>
 
-        {/* Navigation */}
-        <div className="flex justify-between items-center">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
-            disabled={currentIndex === 0}
-          >
-            Previous
-          </Button>
-
-          <div className="flex gap-2">
-            {questions.map((_, index) => (
-              <Button
-                key={index}
-                variant={index === currentIndex ? "default" : "outline"}
-                size="sm"
-                className={`w-8 h-8 p-0 ${isAnswered(questions[index].question_id) ? 'bg-green-100' : ''}`}
-                onClick={() => setCurrentIndex(index)}
-              >
-                {index + 1}
-              </Button>
-            ))}
+        {/* Navigation: question numbers wrap; Previous/Next always stay on screen */}
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-2" aria-label="Jump to question">
+            {questions.map((q, index) => {
+              const answered = isAnswered(q.question_id);
+              return (
+                <Button
+                  key={index}
+                  variant={index === currentIndex ? "default" : "outline"}
+                  size="sm"
+                  className={`w-9 h-9 p-0 ${index !== currentIndex && answered ? 'border-primary/60 bg-primary/15 text-primary' : ''}`}
+                  aria-label={`Question ${index + 1}${answered ? ', answered' : ''}`}
+                  aria-current={index === currentIndex ? 'step' : undefined}
+                  onClick={() => setCurrentIndex(index)}
+                >
+                  {index + 1}
+                </Button>
+              );
+            })}
           </div>
 
-          {currentIndex === questions.length - 1 ? (
+          <div className="flex justify-between items-center gap-3">
             <Button
-              onClick={handleSubmit}
-              disabled={!allQuestionsAnswered() || submitting}
-              className="bg-green-600 hover:bg-green-700"
+              variant="outline"
+              onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
+              disabled={currentIndex === 0}
             >
-              {submitting ? 'Submitting...' : 'Submit Test'}
+              Previous
             </Button>
-          ) : (
-            <Button
-              onClick={() => setCurrentIndex(Math.min(questions.length - 1, currentIndex + 1))}
-              disabled={currentIndex === questions.length - 1}
-            >
-              Next
-            </Button>
-          )}
+
+            {currentIndex === questions.length - 1 ? (
+              <Button
+                onClick={handleSubmit}
+                disabled={!allQuestionsAnswered() || submitting}
+              >
+                {submitting ? 'Submitting...' : 'Submit Test'}
+              </Button>
+            ) : (
+              <Button
+                onClick={() => setCurrentIndex(Math.min(questions.length - 1, currentIndex + 1))}
+              >
+                Next
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

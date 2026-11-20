@@ -22,4 +22,8 @@ describe('sectionScoreOnActScale', () => {
     expect(sectionScoreOnActScale(25, 'self')).toBe(25);
     expect(sectionScoreOnActScale(null, 'diagnostic')).toBeNull();
   });
+  it('ignores 0% diagnostic rows (old placeholders, not real attempts)', () => {
+    expect(sectionScoreOnActScale(0, 'diagnostic')).toBeNull();
+    expect(sectionScoreOnActScale(0, null)).toBeNull();
+  });
 });

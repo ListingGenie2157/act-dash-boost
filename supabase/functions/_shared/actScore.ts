@@ -20,5 +20,8 @@ export function actFromPercent(percent: number): number {
 export function sectionScoreOnActScale(score: number | string | null, source: string | null): number | null {
   if (score === null || score === '' || Number.isNaN(Number(score))) return null;
   const n = Number(score);
-  return source === 'self' ? Math.min(36, Math.max(1, Math.round(n))) : actFromPercent(n);
+  if (source === 'self') return Math.min(36, Math.max(1, Math.round(n)));
+  // A real diagnostic needs at least one answer (finish-diagnostic rejects empty ones), and guessing
+  // alone scores ~25%; 0% rows are old placeholders, so they carry no estimate.
+  return n > 0 ? actFromPercent(n) : null;
 }
