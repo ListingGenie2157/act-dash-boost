@@ -4,6 +4,30 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { PlanTaskJson } from '@/types/studyPlan';
 import { SKILL_PREFIX } from '@/lib/sectionMapping';
+import { sectionScoreOnActScale } from '../../supabase/functions/_shared/actScore';
+
+/** Section with the lowest most-recent score (self-reported 1–36, or diagnostic % mapped to 1–36). */
+async function weakestSection(userId: string): Promise<string> {
+  const { data } = await supabase
+    .from('diagnostics')
+    .select('section, score, source')
+    .eq('user_id', userId)
+    .not('completed_at', 'is', null)
+    .order('completed_at', { ascending: false })
+    .limit(40);
+  const latest = new Map<string, number>();
+  for (const d of data ?? []) {
+    if (d.score === null || latest.has(d.section)) continue;
+    const score = sectionScoreOnActScale(d.score, d.source);
+    if (score !== null) latest.set(d.section, score);
+  }
+  let weakest = 'Math';
+  let low = Infinity;
+  for (const [section, score] of latest) {
+    if (['English', 'Math', 'Reading', 'Science'].includes(section) && score < low) { low = score; weakest = section; }
+  }
+  return weakest;
+}
 
 export default function TaskLauncher() {
   const { date, idx } = useParams<{ date?: string; idx?: string }>();
@@ -61,16 +85,18 @@ export default function TaskLauncher() {
       
       const n = task.size ?? 10;
 
-      // Look up existing study_tasks row to pass its ID downstream
+      // Look up existing study_tasks row to pass its ID downstream (SIM tasks name their form in form_id)
+      const formId = task.form_id ?? null;
       let existingTaskId: string | undefined;
-      const { data: existingTask } = await supabase
+      let lookup = supabase
         .from('study_tasks')
         .select('id')
         .eq('user_id', user.id)
         .eq('the_date', date)
-        .eq('type', type)
-        .eq('skill_id', code || '')
-        .maybeSingle();
+        .eq('type', type);
+      lookup = code ? lookup.eq('skill_id', code) : lookup.is('skill_id', null);
+      if (formId) lookup = lookup.eq('form_id', formId);
+      const { data: existingTask } = await lookup.limit(1).maybeSingle();
       
       if (existingTask?.id) {
         existingTaskId = existingTask.id;
@@ -92,8 +118,16 @@ export default function TaskLauncher() {
           navigate(`/quiz/${code}?n=${n}&date=${encodeURIComponent(date)}&i=${i}${taskIdParam}`, { replace: true });
           break;
         case 'SIM':
-          navigate(`/simulation?date=${encodeURIComponent(date)}&i=${i}${taskIdParam}`, { replace: true });
+          navigate(`/simulation?${formId ? `form=${encodeURIComponent(formId)}&` : ''}date=${encodeURIComponent(date)}&i=${i}${taskIdParam}`, { replace: true });
           break;
+        case 'REVIEW':
+          navigate(`/review/spaced?date=${encodeURIComponent(date)}&i=${i}${taskIdParam}`, { replace: true });
+          break;
+        case 'WARMUP': {
+          const subject = await weakestSection(user.id);
+          navigate(`/drill/${subject}?n=${n}&date=${encodeURIComponent(date)}&i=${i}${taskIdParam}`, { replace: true });
+          break;
+        }
         default:
           navigate('/plan', { replace: true });
       }

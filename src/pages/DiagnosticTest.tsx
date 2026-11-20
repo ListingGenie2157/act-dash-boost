@@ -1,11 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { getAccommodatedTime } from '@/utils/accommodations';
+import { createQuestionTimer } from '@/lib/questionTimer';
+import { sharePassages } from '@/lib/passageGroups';
+import { pickDiagnosticQuestions, pickQuickQuestions, currentSitting } from '@/lib/diagnosticPicker';
+
+const SECTION_BY_CODE: Record<string, string> = { EN: 'English', MA: 'Math', RD: 'Reading', SC: 'Science' };
+const DIAGNOSTIC_POOL_FORMS = ['D2EN', 'D2MA', 'D2RD', 'D2SC'];
+const FORM_LABEL: Record<string, string> = {
+  ONB: 'Quick Diagnostic', D2EN: 'English Diagnostic', D2MA: 'Math Diagnostic', D2RD: 'Reading Diagnostic', D2SC: 'Science Diagnostic',
+};
 import { diagnosticFormIdSchema, validateInput } from '@/lib/validation/edgeFunctionSchemas';
 import { reportError } from '@/lib/errorReporter';
 
@@ -17,6 +25,7 @@ interface Question {
   choice_b: string;
   choice_c: string;
   choice_d: string;
+  passage_id?: string | null;
   passage_text?: string;
   passage_title?: string;
 }
@@ -29,18 +38,6 @@ interface Attempt {
   question_ord: number;
 }
 
-const TIMERS: Record<string, number> = {
-  ONB: 20 * 60, // 20 minutes - quick diagnostic
-  D2EN: 20 * 60, // 20 minutes  
-  D2MA: 25 * 60, // 25 minutes
-  D2RD: 18 * 60, // 18 minutes
-  D2SC: 18 * 60, // 18 minutes - fixed from D2SCI
-  // Official ACT section timers
-  EN_A: 45 * 60, EN_B: 45 * 60, EN_C: 45 * 60, // 45 minutes
-  MATH_A: 60 * 60, MATH_B: 60 * 60, MATH_C: 60 * 60, // 60 minutes
-  RD_A: 35 * 60, RD_B: 35 * 60, RD_C: 35 * 60, // 35 minutes
-  SCI_A: 35 * 60, SCI_B: 35 * 60, SCI_C: 35 * 60, // 35 minutes
-};
 
 // Stable hash function for deterministic shuffling
 function hashCode(str: string): number {
@@ -79,7 +76,9 @@ export default function DiagnosticTest() {
   const [questions, setQuestions] = useState<(Question & { skill_id?: string | null })[]>([]);
   const [attempts, setAttempts] = useState<Record<string, Attempt>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(0);
+  // Untimed for the student: time per question is recorded silently (feeds skill buckets)
+  const questionTimer = useRef(createQuestionTimer());
+  const priorTimeMs = useRef<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -224,17 +223,20 @@ export default function DiagnosticTest() {
       const { data, error } = await supabase
         .from('v_staging_items_public')
         .select('staging_id, form_id, section, ord, skill_code, question, choice_a, choice_b, choice_c, choice_d, difficulty, passage_id, passage_text, passage_title')
-        .eq('form_id', formId)
+        // The quick diagnostic (ONB) draws from the thorough diagnostic pool
+        .in('form_id', formId === 'ONB' ? DIAGNOSTIC_POOL_FORMS : [formId])
         .order('ord', { ascending: true });
 
       if (error) throw error;
 
       // Fetch all skills for skill_id lookup
-      const skillCodes = Array.from(new Set((data || []).map(q => q.skill_code).filter(Boolean)));
-      const { data: skillsData } = await supabase
-        .from('skills')
-        .select('id, code')
-        .in('code', skillCodes);
+      const skillCodes = Array.from(new Set((data || []).map(q => q.skill_code).filter((c): c is string => !!c)));
+      // Question skill codes match skills.id (skills.code holds a different label), so look up both
+      const [byId, byCode] = await Promise.all([
+        supabase.from('skills').select('id, code').in('id', skillCodes),
+        supabase.from('skills').select('id, code').in('code', skillCodes),
+      ]);
+      const skillsData = [...(byId.data ?? []), ...(byCode.data ?? [])];
 
       // Create skill lookup map
       const skillMap = new Map<string, string>();
@@ -248,7 +250,7 @@ export default function DiagnosticTest() {
 
       // Map v_staging_items_public to Question type with skill_id resolution
       // Note: answer/explanation are not available client-side (server-side validation only)
-      const mappedQuestions: (Question & { skill_id?: string | null })[] = (data || []).map(q => {
+      const mappedQuestions: (Question & { skill_id?: string | null; section?: string | null })[] = (data || []).map(q => {
         let skill_id: string | null = null;
         
         if (q.skill_code) {
@@ -264,40 +266,91 @@ export default function DiagnosticTest() {
           choice_b: q.choice_b ?? '',
           choice_c: q.choice_c ?? '',
           choice_d: q.choice_d ?? '',
+          passage_id: q.passage_id ?? null,
           passage_text: q.passage_text ?? undefined,
           passage_title: q.passage_title ?? undefined,
-          skill_id
+          skill_id,
+          section: q.section ?? null,
         };
       });
 
-      setQuestions(mappedQuestions);
-      const baseTime = TIMERS[formId as keyof typeof TIMERS] || 1200;
-      const accommodatedTime = await getAccommodatedTime(baseTime);
-      setTimeLeft(accommodatedTime);
+      // A passage is stored on one question of its group; show it on every question in the group
+      const allQuestions = sharePassages(mappedQuestions).map(q => ({
+        ...q,
+        passage_text: q.passage_text ?? undefined,
+        passage_title: q.passage_title ?? undefined,
+      }));
+
+      // This student's earlier attempt rows for the form, oldest first
+      const { data: formAttempts } = await supabase
+        .from('attempts')
+        .select('question_id, choice_order, correct_idx, selected_idx, question_ord, time_ms, created_at')
+        .eq('user_id', user.user.id)
+        .eq('form_id', formId)
+        .order('created_at', { ascending: true });
+      const priorRows = formAttempts ?? [];
+
+      let shown = allQuestions;
+      let reuseRows = priorRows;
+      const isQuick = formId === 'ONB';
+      if (isQuick || formId.startsWith('D2')) {
+        // Thorough: 2 questions per skill. Quick: ~36 across sections, 1 per skill.
+        // New questions first; an unfinished sitting resumes.
+        const section = isQuick ? 'Mixed' : SECTION_BY_CODE[formId.slice(2)];
+        const [{ data: lastDiag }, { data: answeredRows }] = await Promise.all([
+          supabase
+            .from('diagnostics')
+            .select('completed_at')
+            .eq('user_id', user.user.id)
+            .eq('section', section)
+            .not('completed_at', 'is', null)
+            .order('completed_at', { ascending: false })
+            .limit(1),
+          // Answered in any diagnostic, quick or thorough
+          supabase
+            .from('attempts')
+            .select('question_id')
+            .eq('user_id', user.user.id)
+            .in('form_id', ['ONB', ...DIAGNOSTIC_POOL_FORMS])
+            .not('selected_idx', 'is', null),
+        ]);
+        const skillById = new Map(allQuestions.map(q => [q.question_id, q.skill_id ?? null]));
+        const sitting = currentSitting(
+          priorRows, lastDiag?.[0]?.completed_at ?? null, id => skillById.get(id) ?? null, isQuick ? 1 : 2);
+
+        if (sitting) {
+          const ids = new Set(sitting);
+          reuseRows = priorRows.filter(r => ids.has(String(r.question_id)));
+          const position = new Map(reuseRows.map(r => [String(r.question_id), r.question_ord ?? 0]));
+          shown = allQuestions
+            .filter(q => ids.has(q.question_id))
+            .sort((a, b) => (position.get(a.question_id) ?? 0) - (position.get(b.question_id) ?? 0))
+            .map((q, i) => ({ ...q, ord: i + 1 }));
+        } else {
+          const answered = new Set((answeredRows ?? []).map(r => String(r.question_id)));
+          const pool = allQuestions.map(q => ({ ...q, skill_code: q.skill_id ?? null }));
+          shown = (isQuick ? pickQuickQuestions(pool, answered) : pickDiagnosticQuestions(pool, answered))
+            // Position in this sitting, so a resumed sitting keeps the same order
+            .map((q, i) => ({ ...q, ord: i + 1 }));
+          reuseRows = [];
+        }
+      }
+      setQuestions(shown);
 
       // Load or create attempts with choice shuffling
       const existingAttempts: Record<string, Attempt> = {};
       const newAttempts: Attempt[] = [];
 
-      // Batch fetch all existing attempts (avoiding N+1 query)
-      const questionIds = mappedQuestions.map(q => q.question_id);
-      const { data: existingAttemptsData } = await supabase
-        .from('attempts')
-        .select('*')
-        .eq('user_id', user.user.id)
-        .eq('form_id', formId)
-        .in('question_id', questionIds);
+      // attempts.question_id is the numeric staging_id; the page keys questions by string id (newest row wins)
+      const attemptMap = new Map(reuseRows.map(a => [String(a.question_id), a]));
 
-      const attemptMap = new Map(
-        (existingAttemptsData || []).map(a => [a.question_id, a])
-      );
-
-      for (const question of mappedQuestions) {
+      for (const question of shown) {
         const existing = attemptMap.get(question.question_id);
 
         if (existing) {
+          priorTimeMs.current[question.question_id] = existing.time_ms ?? 0;
           existingAttempts[question.question_id] = {
-            question_id: existing.question_id,
+            question_id: String(existing.question_id),
             choice_order: existing.choice_order,
             correct_idx: existing.correct_idx,
             selected_idx: existing.selected_idx ?? undefined,
@@ -333,7 +386,8 @@ export default function DiagnosticTest() {
             newAttempts.map(attempt => ({
               user_id: user.user.id,
               form_id: formId,
-              ...attempt
+              ...attempt,
+              question_id: Number(attempt.question_id),
             }))
           );
 
@@ -359,14 +413,13 @@ export default function DiagnosticTest() {
     }
   }, [formId, validationError, loadDiagnostic]);
 
+  // Count time only while a question is on screen
   useEffect(() => {
-    if (timeLeft > 0) {
-      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && questions.length > 0 && formId) {
-      handleSubmit();
-    }
-  }, [timeLeft, questions.length, handleSubmit, formId]);
+    const timer = questionTimer.current;
+    const question = questions[currentIndex];
+    if (!loading && question) timer.show(question.question_id);
+    return () => timer.pause();
+  }, [currentIndex, questions, loading]);
 
   const handleAnswerSelect = async (choiceIndex: number) => {
     const question = questions[currentIndex];
@@ -382,23 +435,20 @@ export default function DiagnosticTest() {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) return;
       
+      const timeMs = (priorTimeMs.current[question.question_id] ?? 0)
+        + questionTimer.current.elapsed(question.question_id);
       await supabase
         .from('attempts')
-        .update({ selected_idx: choiceIndex })
+        .update({ selected_idx: choiceIndex, time_ms: Math.round(timeMs) })
         .eq('user_id', user.user.id)
         .eq('form_id', formId)
-        .eq('question_id', question.question_id);
+        .eq('question_id', Number(question.question_id));
     } catch (error) {
       reportError(error instanceof Error ? error : new Error(String(error)), { page: 'DiagnosticTest', source: 'saveAnswer' });
     }
   };
 
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
 
   const getShuffledChoices = (question: Question) => {
     const attempt = attempts[question.question_id];
@@ -494,11 +544,8 @@ export default function DiagnosticTest() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">
-            {formId || 'Diagnostic'} - Question {currentIndex + 1} of {questions.length}
+            {FORM_LABEL[formId ?? ''] ?? formId ?? 'Diagnostic'} - Question {currentIndex + 1} of {questions.length}
           </h1>
-          <div className="text-lg font-mono">
-            {formatTime(timeLeft)}
-          </div>
         </div>
 
         {/* Progress */}
@@ -532,13 +579,13 @@ export default function DiagnosticTest() {
                   <Button
                     key={index}
                     variant={currentAttempt?.selected_idx === index ? "default" : "outline"}
-                    className="w-full text-left justify-start h-auto p-4"
+                    className="w-full text-left justify-start items-start h-auto p-4 whitespace-normal"
                     onClick={() => handleAnswerSelect(index)}
                   >
-                    <span className="font-medium mr-2">
+                    <span className="font-medium mr-2 shrink-0">
                       {String.fromCharCode(65 + index)}.
                     </span>
-                    {choice}
+                    <span className="min-w-0 break-words">{choice}</span>
                   </Button>
                 ))}
               </div>
@@ -546,46 +593,51 @@ export default function DiagnosticTest() {
           </Card>
         </div>
 
-        {/* Navigation */}
-        <div className="flex justify-between items-center">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
-            disabled={currentIndex === 0}
-          >
-            Previous
-          </Button>
-
-          <div className="flex gap-2">
-            {questions.map((_, index) => (
-              <Button
-                key={index}
-                variant={index === currentIndex ? "default" : "outline"}
-                size="sm"
-                className={`w-8 h-8 p-0 ${isAnswered(questions[index].question_id) ? 'bg-green-100' : ''}`}
-                onClick={() => setCurrentIndex(index)}
-              >
-                {index + 1}
-              </Button>
-            ))}
+        {/* Navigation: question numbers wrap; Previous/Next always stay on screen */}
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-2" aria-label="Jump to question">
+            {questions.map((q, index) => {
+              const answered = isAnswered(q.question_id);
+              return (
+                <Button
+                  key={index}
+                  variant={index === currentIndex ? "default" : "outline"}
+                  size="sm"
+                  className={`w-9 h-9 p-0 ${index !== currentIndex && answered ? 'border-primary/60 bg-primary/15 text-primary' : ''}`}
+                  aria-label={`Question ${index + 1}${answered ? ', answered' : ''}`}
+                  aria-current={index === currentIndex ? 'step' : undefined}
+                  onClick={() => setCurrentIndex(index)}
+                >
+                  {index + 1}
+                </Button>
+              );
+            })}
           </div>
 
-          {currentIndex === questions.length - 1 ? (
+          <div className="flex justify-between items-center gap-3">
             <Button
-              onClick={handleSubmit}
-              disabled={!allQuestionsAnswered() || submitting}
-              className="bg-green-600 hover:bg-green-700"
+              variant="outline"
+              onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
+              disabled={currentIndex === 0}
             >
-              {submitting ? 'Submitting...' : 'Submit Test'}
+              Previous
             </Button>
-          ) : (
-            <Button
-              onClick={() => setCurrentIndex(Math.min(questions.length - 1, currentIndex + 1))}
-              disabled={currentIndex === questions.length - 1}
-            >
-              Next
-            </Button>
-          )}
+
+            {currentIndex === questions.length - 1 ? (
+              <Button
+                onClick={handleSubmit}
+                disabled={!allQuestionsAnswered() || submitting}
+              >
+                {submitting ? 'Submitting...' : 'Submit Test'}
+              </Button>
+            ) : (
+              <Button
+                onClick={() => setCurrentIndex(Math.min(questions.length - 1, currentIndex + 1))}
+              >
+                Next
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

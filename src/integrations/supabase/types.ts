@@ -69,10 +69,11 @@ export type Database = {
           created_at: string | null
           form_id: string
           id: string
-          question_id: string
+          question_id: number
           question_ord: number
           selected_idx: number | null
           task_id: string | null
+          time_ms: number | null
           updated_at: string | null
           user_id: string
         }
@@ -82,10 +83,11 @@ export type Database = {
           created_at?: string | null
           form_id: string
           id?: string
-          question_id: string
+          question_id: number
           question_ord: number
           selected_idx?: number | null
           task_id?: string | null
+          time_ms?: number | null
           updated_at?: string | null
           user_id: string
         }
@@ -95,10 +97,11 @@ export type Database = {
           created_at?: string | null
           form_id?: string
           id?: string
-          question_id?: string
+          question_id?: number
           question_ord?: number
           selected_idx?: number | null
           task_id?: string | null
+          time_ms?: number | null
           updated_at?: string | null
           user_id?: string
         }
@@ -114,15 +117,15 @@ export type Database = {
             foreignKeyName: "attempts_question_id_fkey"
             columns: ["question_id"]
             isOneToOne: false
-            referencedRelation: "questions"
-            referencedColumns: ["id"]
+            referencedRelation: "staging_items"
+            referencedColumns: ["staging_id"]
           },
           {
             foreignKeyName: "attempts_question_id_fkey"
             columns: ["question_id"]
             isOneToOne: false
-            referencedRelation: "v_questions_public"
-            referencedColumns: ["id"]
+            referencedRelation: "v_staging_items_public"
+            referencedColumns: ["staging_id"]
           },
           {
             foreignKeyName: "attempts_task_id_fkey"
@@ -590,9 +593,12 @@ export type Database = {
           onboarding_complete: boolean | null
           onboarding_step: string | null
           plan_mode: string | null
+          plan_summary: Json | null
+          plan_summary_at: string | null
           privacy_accepted: boolean | null
           science_required: boolean | null
           sim_preferred_dow: number | null
+          target_score: number | null
           test_date: string | null
           test_format: string | null
           tos_accepted: boolean | null
@@ -611,9 +617,12 @@ export type Database = {
           onboarding_complete?: boolean | null
           onboarding_step?: string | null
           plan_mode?: string | null
+          plan_summary?: Json | null
+          plan_summary_at?: string | null
           privacy_accepted?: boolean | null
           science_required?: boolean | null
           sim_preferred_dow?: number | null
+          target_score?: number | null
           test_date?: string | null
           test_format?: string | null
           tos_accepted?: boolean | null
@@ -632,9 +641,12 @@ export type Database = {
           onboarding_complete?: boolean | null
           onboarding_step?: string | null
           plan_mode?: string | null
+          plan_summary?: Json | null
+          plan_summary_at?: string | null
           privacy_accepted?: boolean | null
           science_required?: boolean | null
           sim_preferred_dow?: number | null
+          target_score?: number | null
           test_date?: string | null
           test_format?: string | null
           tos_accepted?: boolean | null
@@ -820,7 +832,7 @@ export type Database = {
           ease: number | null
           interval_days: number
           lapses: number | null
-          question_id: string
+          question_id: number
           user_id: string
         }
         Insert: {
@@ -829,7 +841,7 @@ export type Database = {
           ease?: number | null
           interval_days: number
           lapses?: number | null
-          question_id: string
+          question_id: number
           user_id: string
         }
         Update: {
@@ -838,7 +850,7 @@ export type Database = {
           ease?: number | null
           interval_days?: number
           lapses?: number | null
-          question_id?: string
+          question_id?: number
           user_id?: string
         }
         Relationships: [
@@ -846,15 +858,15 @@ export type Database = {
             foreignKeyName: "review_queue_question_id_fkey"
             columns: ["question_id"]
             isOneToOne: false
-            referencedRelation: "questions"
-            referencedColumns: ["id"]
+            referencedRelation: "staging_items"
+            referencedColumns: ["staging_id"]
           },
           {
             foreignKeyName: "review_queue_question_id_fkey"
             columns: ["question_id"]
             isOneToOne: false
-            referencedRelation: "v_questions_public"
-            referencedColumns: ["id"]
+            referencedRelation: "v_staging_items_public"
+            referencedColumns: ["staging_id"]
           },
         ]
       }
@@ -1197,6 +1209,7 @@ export type Database = {
         Row: {
           accuracy: number | null
           created_at: string | null
+          form_id: string | null
           id: string
           is_critical: boolean | null
           median_time_ms: number | null
@@ -1213,6 +1226,7 @@ export type Database = {
         Insert: {
           accuracy?: number | null
           created_at?: string | null
+          form_id?: string | null
           id?: string
           is_critical?: boolean | null
           median_time_ms?: number | null
@@ -1229,6 +1243,7 @@ export type Database = {
         Update: {
           accuracy?: number | null
           created_at?: string | null
+          form_id?: string | null
           id?: string
           is_critical?: boolean | null
           median_time_ms?: number | null
@@ -1810,6 +1825,14 @@ export type Database = {
         Returns: Json
       }
       cleanup_old_webhook_events: { Args: never; Returns: undefined }
+      get_bank_answers: {
+        Args: { p_ids: number[] }
+        Returns: {
+          answer: string
+          explanation: string
+          staging_id: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

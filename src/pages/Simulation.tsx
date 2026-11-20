@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { FormPicker } from '@/components/FormPicker';
 import { SimulationStartDialog } from '@/components/SimulationStartDialog';
@@ -87,6 +87,8 @@ export default function Simulation() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [authChecking, setAuthChecking] = useState(true);
+  const [searchParams] = useSearchParams();
+  const planForm = searchParams.get('form'); // practice test scheduled by the study plan
   const [state, setState] = useState<SimulationState>('form-picker');
   const [selectedForm, setSelectedForm] = useState<string>('');
   const [selectedSection, setSelectedSection] = useState<string>('');
@@ -514,7 +516,7 @@ export default function Simulation() {
   }
 
   if (state === 'form-picker') {
-    return <FormPicker onFormSelect={handleFormSelect} />;
+    return <FormPicker onFormSelect={handleFormSelect} highlightPrefix={planForm} />;
   }
 
   if (state === 'start-dialog') {

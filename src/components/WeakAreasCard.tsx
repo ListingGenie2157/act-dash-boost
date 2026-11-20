@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { skillDrillPath } from '@/lib/bank';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -155,7 +156,7 @@ export function WeakAreasCard({ limit = 5, showActions = true }: WeakAreasCardPr
                     className="flex-1"
                     asChild
                   >
-                    <Link to={`/drill/${area.skill_id}`}>
+                    <Link to={skillDrillPath(area.skill_id)}>
                       Practice Drill
                     </Link>
                   </Button>

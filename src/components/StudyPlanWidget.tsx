@@ -8,9 +8,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { PlanTaskJson } from '@/types/studyPlan';
 import { reportError } from '@/lib/errorReporter';
+import { planSummaryText, type PlanSummaryRow } from '@/lib/planSummary';
+import { localDateString } from '@/lib/localDate';
 
 interface StudyTask {
-  type: 'LEARN' | 'DRILL' | 'REVIEW' | 'SIM' | 'FLASH';
+  type: 'LEARN' | 'DRILL' | 'REVIEW' | 'SIM' | 'FLASH' | 'WARMUP';
   skill_id: string | null;
   size: number;
   skill_name?: string;
@@ -47,6 +49,12 @@ const TASK_CONFIG = {
     label: 'Full Test',
     gradient: 'from-destructive to-rose-500',
     description: 'Full Section Simulation'
+  },
+  WARMUP: {
+    icon: Zap,
+    label: 'Warm-up',
+    gradient: 'from-warning to-amber-500',
+    description: 'Light practice before test day'
   }
 };
 
@@ -58,6 +66,7 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
   const [tasks, setTasks] = useState<StudyTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [summaryLine, setSummaryLine] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -70,7 +79,11 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = localDateString();
+
+      const { data: profile } = await supabase.from('profiles').select('plan_summary').eq('id', user.id).maybeSingle();
+      const summary = profile?.plan_summary as unknown as PlanSummaryRow | null;
+      setSummaryLine(summary ? planSummaryText(summary).headline : null);
 
       // Load directly from study_plan_days table (source of truth)
       const { data: planDay, error: planError } = await supabase
@@ -136,7 +149,7 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
       const mappedTasks: StudyTask[] = rawTasks.map((task: PlanTaskJson) => {
         const skillInfo = task.skill_id ? skillsMap.get(task.skill_id) : null;
         return {
-          type: (task.type || 'LEARN') as 'LEARN' | 'DRILL' | 'REVIEW' | 'SIM' | 'FLASH',
+          type: (task.type || 'LEARN') as 'LEARN' | 'DRILL' | 'REVIEW' | 'SIM' | 'FLASH' | 'WARMUP',
           skill_id: task.skill_id ?? null,
           size: task.size ?? 0,
           skill_name: skillInfo?.name || task.title || undefined,
@@ -230,6 +243,7 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
             <p className="text-muted-foreground text-sm mt-1">
               {totalCount} tasks scheduled for today
             </p>
+            {summaryLine && <p className="text-sm mt-1">{summaryLine}</p>}
           </div>
         </div>
 
@@ -239,7 +253,7 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
             if (!config) return null;
             
             const Icon = config.icon;
-            const today = new Date().toISOString().split('T')[0];
+            const today = localDateString();
             
             return (
               <Link 

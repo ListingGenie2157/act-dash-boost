@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { TrendingUp, Clock, Target, CheckCircle, Zap } from 'lucide-react';
 import { reportError } from '@/lib/errorReporter';
+import { localDateString, addDaysToDateString } from '@/lib/localDate';
+import { sectionScoreOnActScale } from '../../supabase/functions/_shared/actScore';
 
 interface AnalyticsData {
   studyStreak: number;
@@ -13,6 +15,7 @@ interface AnalyticsData {
   accuracyByCluster: { cluster: string; accuracy: number; count: number }[];
   medianTime: number;
   carelessRate: number;
+  overallAccuracy: number | null;
   baselineVsLatest: {
     section: string;
     baseline: number;
@@ -71,20 +74,18 @@ const Analytics = () => {
       if (!studyTasks || !skills) return;
 
       // Calculate study streak (consecutive days with completed tasks)
-      const taskDates = studyTasks
-        .map(task => task.the_date)
+      // One entry per day: several tasks on the same day must not end the streak
+      const taskDates = [...new Set(studyTasks.map(task => task.the_date))]
         .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
       
       let streak = 0;
-      const today = new Date().toISOString().split('T')[0];
+      const today = localDateString();
       let currentDate = today;
       
       for (const date of taskDates) {
         if (date === currentDate) {
           streak++;
-          const prev = new Date(currentDate);
-          prev.setDate(prev.getDate() - 1);
-          currentDate = prev.toISOString().split('T')[0];
+          currentDate = addDaysToDateString(currentDate, -1);
         } else {
           break;
         }
@@ -103,7 +104,7 @@ const Analytics = () => {
         if (skill && task.accuracy !== null && task.size) {
           const cluster = skill.cluster;
           const existing = clusterMap.get(cluster) || { correct: 0, total: 0 };
-          existing.correct += Math.round(task.accuracy * task.size);
+          existing.correct += Number(task.accuracy) * task.size; // accuracy is stored 0-1
           existing.total += task.size;
           clusterMap.set(cluster, existing);
         }
@@ -114,6 +115,13 @@ const Analytics = () => {
         accuracy: data.total > 0 ? (data.correct / data.total) * 100 : 0,
         count: data.total
       }));
+
+      // Overall accuracy: every finished task with a score, weighted by its question count
+      const scored = studyTasks.filter(t => t.accuracy !== null && t.size);
+      const scoredQuestions = scored.reduce((sum, t) => sum + (t.size || 0), 0);
+      const overallAccuracy = scoredQuestions > 0
+        ? (scored.reduce((sum, t) => sum + Number(t.accuracy) * (t.size || 0), 0) / scoredQuestions) * 100
+        : null;
 
       // Median time across all tasks
       const allTimes = studyTasks
@@ -129,8 +137,8 @@ const Analytics = () => {
       const carelessTasks = studyTasks.filter(task => 
         task.median_time_ms && 
         task.median_time_ms < 20000 && 
-        task.accuracy && 
-        task.accuracy < 70
+        task.accuracy !== null &&
+        Number(task.accuracy) < 0.7
       );
       const carelessRate = studyTasks.length > 0 
         ? (carelessTasks.length / studyTasks.length) * 100 
@@ -142,7 +150,11 @@ const Analytics = () => {
         const sections = ['Math', 'English', 'Reading', 'Science'];
         
         sections.forEach(section => {
-          const sectionDiagnostics = diagnostics.filter(d => d.section === section);
+          // Diagnostics store percent correct; compare everything on the ACT 1-36 scale
+          const sectionDiagnostics = diagnostics
+            .filter(d => d.section === section)
+            .map(d => ({ ...d, score: sectionScoreOnActScale(d.score, d.source) }))
+            .filter(d => d.score !== null);
           if (sectionDiagnostics.length > 0) {
             const first = sectionDiagnostics[0];
             const last = sectionDiagnostics[sectionDiagnostics.length - 1];
@@ -170,6 +182,7 @@ const Analytics = () => {
         studyStreak: streak,
         totalQuestions,
         accuracyByCluster,
+        overallAccuracy,
         medianTime: Math.round(medianTime / 1000), // Convert to seconds
         carelessRate,
         baselineVsLatest
@@ -274,9 +287,9 @@ const Analytics = () => {
                   <div>
                     <p className="text-sm text-muted-foreground">Avg Accuracy</p>
                     <p className="text-2xl font-bold">
-                      {analyticsData.accuracyByCluster.length > 0 
-                        ? (analyticsData.accuracyByCluster.reduce((sum, item) => sum + item.accuracy, 0) / analyticsData.accuracyByCluster.length).toFixed(1)
-                        : '0'}%
+                      {analyticsData.overallAccuracy !== null
+                        ? `${analyticsData.overallAccuracy.toFixed(1)}%`
+                        : '—'}
                     </p>
                     <p className="text-xs text-muted-foreground">overall</p>
                   </div>

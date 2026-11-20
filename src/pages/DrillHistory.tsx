@@ -91,7 +91,7 @@ export default function DrillHistory() {
     <div className="container mx-auto p-6 max-w-6xl">
       <Button
         variant="outline"
-        onClick={() => navigate('/drill-runner')}
+        onClick={() => navigate('/pacing-lab')}
         className="mb-4"
       >
         <ArrowLeft className="h-4 w-4 mr-2" />

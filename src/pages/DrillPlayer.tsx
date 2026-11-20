@@ -2,10 +2,20 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { DrillComponent } from '@/components/DrillComponent';
+import { DrillComponent, type DrillResult } from '@/components/DrillComponent';
+import { getBankAnswer, BANK_FORM_IDS } from '@/lib/bank';
 import { toast } from 'sonner';
 import type { DrillSession, LegacyQuestion } from '@/types';
 import { logger } from '@/lib/logger';
+import { localDateString } from '@/lib/localDate';
+
+/** Drill bank form for each subject (accepts full names and codes) */
+const DRILL_FORM_BY_SUBJECT: Record<string, string> = {
+  Reading: 'DR_RD', RD: 'DR_RD',
+  Math: 'DR_MA', MA: 'DR_MA',
+  English: 'DR_EN', EN: 'DR_EN',
+  Science: 'DR_SC', SC: 'DR_SC',
+};
 
 export default function DrillPlayer() {
   const { subject } = useParams<{ subject: string }>();
@@ -30,22 +40,11 @@ export default function DrillPlayer() {
           return;
         }
 
-        // Map subject to drill form ID (accepts full subject names)
-        const formIdMap: Record<string, string> = {
-          'Reading': 'DR_RD',
-          'RD': 'DR_RD',
-          'Math': 'DR_MA',
-          'MA': 'DR_MA',
-          'English': 'DR_EN',
-          'EN': 'DR_EN',
-          'Science': 'DR_SC',
-          'SC': 'DR_SC',
-        };
-        const drillFormId = formIdMap[subject];
+        const drillFormId = DRILL_FORM_BY_SUBJECT[subject];
 
         if (!drillFormId) {
           toast.error('Invalid drill subject');
-          navigate('/drill-runner');
+          navigate('/pacing-lab');
           return;
         }
 
@@ -140,6 +139,7 @@ export default function DrillPlayer() {
               .from('v_staging_items_public')
               .select('staging_id, form_id, section, ord, skill_code, question, choice_a, choice_b, choice_c, choice_d, difficulty, passage_id, passage_text, passage_title, underlined_text, reference_number')
               .in('staging_id', stagingIds)
+              .in('form_id', BANK_FORM_IDS) // locked exam/diagnostic questions are not re-practiced
               .eq('section', targetSection);
 
             if (!stagingData || stagingData.length === 0) {
@@ -156,7 +156,7 @@ export default function DrillPlayer() {
                 id: q.staging_id!.toString(),
                 question: q.question || '',
                 options: [q.choice_a || '', q.choice_b || '', q.choice_c || '', q.choice_d || ''],
-                correctAnswer: 0, // Placeholder - actual validation is server-side
+                correctAnswer: 0, // Unused: graded per answer via gradeAnswer (get_bank_answers)
                 explanation: 'Review after submission', // Explanation fetched after attempt
                 difficulty: (q.difficulty === 'easy' ? 'easy' : q.difficulty === 'hard' ? 'hard' : 'medium') as 'easy' | 'medium' | 'hard',
                 passageText: q.passage_text || undefined,
@@ -207,7 +207,7 @@ export default function DrillPlayer() {
             id: q.staging_id!.toString(),
             question: q.question || '',
             options: [q.choice_a || '', q.choice_b || '', q.choice_c || '', q.choice_d || ''],
-            correctAnswer: 0, // Placeholder - actual validation is server-side
+            correctAnswer: 0, // Unused: graded per answer via gradeAnswer (get_bank_answers)
             explanation: 'Review after submission', // Explanation fetched after attempt
             difficulty: (q.difficulty === 'easy' ? 'easy' : q.difficulty === 'hard' ? 'hard' : 'medium') as 'easy' | 'medium' | 'hard',
             passageText: q.passage_text || undefined,
@@ -238,26 +238,52 @@ export default function DrillPlayer() {
     void fetchQuestions();
   }, [subject, mode, questionCount, timeLimit, skillId, navigate]);
 
-  const handleComplete = async (score: number, answers: number[]) => {
+  const gradeAnswer = async (questionId: string, _selectedIdx: number) => {
+    const result = await getBankAnswer(questionId);
+    if (!result) throw new Error(`No answer key for question ${questionId}`);
+    return { correctIdx: result.correctIdx, explanation: result.explanation };
+  };
+
+  const handleComplete = async ({ score, answers, correctIdxs, elapsedSeconds, timesMs }: DrillResult) => {
     if (!drill) return;
-    
+
     // Calculate stats from drill
     const total = drill.questions.length;
-    const correct = Math.round((score / 100) * total);
-    
+    const correct = answers.filter((a, i) => a !== -1 && a === correctIdxs[i]).length;
+    const answeredCount = answers.filter(a => a !== -1).length;
+
     logger.debug('Drill completed:', { score, correct, total });
-    
+
     // Save drill session to database
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Record missed questions to error_bank
+      // One attempt per graded answer, with time on the question (feeds skill buckets in the study plan)
+      const attemptRows = drill.questions
+        .map((q, i) => ({ q, i }))
+        .filter(({ i }) => answers[i] !== -1 && correctIdxs[i] !== -1)
+        .map(({ q, i }) => ({
+          user_id: user.id,
+          question_id: Number(q.id),
+          form_id: DRILL_FORM_BY_SUBJECT[subject ?? ''] ?? 'DR_EN',
+          question_ord: i + 1,
+          choice_order: [0, 1, 2, 3],
+          correct_idx: correctIdxs[i],
+          selected_idx: answers[i],
+          time_ms: timesMs[i] ?? null,
+        }));
+      if (attemptRows.length > 0) {
+        const { error: attemptsError } = await supabase.from('attempts').insert(attemptRows);
+        if (attemptsError) logger.error('Failed to save drill attempts:', attemptsError);
+      }
+
+      // Record missed questions to error_bank (only answers that were actually graded)
       for (let i = 0; i < drill.questions.length; i++) {
         const userAnswer = answers[i];
-        const correctAnswer = drill.questions[i].correctAnswer;
-        
-        if (userAnswer !== -1 && userAnswer !== correctAnswer) {
+        const correctAnswer = correctIdxs[i];
+
+        if (userAnswer !== -1 && correctAnswer !== -1 && userAnswer !== correctAnswer) {
           // Question was answered incorrectly
           const questionIdStr = drill.questions[i].id;
           
@@ -267,7 +293,7 @@ export default function DrillPlayer() {
             .select('miss_count')
             .eq('user_id', user.id)
             .eq('question_id', questionIdStr)
-            .single();
+            .maybeSingle();
           
           if (existingError) {
             // Update existing record
@@ -291,26 +317,28 @@ export default function DrillPlayer() {
         }
       }
 
-      await supabase.from('study_tasks').insert({
+      const taskRow = {
         user_id: user.id,
         type: 'DRILL',
         skill_id: mode === 'skill' ? skillId : null,
-        the_date: new Date().toISOString().split('T')[0],
+        the_date: localDateString(),
         status: 'DONE',
         size: total,
         accuracy: correct / total,
-        median_time_ms: timeLimit > 0 ? Math.round((timeLimit * 1000) / total) : null,
-      });
+        // Average time actually spent per answered question (previously time limit ÷ questions)
+        median_time_ms: answeredCount > 0 ? Math.round((elapsedSeconds * 1000) / answeredCount) : null,
+      };
+      const { error: taskError } = await supabase.from('study_tasks').insert(taskRow);
+      // One task per user/day/type/skill (unique index shared with the study plan). A repeat drill
+      // of the same skill today keeps the first saved result; students can't rewrite scores (RLS).
+      if (taskError && taskError.code !== '23505') throw taskError;
 
       toast.success(`Drill complete! ${correct}/${total} correct (${score}%)`);
     } catch (error) {
       console.error('Error saving drill results:', error);
     }
 
-    // Navigate back after a delay
-    setTimeout(() => {
-      navigate('/drill-runner');
-    }, 3000);
+    // Stay on the results screen (answers + explanations); DrillComponent provides the exit buttons
   };
 
   const handleBack = () => {
@@ -329,6 +357,7 @@ export default function DrillPlayer() {
     <DrillComponent
       drill={drill}
       onComplete={handleComplete}
+      gradeAnswer={gradeAnswer}
       onBack={handleBack}
     />
   );

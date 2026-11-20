@@ -68,11 +68,12 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { authorization: authHeader } }
+      global: { headers: { Authorization: authHeader } }
     });
 
     // Verify the JWT token
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // Pass the token explicitly: there is no stored session on the server
+    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace(/^Bearer\s+/i, ''));
     
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -136,11 +137,15 @@ serve(async (req) => {
     const studyMode = daysLeft === null || daysLeft > 30 ? 'MASTERY' : 
                      daysLeft <= 7 ? 'CRASH' : 'MASTERY';
 
-    // Update the task status and metrics
-    const { data: updatedTask, error: updateError } = await supabase
+    // Update the task status and metrics. Students may not write scores themselves (RLS), so the
+    // server writes them with the service role — ownership was verified above and is re-checked here.
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!serviceKey) throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY');
+    const serviceClient = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
+    const { data: updatedTask, error: updateError } = await serviceClient
       .from('study_tasks')
       .update({
-        status: 'COMPLETED',
+        status: 'DONE', // allowed: PENDING, DONE, SKIPPED
         accuracy: accuracy,
         median_time_ms: time_ms
       })

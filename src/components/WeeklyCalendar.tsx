@@ -7,6 +7,7 @@ import { BookOpen, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { format, isToday, differenceInDays } from 'date-fns';
 import type { PlanTaskJson } from '@/types/studyPlan';
 import { reportError } from '@/lib/errorReporter';
+import { localDateString } from '@/lib/localDate';
 
 interface StudyTask {
   type: string;
@@ -43,7 +44,7 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
         for (let i = 0; i < 7; i++) {
           const date = new Date(today);
           date.setDate(today.getDate() + i);
-          dates.push(date.toISOString().split('T')[0]);
+          dates.push(localDateString(date));
         }
 
         // Fetch study plan days (source of truth)
@@ -87,9 +88,11 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
 
         // Calculate days until test
         if (testDate) {
-          const testDateObj = new Date(testDate);
-          const days = differenceInDays(testDateObj, today);
-          setDaysUntilTest(days);
+          // Date-only value parsed as local time; a past test date shows no countdown
+          const testDateObj = new Date(`${testDate}T00:00:00`);
+          const now = new Date();
+          const days = differenceInDays(testDateObj, new Date(now.getFullYear(), now.getMonth(), now.getDate()));
+          setDaysUntilTest(days >= 0 ? days : null);
         }
       } catch (err) {
         reportError(err instanceof Error ? err : new Error(String(err)), { component: 'WeeklyCalendar' });
@@ -122,7 +125,7 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
           {daysUntilTest !== null && (
             <Badge variant={daysUntilTest < 7 ? 'destructive' : daysUntilTest < 30 ? 'secondary' : 'default'}>
               <Clock className="mr-1 h-3 w-3" />
-              {daysUntilTest} days until test
+              {daysUntilTest === 0 ? 'Test day' : `${daysUntilTest} day${daysUntilTest === 1 ? '' : 's'} until test`}
             </Badge>
           )}
         </CardTitle>

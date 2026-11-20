@@ -127,11 +127,13 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
         reportError(preferencesError instanceof Error ? preferencesError : new Error(String(preferencesError)), { component: 'StudyPlanWizard', source: 'preferences' });
       }
 
-      // 5. Update profile with daily time cap
+      // 5. Update profile with daily time cap and target score (the planner aims for it)
+      const target = parseInt(form.targetScore, 10);
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
           daily_time_cap_mins: parseInt(form.dailyMinutes, 10),
+          ...(target >= 1 && target <= 36 ? { target_score: target } : {}),
         })
         .eq('id', user.id);
 
@@ -184,11 +186,11 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
         }
       } else if (form.diagnosticChoice === 'quick') {
         // Quick diagnostic goes directly to ONB combined test
-        toast.info('Starting 20-minute quick diagnostic...');
+        toast.info('Starting the quick diagnostic (about 35 minutes)...');
         navigate('/diagnostic-test/ONB');
       } else {
         // Thorough diagnostic goes to multi-section orchestrator
-        toast.info('Starting 60-minute thorough diagnostic...');
+        toast.info('Starting the thorough diagnostic (4 sections, about 3 hours 20 minutes)...');
         navigate('/diagnostic');
       }
     } catch (error) {
@@ -337,7 +339,7 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
           <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
             <RadioGroupItem value="quick" id="quick" className="mt-1" />
             <Label htmlFor="quick" className="cursor-pointer flex-1">
-              <div className="font-semibold">Quick Diagnostic (20 minutes)</div>
+              <div className="font-semibold">Quick Diagnostic (about 35 minutes)</div>
               <div className="text-sm text-muted-foreground mt-1">
                 A shorter assessment covering all four sections. Perfect for getting started quickly.
               </div>
@@ -347,7 +349,7 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
           <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
             <RadioGroupItem value="thorough" id="thorough" className="mt-1" />
             <Label htmlFor="thorough" className="cursor-pointer flex-1">
-              <div className="font-semibold">Thorough Diagnostic (60 minutes)</div>
+              <div className="font-semibold">Thorough Diagnostic (about 3 hours 20 minutes)</div>
               <div className="text-sm text-muted-foreground mt-1">
                 A comprehensive assessment with more questions per section for accurate results.
               </div>
@@ -437,8 +439,8 @@ export function StudyPlanWizard({ open, onOpenChange, onPlanGenerated }: StudyPl
           <div>
             <div className="font-semibold">Diagnostic</div>
             <div className="text-sm text-muted-foreground">
-              {form.diagnosticChoice === 'quick' ? 'Quick (20 min)' :
-               form.diagnosticChoice === 'thorough' ? 'Thorough (60 min)' :
+              {form.diagnosticChoice === 'quick' ? 'Quick (about 35 min)' :
+               form.diagnosticChoice === 'thorough' ? 'Thorough (about 3 hr 20 min, 4 sections)' :
                'Skip for now'}
             </div>
           </div>

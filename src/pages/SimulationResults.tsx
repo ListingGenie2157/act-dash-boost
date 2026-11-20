@@ -123,14 +123,22 @@ export default function SimulationResults() {
         // Batch fetch skill codes from staging_items (question_id is UUID but we store staging_id references)
         // For simulations using staging_items, question_id may be stored as UUID or staging_id
         // Try staging_items first for skill_code lookup
-        const { data: stagingItems } = await supabase
-          .from('staging_items')
-          .select('staging_id, skill_code')
-          .limit(1000);
+        const responseStagingIds = responses
+          .map(r => String(r.question_id))
+          .filter(id => /^\d+$/.test(id))
+          .map(Number);
+        const { data: stagingItems } = responseStagingIds.length > 0
+          ? await supabase
+              .from('v_staging_items_public')
+              .select('staging_id, skill_code')
+              .in('staging_id', responseStagingIds)
+          : { data: [] as Array<{ staging_id: number | null; skill_code: string | null }> };
 
         // Create map of staging_id to skill_code
         const stagingSkillMap = new Map<string, string>(
-          (stagingItems || []).map(item => [item.staging_id.toString(), item.skill_code])
+          (stagingItems || [])
+            .filter(item => item.staging_id !== null && item.skill_code)
+            .map(item => [String(item.staging_id), item.skill_code as string])
         );
 
         // Group by skill

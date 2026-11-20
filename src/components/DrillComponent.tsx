@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -7,35 +7,68 @@ import { Timer, Play, Pause, RotateCcw, ArrowLeft, CheckCircle, XCircle, BookOpe
 import type { DrillSession } from '@/types';
 import { useTimer } from '@/hooks/useTimer';
 import { useToast } from '@/hooks/use-toast';
+import { createQuestionTimer } from '@/lib/questionTimer';
+
+export interface DrillResult {
+  score: number;
+  /** selected option index per question, -1 = unanswered */
+  answers: number[];
+  /** correct option index per question (-1 if unknown) */
+  correctIdxs: number[];
+  elapsedSeconds: number;
+  /** ms each question was on screen before it was answered (0 = unanswered) */
+  timesMs: number[];
+}
 
 interface DrillComponentProps {
   drill: DrillSession;
-  onComplete: (score: number, answers: number[]) => void;
+  onComplete: (result: DrillResult) => void;
   onBack: () => void;
+  /**
+   * Server-side grading. When provided, the answer key is not on the client:
+   * each answer is graded after selection and correctAnswer on the questions is ignored.
+   */
+  gradeAnswer?: (questionId: string, selectedIdx: number) => Promise<{ correctIdx: number; explanation?: string | null }>;
 }
 
-export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProps) => {
+export const DrillComponent = ({ drill, onComplete, onBack, gradeAnswer }: DrillComponentProps) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<number[]>(new Array(drill.questions.length).fill(-1));
+  const [correctIdxs, setCorrectIdxs] = useState<number[]>(
+    drill.questions.map(q => (gradeAnswer ? -1 : q.correctAnswer))
+  );
+  const [explanations, setExplanations] = useState<(string | null)[]>(new Array(drill.questions.length).fill(null));
   const [showResults, setShowResults] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
-  
+  const pendingGrades = useRef<Map<number, Promise<number>>>(new Map());
+  const finishedRef = useRef(false);
+  const questionTimer = useRef(createQuestionTimer());
+  const timesMs = useRef<number[]>(new Array(drill.questions.length).fill(0));
+
   const { timeLeft, isActive, isCompleted, startTimer, pauseTimer, resetTimer, formatTime } = useTimer(drill.timeLimit);
 
   // Toast API for immediate feedback during drills.
   const { toast } = useToast();
 
-  const handleFinish = useCallback((finalAnswers: number[]) => {
+  const handleFinish = useCallback(async (finalAnswers: number[]) => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
     pauseTimer();
+    const elapsedSeconds = drill.timeLimit - timeLeft;
+
+    // Wait for any in-flight grading so the score is final
+    const resolved = [...correctIdxs];
+    for (const [index, promise] of pendingGrades.current) {
+      resolved[index] = await promise;
+    }
+    setCorrectIdxs(resolved);
     setShowResults(true);
-    
-    const correctCount = finalAnswers.filter((answer, index) => 
-      answer === drill.questions[index].correctAnswer
-    ).length;
-    
+
+    const correctCount = finalAnswers.filter((answer, index) => answer !== -1 && answer === resolved[index]).length;
     const score = Math.round((correctCount / drill.questions.length) * 100);
-    onComplete(score, finalAnswers);
-  }, [pauseTimer, drill.questions, onComplete]);
+    questionTimer.current.pause();
+    onComplete({ score, answers: finalAnswers, correctIdxs: resolved, elapsedSeconds, timesMs: [...timesMs.current] });
+  }, [pauseTimer, drill.questions, drill.timeLimit, timeLeft, correctIdxs, onComplete]);
 
   useEffect(() => {
     if (isCompleted && hasStarted) {
@@ -43,31 +76,66 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
     }
   }, [isCompleted, hasStarted, answers, handleFinish]);
 
+  // Count time only while the current question is on screen and the drill is running
+  useEffect(() => {
+    const question = drill.questions[currentQuestion];
+    if (hasStarted && isActive && !showResults && question) questionTimer.current.show(question.id);
+    else questionTimer.current.pause();
+  }, [currentQuestion, hasStarted, isActive, showResults, drill.questions]);
+
   const handleStart = () => {
     setHasStarted(true);
     startTimer();
   };
 
-  const handleAnswerSelect = (answerIndex: number) => {
-    if (!isActive || showResults) return;
-    
-    const newAnswers = [...answers];
-    newAnswers[currentQuestion] = answerIndex;
-    setAnswers(newAnswers);
-
-    // Provide immediate feedback on the selected answer.
-    const isCorrect = answerIndex === drill.questions[currentQuestion].correctAnswer;
+  const showFeedback = (isCorrect: boolean) => {
     toast({
       title: isCorrect ? 'Correct!' : 'Incorrect',
       description: isCorrect ? undefined : 'Keep going!',
     });
-    
+  };
+
+  const handleAnswerSelect = (answerIndex: number) => {
+    if (!isActive || showResults) return;
+
+    const questionIndex = currentQuestion;
+    timesMs.current[questionIndex] = questionTimer.current.elapsed(drill.questions[questionIndex].id);
+    const newAnswers = [...answers];
+    newAnswers[questionIndex] = answerIndex;
+    setAnswers(newAnswers);
+
+    if (gradeAnswer) {
+      const question = drill.questions[questionIndex];
+      const grade = gradeAnswer(question.id, answerIndex)
+        .then(({ correctIdx, explanation }) => {
+          setCorrectIdxs(prev => {
+            const next = [...prev];
+            next[questionIndex] = correctIdx;
+            return next;
+          });
+          setExplanations(prev => {
+            const next = [...prev];
+            next[questionIndex] = explanation ?? null;
+            return next;
+          });
+          showFeedback(correctIdx === answerIndex);
+          return correctIdx;
+        })
+        .catch(() => {
+          toast({ title: 'Could not check that answer', description: 'It will be marked as not graded.' });
+          return -1;
+        });
+      pendingGrades.current.set(questionIndex, grade);
+    } else {
+      showFeedback(answerIndex === drill.questions[questionIndex].correctAnswer);
+    }
+
     // Auto-advance to next question
-    if (currentQuestion < drill.questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
+    if (questionIndex < drill.questions.length - 1) {
+      setCurrentQuestion(questionIndex + 1);
     } else {
       // All questions answered, finish drill
-      handleFinish(newAnswers);
+      void handleFinish(newAnswers);
     }
   };
 
@@ -76,8 +144,8 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
   const timeProgress = ((drill.timeLimit - timeLeft) / drill.timeLimit) * 100;
 
   if (showResults) {
-    const correctCount = answers.filter((answer, index) => 
-      answer === drill.questions[index].correctAnswer
+    const correctCount = answers.filter((answer, index) =>
+      answer !== -1 && answer === correctIdxs[index]
     ).length;
     const score = Math.round((correctCount / drill.questions.length) * 100);
     
@@ -114,8 +182,10 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
           <div className="grid gap-3">
             {drill.questions.map((question, index) => {
               const userAnswer = answers[index];
-              const isCorrect = userAnswer === question.correctAnswer;
+              const correctIdx = correctIdxs[index];
+              const isCorrect = userAnswer === correctIdx;
               const wasAnswered = userAnswer !== -1;
+              const explanation = explanations[index];
               
               return (
                 <Card key={question.id} className={`p-4 shadow-soft ${
@@ -135,8 +205,11 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
                       {wasAnswered && (
                         <p className="text-xs text-muted-foreground mt-1">
                           Your answer: {question.options[userAnswer]}
-                          {!isCorrect && ` • Correct: ${question.options[question.correctAnswer]}`}
+                          {!isCorrect && correctIdx >= 0 && ` • Correct: ${question.options[correctIdx]}`}
                         </p>
+                      )}
+                      {wasAnswered && explanation && (
+                        <p className="text-xs text-muted-foreground mt-1">{explanation}</p>
                       )}
                       {!wasAnswered && (
                         <p className="text-xs text-muted-foreground mt-1">Not answered</p>
@@ -151,12 +224,18 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
 
         <div className="flex gap-3">
           <Button onClick={onBack} variant="outline" className="flex-1">
-            Back to Day
+            Back to Drill Setup
           </Button>
           <Button 
             onClick={() => {
               setCurrentQuestion(0);
               setAnswers(new Array(drill.questions.length).fill(-1));
+              setCorrectIdxs(drill.questions.map(q => (gradeAnswer ? -1 : q.correctAnswer)));
+              setExplanations(new Array(drill.questions.length).fill(null));
+              pendingGrades.current = new Map();
+              questionTimer.current = createQuestionTimer();
+              timesMs.current = new Array(drill.questions.length).fill(0);
+              finishedRef.current = false;
               setShowResults(false);
               setHasStarted(false);
               resetTimer();
@@ -211,9 +290,9 @@ export const DrillComponent = ({ drill, onComplete, onBack }: DrillComponentProp
               </div>
               <div className="p-4 bg-muted rounded-lg">
                 <div className="text-2xl font-bold text-primary">
-                  {Math.round((drill.questions.length / drill.timeLimit) * 60)}
+                  {Math.round(drill.timeLimit / Math.max(1, drill.questions.length))}s
                 </div>
-                <div className="text-sm text-muted-foreground">Target Q/min</div>
+                <div className="text-sm text-muted-foreground">Target per question</div>
               </div>
             </div>
 

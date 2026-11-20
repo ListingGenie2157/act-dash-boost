@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Session } from '@supabase/supabase-js';
 import { Calculator, Target, ArrowRight, BookOpen, PlayCircle, Zap, User } from 'lucide-react';
 import { logger } from '@/lib/logger';
+import { localDateString } from '@/lib/localDate';
 
 interface Profile {
   test_date?: string | null;
@@ -55,7 +56,7 @@ const Dashboard = () => {
         if (mounted && profileData) {
           setProfile(profileData);
 
-          const today = new Date().toISOString().split('T')[0];
+          const today = localDateString();
           const { data: planCheck } = await supabase
             .from('study_plan_days')
             .select('the_date')
@@ -268,7 +269,7 @@ const Dashboard = () => {
                   </div>
                 </Link>
                 
-                <Link to="/drill-runner">
+                <Link to="/pacing-lab">
                   <div className="glass-card group p-6 h-full card-hover">
                     <div className="space-y-4">
                       <div className="glass-icon">

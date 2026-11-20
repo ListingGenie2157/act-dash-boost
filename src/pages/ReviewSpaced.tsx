@@ -1,11 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { RotateCcw, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
+import { getBankAnswer } from '@/lib/bank';
+import { completeTask } from '@/lib/supabase-client';
 import { BackButton } from '@/components/BackButton';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { reportError } from '@/lib/errorReporter';
@@ -28,6 +30,8 @@ interface ReviewCardWithQuestion extends ReviewCard {
   explanation?: string | null;
 }
 
+const PLAN_REVIEW_BLOCK = 10;
+
 export default function ReviewSpaced() {
   const navigate = useNavigate();
   const [dueCards, setDueCards] = useState<ReviewCardWithQuestion[]>([]);
@@ -36,6 +40,12 @@ export default function ReviewSpaced() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [reviewed, setReviewed] = useState(0);
+  // Opened from the study plan: the review task checks off after its block (max 10 cards) or when nothing is left
+  const [searchParams] = useSearchParams();
+  const planTaskId = searchParams.get('taskId');
+  const planGoal = useRef(0);
+  const planGood = useRef(0);
+  const planDone = useRef(false);
 
   const loadDueCards = useCallback(async () => {
     try {
@@ -65,10 +75,8 @@ export default function ReviewSpaced() {
         return;
       }
 
-      // question_id in review_queue stores staging_id as text
-      const stagingIds = reviewItems
-        .map(item => parseInt(item.question_id as unknown as string, 10))
-        .filter(id => !isNaN(id));
+      // review_queue.question_id is the numeric staging_id
+      const stagingIds = reviewItems.map(item => Number(item.question_id));
 
       // Fetch staging items using safe view (excludes answer/explanation for security)
       const { data: stagingItems, error: stagingError } = await supabase
@@ -87,18 +95,19 @@ export default function ReviewSpaced() {
 
       // Merge review items with staging questions
       const allCards = reviewItems.map(item => ({
-        question_id: item.question_id,
+        question_id: String(item.question_id),
         user_id: item.user_id,
         due_at: item.due_at,
         interval_days: item.interval_days,
         ease: item.ease ?? 250,
         lapses: item.lapses ?? 0,
-        staging_question: stagingMap.get(parseInt(item.question_id as unknown as string, 10)) || null,
+        staging_question: stagingMap.get(Number(item.question_id)) || null,
       }));
 
       const cards = allCards.filter(card => card.staging_question !== null) as ReviewCardWithQuestion[];
 
       setDueCards(cards);
+      planGoal.current = Math.min(PLAN_REVIEW_BLOCK, cards.length);
       if (cards.length > 0) {
         setCurrentCard(cards[0]);
       }
@@ -121,11 +130,7 @@ export default function ReviewSpaced() {
     
     // Fetch answer and explanation after user attempts (security: only available post-attempt)
     try {
-      const { data: fullQuestion } = await supabase
-        .from('staging_items')
-        .select('answer, explanation')
-        .eq('staging_id', currentCard.staging_question.staging_id)
-        .single();
+      const fullQuestion = await getBankAnswer(currentCard.staging_question.staging_id);
       
       if (fullQuestion) {
         // Update current card with answer/explanation
@@ -146,12 +151,12 @@ export default function ReviewSpaced() {
     if (!currentCard) return;
 
     try {
-      const updates = calculateNextReview(currentCard, grade);
+      const { question_id: _questionId, ...updates } = calculateNextReview(currentCard, grade);
 
       await supabase
         .from('review_queue')
         .update(updates)
-        .eq('question_id', currentCard.question_id)
+        .eq('question_id', Number(currentCard.question_id))
         .eq('user_id', currentCard.user_id);
 
       // Move to next card
@@ -161,6 +166,13 @@ export default function ReviewSpaced() {
       setShowAnswer(false);
       setSelectedAnswer(null);
       setReviewed(prev => prev + 1);
+      if (grade === ReviewGrade.GOOD || grade === ReviewGrade.EASY) planGood.current++;
+      const gradedCount = reviewed + 1;
+      if (planTaskId && !planDone.current && (gradedCount >= planGoal.current || nextCards.length === 0)) {
+        planDone.current = true;
+        completeTask(supabase, { taskId: planTaskId, correctCount: planGood.current, totalCount: gradedCount, medianTimeMs: 0 })
+          .catch(err => reportError(err instanceof Error ? err : new Error(String(err)), { page: 'ReviewSpaced', source: 'completeTask' }));
+      }
 
       // Show feedback
       if (grade === ReviewGrade.EASY) {

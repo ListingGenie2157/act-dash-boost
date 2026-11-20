@@ -9,14 +9,24 @@ import { ArrowLeft, Target, GraduationCap, RotateCcw, Zap, Clock, Calendar, Tren
 import { CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { reportError } from '@/lib/errorReporter';
+import { StudyPlanWizard } from '@/components/StudyPlanWizard';
+import { planSummaryText, type PlanSummaryRow } from '@/lib/planSummary';
+import { localDateString, addDaysToDateString } from '@/lib/localDate';
 
 const TASK_CONFIG: Record<string, { icon: LucideIcon; gradient: string; label: string }> = {
   LEARN: { icon: GraduationCap, gradient: 'from-primary to-primary/80', label: 'Lesson' },
   DRILL: { icon: Target, gradient: 'from-secondary to-cyan-500', label: 'Drill' },
   REVIEW: { icon: RotateCcw, gradient: 'from-success to-emerald-500', label: 'Review' },
   FLASH: { icon: Zap, gradient: 'from-warning to-amber-500', label: 'Flash' },
-  SIM: { icon: Clock, gradient: 'from-destructive to-rose-500', label: 'Test' }
+  SIM: { icon: Clock, gradient: 'from-destructive to-rose-500', label: 'Test' },
+  WARMUP: { icon: Zap, gradient: 'from-warning to-amber-500', label: 'Warm-up' }
 };
+
+/** Card subtitle: question count for practice, time for lessons and tests */
+function taskDetail(task: StudyPlanTask): string {
+  if (task.type === 'LEARN' || task.type === 'SIM') return `~${task.estimated_mins ?? 12} min`;
+  return `${task.size || 5} questions`;
+}
 
 /** Key for matching a study_task to a plan task */
 function taskKey(date: string, type: string, skillId: string | null | undefined): string {
@@ -30,16 +40,18 @@ export default function Plan() {
   const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [completedKeys, setCompletedKeys] = useState<Set<string>>(new Set());
+  const [summary, setSummary] = useState<PlanSummaryRow | null>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
 
-  const today = new Date().toISOString().split('T')[0];
-  const sixDaysFromNow = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const today = localDateString();
+  const sixDaysFromNow = addDaysToDateString(today, 6);
 
   const fetchPlans = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setPlans([]); setLoading(false); return; }
 
-      const [plansRes, tasksRes] = await Promise.all([
+      const [plansRes, tasksRes, profileRes] = await Promise.all([
         supabase
           .from('study_plan_days')
           .select('the_date, tasks_json, generated_at, user_id')
@@ -53,8 +65,10 @@ export default function Plan() {
           .eq('user_id', user.id)
           .gte('the_date', today)
           .lte('the_date', sixDaysFromNow)
-          .in('status', ['DONE', 'COMPLETED'])
+          .in('status', ['DONE', 'COMPLETED']),
+        supabase.from('profiles').select('plan_summary').eq('id', user.id).maybeSingle(),
       ]);
+      setSummary((profileRes.data?.plan_summary as unknown as PlanSummaryRow | null) ?? null);
 
       if (plansRes.error) throw plansRes.error;
 
@@ -148,6 +162,9 @@ export default function Plan() {
       </div>
 
       <div className="max-w-5xl mx-auto p-6">
+        {summary && <PlanSummaryCard summary={summary} onChangeTime={() => setWizardOpen(true)} />}
+        <StudyPlanWizard open={wizardOpen} onOpenChange={setWizardOpen} onPlanGenerated={() => void fetchPlans()} />
+
         {/* Subject Balance Overview */}
         <SubjectBalanceCard plans={plans} />
 
@@ -245,7 +262,7 @@ export default function Plan() {
                                 </h3>
                                 
                                 <p className="text-white/80 text-xs">
-                                  {task.size || 5} questions
+                                  {taskDetail(task)}
                                 </p>
                               </Card>
                             </Link>
@@ -311,6 +328,25 @@ function SubjectBalanceCard({ plans }: { plans: StudyPlanDay[] }) {
             );
           })}
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PlanSummaryCard({ summary, onChangeTime }: { summary: PlanSummaryRow; onChangeTime: () => void }) {
+  const text = planSummaryText(summary);
+  return (
+    <Card className={`mb-6 ${text.kind === 'short' ? 'border-warning' : ''}`}>
+      <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+        <div>
+          <p className="font-medium">{text.headline}</p>
+          {text.detail && <p className="text-sm text-muted-foreground mt-1">{text.detail}</p>}
+        </div>
+        {text.kind !== 'fits' && (
+          <Button variant="outline" size="sm" onClick={onChangeTime} className="shrink-0">
+            {text.kind === 'no-date' ? 'Set test date' : 'Change daily time'}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

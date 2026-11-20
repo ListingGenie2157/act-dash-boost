@@ -83,9 +83,12 @@ serve(async (req) => {
     const { form_id, section, mode, coached } = validationResult.data;
 
     // Validate form_id format for simulations
-    if (mode === 'simulation' && !['FA_', 'FB_', 'FC_'].some(prefix => form_id.startsWith(prefix))) {
+    // Locked exams: 3 full simulations (FA/FB/FC) and 5 coach-mode exams (C1–C5)
+    const isSimulationForm = ['FA_', 'FB_', 'FC_'].some(prefix => form_id.startsWith(prefix));
+    const isCoachForm = /^C[1-5]_/.test(form_id);
+    if (mode === 'simulation' && !isSimulationForm && !isCoachForm) {
       return new Response(JSON.stringify({
-        error: 'Invalid form_id for simulation. Must be FA_*, FB_*, or FC_*'
+        error: 'Invalid form_id for simulation. Must be FA_*, FB_*, FC_* or C1_*–C5_*'
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -146,7 +149,7 @@ serve(async (req) => {
     });
 
     const sectionVariants = getAllSectionVariants(section);
-    const useStaging = form_id.startsWith('F') || form_id.startsWith('DR_')
+    const useStaging = form_id.startsWith('F') || /^C[1-5]_/.test(form_id) || form_id.startsWith('DR_')
       || form_id.startsWith('D2') || form_id.startsWith('ONB');
 
     type PinRow = { session_id: string; question_id: string; ord: number; passage_id: string | null };

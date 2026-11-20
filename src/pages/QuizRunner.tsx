@@ -1,134 +1,97 @@
-import { useEffect, useState, useMemo } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
-import { getQuestionsBySkill } from '@/lib/content';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import type { Question } from '@/types';
-import { shuffleQuestionChoices } from '@/lib/shuffle';
+import { QuizComponent } from '@/components/QuizComponent';
+import { Button } from '@/components/ui/button';
+import { getRandomBankQuestions, gradeBankAnswer, recordBankAttempt, toLegacyQuestions, type BankQuestion } from '@/lib/bank';
 import { reportError } from '@/lib/errorReporter';
 
+/**
+ * Skill quiz (/quiz/:skillCode?n=10). Draws a fresh random set from the question bank
+ * each time and grades each answer server-side.
+ */
 export default function QuizRunner() {
   const { section } = useParams<{ section?: string }>();
   const [searchParams] = useSearchParams();
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const navigate = useNavigate();
+  const [bankQuestions, setBankQuestions] = useState<BankQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [current, setCurrent] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
-  const [completed, setCompleted] = useState(false);
+
+  const skillCode = (section ?? '').trim().toUpperCase();
+  const count = Math.min(Math.max(parseInt(searchParams.get('n') ?? '10', 10) || 10, 1), 30);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const load = async () => {
+      setLoading(true);
       try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-          setError('Not authenticated');
-          setLoading(false);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          navigate('/login');
           return;
         }
         setUserId(user.id);
-        const nParam = searchParams.get('n');
-        const n = nParam ? parseInt(nParam, 10) : 10;
-        const code = section ?? '';
-        const { data, error: qError } = await getQuestionsBySkill(code, n);
-        if (qError) {
-          setError(qError.message);
-        } else {
-          // Map DB questions to Question type with proper defaults
-          // Note: answer is NOT available client-side (server-side validation only)
-          const mappedQuestions: Question[] = (data ?? []).map(q => ({
-            id: q.id,
-            stem: q.stem || '',
-            choice_a: q.choice_a || '',
-            choice_b: q.choice_b || '',
-            choice_c: q.choice_c || '',
-            choice_d: q.choice_d || '',
-            answer: 'A' as const, // Placeholder - actual validation is server-side
-            skill_code: q.skill_id || undefined,
-          }));
-          setQuestions(mappedQuestions);
-        }
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Failed to load questions');
+        const questions = await getRandomBankQuestions(skillCode, count);
+        setBankQuestions(questions);
+        if (questions.length === 0) setError(`No practice questions found for skill "${skillCode}".`);
+      } catch (err) {
+        reportError(err instanceof Error ? err : new Error(String(err)), { page: 'QuizRunner' });
+        setError('Failed to load quiz questions.');
       } finally {
         setLoading(false);
       }
     };
-    void fetchData();
-  }, [section, searchParams]);
+    void load();
+  }, [skillCode, count, navigate]);
 
-  const handleAnswer = async (selectedIdx: number, choiceOrder: number[] = [0, 1, 2, 3]) => {
+  const questions = useMemo(() => toLegacyQuestions(bankQuestions), [bankQuestions]);
+  const formIdById = useMemo(
+    () => new Map(bankQuestions.map(q => [String(q.staging_id), q.form_id])),
+    [bankQuestions]
+  );
+
+  const persistAnswer = async (questionId: string, selectedIdx: number, correctIdx: number, choiceOrder: number[], timeMs: number) => {
     if (!userId) return;
-    const q = questions[current];
-    if (!q) return;
-    
-    const correctIdx = ['A', 'B', 'C', 'D'].indexOf(q.answer);
     try {
-      // Store actual shuffled choice_order for accurate attempt reconstruction
-      await supabase.from('attempts').insert({
-        user_id: userId,
-        question_id: q.id,
-        form_id: q.form_id ?? 'quiz',
-        question_ord: current + 1,
-        choice_order: choiceOrder,
-        correct_idx: correctIdx,
-        selected_idx: selectedIdx,
+      await recordBankAttempt({
+        userId,
+        questionId,
+        skillCode,
+        formId: formIdById.get(questionId),
+        questionOrd: questions.findIndex(q => q.id === questionId) + 1,
+        choiceOrder,
+        selectedIdx,
+        correctIdx,
+        timeMs,
       });
-      if (selectedIdx !== correctIdx) {
-        const dueDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
-        await supabase.from('review_queue').insert({
-          user_id: userId,
-          question_id: q.id,
-          due_at: dueDate.toISOString(),
-          interval_days: 2,
-        });
-      }
     } catch (err) {
-      reportError(err instanceof Error ? err : new Error(String(err)), { page: 'QuizRunner' });
-    }
-    if (current + 1 < questions.length) {
-      setCurrent(current + 1);
-    } else {
-      setCompleted(true);
+      reportError(err instanceof Error ? err : new Error(String(err)), { page: 'QuizRunner', source: 'persist' });
     }
   };
-
-  // Shuffle current question's choices
-  const shuffled = useMemo(() => {
-    if (!questions[current]) return null;
-    const seed = userId ? `${userId}-${questions[current].id}` : undefined;
-    return shuffleQuestionChoices(questions[current], seed);
-  }, [current, questions, userId]);
 
   if (loading) return <div className="p-4">Loading quiz...</div>;
-  if (error) return <div className="p-4 text-destructive">{error}</div>;
-  if (completed) return <div className="p-4">Quiz complete! Great job.</div>;
-  if (questions.length === 0) return <div className="p-4">No quiz questions found.</div>;
-  if (!shuffled) return <div className="p-4">Loading question...</div>;
 
-  const handleShuffledAnswer = async (shuffledIndex: number) => {
-    if (!shuffled) return;
-    
-    // Map shuffled index back to original index and pass actual choice order for DB persistence
-    const originalIndex = shuffled.choiceOrder[shuffledIndex];
-    await handleAnswer(originalIndex, shuffled.choiceOrder);
-  };
+  if (error || questions.length === 0) {
+    return (
+      <div className="container mx-auto p-4 space-y-4">
+        <p className="text-muted-foreground">{error ?? 'No quiz questions found.'}</p>
+        <Button variant="outline" onClick={() => navigate('/lessons')}>Back to Lessons</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-4">
-      <h2 className="font-bold mb-4">Quiz Question {current + 1} of {questions.length}</h2>
-      <p className="mb-4">{shuffled.original.stem}</p>
-      <div className="space-y-2">
-        {shuffled.choices.map((choice, i) => (
-          <button
-            key={i}
-            className="w-full border rounded-md p-2 text-left hover:bg-muted"
-            onClick={() => handleShuffledAnswer(i)}
-          >
-            <span className="font-semibold mr-2">{['A', 'B', 'C', 'D'][i]})</span>
-            {choice}
-          </button>
-        ))}
-      </div>
+      <QuizComponent
+        questions={questions}
+        title={`Skill Quiz – ${skillCode}`}
+        skillCode={skillCode}
+        gradeAnswer={(id) => gradeBankAnswer(id)}
+        onAnswerGraded={(id, selected, correct, order, timeMs) => void persistAnswer(id, selected, correct, order, timeMs)}
+        onComplete={() => { /* results are shown by QuizComponent */ }}
+        onBack={() => navigate(-1)}
+      />
     </div>
   );
 }

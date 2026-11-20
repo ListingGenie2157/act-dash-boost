@@ -27,10 +27,10 @@ export default function Diagnostic() {
   });
 
   const sections = [
-    { id: 'D2EN', label: 'English', description: '20 minutes - Grammar, punctuation, and style' },
-    { id: 'D2MA', label: 'Math', description: '25 minutes - Algebra, geometry, and trigonometry' },
-    { id: 'D2RD', label: 'Reading', description: '18 minutes - Comprehension and analysis' },
-    { id: 'D2SC', label: 'Science', description: '18 minutes - Data interpretation and reasoning' }
+    { id: 'D2EN', label: 'English', description: '70 questions, about 50 minutes - Grammar, punctuation, and style' },
+    { id: 'D2MA', label: 'Math', description: '86 questions, about 95 minutes - Algebra, geometry, and trigonometry' },
+    { id: 'D2RD', label: 'Reading', description: '30 questions, about 35 minutes - Comprehension and analysis' },
+    { id: 'D2SC', label: 'Science', description: '20 questions, about 20 minutes - Data interpretation and reasoning' }
   ];
 
   const currentSectionIndex = completedSections.length;
@@ -117,10 +117,10 @@ export default function Diagnostic() {
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Clock className="w-4 h-4" />
-                      <span>~20 minutes</span>
+                      <span>~35 minutes</span>
                     </div>
                     <ul className="text-sm text-muted-foreground space-y-1 text-left w-full">
-                      <li>• 30 mixed questions</li>
+                      <li>• 36 questions, one per skill</li>
                       <li>• All 4 subjects sampled</li>
                       <li>• Immediate results</li>
                     </ul>
@@ -148,10 +148,10 @@ export default function Diagnostic() {
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Clock className="w-4 h-4" />
-                      <span>~80 minutes</span>
+                      <span>~3 hours 20 minutes</span>
                     </div>
                     <ul className="text-sm text-muted-foreground space-y-1 text-left w-full">
-                      <li>• 4 separate section tests</li>
+                      <li>• 4 section tests, 2 questions per skill</li>
                       <li>• Detailed skill breakdown</li>
                       <li>• Pause between sections</li>
                     </ul>
@@ -197,7 +197,7 @@ export default function Diagnostic() {
                   <Clock className="w-5 h-5 text-primary" />
                   <div>
                     <p className="font-medium">Total Duration</p>
-                    <p className="text-sm text-muted-foreground">~80 minutes (4 sections)</p>
+                    <p className="text-sm text-muted-foreground">About 3 hours 20 minutes in 4 sections — take them one at a time</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-4 border rounded-lg">

@@ -16,7 +16,7 @@ export async function getTimeMultiplier(): Promise<number> {
       .from('accommodations')
       .select('time_multiplier')
       .eq('user_id', session.user.id)
-      .single();
+      .maybeSingle();
 
     return accommodation?.time_multiplier || 1.0;
   } catch (error) {

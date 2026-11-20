@@ -36,14 +36,6 @@ GLOBAL RULES:
 REMEMBER: You are a TUTOR, not an answer key.`;
 
 const SUBJECT_PROMPTS: Record<string, string> = {
-  AP_CHEM: `
-CHEMISTRY TUTORING:
-- Use dimensional analysis and units in EVERY step.
-- Emphasize setup: balanced equations, given data, what is being solved for.
-- Remind about limiting reactants, sig figs, and state assumptions.
-- Show units at every step so they see what cancels.
-- Always ask: "What information do you have?" and "What are you solving for?"`,
-
   SCIENCE: `
 SCIENCE TUTORING:
 - Use dimensional analysis and units in EVERY step.

@@ -11,6 +11,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { reportError } from '@/lib/errorReporter';
+import { localDateString } from '@/lib/localDate';
 
 interface DaysLeftResponse {
   today: string;
@@ -55,7 +56,7 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
             const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
             
             setDaysLeft({
-              today: today.toISOString().split('T')[0],
+              today: localDateString(today),
               test_date: profile.test_date,
               days_left: daysDiff
             });
@@ -155,16 +156,20 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
   }
 
   const daysLeftNum = daysLeft.days_left;
-  const testDate = new Date(daysLeft.test_date);
+  // Parse the date-only string as a local date (new Date('yyyy-mm-dd') is UTC and shows the day before in the US)
+  const testDate = new Date(`${daysLeft.test_date}T00:00:00`);
+  const testPassed = daysLeftNum !== null && daysLeftNum < 0;
   
   const maxPrepDays = 90;
   const totalDays = maxPrepDays;
-  const percentage = daysLeftNum !== null ? ((totalDays - daysLeftNum) / totalDays) * 100 : 0;
+  const percentage = daysLeftNum !== null
+    ? Math.min(100, Math.max(0, ((totalDays - daysLeftNum) / totalDays) * 100))
+    : 0;
   
   const getMotivationalMessage = () => {
     if (daysLeftNum === null) return '';
     if (daysLeftNum === 0) return 'Execute.';
-    if (daysLeftNum < 0) return 'Complete.';
+    if (daysLeftNum < 0) return 'Taking it again? Set your next test date.';
     if (daysLeftNum <= 7) return 'Final Week.';
     if (daysLeftNum <= 30) return 'Stay on pace.';
     return 'Time is on your side.';
@@ -216,7 +221,7 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-5xl font-bold text-foreground">
-              {daysLeftNum}
+              {testPassed ? 0 : daysLeftNum}
             </span>
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider">days</span>
           </div>
