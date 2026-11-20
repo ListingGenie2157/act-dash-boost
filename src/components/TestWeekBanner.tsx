@@ -42,9 +42,9 @@ export const TestWeekBanner = () => {
       if (daysLeft > 7 || daysLeft < 0) return;
 
       const scheduleItems = [
-        { day: 7, label: 'T-7', activity: 'English SIM (75 questions)', icon: <Target className="w-4 h-4" />, isToday: daysLeft === 7 },
-        { day: 5, label: 'T-5', activity: 'English SIM (75 questions)', icon: <Target className="w-4 h-4" />, isToday: daysLeft === 5 },
-        { day: 3, label: 'T-3', activity: 'English SIM (75 questions)', icon: <Target className="w-4 h-4" />, isToday: daysLeft === 3 },
+        { day: 7, label: 'T-7', activity: 'English SIM (50 questions)', icon: <Target className="w-4 h-4" />, isToday: daysLeft === 7 },
+        { day: 5, label: 'T-5', activity: 'English SIM (50 questions)', icon: <Target className="w-4 h-4" />, isToday: daysLeft === 5 },
+        { day: 3, label: 'T-3', activity: 'English SIM (50 questions)', icon: <Target className="w-4 h-4" />, isToday: daysLeft === 3 },
         { day: 2, label: 'T-2', activity: 'Review Only (20 mins)', icon: <Clock className="w-4 h-4" />, isToday: daysLeft === 2 },
         { day: 1, label: 'T-1', activity: 'Warmup (15 mins)', icon: <Brain className="w-4 h-4" />, isToday: daysLeft === 1 },
       ];
