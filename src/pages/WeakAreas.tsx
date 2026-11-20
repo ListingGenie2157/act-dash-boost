@@ -144,7 +144,7 @@ export default function WeakAreas() {
 
           {/* Filter Tabs */}
           <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)} className="mb-6">
-            <TabsList>
+            <TabsList className="max-w-full justify-start overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <TabsTrigger value="all">
                 All ({weakAreas.length})
               </TabsTrigger>

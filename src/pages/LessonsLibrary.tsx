@@ -166,7 +166,7 @@ export default function LessonsLibrary() {
         </div>
 
         <Tabs value={subjectFilter} onValueChange={setSubjectFilter}>
-          <TabsList>
+          <TabsList className="max-w-full justify-start overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <TabsTrigger value="all">
               All ({lessons.length})
             </TabsTrigger>

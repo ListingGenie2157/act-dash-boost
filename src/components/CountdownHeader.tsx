@@ -28,6 +28,7 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const isMobile = useIsMobile();
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
@@ -177,6 +178,44 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
 
   const isUrgent = daysLeftNum !== null && daysLeftNum <= 7 && daysLeftNum >= 0;
 
+  const dateDialog = (
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="flex-shrink-0">
+          <CalendarCmp className="h-4 w-4 mr-2" />
+          {testPassed ? 'Set date' : format(testDate, 'MMM d')}
+        </Button>
+      </DialogTrigger>
+      <SetTestDateDialog
+        selectedDate={selectedDate}
+        onDateSelect={setSelectedDate}
+        onConfirm={handleSetTestDate}
+        saving={saving}
+      />
+    </Dialog>
+  );
+
+  // Phones: one line, so the countdown doesn't take over the screen
+  if (isMobile) {
+    return (
+      <div className={cn("flex items-center justify-between gap-3 min-w-0", className)}>
+        <p className="text-sm font-medium truncate">
+          {daysLeftNum !== null && daysLeftNum > 0 ? (
+            <>
+              <span className={cn("font-bold tabular-nums", isUrgent ? "text-coral" : "text-primary")}>{daysLeftNum}</span>
+              <span className="text-foreground"> day{daysLeftNum === 1 ? '' : 's'} until test</span>
+            </>
+          ) : daysLeftNum === 0 ? (
+            <span className="text-coral font-bold">Test day</span>
+          ) : (
+            <span className="text-muted-foreground">Test date passed</span>
+          )}
+        </p>
+        {dateDialog}
+      </div>
+    );
+  }
+
   const radius = 45;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
@@ -258,21 +297,7 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
           </div>
         </div>
 
-        {/* Edit button */}
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="flex-shrink-0">
-              <CalendarCmp className="h-4 w-4 mr-2" />
-              {format(testDate, 'MMM d')}
-            </Button>
-          </DialogTrigger>
-          <SetTestDateDialog
-            selectedDate={selectedDate}
-            onDateSelect={setSelectedDate}
-            onConfirm={handleSetTestDate}
-            saving={saving}
-          />
-        </Dialog>
+        {dateDialog}
       </CardContent>
     </Card>
   );

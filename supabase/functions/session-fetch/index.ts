@@ -90,10 +90,11 @@ serve(async (req) => {
       });
     }
 
-    // Subscription gating (exempt diagnostic/onboarding)
+    // Subscription gating (exempt diagnostic/onboarding; admins bypass, as RequireSubscription does)
     const isExemptForm = session.form_id.startsWith('D2') || session.form_id.startsWith('ONB');
+    const { data: isAdmin } = isExemptForm ? { data: false } : await supabase.rpc('is_admin');
 
-    if (!isExemptForm) {
+    if (!isExemptForm && isAdmin !== true) {
       const serviceClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', {
         auth: { persistSession: false },
       });
