@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pickDiagnosticQuestions, currentSitting, type PickableQuestion } from './diagnosticPicker';
+import { pickDiagnosticQuestions, pickQuickQuestions, currentSitting, QUICK_COUNTS, type PickableQuestion } from './diagnosticPicker';
 
 const q = (id: number, skill: string, extra: Partial<PickableQuestion> = {}): PickableQuestion => ({
   question_id: String(id), skill_code: skill, ord: id, passage_id: null, passage_text: undefined, ...extra,
@@ -65,5 +65,56 @@ describe('currentSitting', () => {
   it('ignores an old whole-form batch (more than 2 questions for a skill)', () => {
     const rows = [1, 2, 3, 6].map(id => at(id, '2026-11-19T09:00:00Z'));
     expect(currentSitting(rows, null, skillOf)).toBeNull();
+  });
+
+  it('with a limit of 1 per skill, rejects a batch that repeats a skill', () => {
+    const rows = [1, 6].map(id => at(id, '2026-11-19T09:00:00Z'));
+    expect(currentSitting(rows, null, skillOf, 1)).toEqual(['1', '6']);
+    expect(currentSitting([...rows, at(2, '2026-11-19T09:00:00Z')], null, skillOf, 1)).toBeNull();
+  });
+
+  it('does not resume questions that are no longer in the pool', () => {
+    expect(currentSitting([at(99, '2026-11-19T09:00:00Z')], null, skillOf)).toBeNull();
+  });
+});
+
+describe('pickQuickQuestions', () => {
+  const sec = (section: string, id: number, skill: string, extra: Partial<PickableQuestion> = {}) =>
+    ({ ...q(id, skill, extra), section });
+
+  it('takes the ACT-style count per section, one question per skill, sections in test order', () => {
+    const pool = [
+      ...Array.from({ length: 40 }, (_, i) => sec('Math', 100 + i, `M${i % 20}`)),
+      ...Array.from({ length: 30 }, (_, i) => sec('English', 200 + i, `E${i % 15}`)),
+      ...Array.from({ length: 20 }, (_, i) => sec('Reading', 300 + i, `R${i % 10}`)),
+      ...Array.from({ length: 20 }, (_, i) => sec('Science', 400 + i, `S${i % 10}`)),
+    ];
+    const picked = pickQuickQuestions(pool, new Set(), seq());
+    const count = (s: string) => picked.filter(x => x.section === s).length;
+    expect([count('English'), count('Math'), count('Reading'), count('Science')])
+      .toEqual([QUICK_COUNTS.English, QUICK_COUNTS.Math, QUICK_COUNTS.Reading, QUICK_COUNTS.Science]);
+    expect(new Set(picked.map(x => x.skill_code)).size).toBe(picked.length);
+    const order = [...new Set(picked.map(x => x.section))];
+    expect(order).toEqual(['English', 'Math', 'Reading', 'Science']);
+  });
+
+  it('uses the rest of an opened passage for other skills, shown together', () => {
+    const pool = [
+      sec('Reading', 1, 'R1', { passage_id: 'P' }), sec('Reading', 2, 'R2', { passage_id: 'P' }), sec('Reading', 3, 'R1', { passage_id: 'P' }),
+      sec('Reading', 4, 'R3'),
+    ];
+    const ids = pickQuickQuestions(pool, new Set(['4']), seq()).map(x => x.question_id);
+    // one question per skill: R2, one of the two R1s, and R3
+    expect(ids).toHaveLength(3);
+    expect(ids).toContain('2');
+    expect(ids).toContain('4');
+    // the two passage questions sit next to each other
+    const onPassage = ids.map((id, i) => (['1', '2', '3'].includes(id) ? i : -1)).filter(i => i >= 0);
+    expect(onPassage[1] - onPassage[0]).toBe(1);
+  });
+
+  it('prefers questions not answered before', () => {
+    const pool = [sec('Science', 1, 'S1'), sec('Science', 2, 'S1')];
+    expect(pickQuickQuestions(pool, new Set(['1']), seq()).map(x => x.question_id)).toEqual(['2']);
   });
 });

@@ -49,7 +49,7 @@ interface DiagnosticBlock {
 }
 
 interface DiagnosticRequest {
-  section: 'English' | 'Math' | 'Reading' | 'Science';
+  section: 'English' | 'Math' | 'Reading' | 'Science' | 'Mixed';
   blocks: DiagnosticBlock[];
 }
 
@@ -145,10 +145,11 @@ Deno.serve(async (req) => {
 
     // Fetch real answers from staging_items (service role bypasses RLS)
     const answerMap = new Map<string, string>();
+    const sectionMap = new Map<string, string>();
     if (allStagingIds.length > 0) {
       const { data: stagingRows, error: stagingError } = await supabase
         .from('staging_items')
-        .select('staging_id, answer')
+        .select('staging_id, answer, section')
         .in('staging_id', allStagingIds);
 
       if (stagingError) {
@@ -156,6 +157,7 @@ Deno.serve(async (req) => {
       } else {
         for (const row of stagingRows || []) {
           answerMap.set(String(row.staging_id), row.answer.toUpperCase());
+          if (row.section) sectionMap.set(String(row.staging_id), row.section);
         }
       }
     }
@@ -167,6 +169,7 @@ Deno.serve(async (req) => {
     let totalCorrect = 0;
     let totalQuestions = 0;
     const skillAccuracy: Record<string, { correct: number; total: number }> = {};
+    const sectionTally: Record<string, { correct: number; total: number }> = {};
     const scoredAnswers: ScoredAnswer[] = [];
     const missedQuestions: Array<{ questionId: string; skill: string | null }> = [];
 
@@ -195,6 +198,13 @@ Deno.serve(async (req) => {
           const isCorrect = realAnswer ? selectedLetter === realAnswer : false;
           
           if (isCorrect) totalCorrect++;
+
+          const qSection = sectionMap.get(answer.questionId);
+          if (qSection) {
+            sectionTally[qSection] ??= { correct: 0, total: 0 };
+            sectionTally[qSection].total++;
+            if (isCorrect) sectionTally[qSection].correct++;
+          }
 
           const skill = getSkillFromTags(question.skill_tags);
           if (skill) {
@@ -256,6 +266,24 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ── QUICK DIAGNOSTIC: one score per section, so the study plan gets section estimates ──
+    if (body.section === 'Mixed') {
+      const sectionRows = Object.entries(sectionTally)
+        .filter(([section]) => ['English', 'Math', 'Reading', 'Science'].includes(section))
+        .map(([section, t]) => ({
+          user_id: user.id,
+          section,
+          block: 1,
+          responses: [],
+          score: t.total > 0 ? (t.correct / t.total) * 100 : 0, // percent correct, like every diagnostic
+          completed_at: new Date().toISOString(),
+        }));
+      if (sectionRows.length) {
+        const { error: sectionError } = await supabase.from('diagnostics').insert(sectionRows);
+        if (sectionError) console.error('Error saving section scores:', sectionError);
+      }
+    }
+
     // ── UPDATE REVIEW QUEUE for missed questions ──
     if (missedQuestions.length > 0) {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -289,15 +317,25 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Diagnostic answers ADD to a skill's history; they never replace it
+    const skillIds = Object.keys(skillAccuracy);
+    const [{ data: priorMastery }, { data: priorProgress }] = await Promise.all([
+      supabase.from('mastery').select('skill_id, total, correct').eq('user_id', user.id).in('skill_id', skillIds),
+      supabase.from('progress').select('skill_id, seen, correct').eq('user_id', user.id).in('skill_id', skillIds),
+    ]);
+    const masteryBefore = new Map((priorMastery ?? []).map(m => [m.skill_id, m]));
+    const progressBefore = new Map((priorProgress ?? []).map(p => [p.skill_id, p]));
+
     // ── UPDATE MASTERY for each skill ──
     for (const [skillId, data] of Object.entries(skillAccuracy)) {
+      const before = masteryBefore.get(skillId);
       const { error: masteryError } = await supabase
         .from('mastery')
         .upsert({
           user_id: user.id,
           skill_id: skillId,
-          total: data.total,
-          correct: data.correct,
+          total: (before?.total ?? 0) + data.total,
+          correct: (before?.correct ?? 0) + data.correct,
           avg_time_ms: 0, // diagnostic doesn't track per-question time
           last_updated: new Date().toISOString()
         }, {
@@ -311,7 +349,10 @@ Deno.serve(async (req) => {
 
     // ── UPDATE PROGRESS for each skill ──
     for (const [skillId, data] of Object.entries(skillAccuracy)) {
-      const accuracy = data.total > 0 ? data.correct / data.total : 0;
+      const prior = progressBefore.get(skillId);
+      const seen = (prior?.seen ?? 0) + data.total;
+      const correct = (prior?.correct ?? 0) + data.correct;
+      const accuracy = seen > 0 ? correct / seen : 0;
       const masteryLevel = accuracy >= 0.8 ? 3 : accuracy >= 0.5 ? 2 : 1;
 
       const { error: progressError } = await supabase
@@ -319,8 +360,8 @@ Deno.serve(async (req) => {
         .upsert({
           user_id: user.id,
           skill_id: skillId,
-          seen: data.total,
-          correct: data.correct,
+          seen,
+          correct,
           mastery_level: masteryLevel,
           median_time_ms: 0,
           updated_at: new Date().toISOString()

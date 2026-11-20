@@ -9,12 +9,16 @@
 
 export const QUESTIONS_PER_SKILL = 2;
 
+/** Quick diagnostic: questions per section, roughly in ACT proportions (one per skill) */
+export const QUICK_COUNTS = { English: 10, Math: 12, Reading: 7, Science: 7 } as const;
+
 export interface PickableQuestion {
   question_id: string;
   skill_code: string | null;
   ord: number;
   passage_id?: string | null;
   passage_text?: string | null;
+  section?: string | null;
 }
 
 const NO_GROUP = new Set(['', 'nan', 'null', 'none']);
@@ -39,11 +43,7 @@ export function pickDiagnosticQuestions<T extends PickableQuestion>(
   const need = new Map<string, number>();
   for (const q of pool) if (q.skill_code) need.set(q.skill_code, QUESTIONS_PER_SKILL);
 
-  // Random order, then new questions ahead of answered ones
-  const order = pool
-    .map(q => ({ q, r: random() }))
-    .sort((a, b) => Number(seen.has(a.q.question_id)) - Number(seen.has(b.q.question_id)) || a.r - b.r)
-    .map(x => x.q);
+  const order = newFirst(pool, seen, random);
 
   const mates = new Map<string, T[]>();
   for (const q of order) {
@@ -66,16 +66,58 @@ export function pickDiagnosticQuestions<T extends PickableQuestion>(
     if (take(q)) for (const mate of mates.get(passageKey(q)) ?? []) take(mate);
   }
 
-  // Show passage-mates back to back, passages in form order
+  return passagesTogether(picked);
+}
+
+/** Random order with questions the student has not answered first. */
+function newFirst<T extends PickableQuestion>(pool: T[], seen: Set<string>, random: () => number): T[] {
+  return pool
+    .map(q => ({ q, r: random() }))
+    .sort((a, b) => Number(seen.has(a.q.question_id)) - Number(seen.has(b.q.question_id)) || a.r - b.r)
+    .map(x => x.q);
+}
+
+/** Show passage-mates back to back, passages in form order. */
+function passagesTogether<T extends PickableQuestion>(picked: T[]): T[] {
   const firstOrd = new Map<string, number>();
   for (const q of picked) {
     const k = passageKey(q);
     firstOrd.set(k, Math.min(firstOrd.get(k) ?? Infinity, q.ord));
   }
-  return picked.sort((a, b) =>
+  return [...picked].sort((a, b) =>
     (firstOrd.get(passageKey(a))! - firstOrd.get(passageKey(b))!) ||
     passageKey(a).localeCompare(passageKey(b)) ||
     a.ord - b.ord);
+}
+
+/**
+ * Quick diagnostic: QUICK_COUNTS questions per section, each for a different skill, new
+ * questions first. Once a passage is opened, its other questions are used for other skills.
+ * Sections come in ACT order.
+ */
+export function pickQuickQuestions<T extends PickableQuestion>(
+  pool: T[],
+  seen: Set<string>,
+  random: () => number = Math.random,
+): T[] {
+  const out: T[] = [];
+  for (const [section, count] of Object.entries(QUICK_COUNTS)) {
+    const order = newFirst(pool.filter(q => q.section === section && q.skill_code), seen, random);
+    const used = new Set<string>();
+    const picked: T[] = [];
+    const take = (q: T) => {
+      if (picked.length >= count || used.has(q.skill_code!) || picked.includes(q)) return false;
+      used.add(q.skill_code!);
+      picked.push(q);
+      return true;
+    };
+    for (const q of order) {
+      if (picked.length >= count) break;
+      if (take(q)) for (const mate of order) if (passageKey(mate) === passageKey(q)) take(mate);
+    }
+    out.push(...passagesTogether(picked));
+  }
+  return out;
 }
 
 /**
@@ -83,13 +125,15 @@ export function pickDiagnosticQuestions<T extends PickableQuestion>(
  * A sitting's attempt rows are inserted in one batch, so they share created_at.
  *
  * @param lastFinishedAt when this section's diagnostic was last completed (null = never)
- * @param skillOf skill of a question id; a batch with more than QUESTIONS_PER_SKILL for a
- *   skill comes from the old whole-form diagnostic and is not resumed
+ * @param skillOf skill of a question id (null = not in the pool). A batch with a question
+ *   outside the pool, or more than maxPerSkill for a skill, comes from the old whole-form
+ *   diagnostic and is not resumed
  */
 export function currentSitting(
   rows: Array<{ question_id: number | string; created_at: string | null }>,
   lastFinishedAt: string | null,
   skillOf: (questionId: string) => string | null,
+  maxPerSkill: number = QUESTIONS_PER_SKILL,
 ): string[] | null {
   const after = rows.filter(r => r.created_at && (!lastFinishedAt || Date.parse(r.created_at) > Date.parse(lastFinishedAt)));
   if (!after.length) return null;
@@ -97,8 +141,9 @@ export function currentSitting(
   const batch = [...new Set(after.filter(r => Date.parse(r.created_at!) === newest).map(r => String(r.question_id)))];
   const perSkill = new Map<string, number>();
   for (const id of batch) {
-    const skill = skillOf(id) ?? `?${id}`;
+    const skill = skillOf(id);
+    if (!skill) return null;
     perSkill.set(skill, (perSkill.get(skill) ?? 0) + 1);
   }
-  return [...perSkill.values()].every(n => n <= QUESTIONS_PER_SKILL) ? batch : null;
+  return [...perSkill.values()].every(n => n <= maxPerSkill) ? batch : null;
 }

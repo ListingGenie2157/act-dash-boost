@@ -7,9 +7,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { createQuestionTimer } from '@/lib/questionTimer';
 import { sharePassages } from '@/lib/passageGroups';
-import { pickDiagnosticQuestions, currentSitting } from '@/lib/diagnosticPicker';
+import { pickDiagnosticQuestions, pickQuickQuestions, currentSitting } from '@/lib/diagnosticPicker';
 
 const SECTION_BY_CODE: Record<string, string> = { EN: 'English', MA: 'Math', RD: 'Reading', SC: 'Science' };
+const DIAGNOSTIC_POOL_FORMS = ['D2EN', 'D2MA', 'D2RD', 'D2SC'];
+const FORM_LABEL: Record<string, string> = {
+  ONB: 'Quick Diagnostic', D2EN: 'English Diagnostic', D2MA: 'Math Diagnostic', D2RD: 'Reading Diagnostic', D2SC: 'Science Diagnostic',
+};
 import { diagnosticFormIdSchema, validateInput } from '@/lib/validation/edgeFunctionSchemas';
 import { reportError } from '@/lib/errorReporter';
 
@@ -219,7 +223,8 @@ export default function DiagnosticTest() {
       const { data, error } = await supabase
         .from('v_staging_items_public')
         .select('staging_id, form_id, section, ord, skill_code, question, choice_a, choice_b, choice_c, choice_d, difficulty, passage_id, passage_text, passage_title')
-        .eq('form_id', formId)
+        // The quick diagnostic (ONB) draws from the thorough diagnostic pool
+        .in('form_id', formId === 'ONB' ? DIAGNOSTIC_POOL_FORMS : [formId])
         .order('ord', { ascending: true });
 
       if (error) throw error;
@@ -245,7 +250,7 @@ export default function DiagnosticTest() {
 
       // Map v_staging_items_public to Question type with skill_id resolution
       // Note: answer/explanation are not available client-side (server-side validation only)
-      const mappedQuestions: (Question & { skill_id?: string | null })[] = (data || []).map(q => {
+      const mappedQuestions: (Question & { skill_id?: string | null; section?: string | null })[] = (data || []).map(q => {
         let skill_id: string | null = null;
         
         if (q.skill_code) {
@@ -264,7 +269,8 @@ export default function DiagnosticTest() {
           passage_id: q.passage_id ?? null,
           passage_text: q.passage_text ?? undefined,
           passage_title: q.passage_title ?? undefined,
-          skill_id
+          skill_id,
+          section: q.section ?? null,
         };
       });
 
@@ -286,19 +292,31 @@ export default function DiagnosticTest() {
 
       let shown = allQuestions;
       let reuseRows = priorRows;
-      if (formId.startsWith('D2')) {
-        // Thorough diagnostic: 2 questions per skill, new ones first; resume an unfinished sitting
-        const section = SECTION_BY_CODE[formId.slice(2)];
-        const { data: lastDiag } = await supabase
-          .from('diagnostics')
-          .select('completed_at')
-          .eq('user_id', user.user.id)
-          .eq('section', section)
-          .not('completed_at', 'is', null)
-          .order('completed_at', { ascending: false })
-          .limit(1);
+      const isQuick = formId === 'ONB';
+      if (isQuick || formId.startsWith('D2')) {
+        // Thorough: 2 questions per skill. Quick: ~36 across sections, 1 per skill.
+        // New questions first; an unfinished sitting resumes.
+        const section = isQuick ? 'Mixed' : SECTION_BY_CODE[formId.slice(2)];
+        const [{ data: lastDiag }, { data: answeredRows }] = await Promise.all([
+          supabase
+            .from('diagnostics')
+            .select('completed_at')
+            .eq('user_id', user.user.id)
+            .eq('section', section)
+            .not('completed_at', 'is', null)
+            .order('completed_at', { ascending: false })
+            .limit(1),
+          // Answered in any diagnostic, quick or thorough
+          supabase
+            .from('attempts')
+            .select('question_id')
+            .eq('user_id', user.user.id)
+            .in('form_id', ['ONB', ...DIAGNOSTIC_POOL_FORMS])
+            .not('selected_idx', 'is', null),
+        ]);
         const skillById = new Map(allQuestions.map(q => [q.question_id, q.skill_id ?? null]));
-        const sitting = currentSitting(priorRows, lastDiag?.[0]?.completed_at ?? null, id => skillById.get(id) ?? null);
+        const sitting = currentSitting(
+          priorRows, lastDiag?.[0]?.completed_at ?? null, id => skillById.get(id) ?? null, isQuick ? 1 : 2);
 
         if (sitting) {
           const ids = new Set(sitting);
@@ -306,10 +324,12 @@ export default function DiagnosticTest() {
           const position = new Map(reuseRows.map(r => [String(r.question_id), r.question_ord ?? 0]));
           shown = allQuestions
             .filter(q => ids.has(q.question_id))
-            .sort((a, b) => (position.get(a.question_id) ?? 0) - (position.get(b.question_id) ?? 0));
+            .sort((a, b) => (position.get(a.question_id) ?? 0) - (position.get(b.question_id) ?? 0))
+            .map((q, i) => ({ ...q, ord: i + 1 }));
         } else {
-          const answered = new Set(priorRows.filter(r => r.selected_idx !== null).map(r => String(r.question_id)));
-          shown = pickDiagnosticQuestions(allQuestions.map(q => ({ ...q, skill_code: q.skill_id ?? null })), answered)
+          const answered = new Set((answeredRows ?? []).map(r => String(r.question_id)));
+          const pool = allQuestions.map(q => ({ ...q, skill_code: q.skill_id ?? null }));
+          shown = (isQuick ? pickQuickQuestions(pool, answered) : pickDiagnosticQuestions(pool, answered))
             // Position in this sitting, so a resumed sitting keeps the same order
             .map((q, i) => ({ ...q, ord: i + 1 }));
           reuseRows = [];
@@ -524,7 +544,7 @@ export default function DiagnosticTest() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">
-            {formId || 'Diagnostic'} - Question {currentIndex + 1} of {questions.length}
+            {FORM_LABEL[formId ?? ''] ?? formId ?? 'Diagnostic'} - Question {currentIndex + 1} of {questions.length}
           </h1>
         </div>
 
