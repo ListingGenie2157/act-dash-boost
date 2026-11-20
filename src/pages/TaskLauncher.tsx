@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { PlanTaskJson } from '@/types/studyPlan';
 import { SKILL_PREFIX } from '@/lib/sectionMapping';
+import { sectionScoreOnActScale } from '../../supabase/functions/_shared/actScore';
 
 /** Section with the lowest most-recent score (self-reported 1–36, or diagnostic % mapped to 1–36). */
 async function weakestSection(userId: string): Promise<string> {
@@ -17,7 +18,8 @@ async function weakestSection(userId: string): Promise<string> {
   const latest = new Map<string, number>();
   for (const d of data ?? []) {
     if (d.score === null || latest.has(d.section)) continue;
-    latest.set(d.section, d.source === 'self' ? Number(d.score) : Math.round(1 + 35 * Number(d.score) / 100));
+    const score = sectionScoreOnActScale(d.score, d.source);
+    if (score !== null) latest.set(d.section, score);
   }
   let weakest = 'Math';
   let low = Infinity;

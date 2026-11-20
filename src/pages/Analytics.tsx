@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { TrendingUp, Clock, Target, CheckCircle, Zap } from 'lucide-react';
 import { reportError } from '@/lib/errorReporter';
 import { localDateString, addDaysToDateString } from '@/lib/localDate';
+import { sectionScoreOnActScale } from '../../supabase/functions/_shared/actScore';
 
 interface AnalyticsData {
   studyStreak: number;
@@ -149,9 +150,11 @@ const Analytics = () => {
         const sections = ['Math', 'English', 'Reading', 'Science'];
         
         sections.forEach(section => {
-          // Older diagnostics stored percentages (0-100); only ACT-scale scores (1-36) compare
-          const sectionDiagnostics = diagnostics.filter(d =>
-            d.section === section && d.score !== null && Number(d.score) >= 1 && Number(d.score) <= 36);
+          // Diagnostics store percent correct; compare everything on the ACT 1-36 scale
+          const sectionDiagnostics = diagnostics
+            .filter(d => d.section === section)
+            .map(d => ({ ...d, score: sectionScoreOnActScale(d.score, d.source) }))
+            .filter(d => d.score !== null);
           if (sectionDiagnostics.length > 0) {
             const first = sectionDiagnostics[0];
             const last = sectionDiagnostics[sectionDiagnostics.length - 1];

@@ -4,6 +4,7 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { checkRateLimit, getClientIp, createRateLimitResponse } from '../_shared/rateLimit.ts';
 import { parseBodyWithLimit } from '../_shared/mod.ts';
+import { sectionScoreOnActScale } from '../_shared/actScore.ts';
 import {
   buildPlan,
   classifyAnswer,
@@ -104,7 +105,10 @@ async function loadPlannerInput(db: SupabaseClient, userId: string, today: strin
   for (const d of (diagRes.data ?? []) as Array<{ section: string; score: number | null; source: string | null }>) {
     const section = d.section as Section;
     if (!SECTIONS.includes(section) || d.score === null || sectionEstimates[section]) continue;
-    sectionEstimates[section] = { score: Number(d.score), source: d.source === 'self' ? 'self' : 'diagnostic' };
+    // Diagnostics store percent correct; self-reported scores are already 1-36
+    const score = sectionScoreOnActScale(d.score, d.source);
+    if (score === null) continue;
+    sectionEstimates[section] = { score, source: d.source === 'self' ? 'self' : 'diagnostic' };
   }
 
   const mastery: Record<string, SkillStats> = {};

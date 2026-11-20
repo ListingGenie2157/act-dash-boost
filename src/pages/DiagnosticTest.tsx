@@ -7,6 +7,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { createQuestionTimer } from '@/lib/questionTimer';
 import { sharePassages } from '@/lib/passageGroups';
+import { pickDiagnosticQuestions, currentSitting } from '@/lib/diagnosticPicker';
+
+const SECTION_BY_CODE: Record<string, string> = { EN: 'English', MA: 'Math', RD: 'Reading', SC: 'Science' };
 import { diagnosticFormIdSchema, validateInput } from '@/lib/validation/edgeFunctionSchemas';
 import { reportError } from '@/lib/errorReporter';
 
@@ -222,11 +225,13 @@ export default function DiagnosticTest() {
       if (error) throw error;
 
       // Fetch all skills for skill_id lookup
-      const skillCodes = Array.from(new Set((data || []).map(q => q.skill_code).filter(Boolean)));
-      const { data: skillsData } = await supabase
-        .from('skills')
-        .select('id, code')
-        .in('code', skillCodes);
+      const skillCodes = Array.from(new Set((data || []).map(q => q.skill_code).filter((c): c is string => !!c)));
+      // Question skill codes match skills.id (skills.code holds a different label), so look up both
+      const [byId, byCode] = await Promise.all([
+        supabase.from('skills').select('id, code').in('id', skillCodes),
+        supabase.from('skills').select('id, code').in('code', skillCodes),
+      ]);
+      const skillsData = [...(byId.data ?? []), ...(byCode.data ?? [])];
 
       // Create skill lookup map
       const skillMap = new Map<string, string>();
@@ -264,31 +269,62 @@ export default function DiagnosticTest() {
       });
 
       // A passage is stored on one question of its group; show it on every question in the group
-      setQuestions(sharePassages(mappedQuestions).map(q => ({
+      const allQuestions = sharePassages(mappedQuestions).map(q => ({
         ...q,
         passage_text: q.passage_text ?? undefined,
         passage_title: q.passage_title ?? undefined,
-      })));
+      }));
+
+      // This student's earlier attempt rows for the form, oldest first
+      const { data: formAttempts } = await supabase
+        .from('attempts')
+        .select('question_id, choice_order, correct_idx, selected_idx, question_ord, time_ms, created_at')
+        .eq('user_id', user.user.id)
+        .eq('form_id', formId)
+        .order('created_at', { ascending: true });
+      const priorRows = formAttempts ?? [];
+
+      let shown = allQuestions;
+      let reuseRows = priorRows;
+      if (formId.startsWith('D2')) {
+        // Thorough diagnostic: 2 questions per skill, new ones first; resume an unfinished sitting
+        const section = SECTION_BY_CODE[formId.slice(2)];
+        const { data: lastDiag } = await supabase
+          .from('diagnostics')
+          .select('completed_at')
+          .eq('user_id', user.user.id)
+          .eq('section', section)
+          .not('completed_at', 'is', null)
+          .order('completed_at', { ascending: false })
+          .limit(1);
+        const skillById = new Map(allQuestions.map(q => [q.question_id, q.skill_id ?? null]));
+        const sitting = currentSitting(priorRows, lastDiag?.[0]?.completed_at ?? null, id => skillById.get(id) ?? null);
+
+        if (sitting) {
+          const ids = new Set(sitting);
+          reuseRows = priorRows.filter(r => ids.has(String(r.question_id)));
+          const position = new Map(reuseRows.map(r => [String(r.question_id), r.question_ord ?? 0]));
+          shown = allQuestions
+            .filter(q => ids.has(q.question_id))
+            .sort((a, b) => (position.get(a.question_id) ?? 0) - (position.get(b.question_id) ?? 0));
+        } else {
+          const answered = new Set(priorRows.filter(r => r.selected_idx !== null).map(r => String(r.question_id)));
+          shown = pickDiagnosticQuestions(allQuestions.map(q => ({ ...q, skill_code: q.skill_id ?? null })), answered)
+            // Position in this sitting, so a resumed sitting keeps the same order
+            .map((q, i) => ({ ...q, ord: i + 1 }));
+          reuseRows = [];
+        }
+      }
+      setQuestions(shown);
 
       // Load or create attempts with choice shuffling
       const existingAttempts: Record<string, Attempt> = {};
       const newAttempts: Attempt[] = [];
 
-      // Batch fetch all existing attempts (avoiding N+1 query)
-      const questionIds = mappedQuestions.map(q => q.question_id);
-      const { data: existingAttemptsData } = await supabase
-        .from('attempts')
-        .select('*')
-        .eq('user_id', user.user.id)
-        .eq('form_id', formId)
-        .in('question_id', questionIds.map(Number));
+      // attempts.question_id is the numeric staging_id; the page keys questions by string id (newest row wins)
+      const attemptMap = new Map(reuseRows.map(a => [String(a.question_id), a]));
 
-      // attempts.question_id is the numeric staging_id; the page keys questions by string id
-      const attemptMap = new Map(
-        (existingAttemptsData || []).map(a => [String(a.question_id), a])
-      );
-
-      for (const question of mappedQuestions) {
+      for (const question of shown) {
         const existing = attemptMap.get(question.question_id);
 
         if (existing) {
