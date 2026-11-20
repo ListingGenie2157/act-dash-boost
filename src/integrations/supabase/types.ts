@@ -1166,6 +1166,249 @@ export type Database = {
           },
         ]
       }
+      staging_items_removed_dupes_20261119: {
+        Row: {
+          answer: string | null
+          calculator_allowed: boolean | null
+          choice_a: string | null
+          choice_b: string | null
+          choice_c: string | null
+          choice_d: string | null
+          difficulty: string | null
+          explanation: string | null
+          form_id: string | null
+          image_caption: string | null
+          image_position: string | null
+          image_url: string | null
+          lesson_code: string | null
+          ord: number | null
+          passage_id: string | null
+          passage_text: string | null
+          passage_title: string | null
+          position_in_passage: number | null
+          question: string | null
+          reference_number: number | null
+          section: string | null
+          skill_code: string | null
+          staging_id: number | null
+          underlined_text: string | null
+        }
+        Insert: {
+          answer?: string | null
+          calculator_allowed?: boolean | null
+          choice_a?: string | null
+          choice_b?: string | null
+          choice_c?: string | null
+          choice_d?: string | null
+          difficulty?: string | null
+          explanation?: string | null
+          form_id?: string | null
+          image_caption?: string | null
+          image_position?: string | null
+          image_url?: string | null
+          lesson_code?: string | null
+          ord?: number | null
+          passage_id?: string | null
+          passage_text?: string | null
+          passage_title?: string | null
+          position_in_passage?: number | null
+          question?: string | null
+          reference_number?: number | null
+          section?: string | null
+          skill_code?: string | null
+          staging_id?: number | null
+          underlined_text?: string | null
+        }
+        Update: {
+          answer?: string | null
+          calculator_allowed?: boolean | null
+          choice_a?: string | null
+          choice_b?: string | null
+          choice_c?: string | null
+          choice_d?: string | null
+          difficulty?: string | null
+          explanation?: string | null
+          form_id?: string | null
+          image_caption?: string | null
+          image_position?: string | null
+          image_url?: string | null
+          lesson_code?: string | null
+          ord?: number | null
+          passage_id?: string | null
+          passage_text?: string | null
+          passage_title?: string | null
+          position_in_passage?: number | null
+          question?: string | null
+          reference_number?: number | null
+          section?: string | null
+          skill_code?: string | null
+          staging_id?: number | null
+          underlined_text?: string | null
+        }
+        Relationships: []
+      }
+      staging_items_removed_forma_20261119: {
+        Row: {
+          answer: string | null
+          calculator_allowed: boolean | null
+          choice_a: string | null
+          choice_b: string | null
+          choice_c: string | null
+          choice_d: string | null
+          difficulty: string | null
+          explanation: string | null
+          form_id: string | null
+          image_caption: string | null
+          image_position: string | null
+          image_url: string | null
+          lesson_code: string | null
+          ord: number | null
+          passage_id: string | null
+          passage_text: string | null
+          passage_title: string | null
+          position_in_passage: number | null
+          question: string | null
+          reference_number: number | null
+          section: string | null
+          skill_code: string | null
+          staging_id: number | null
+          underlined_text: string | null
+        }
+        Insert: {
+          answer?: string | null
+          calculator_allowed?: boolean | null
+          choice_a?: string | null
+          choice_b?: string | null
+          choice_c?: string | null
+          choice_d?: string | null
+          difficulty?: string | null
+          explanation?: string | null
+          form_id?: string | null
+          image_caption?: string | null
+          image_position?: string | null
+          image_url?: string | null
+          lesson_code?: string | null
+          ord?: number | null
+          passage_id?: string | null
+          passage_text?: string | null
+          passage_title?: string | null
+          position_in_passage?: number | null
+          question?: string | null
+          reference_number?: number | null
+          section?: string | null
+          skill_code?: string | null
+          staging_id?: number | null
+          underlined_text?: string | null
+        }
+        Update: {
+          answer?: string | null
+          calculator_allowed?: boolean | null
+          choice_a?: string | null
+          choice_b?: string | null
+          choice_c?: string | null
+          choice_d?: string | null
+          difficulty?: string | null
+          explanation?: string | null
+          form_id?: string | null
+          image_caption?: string | null
+          image_position?: string | null
+          image_url?: string | null
+          lesson_code?: string | null
+          ord?: number | null
+          passage_id?: string | null
+          passage_text?: string | null
+          passage_title?: string | null
+          position_in_passage?: number | null
+          question?: string | null
+          reference_number?: number | null
+          section?: string | null
+          skill_code?: string | null
+          staging_id?: number | null
+          underlined_text?: string | null
+        }
+        Relationships: []
+      }
+      staging_items_removed_formc_20261120: {
+        Row: {
+          answer: string | null
+          calculator_allowed: boolean | null
+          choice_a: string | null
+          choice_b: string | null
+          choice_c: string | null
+          choice_d: string | null
+          difficulty: string | null
+          explanation: string | null
+          form_id: string | null
+          image_caption: string | null
+          image_position: string | null
+          image_url: string | null
+          lesson_code: string | null
+          ord: number | null
+          passage_id: string | null
+          passage_text: string | null
+          passage_title: string | null
+          position_in_passage: number | null
+          question: string | null
+          reference_number: number | null
+          section: string | null
+          skill_code: string | null
+          staging_id: number | null
+          underlined_text: string | null
+        }
+        Insert: {
+          answer?: string | null
+          calculator_allowed?: boolean | null
+          choice_a?: string | null
+          choice_b?: string | null
+          choice_c?: string | null
+          choice_d?: string | null
+          difficulty?: string | null
+          explanation?: string | null
+          form_id?: string | null
+          image_caption?: string | null
+          image_position?: string | null
+          image_url?: string | null
+          lesson_code?: string | null
+          ord?: number | null
+          passage_id?: string | null
+          passage_text?: string | null
+          passage_title?: string | null
+          position_in_passage?: number | null
+          question?: string | null
+          reference_number?: number | null
+          section?: string | null
+          skill_code?: string | null
+          staging_id?: number | null
+          underlined_text?: string | null
+        }
+        Update: {
+          answer?: string | null
+          calculator_allowed?: boolean | null
+          choice_a?: string | null
+          choice_b?: string | null
+          choice_c?: string | null
+          choice_d?: string | null
+          difficulty?: string | null
+          explanation?: string | null
+          form_id?: string | null
+          image_caption?: string | null
+          image_position?: string | null
+          image_url?: string | null
+          lesson_code?: string | null
+          ord?: number | null
+          passage_id?: string | null
+          passage_text?: string | null
+          passage_title?: string | null
+          position_in_passage?: number | null
+          question?: string | null
+          reference_number?: number | null
+          section?: string | null
+          skill_code?: string | null
+          staging_id?: number | null
+          underlined_text?: string | null
+        }
+        Relationships: []
+      }
       stripe_webhook_events: {
         Row: {
           id: string
