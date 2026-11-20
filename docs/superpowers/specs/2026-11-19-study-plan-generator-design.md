@@ -189,3 +189,8 @@ Need decides which subject gets each lesson slot; within a subject, lessons alwa
 curriculum order in `skills.order_index` (capstones last). Lessons already completed or shown to be
 strengths are skipped. Diagnostic scores are percent correct and are converted to 1-36 once, in
 `currentEstimate` (shared curve in `_shared/actScore.ts`).
+
+## Subject variety (2026-11-19)
+Each 7-day week, every subject with lessons left gets at least one lesson, and two single-subject
+days never come back to back while another subject is still due that week. The forced lesson is
+that subject's next one in curriculum order; need still gives the weakest subject most slots.

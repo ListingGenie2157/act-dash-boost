@@ -217,6 +217,7 @@ function fillLearningDay(
   input: PlannerInput,
   dailyMinutes: number,
   lessonTarget: number,
+  forceSections: Section[] = [],
 ): PlannedDay {
   const mult = input.timeMultiplier || 1;
   const m = (k: keyof typeof MINUTES) => Math.round(MINUTES[k] * mult);
@@ -231,10 +232,13 @@ function fillLearningDay(
   const perSection: Record<string, number> = {};
   let placed = 0;
   // Interleave by rank: lessons (up to the pace target) and drill-only skills.
-  // Lessons use their slot's priority, so each subject stays in curriculum order
+  // Lessons use their slot's priority, so each subject stays in curriculum order.
+  // A forced subject's next lesson goes first (subject variety).
+  const forced = new Set(forceSections.map(sec => state.lessons.find(l => l.section === sec)).filter(Boolean));
   const queue = [...state.lessons.map(l => ({ l, kind: 'learn' as const })), ...state.drills.map(l => ({ l, kind: 'drill' as const }))]
     .map(x => ({ ...x, p: x.kind === 'learn' ? (state.slotPriority.get(x.l.skillId) ?? 0) : priority(x.l, input) }))
     .sort((a, b) =>
+      Number(forced.has(b.l) && b.kind === 'learn') - Number(forced.has(a.l) && a.kind === 'learn') ||
       Number(CAPSTONE_LESSONS.has(a.l.skillId)) - Number(CAPSTONE_LESSONS.has(b.l.skillId)) ||
       b.p - a.p ||
       (a.l.section === b.l.section ? a.l.orderIndex - b.l.orderIndex : 0));
@@ -313,8 +317,16 @@ function simulate(input: PlannerInput, dailyMinutes: number, horizonDays: number
   let learningLeft = learningDays;
   const mult = input.timeMultiplier || 1;
 
-  for (const date of dates) {
+  // Subject variety: in each 7-day week every subject with lessons left gets at least one, and
+  // two single-subject days never come back to back while another subject is still due.
+  const weekOf = (i: number) => Math.floor(i / 7);
+  let taughtThisWeek = new Set<Section>();
+  let currentWeek = 0;
+  let prevSingleSubject = false;
+
+  for (const [i, date] of dates.entries()) {
     const kind = kindOf(date);
+    if (weekOf(i) !== currentWeek) { currentWeek = weekOf(i); taughtThisWeek = new Set(); }
     if (kind === 'exam') {
       days.push({ date, kind, tasks: [{ type: 'SIM', skillId: exams.get(date)!, size: 4, minutes: Math.round(MINUTES.sim * mult) }] });
     } else if (kind === 'warmup') {
@@ -324,7 +336,20 @@ function simulate(input: PlannerInput, dailyMinutes: number, horizonDays: number
     } else {
       const target = test ? Math.ceil(state.lessons.length / Math.max(1, learningLeft)) : Number.POSITIVE_INFINITY;
       const before = state.lessons.length;
-      days.push(fillLearningDay(date, state, input, dailyMinutes, target));
+      // Subjects still due this week, most needed first
+      const owed: Section[] = [];
+      for (const l of [...state.lessons].sort((a, b) => (state.slotPriority.get(b.skillId) ?? 0) - (state.slotPriority.get(a.skillId) ?? 0))) {
+        if (!taughtThisWeek.has(l.section) && !owed.includes(l.section)) owed.push(l.section);
+      }
+      const daysLeftThisWeek = dates.filter((d, j) => j >= i && weekOf(j) === currentWeek && kindOf(d) === 'learning').length;
+      const mustForce = Math.max(0, owed.length - (daysLeftThisWeek - 1));
+      const force = owed.slice(0, Math.max(mustForce, prevSingleSubject && owed.length > 0 ? 1 : 0));
+      const day = fillLearningDay(date, state, input, dailyMinutes, target, force);
+      days.push(day);
+      const taughtToday = new Set(day.tasks.filter(t => t.type === 'LEARN')
+        .map(t => input.lessons.find(l => l.skillId === t.skillId)?.section).filter((x): x is Section => !!x));
+      for (const sec of taughtToday) taughtThisWeek.add(sec);
+      prevSingleSubject = taughtToday.size === 1;
       scheduledLessons += before - state.lessons.length;
       learningLeft--;
     }

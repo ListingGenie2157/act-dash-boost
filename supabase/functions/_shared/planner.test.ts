@@ -333,3 +333,41 @@ describe('curriculum order', () => {
     expect(rankLessons(input).slice(0, 4).map(l => l.section)).toEqual(['Math', 'Math', 'Math', 'Math']);
   });
 });
+
+describe('subject variety', () => {
+  const many = (section: 'English' | 'Math' | 'Reading' | 'Science', prefix: string, n: number): LessonInfo[] =>
+    Array.from({ length: n }, (_, i) => ({ skillId: `${prefix}${i + 1}.A`, section, orderIndex: i + 1, bankQuestions: 10 }));
+  const all = [...many('Math', 'M', 30), ...many('English', 'E', 10), ...many('Reading', 'R', 10), ...many('Science', 'S', 10)];
+  const info = new Map(all.map(l => [l.skillId, l.section]));
+  // Math far behind: on need alone, every slot would go to Math
+  const input = makeInput({
+    lessons: all, dailyMinutes: 45,
+    sectionEstimates: {
+      Math: { score: 14, source: 'self' }, English: { score: 27, source: 'self' },
+      Reading: { score: 27, source: 'self' }, Science: { score: 27, source: 'self' },
+    },
+  });
+  const subjectsByDay = (days: PlannedDay[]) =>
+    days.filter(d => d.kind === 'learning').map(d => new Set(d.tasks.filter(t => t.type === 'LEARN').map(t => info.get(t.skillId!))));
+
+  it('teaches every subject at least once each week', () => {
+    const { days } = buildPlan(input, 14);
+    for (const week of [days.slice(0, 7), days.slice(7, 14)]) {
+      const taught = new Set(subjectsByDay(week).flatMap(s => [...s]));
+      expect([...taught].sort()).toEqual(['English', 'Math', 'Reading', 'Science']);
+    }
+  });
+
+  it('never has two single-subject days in a row while other subjects are due', () => {
+    const days = subjectsByDay(buildPlan(input, 7).days);
+    for (let i = 1; i < days.length; i++) {
+      expect(days[i - 1].size === 1 && days[i].size === 1).toBe(false);
+    }
+  });
+
+  it('still gives the weakest subject most of the lessons', () => {
+    const learn = buildPlan(input, 7).days.flatMap(d => d.tasks.filter(t => t.type === 'LEARN'));
+    const math = learn.filter(t => info.get(t.skillId!) === 'Math').length;
+    expect(math).toBeGreaterThan(learn.length / 2);
+  });
+});
