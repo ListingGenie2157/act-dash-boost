@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { PlanTaskJson } from '@/types/studyPlan';
 import { reportError } from '@/lib/errorReporter';
 import { planSummaryText, type PlanSummaryRow } from '@/lib/planSummary';
+import { localDateString } from '@/lib/localDate';
 
 interface StudyTask {
   type: 'LEARN' | 'DRILL' | 'REVIEW' | 'SIM' | 'FLASH' | 'WARMUP';
@@ -78,7 +79,7 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = localDateString();
 
       const { data: profile } = await supabase.from('profiles').select('plan_summary').eq('id', user.id).maybeSingle();
       const summary = profile?.plan_summary as unknown as PlanSummaryRow | null;
@@ -252,7 +253,7 @@ export function StudyPlanWidget({ hasStudyPlan = true }: StudyPlanWidgetProps) {
             if (!config) return null;
             
             const Icon = config.icon;
-            const today = new Date().toISOString().split('T')[0];
+            const today = localDateString();
             
             return (
               <Link 

@@ -11,6 +11,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { reportError } from '@/lib/errorReporter';
+import { localDateString } from '@/lib/localDate';
 
 interface DaysLeftResponse {
   today: string;
@@ -55,7 +56,7 @@ export function CountdownHeader({ className }: CountdownHeaderProps) {
             const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
             
             setDaysLeft({
-              today: today.toISOString().split('T')[0],
+              today: localDateString(today),
               test_date: profile.test_date,
               days_left: daysDiff
             });

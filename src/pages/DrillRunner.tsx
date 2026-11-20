@@ -15,6 +15,7 @@ import { logger } from '@/lib/logger';
 import { reportError } from '@/lib/errorReporter';
 import { completeTask } from '@/lib/supabase-client';
 import { gradeBankAnswer, shuffleArray } from '@/lib/bank';
+import { localDateString } from '@/lib/localDate';
 
 export default function DrillRunner() {
   const navigate = useNavigate();
@@ -179,7 +180,7 @@ export default function DrillRunner() {
                 .insert({
                   user_id: user.id,
                   type: 'DRILL',
-                  the_date: new Date().toISOString().split('T')[0],
+                  the_date: localDateString(),
                   size: validQuestions.length,
                   status: 'IN_PROGRESS',
                 })

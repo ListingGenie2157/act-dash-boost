@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { reportError } from '@/lib/errorReporter';
+import { localDateString } from '@/lib/localDate';
 
 export const ParentBanner = () => {
   const [potentialEarnings, setPotentialEarnings] = useState<number>(0);
@@ -18,7 +19,7 @@ export const ParentBanner = () => {
       if (!user) return;
 
       // Get today's pending tasks
-      const today = new Date().toISOString().split('T')[0];
+      const today = localDateString();
       const { data: todayTasks } = await supabase
         .from('study_tasks')
         .select('type, size')

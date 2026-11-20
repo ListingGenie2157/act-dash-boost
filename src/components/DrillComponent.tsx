@@ -290,9 +290,9 @@ export const DrillComponent = ({ drill, onComplete, onBack, gradeAnswer }: Drill
               </div>
               <div className="p-4 bg-muted rounded-lg">
                 <div className="text-2xl font-bold text-primary">
-                  {Math.round((drill.questions.length / drill.timeLimit) * 60)}
+                  {Math.round(drill.timeLimit / Math.max(1, drill.questions.length))}s
                 </div>
-                <div className="text-sm text-muted-foreground">Target Q/min</div>
+                <div className="text-sm text-muted-foreground">Target per question</div>
               </div>
             </div>
 

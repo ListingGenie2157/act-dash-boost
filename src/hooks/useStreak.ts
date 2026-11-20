@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { localDateString, addDaysToDateString } from '@/lib/localDate';
 
 export function useStreak() {
   return useQuery({
@@ -24,8 +25,8 @@ export function useStreak() {
       
       // Calculate current streak
       let currentStreak = 0;
-      const today = new Date().toISOString().split('T')[0];
-      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      const today = localDateString();
+      const yesterday = addDaysToDateString(today, -1);
       
       if (uniqueDates[0] === today || uniqueDates[0] === yesterday) {
         currentStreak = 1;

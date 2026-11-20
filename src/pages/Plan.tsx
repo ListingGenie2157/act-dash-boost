@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { reportError } from '@/lib/errorReporter';
 import { StudyPlanWizard } from '@/components/StudyPlanWizard';
 import { planSummaryText, type PlanSummaryRow } from '@/lib/planSummary';
+import { localDateString, addDaysToDateString } from '@/lib/localDate';
 
 const TASK_CONFIG: Record<string, { icon: LucideIcon; gradient: string; label: string }> = {
   LEARN: { icon: GraduationCap, gradient: 'from-primary to-primary/80', label: 'Lesson' },
@@ -42,8 +43,8 @@ export default function Plan() {
   const [summary, setSummary] = useState<PlanSummaryRow | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
 
-  const today = new Date().toISOString().split('T')[0];
-  const sixDaysFromNow = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const today = localDateString();
+  const sixDaysFromNow = addDaysToDateString(today, 6);
 
   const fetchPlans = async () => {
     try {

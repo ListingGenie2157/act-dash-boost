@@ -7,6 +7,7 @@ import { BookOpen, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { format, isToday, differenceInDays } from 'date-fns';
 import type { PlanTaskJson } from '@/types/studyPlan';
 import { reportError } from '@/lib/errorReporter';
+import { localDateString } from '@/lib/localDate';
 
 interface StudyTask {
   type: string;
@@ -43,7 +44,7 @@ export function WeeklyCalendar({ userId, testDate }: WeeklyCalendarProps) {
         for (let i = 0; i < 7; i++) {
           const date = new Date(today);
           date.setDate(today.getDate() + i);
-          dates.push(date.toISOString().split('T')[0]);
+          dates.push(localDateString(date));
         }
 
         // Fetch study plan days (source of truth)

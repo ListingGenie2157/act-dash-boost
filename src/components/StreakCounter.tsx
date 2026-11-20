@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Flame, TrendingUp } from 'lucide-react';
 import { useStreak } from '@/hooks/useStreak';
 import { Skeleton } from '@/components/ui/skeleton';
+import { localDateString } from '@/lib/localDate';
 
 export function StreakCounter() {
   const { data: streak, isLoading } = useStreak();
@@ -22,7 +23,7 @@ export function StreakCounter() {
 
   if (!streak) return null;
 
-  const isActiveToday = streak.lastActiveDate === new Date().toISOString().split('T')[0];
+  const isActiveToday = streak.lastActiveDate === localDateString();
 
   return (
     <Card className={streak.currentStreak > 0 ? 'border-l-4 border-l-primary' : ''}>

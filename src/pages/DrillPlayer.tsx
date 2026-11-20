@@ -7,6 +7,7 @@ import { getBankAnswer, BANK_FORM_IDS } from '@/lib/bank';
 import { toast } from 'sonner';
 import type { DrillSession, LegacyQuestion } from '@/types';
 import { logger } from '@/lib/logger';
+import { localDateString } from '@/lib/localDate';
 
 /** Drill bank form for each subject (accepts full names and codes) */
 const DRILL_FORM_BY_SUBJECT: Record<string, string> = {
@@ -320,7 +321,7 @@ export default function DrillPlayer() {
         user_id: user.id,
         type: 'DRILL',
         skill_id: mode === 'skill' ? skillId : null,
-        the_date: new Date().toISOString().split('T')[0],
+        the_date: localDateString(),
         status: 'DONE',
         size: total,
         accuracy: correct / total,
