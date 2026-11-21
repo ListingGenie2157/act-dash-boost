@@ -198,7 +198,7 @@ In addition to DB lessons, Preppit ships a **calculator lesson library** (`src/d
 - **Status:** ✅ Shipped.
 
 ### 3.8 Simulations (full‑length, authentic ACT)
-- **Purpose:** Full‑length practice tests matching the Enhanced ACT (50/45/36/40).
+- **Purpose:** Full‑length practice tests matching the Enhanced ACT: English 50 questions / 35 min, Math 45 / 50 min, Reading 36 / 40 min, Science 40 / 40 min (~165 min total).
 - **Modes:**
   - **Timed (default)** — silent, no coaching, identical to test day.
   - **Coached** — strategic toasts (no answers), ADHD tools (Bail+Bank, Chunk Timer, Two‑Pass, Miss‑Reason).
@@ -396,7 +396,7 @@ Returns top weak skills weighted by (mastery deficit) × (recency of miss) × (s
 3. **Ranking.** Priority = (section gap + 1) × (1.5 − skill accuracy). Section gap = target section score − current estimate (diagnostic → 1–36, else past score, else 18; target = target composite, else estimate + 4). **Need decides which subject gets each lesson slot; within a subject, lessons follow curriculum order** (`skills.order_index`), so foundations always come before advanced topics.
 4. **Subject variety.** Max 2 lessons per section per day. Each 7‑day week, every subject with lessons left gets at least one lesson, and two single‑subject days never come back to back while another subject is still due. The weakest subject still gets most slots.
 5. **Calendar.**
-   - **Exam days:** Forms A, B, C on the preferred weekday 3, 2 and 1 weeks before the test (past dates and empty forms skipped). An exam day holds only the exam (~175 min × multiplier).
+   - **Exam days:** Forms A, B, C on the preferred weekday 3, 2 and 1 weeks before the test (past dates and empty forms skipped). An exam day holds only the exam (~165 min × multiplier).
    - **Final week** (last 6 days): no new lessons — missed‑question review and drills on the weakest skills.
    - **Day before the test:** 10‑question warm‑up only.
    - **Learning days:** everything else.
@@ -741,6 +741,7 @@ A production‑grade, subscription SaaS for ACT prep. The flagship product is **
 ## 15. Change Log
 
 ### 2026‑11‑20
+- Enhanced ACT section counts and times updated (English 50/35, Math 45/50, Reading 36/40, Science 40/40; practice test ~165 min) across Pacing Lab, Test Week banner, Analytics and the planner.
 - Practice tests load for admins (`session-fetch` admin bypass) and practice‑test answers save again (mastery trigger reads `staging_items`; had failed since 2025‑09).
 - Phones: one‑line countdown; “Test date passed” state; Lessons Library / Weak Areas tabs scroll sideways.
 
