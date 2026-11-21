@@ -11,10 +11,10 @@ import { reportError } from '@/lib/errorReporter';
 type SubjectStats = { subject: string; questionCount: number };
 
 const sectionSimCards = [
-  { section: 'English', questions: 75, time: '45 min', description: 'Pace through 5 passages with chunk timers and two-pass coaching.' },
-  { section: 'Math', questions: 60, time: '60 min', description: 'Build speed on 60 questions with real-time pace alerts.' },
-  { section: 'Reading', questions: 40, time: '35 min', description: 'Train two-pass strategy across 4 passages under timed pressure.' },
-  { section: 'Science', questions: 40, time: '35 min', description: 'Practice data-heavy passages with chunk-based pacing.' },
+  { section: 'English', questions: 50, time: '35 min', description: 'Pace through 5 passages with chunk timers and two-pass coaching.' },
+  { section: 'Math', questions: 45, time: '50 min', description: 'Build speed on 45 questions with real-time pace alerts.' },
+  { section: 'Reading', questions: 36, time: '40 min', description: 'Train two-pass strategy across 4 passages under timed pressure.' },
+  { section: 'Science', questions: 40, time: '40 min', description: 'Practice data-heavy passages with chunk-based pacing.' },
 ];
 
 const PacingLab = () => {

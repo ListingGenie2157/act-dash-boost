@@ -93,7 +93,8 @@ const Analytics = () => {
 
       // Total questions from study tasks and sim results
       const studyQuestions = studyTasks.reduce((sum, task) => sum + (task.size || 0), 0);
-      const simQuestions = (simResults || []).reduce((sum) => sum + 75, 0); // 75 questions per sim
+      const SIM_QUESTIONS: Record<string, number> = { EN: 50, MATH: 45, RD: 36, SCI: 40 }; // Enhanced ACT question counts per section
+      const simQuestions = (simResults || []).reduce((sum, r) => sum + (SIM_QUESTIONS[r.section] ?? 0), 0);
       const totalQuestions = studyQuestions + simQuestions;
 
       // Accuracy by cluster

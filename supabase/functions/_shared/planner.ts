@@ -52,7 +52,7 @@ export const SECTION_TARGET_MS: Record<Section, number> = {
   Science: 45000,
 };
 
-const MINUTES = { lesson: 12, drill: 8, review: 10, warmup: 15, sim: 175 };
+const MINUTES = { lesson: 12, drill: 8, review: 10, warmup: 15, sim: 165 };
 const DRILL_SIZE = 5;
 const REVIEW_MAX = 10;
 const WARMUP_SIZE = 10;

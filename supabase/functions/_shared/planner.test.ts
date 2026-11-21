@@ -264,7 +264,7 @@ describe('buildPlan', () => {
     const { days } = buildPlan(makeInput({ today: '2027-02-02', testDate: '2027-02-27' }));
     const examDay = days.find(d => d.date === '2027-02-06');
     expect(examDay?.kind).toBe('exam');
-    expect(examDay?.tasks).toEqual([{ type: 'SIM', skillId: 'FA', size: 4, minutes: 175 }]);
+    expect(examDay?.tasks).toEqual([{ type: 'SIM', skillId: 'FA', size: 4, minutes: 165 }]);
   });
 
   it('reports pace and next exam when everything fits', () => {
