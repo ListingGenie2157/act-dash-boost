@@ -5,6 +5,7 @@
 **Document type:** Official product + technical specification
 **Audience:** Founders, investors, prospective buyers, new engineers, partners
 **Prepared from:** Live codebase audit (React/TS frontend, Supabase backend, 21 deployed edge functions, 38 Postgres tables)
+**Last updated:** 2026‑11‑20 — study plan v2, diagnostic v2, question bank fixes, mobile fixes (see §15 Change Log)
 **Live URLs:** https://getpreppit.com (custom domain) · https://act-dash-boost.lovable.app (Lovable host)
 **Supabase project ref:** `hhbkmxrzxcswwokmbtbz`
 
@@ -15,7 +16,7 @@
 ### 1.1 Product Name & Positioning
 **Preppit** is an ACT prep platform whose flagship feature is **Coach Mode** — an embedded AI‑style "voice in your head" that delivers context‑aware nudges, pacing alerts, and strategy reminders **inside live timed simulations and drills**. Coach Mode is what students experience first and what they re‑subscribe for: it trains test‑day instincts (flag and move on, two‑pass, guess blanks at T‑2:00, watch the Desmos mode) until they fire automatically without prompting.
 
-Around Coach Mode, Preppit ships a complete ACT engine: authentic Enhanced‑ACT simulations (50/45/36/40), an AI study planner, an AI tutor, a 120‑skill mastery system, a parent portal, and the well‑known **"Calculator Hacks"** library — a supporting differentiator (not the core), used both as a top‑of‑funnel hook and as the proof point that Preppit teaches *how to take* the test, not just the content.
+Around Coach Mode, Preppit ships a complete ACT engine: authentic Enhanced‑ACT simulations (50/45/36/40), a personalized study planner, an AI tutor, a 120‑skill mastery system, a parent portal, and the well‑known **"Calculator Hacks"** library — a supporting differentiator (not the core), used both as a top‑of‑funnel hook and as the proof point that Preppit teaches *how to take* the test, not just the content.
 
 ### 1.2 Mission / Problem Solved
 The ACT is a high‑stakes, **pace‑constrained** exam. Most prep tools (Khan Academy, prep books, $200/hr tutors) drill *content* but ignore *how a real teen performs under a 35–50 minute timer* — especially teens with ADHD, anxiety, or weak time‑management. Knowing the math isn't the same as knowing when to bail on a problem at 0:75, when to start the second pass, when to fill bubbles, or when to switch Desmos out of radian mode. Preppit solves three specific problems:
@@ -53,7 +54,7 @@ Roles are stored in `public.user_roles` keyed on `(user_id, role)` with a `app_r
 | **Anonymous visitor** | Default | Landing page, /pricing, /terms, /privacy, /login, lead capture (`capture-lead`) |
 | **Student (authenticated)** | Email/password signup via Supabase Auth | All `/dashboard` routes, own profile, own sessions/attempts/responses, own error_bank, own study_plan_days, own mastery, own sim_results. Gated by **subscription** for `/simulation`, `/cheatsheets/*`, `/plan`, `/task/*`, `/lesson/*`, `/lessons`, `/drills*`, `/quiz/*`, `/weak-areas`, `/calculator-lab`, `/pacing-lab`, `/review/*` |
 | **Parent** | Row in `parent_links` (`parent_id`, `student_id`) | `/parent-portal` — read student mastery, study tasks, rewards_ledger; can issue rewards via `rewards_rules` |
-| **Admin** | `user_roles.role = 'admin'` | Bypasses `RequireSubscription`; all `/admin-*` and `/admin/*` routes (Import, Lesson Import, Skill Codes, Question Generator, Simulation Generator); can run `cron-daily` manually via `AdminCronButton` |
+| **Admin** | `user_roles.role = 'admin'` | Bypasses `RequireSubscription` (and the matching server check in `session-fetch`, so admins can open practice tests); all `/admin-*` and `/admin/*` routes (Import, Lesson Import, Skill Codes, Question Generator, Simulation Generator); can run `cron-daily` manually via `AdminCronButton` |
 | **System / AI** | Service role (Edge Functions only) | `generate-study-plan`, `generate-questions`, `cron-daily`, `stripe-webhook`, `finish-diagnostic` — bypass RLS via service_role; **never exposed to client** |
 
 **Subscription gating** is enforced in two places: `src/components/RequireSubscription.tsx` (UI) AND server‑side checks in gated edge functions (e.g., `complete-task`, `session-start`).
@@ -82,24 +83,45 @@ Every shipped feature, audited from the codebase. Status legend: ✅ Shipped · 
 - **Status:** ✅ Shipped.
 
 ### 3.3 Diagnostic Assessment (Quick + Thorough)
-- **Purpose:** Establish baseline subscores per subject and seed weak‑area detection.
+- **Purpose:** Establish baseline section scores and per‑skill results that feed the study plan and weak‑area detection.
+- **Shared pool:** Both diagnostics draw from one diagnostic question pool (`D2*` forms in `staging_items`) using `src/lib/diagnosticPicker.ts`. The pool measures **103 of the 120 skills** (English 35, Math 43, Reading 15, Science 10). The 17 skills left out (review skills, mixed practice, practice‑test/capstone lessons, R5.A and S5.B timing strategy) can't be measured by one question; they keep their lessons and are ranked from mastery and drill timing instead. Source of truth: `Preppit_skill_ids_diagnostic.csv`.
 - **Modes:**
-  - **Quick** — `ONB_*` forms, ~10–15 questions per section, used during onboarding.
-  - **Thorough** — `D2_*` forms, full‑section diagnostic for returning users.
-- **Components:** `Diagnostic.tsx`, `DiagnosticTest.tsx`, `DiagnosticResults.tsx`, `DiagnosticResultsComplete.tsx`, `FormPicker.tsx`.
-- **Tables:** `diagnostics`, `forms`, `form_questions`, `questions`, `attempts`, `session_questions`.
-- **Functions:** `session-start`, `session-fetch`, `submit-response`, `session-finish`, `finish-diagnostic`.
-- **Business rules:** Answers de‑shuffled server‑side for grading (`Diagnostic Scoring Integrity`); one attempt per form/section enforced via session lockout.
-- **Status:** ✅ Shipped.
+  - **Quick** (~35 min, 36 questions) — English 10, Math 12, Reading 7, Science 7; one question per skill, spread across the 103 skills. Feeds section estimates only; one question never marks a skill a gap or a strength.
+  - **Thorough** (~3 h 20 min, 4 sections of 70/86/30/20 questions) — **2 questions for each of the 103 skills** (206 total).
+- **Picker rules:**
+  - Questions the student hasn't answered come first; questions answered in either diagnostic count as seen for both, so a retake draws new questions.
+  - Reading/Science passage groups are drawn as a unit and shown back to back. The passage text is stored on one question of the group (`passage_id`) and shown on every question in it.
+  - An unfinished sitting resumes with the same questions; a finished section draws a new set next time.
+- **Timing:** No timer is shown to the student; time per question is recorded (`attempts.time_ms`) and feeds the study plan's skill buckets (§5.4).
+- **Mobile:** Question numbers wrap and Previous/Next/Submit stay on screen on phones; long answer choices wrap inside their card.
+- **Components:** `Diagnostic.tsx`, `DiagnosticTest.tsx`, `DiagnosticResults.tsx`, `DiagnosticResultsComplete.tsx`, `FormPicker.tsx`, `lib/diagnosticPicker.ts`.
+- **Tables:** `diagnostics`, `forms`, `staging_items` (via `v_staging_items_public`), `attempts`, `mastery`, `progress`.
+- **Functions:** `finish-diagnostic` (grades, writes `diagnostics` rows; a quick “Mixed” diagnostic also saves a score per section; answers **add to** skill mastery/progress rather than replacing it; empty diagnostics are rejected).
+- **Scores:** a diagnostic stores **percent correct**; self‑reported scores are 1–36. Anything that needs a 1–36 score converts once through `_shared/actScore.ts` (§5.5). 0% rows are old placeholders and carry no score (they no longer produce fake “+27 pts” gains in Analytics).
+- **Results:** `/diagnostic-results/:formId` reopens without route state (previously a 404); Reading maps to `D2RD`.
+- **Status:** ✅ Shipped (diagnostic v2, 2026‑11‑19).
 
-### 3.4 Study Plan (AI‑generated, daily)
-- **Purpose:** Generate a per‑day task list balancing all 4 subjects, weak skills, and days‑to‑test.
-- **Algorithm:** `generate-study-plan/index.ts` (1046 lines). Round‑robin subject balancing, max 2 tasks per subject per day. Uses Lovable AI Gateway (Gemini) for narrative coaching.
-- **Components:** `Plan.tsx`, `StudyPlanWidget.tsx`, `StudyPlanWizard.tsx`, `TaskLauncher.tsx`.
-- **Tables:** `study_plan_days` (one row per `user_id, the_date`, `tasks_json`), `study_tasks` (one row per task instance).
-- **Functions:** `generate-study-plan`, `complete-task`, `cron-daily` (regen for active users), `days-left`.
-- **Auto‑regen:** Returning users get their plan regenerated on login if `generated_at` is stale.
-- **Status:** ✅ Shipped.
+### 3.4 Study Plan (personalized, recalculated nightly)
+- **Purpose:** Build each student's plan from what we know about them (test date, past scores, target score, daily minutes, accommodations, diagnostic results, ongoing mastery and per‑question timing), cover the lessons they actually need at a pace that fits, and say honestly when it doesn't fit.
+- **Algorithm:** a pure, unit‑tested planner in `supabase/functions/_shared/planner.ts` (`planner.test.ts`), called by `generate-study-plan/index.ts` (313 lines). Rule‑based, **no AI call**. Full rules in §5.4.
+- **What the student sees:** 7 days of tasks plus a summary line above them, e.g. *“62 lessons to go · 48 days until your test · ~1.3 lessons/day · On track · Form B practice test: Sat Dec 14”*. When the work doesn't fit: *“At 30 min/day, 90 lessons fit before your test — 33 lower‑priority lessons were left out. Add 15 min/day to cover them.”* (`lib/planSummary.ts`).
+- **Task types:** LEARN (lesson), DRILL (5 bank questions), REVIEW (spaced review), SIM (Form A/B/C practice test), WARMUP (10‑question mixed drill the day before the test).
+- **Every task launches and checks off:**
+
+  | Task | Launches | Marked done when |
+  |---|---|---|
+  | LEARN | `/lesson/:skill` | checkpoint quiz finished |
+  | DRILL | skill drill (bank questions) | drill finished |
+  | REVIEW | `/review/spaced` | review session finished |
+  | SIM | that form on Practice Tests | all 4 sections finished |
+  | WARMUP | short mixed drill | finished |
+
+- **Wizard:** `StudyPlanWizard` saves `profiles.target_score` even when no past scores are entered.
+- **Components:** `Plan.tsx`, `StudyPlanWidget.tsx`, `StudyPlanWizard.tsx`, `TaskLauncher.tsx`, `WeeklyCalendar.tsx`.
+- **Tables:** `study_plan_days` (one row per `user_id, the_date`, `tasks_json`), `study_tasks` (one row per task; `status` is PENDING / DONE / SKIPPED; `form_id` for SIM tasks), `profiles.plan_summary`.
+- **Functions:** `generate-study-plan`, `complete-task` (writes with the service key; students can update their own tasks but not scores), `cron-daily` (one nightly job; the duplicate cron job was removed), `days-left`.
+- **Regeneration:** nightly, after the wizard or a diagnostic, and on “Regenerate”. Only PENDING future tasks are replaced; finished tasks are never touched.
+- **Status:** ✅ Shipped (study plan v2, 2026‑11‑19). Design: `docs/superpowers/specs/2026-11-19-study-plan-generator-design.md`.
 
 ### 3.5 Lessons (Enhanced 3‑tab viewer) — Full Inventory
 
@@ -119,7 +141,9 @@ Every shipped feature, audited from the codebase. Status legend: ✅ Shipped · 
 | **ACT Science** | **10** |
 | **Total full lessons in DB** | **119** |
 
-In addition to DB lessons, Preppit ships a **calculator lesson library** (`src/data/calculatorLessons.ts`, 872 lines). The daily Study Plan is built from the DB lessons by the study planner (see the study plan design doc).
+In addition to DB lessons, Preppit ships a **calculator lesson library** (`src/data/calculatorLessons.ts`, 872 lines). The daily Study Plan is built from the DB lessons by the study planner (§3.4, §5.4). AP Chemistry (12 lessons) and the old in‑code crash‑course curriculum were removed on 2026‑11‑19; the AP Chemistry rows are kept in the private `archive` schema.
+
+**Checkpoint quiz:** each lesson's quiz draws a fresh random set of bank questions every time and is graded against the bank (not placeholder answers). Finishing it checks off the plan's LEARN task.
 
 #### 3.5.2 Calculator Hacks Library (`calculatorLessons.ts`)
 
@@ -160,7 +184,9 @@ In addition to DB lessons, Preppit ships a **calculator lesson library** (`src/d
 - **Components:** `DrillSetup.tsx`, `DrillPlayer.tsx`, `DrillRunner.tsx`, `DrillHistory.tsx`, `DrillDetail.tsx`, `TimerBar.tsx`, `ChunkTimerBar.tsx`.
 - **Tables:** `study_tasks`, `attempts`, `responses`, `sessions`, `error_bank`, `mastery`.
 - **Functions:** `session-start`, `session-fetch`, `submit-response`, `session-finish`, `complete-task`.
-- **Data source:** `DR_*` forms.
+- **Data source:** `DR_*` forms (the question bank), read through `v_staging_items_public`; answers revealed per question by `get_bank_answers()` for grading.
+- **Timing:** time per question recorded in `attempts.time_ms`; the drill intro shows the target as seconds per question (was “0 Target Q/min”).
+- **Links:** weak‑area and missed‑question practice links open real drills (dead `/drill-runner` links fixed).
 - **ADHD wrappers:** Sprint / Marathon / Pomodoro run‑styles (`src/lib/runStyles.ts`).
 - **Coach Mode:** Available inside Coached drills (see §3.8a).
 - **Status:** ✅ Shipped.
@@ -179,7 +205,8 @@ In addition to DB lessons, Preppit ships a **calculator lesson library** (`src/d
 - **Components:** `Simulation.tsx`, `SimulationStartDialog.tsx`, `SimulationResults.tsx`, `TestCompanion.tsx`, `BailBankButton.tsx`, `BreakModal.tsx`, `TwoPassIndicator.tsx`, `LiveStreakCounter.tsx`, `MissReasonTagger.tsx`.
 - **Tables:** `sessions`, `session_questions` (anti‑scraping pin), `attempts`, `responses`, `sim_results`, `study_tasks`.
 - **Functions:** `session-start`, `session-fetch`, `submit-response`, `session-finish`.
-- **Data source:** `FA_*` forms.
+- **Practice Tests page:** **Forms A, B, C** (timed, `FA`/`FB`/`FC`) and **Coach Exams 1–5** (`C1`–`C5`) with correct section times. Forms A–C are scheduled by the study plan 3, 2 and 1 weeks before the test; Coach Exams are never scheduled and stay available “use as needed.”
+- **Saving answers:** every practice‑test answer had failed to save since 2025‑09 (the mastery trigger looked up the empty legacy `questions` table); fixed 2026‑11‑20 (§5.2).
 - **Calculator:** Available **only** in Math section; force‑hidden elsewhere.
 - **Integrity:** Timer `started_at` calculated server‑side; daily cap 15 tests/user (DB trigger 500/day hard cap); answer keys never sent to client.
 - **Status:** ✅ Shipped.
@@ -239,13 +266,13 @@ In addition to DB lessons, Preppit ships a **calculator lesson library** (`src/d
 
 ### 3.13 Mastery Tracking
 - **Purpose:** 5‑level skill mastery (Mastered / Proficient / Learning / Beginner / Not Started).
-- **Logic:** `src/lib/mastery.ts`. Auto‑updated by DB trigger `update_mastery_on_response()`.
+- **Logic:** `src/lib/mastery.ts`. Auto‑updated by DB trigger `update_mastery_on_response()`, which reads each question's skill from `staging_items`. Changing an answer does not count as a new attempt.
 - **Components:** `MasteryBadge.tsx`, `MasteryDashboard.tsx`, `MasteryProgressBar.tsx`.
 - **Tables:** `mastery` (user_id, skill_id, total, correct, avg_time_ms, last_updated).
 - **Status:** ✅ Shipped. 120 skills tracked in aggregate dashboard mastery progress.
 
 ### 3.14 Spaced Repetition Review
-- **Components:** `ReviewSpaced.tsx`, `lib/spacedRepetition.ts`.
+- **Components:** `ReviewSpaced.tsx`, `lib/spacedRepetition.ts`. Graded against the question bank; finishing a session checks off the plan's REVIEW task.
 - **Tables:** `review_queue` (next_review_at, interval_days, ease).
 - **Status:** ✅ Shipped.
 
@@ -275,8 +302,15 @@ In addition to DB lessons, Preppit ships a **calculator lesson library** (`src/d
 
 ### 3.19 Analytics
 - **Components:** `Analytics.tsx`, recharts.
-- **Tables:** `responses`, `attempts`, `mastery`, `sim_results`.
+- **Tables:** `responses`, `attempts`, `mastery`, `sim_results`, `diagnostics`, `study_tasks`.
+- **Rules:** average accuracy weights every finished task; careless rate compares 0–1 accuracy; baseline and score gains use 1–36 estimates (old percentage and 0% placeholder rows are ignored); the streak doesn't break on days with several tasks.
 - **Status:** ✅ Shipped.
+
+### 3.19a Dates, Countdown & Mobile Layout
+- **Local dates:** “today” is the student's local calendar date everywhere (`src/lib/localDate.ts`, tested). It used UTC before, so in US evenings the plan showed tomorrow as today and drills were dated tomorrow. Date‑only values (test date) parse as local dates.
+- **Countdown (`CountdownHeader.tsx`):** on phones a single line (“91 days until test” + date button) instead of the ring card. After the test date passes it reads “Test date passed” with a “Set date” button. No negative days, no >100% progress, no “Test Week Alert” for a past date.
+- **Tabs:** Lessons Library and Weak Areas subject tabs scroll sideways on narrow screens (Science was unreachable).
+- **Status:** ✅ Shipped (2026‑11‑19/20).
 
 ### 3.20 Subscriptions & Payments
 - **Components:** `Pricing.tsx`, `SubscriptionSuccess.tsx`, `hooks/useSubscription.ts`.
@@ -292,7 +326,7 @@ In addition to DB lessons, Preppit ships a **calculator lesson library** (`src/d
 - **Status:** ✅ Shipped.
 
 ### 3.22 Admin Tools
-- `AdminImport.tsx` — bulk question import from CSV/TSV → `staging_items`.
+- `AdminImport.tsx` — bulk question import from CSV/TSV → `staging_items`. Adds questions and never deletes existing ones (skips ones already in the form); sends only `staging_items` columns and reports the rest; rejects 5‑choice rows; stores English/Math/Reading/Science (accepts EN/MATH/RD/SCI); real CSV parsing (quoted fields, line breaks, `#` template lines).
 - `AdminLessonImport.tsx` → `lesson_content`.
 - `AdminSkillCodes.tsx` — skills taxonomy.
 - `AdminQuestionGenerator.tsx` — AI question generation targeted at a form.
@@ -312,13 +346,13 @@ In addition to DB lessons, Preppit ships a **calculator lesson library** (`src/d
 1. Landing `/` → "Get Started" → `/login` (sign up).
 2. `handle_new_user()` trigger seeds `profiles`.
 3. Redirect → `/onboarding` (7 steps): test date, target score, baseline, accommodations, ADHD prefs, parent email, digital/paper.
-4. Optional Quick Diagnostic (`ONB_*` form).
+4. Optional Quick Diagnostic (36 questions from the shared diagnostic pool, ~35 min).
 5. `/pricing` if no subscription → Stripe Checkout (7‑day trial on monthly).
 6. `/dashboard` → today's `study_plan_day` rendered as task cards.
-7. Click first task → `/task/:date/:idx` → `TaskLauncher` routes to drill/quiz/lesson.
+7. Click first task → `/task/:date/:idx` → `TaskLauncher` routes to lesson/drill/review/practice test/warm‑up.
 
 ### 4.2 Daily Learning Loop
-Dashboard widget shows today's tasks → `complete-task` writes results → `update_mastery_on_response()` trigger updates `mastery` → weak‑area card refreshes → streak counter ticks → tomorrow's plan auto‑regenerates via `cron-daily`.
+Dashboard widget shows today's tasks → finishing a lesson quiz, drill, review or practice test checks the task off (`complete-task`) → `update_mastery_on_response()` trigger updates `mastery` → weak‑area card refreshes → streak counter ticks → `cron-daily` recalculates the next 7 days overnight, so missed days re‑balance on their own.
 
 ### 4.3 Simulation Flow
 `/simulation` → `SimulationStartDialog` (pick form + section, mode Timed vs Coached) → `session-start` (pins questions in `session_questions`, calcs server `started_at`) → `session-fetch` (no answer keys) → questions presented, calculator gated to Math only → answers POSTed to `submit-response` → on completion `session-finish` grades server‑side, writes `sim_results` and `attempts`, redirects to `/simulation-results`.
@@ -354,21 +388,32 @@ DB trigger `update_mastery_on_response()` runs on every `responses` insert and u
 ### 5.3 Adaptive / Weakness Detection (`src/lib/chooseWeakSkills.ts`)
 Returns top weak skills weighted by (mastery deficit) × (recency of miss) × (subject test‑weight). Used by study plan generator and Weak Areas page.
 
-### 5.4 Study Plan Algorithm (`generate-study-plan/index.ts`)
-- Inputs: user profile, days‑to‑test, mastery snapshot, accommodations, ADHD prefs, last 7 days of `study_plan_days`.
-- Round‑robin across 4 subjects.
-- Max 2 tasks per subject per day.
-- Inserts at least one REVIEW or FLASH every other day if `error_bank` has entries.
-- Schedules one full SIM every 10–14 days, more often as test approaches.
-- Calls Lovable AI Gateway (Gemini) for narrative `content_hint`.
-- Writes single row to `study_plan_days` (`tasks_json` JSONB).
+### 5.4 Study Plan Algorithm (`_shared/planner.ts`, called by `generate-study-plan`)
+**Inputs:** `profiles.test_date`, `profiles.target_score`, `user_preferences.daily_minutes` (fallback `profiles.daily_time_cap_mins`, then 30), `accommodations.time_multiplier`, `profiles.science_required` (false ⇒ no Science), section scores (`diagnostics`), `mastery`, diagnostic per‑skill answers, per‑question timing buckets, bank question counts per skill, `profiles.sim_preferred_dow` (default Saturday).
+
+1. **Lesson queue.** All ACT lessons for the student's sections, minus completed lessons and **strengths** (≥ 90% over ≥ 5 answers, or all correct on ≥ 2 diagnostic questions, or a **solid** timing bucket). Practice‑test lessons (E10.A, E10.B, M10.F, M10.G) are never planned — the plan schedules its own practice tests. Capstones (E9.A–C, E10.C, M10.H) come after every other lesson.
+2. **Skill buckets from timing.** Each timed answer is **solid** (right + fast), **shaky** (right + slow), **careless** (wrong + fast) or **gap** (wrong + slow, unanswered, or a guess under 25% of target time). Fast = at or under the section target (English 30s, Math 60s, Reading 45s, Science 45s, × accommodation multiplier). A skill takes the worst of its recent answers. gap → lesson then drill; shaky → timed drill only; careless → accuracy drill only; solid → skipped.
+3. **Ranking.** Priority = (section gap + 1) × (1.5 − skill accuracy). Section gap = target section score − current estimate (diagnostic → 1–36, else past score, else 18; target = target composite, else estimate + 4). **Need decides which subject gets each lesson slot; within a subject, lessons follow curriculum order** (`skills.order_index`), so foundations always come before advanced topics.
+4. **Subject variety.** Max 2 lessons per section per day. Each 7‑day week, every subject with lessons left gets at least one lesson, and two single‑subject days never come back to back while another subject is still due. The weakest subject still gets most slots.
+5. **Calendar.**
+   - **Exam days:** Forms A, B, C on the preferred weekday 3, 2 and 1 weeks before the test (past dates and empty forms skipped). An exam day holds only the exam (~175 min × multiplier).
+   - **Final week** (last 6 days): no new lessons — missed‑question review and drills on the weakest skills.
+   - **Day before the test:** 10‑question warm‑up only.
+   - **Learning days:** everything else.
+6. **Pacing.** Minutes per item × accommodation multiplier: lesson 12, drill 8, review 10, warm‑up 15. Each day: due spaced‑review block first, then lesson + drill pairs in rank order until the daily minutes run out (capped at 240). A drill is only scheduled for a skill with ≥ 5 bank questions.
+7. **Fit report.** If the queue doesn't fit, the lowest‑ranked lessons fall off; the summary says how many and how many extra minutes/day would cover them.
+8. **No test date:** plan the next 7 days at the daily minutes in rank order, no exams; the summary prompts for a test date.
+9. **Write** the next 7 days to `study_plan_days` / `study_tasks` and the summary to `profiles.plan_summary`. Only PENDING future tasks are replaced.
 
 ### 5.5 Scoring Logic
-- **Question grading:** server‑side in `submit-response` / `session-finish`. Client never sees answer key.
+- **Question grading:** server‑side in `submit-response` / `session-finish`; drills, quizzes and reviews grade via `get_bank_answers()`. Client never sees the answer key up front.
 - **Simulation scaled scores:** `src/utils/scoring.ts` maps raw correct → 1–36 scale per section, then averages.
+- **Diagnostic → ACT scale:** `_shared/actScore.ts` converts percent correct to 1–36 with a curve (0%→1, 25%→13, 50%→19, 75%→26, 90%→31, 100%→36). Self‑reported scores are already 1–36. Conversion happens exactly once (a double conversion between generator and planner was fixed 2026‑11‑19).
 - **Diagnostic scoring integrity:** answer choices are shuffled per user via seeded Fisher‑Yates, and de‑shuffled server‑side before grading.
 
 ### 5.6 Question Selection Rules
+- Diagnostics: `diagnosticPicker.ts` — see §3.3 (unseen first, passage groups whole, resumable).
+- Lesson checkpoint quiz: fresh random set from the bank each time.
 - Drill: pull from `form_questions` filtered by skill, exclude questions already in current `session_questions`.
 - Simulation: full form, fixed order (`form_questions.ord`).
 - Review Missed: pull from `error_bank` ordered by `miss_count desc, last_missed_at asc`.
@@ -388,10 +433,11 @@ Driven by study plan algorithm; cadence scales with `days_to_test` (from `days-l
 |---|---|---|
 | Subjects | hardcoded enum (EN/MATH/RD/SCI) | Section standardization in `src/lib/sectionMapping.ts` |
 | Skills | `skills` | 120 rows, clustered, ordered, prereqs |
-| Forms | `forms` (`FA_*` simulations, `D2_*` diagnostics, `DR_*` drills, `ONB_*` onboarding) | `is_active` flag |
+| Forms | `forms` (`FA`/`FB`/`FC` practice tests, `C1`–`C5` Coach Exams, `D2*` diagnostic pool, `DR_*` drill bank, `ONB` legacy onboarding) | `is_active` flag |
+| Public question view | `v_staging_items_public` | Bank, practice tests, Coach Exams and diagnostics **without answers**; students read questions only through this view |
 | Form questions | `form_questions` (form_id, section, ord, question_id, passage_id) | Defines test order |
 | Questions | `questions` (20 cols incl. choice_a–e, calculator_allowed, underlined_text, line_numbers_enabled, passage_format) | UUID PK |
-| Staging | `staging_items` (24 cols) | Raw import buffer with numeric `staging_id`; `error_bank` references this id |
+| Staging | `staging_items` (24 cols) | The live question bank, numeric `staging_id`; `attempts`, `review_queue` and `error_bank` reference this id |
 | Passages | `passages` (12 cols incl. chart_image_url) | Reading + Science |
 | Lessons | `lesson_content` (24 cols) | Linked to `skills` via `skill_code` |
 | Difficulty | `questions.difficulty` | (easy/medium/hard) |
@@ -414,7 +460,8 @@ Driven by study plan algorithm; cadence scales with `days_to_test` (from `days-l
 | Sanitization | DOMPurify (`src/lib/sanitize.ts`) |
 | Backend | Supabase (Postgres + Auth + Edge Functions + Storage) |
 | Edge runtime | Deno (21 functions, 6,071 LOC) |
-| AI | Lovable AI Gateway (Gemini default) for tutor + question generation + study plan narratives |
+| AI | Lovable AI Gateway (Gemini default) for tutor + question generation (the study planner is rule‑based, no AI) |
+| Tests | Vitest (`src/lib/*.test.ts`) + Deno tests for shared edge code (`_shared/planner.test.ts`, `actScore.test.ts`, `review.test.ts`) |
 | Payments | Stripe (Checkout + Billing Portal + Webhooks) |
 | Storage | `question-images` bucket (public read) |
 | Offline | IndexedDB queue (`src/lib/offline-persistence`) for network drops |
@@ -434,7 +481,7 @@ Edge functions (Supabase secrets): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
 
 | Table | Cols | Purpose | Key columns |
 |---|---:|---|---|
-| profiles | 19 | User profile + prefs | id (FK auth.users), first_name, last_name, test_date, target_score, digital_format, font_size |
+| profiles | 22 | User profile + prefs | id (FK auth.users), first_name, last_name, test_date, target_score (1–36), plan_summary (jsonb), plan_summary_at, sim_preferred_dow, digital_format, font_size |
 | user_roles | 3 | Roles (anti‑recursion via has_role) | user_id, role (app_role enum) |
 | accommodations | 6 | Extended time | user_id, time_multiplier |
 | user_preferences | 10 | Study prefs / ADHD toggles | user_id, run_style, two_pass_enabled |
@@ -448,14 +495,14 @@ Edge functions (Supabase secrets): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
 | lesson_content | 24 | Lessons | skill_code, overview_html, concept_explanation, guided_practice_* |
 | sessions | 10 | A practice session | id, user_id, type, started_at, finished_at |
 | session_questions | 4 | Anti‑scrape pin | session_id, question_id, ord |
-| attempts | 11 | One attempt per question | session_id, question_id, choice_order, selected_idx, correct_idx |
-| responses | 7 | Final response | session_id, question_id, correct, time_ms |
+| attempts | 12 | One attempt per question | session_id, question_id (bigint FK → staging_items), choice_order, selected_idx, correct_idx, time_ms |
+| responses | 7 | Final response | session_id, question_id (text), correct, time_ms |
 | mastery | 6 | Per skill totals | user_id, skill_id, total, correct, avg_time_ms |
 | progress | 7 | Alt progress | user_id, skill_id |
 | error_bank | 4 | Missed questions | user_id, question_id (text/staging), miss_count |
-| review_queue | 7 | Spaced rep | user_id, question_id, next_review_at, interval_days, ease |
+| review_queue | 7 | Spaced rep | user_id, question_id (bigint FK → staging_items), next_review_at, interval_days, ease |
 | study_plan_days | 5 | Daily plan | user_id, the_date, tasks_json |
-| study_tasks | 14 | Task instance | user_id, type, skill_id, the_date, status, accuracy |
+| study_tasks | 15 | Task instance | user_id, type, skill_id, form_id, the_date, status (PENDING/DONE/SKIPPED), accuracy |
 | diagnostics | 10 | Diagnostic results | user_id, section, responses (jsonb), score |
 | sim_results | 8 | Simulation final | user_id, form_id, raw_*, scale_* |
 | calculator_practice | 8 | Cal Lab | user_id, lesson_id, time_saved_ms |
@@ -473,11 +520,14 @@ Edge functions (Supabase secrets): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
 | _orphan_cleanup_log | 4 | Janitor audit | table_name, orphan_count |
 
 ### RLS Policies (high level)
-All user‑data tables enable RLS. Standard policy shape: `auth.uid() = user_id`. Service role bypasses. Admin reads go through `is_admin()` SECURITY DEFINER. `user_roles` is auth‑only (no anon grant) and accessed via `has_role()`.
+All user‑data tables enable RLS. Standard policy shape: `auth.uid() = user_id`. Service role bypasses. Admin reads go through `is_admin()` SECURITY DEFINER. `user_roles` is auth‑only (no anon grant) and accessed via `has_role()`. Students can update their own `study_tasks` but not the score columns. Once the frontend reading `v_staging_items_public` is live, migration `20261119130000_lock_staging_items_to_admins` removes students' direct read of `staging_items` (which exposed answers/explanations).
+
+### Archive schema
+`archive.apchem_lesson_content`, `archive.apchem_skills` — removed AP Chemistry content, no anon/authenticated access.
 
 ### Triggers
 - `handle_new_user()` — seeds `profiles` from `auth.users`.
-- `update_mastery_on_response()` — running mastery on each `responses` insert.
+- `update_mastery_on_response()` — running mastery on each `responses` insert; reads the skill from `staging_items`; a changed answer is not a new attempt.
 - `update_updated_at_column()` — generic timestamp.
 - `check_sim_results_daily_limit()` — hard cap 500 sim_results / user / day.
 
@@ -485,6 +535,7 @@ All user‑data tables enable RLS. Standard policy shape: `auth.uid() = user_id`
 - `has_role(user_id, role)` — anti‑recursion role check.
 - `is_admin()` — convenience.
 - `increment_error_bank(user_id, question_id)` — atomic upsert.
+- `get_bank_answers(ids bigint[])` — reveals answers for specific bank questions so drills/quizzes/reviews can grade (authenticated only).
 - `check_rate_limit(key, limit, window_ms)` — rolling window limiter.
 - `cleanup_old_webhook_events()` — janitor (7‑day Stripe event TTL).
 
@@ -503,7 +554,7 @@ All user‑data tables enable RLS. Standard policy shape: `auth.uid() = user_id`
 | `customer-portal` | 84 | ✅ | Billing portal link | – | `{url}` | – | Stripe |
 | `stripe-webhook` | 205 | ❌ | Handle Stripe events idempotently | raw body | 200 | subscriptions, stripe_webhook_events | STRIPE_WEBHOOK_SECRET |
 | `tutor-chat` | 360 | ✅ | AI tutor (no answers leaked) | `{messages, context}` | streamed text | tutor_sessions, tutor_messages | LOVABLE_API_KEY |
-| `generate-study-plan` | 1046 | ✅ | Build daily plan | `{user_id?, date?}` | `{tasks_json}` | study_plan_days, mastery, error_bank | LOVABLE_API_KEY |
+| `generate-study-plan` | 313 (+ `_shared/planner.ts` 393) | ✅ | Build next 7 days + plan summary | `{user_id?}` | `{days, summary}` | study_plan_days, study_tasks, profiles, mastery, diagnostics, attempts, staging_items | – |
 | `generate-questions` | 1018 | ✅ | AI question generation | `{skill, count, form_id}` | `{inserted}` | staging_items, questions, form_questions | LOVABLE_API_KEY |
 | `cron-daily` | 220 | ❌ (CRON_SECRET header) | Daily plan regen + cleanup | – | `{ok}` | study_plan_days | service role |
 | `days-left` | 117 | ✅ | Days to test date | – | `{days_left}` | profiles | – |
@@ -524,6 +575,7 @@ All user‑data tables enable RLS. Standard policy shape: `auth.uid() = user_id`
 - All errors logged through `safeError` (no PII).
 - All log lines go through `safeLog` (sanitize emails, tokens, bodies).
 - `Authorization` header forwarded so RLS sees `auth.uid()`.
+- Shared logic in `_shared/`: `planner.ts` (study planner), `actScore.ts` (percent → 1–36), `review.ts`, `sectionVariants.ts`, `stripeConfig.ts`.
 
 ---
 
@@ -600,7 +652,7 @@ Supabase email/password JWT. Auth header forwarded to all edge functions. No MFA
 
 ### Scaling Limitations
 - Single Supabase project (no read replica).
-- AI tutor + study plan generator both call Lovable AI Gateway — cost scales linearly with usage; rate limiting in place.
+- AI tutor and question generator call Lovable AI Gateway — cost scales linearly with usage; rate limiting in place. (The study planner no longer calls AI.)
 - Stripe price IDs hardcoded per environment — multi‑region/currency would need refactor.
 - 1000‑row default Postgres response limit not yet paginated everywhere in admin views.
 - No background queue (Inngest/Trigger) yet — all generation runs in‑request.
@@ -615,13 +667,15 @@ Supabase email/password JWT. Auth header forwarded to all edge functions. No MFA
 ## 13. Product Roadmap
 
 ### ✅ Currently Built
-Everything in §3, including: auth, onboarding, quick + thorough diagnostics, study plan (cron + auto‑regen), lessons (3‑tab), drills (Sprint/Marathon/Pomodoro), quizzes, simulations (Timed + Coached + ADHD tools), pacing lab, calculator lab (TI‑84 + Desmos), cheatsheets, weak areas, mastery, spaced repetition, error bank, AI tutor, parent portal + rewards, streak/achievements, analytics, full Stripe billing with 7‑day trial, lead capture, admin import/generation/cron, health monitoring, offline persistence, log sanitization, answer pinning.
+Everything in §3, including: auth, onboarding, quick + thorough diagnostics (shared pool, 103 skills, resumable), personalized study plan (ranking, curriculum order, subject variety, timing buckets, scheduled Forms A–C, fit report, nightly recalculation), lessons (3‑tab), drills (Sprint/Marathon/Pomodoro), quizzes, simulations (Timed + Coached + ADHD tools), pacing lab, calculator lab (TI‑84 + Desmos), cheatsheets, weak areas, mastery, spaced repetition, error bank, AI tutor, parent portal + rewards, streak/achievements, analytics, full Stripe billing with 7‑day trial, lead capture, admin import/generation/cron, health monitoring, offline persistence, log sanitization, answer pinning.
 
 ### 🟡 In Progress / Partial
 - **Content coverage:** not all 120 skills have full `lesson_content` populated.
 - **Admin user management:** read‑only — no in‑app CRUD.
 - **Per‑user admin analytics drilldown:** aggregate only.
 - **GDPR/COPPA deletion endpoint:** specified, not implemented.
+- **Lock `staging_items` to admins:** migration written; apply once the `v_staging_items_public` frontend is live everywhere.
+- **17 skills not measured by the diagnostic:** ranked from mastery and drill timing only (by design; see §3.3).
 
 ### 🟢 Recommended Next
 1. **Google OAuth + magic link signup** — reduce signup friction.
@@ -645,12 +699,12 @@ Everything in §3, including: auth, onboarding, quick + thorough diagnostics, st
 ## 14. Investor / Sale Summary
 
 ### What Has Been Built
-A production‑grade, subscription SaaS for ACT prep. The flagship product is **Coach Mode** — the embedded "voice in your head" that nudges pacing, two‑pass strategy, and digital‑navigation moves *inside* live timed simulations until those behaviors become automatic. Coach Mode is wrapped in a complete learning engine: 21 edge functions, 38 Postgres tables, 40+ React pages, 120‑skill taxonomy, 119 published lessons (English 47, Math 46, Reading 16, Science 10) and a 15‑lesson **Calculator Hacks** library (TI‑84 + Desmos) used as the top‑of‑funnel hook. Full Enhanced‑ACT (50/45/36/40) simulation engine, AI tutor, AI study planner, AI question generator, Stripe billing live with 7‑day trial, parent portal with rewards ledger. Domain live at **getpreppit.com**.
+A production‑grade, subscription SaaS for ACT prep. The flagship product is **Coach Mode** — the embedded "voice in your head" that nudges pacing, two‑pass strategy, and digital‑navigation moves *inside* live timed simulations until those behaviors become automatic. Coach Mode is wrapped in a complete learning engine: 21 edge functions, 38 Postgres tables, 40+ React pages, 120‑skill taxonomy, 119 published lessons (English 47, Math 46, Reading 16, Science 10) and a 15‑lesson **Calculator Hacks** library (TI‑84 + Desmos) used as the top‑of‑funnel hook. Full Enhanced‑ACT (50/45/36/40) simulation engine with 3 practice tests + 5 Coach Exams, a 103‑skill adaptive diagnostic, a personalized study planner, AI tutor, AI question generator, Stripe billing live with 7‑day trial, parent portal with rewards ledger. Domain live at **getpreppit.com**.
 
 ### Technology Assets
 - **Codebase:** ~40k LOC TypeScript (strict mode), 6,071 LOC Deno edge functions, fully typed Supabase schema.
 - **Database:** 38 tables with RLS, triggers, security‑definer role functions, atomic RPCs, anti‑scrape question pinning.
-- **AI integrations:** Lovable AI Gateway (Gemini) for tutor, study plan, and question generation — provider‑agnostic.
+- **AI integrations:** Lovable AI Gateway (Gemini) for tutor and question generation — provider‑agnostic.
 - **Content:** ACT skill taxonomy, ONB_/D2_/DR_/FA_ form library with passage support, growing lesson library.
 - **Infrastructure:** Lovable hosting + Supabase + Stripe + custom domain + cron + offline queue + health monitoring.
 
@@ -659,7 +713,7 @@ A production‑grade, subscription SaaS for ACT prep. The flagship product is **
 - ADHD‑native test‑simulation UX (Bail+Bank, Chunk Timer, Two‑Pass, Miss‑Reason, Streak) integrated into a *real* timed sim — defensible UX patent‑adjacent.
 - "Calculator Hacks" brand and 15‑lesson TI‑84/Desmos library (top‑of‑funnel hook).
 - Server‑side answer pinning architecture (`session_questions` + de‑shuffle on grade) — anti‑scrape moat.
-- AI study‑plan algorithm with subject round‑robin + ADHD pacing wrappers.
+- Study‑plan algorithm: need‑based ranking, curriculum order, speed/accuracy skill buckets from per‑question timing, honest fit report, nightly re‑balancing (pure, unit‑tested `planner.ts`).
 - Coached vs. Timed dual‑mode simulation engine — the chassis Coach Mode rides on.
 
 ### Market Opportunity
@@ -681,6 +735,22 @@ A production‑grade, subscription SaaS for ACT prep. The flagship product is **
 - Stripe billing already live (revenue can transfer with account).
 - Strict TypeScript + tests (Vitest + Playwright smoke) — short ramp for new engineers.
 - Memory document + this spec serve as full onboarding for a new dev or buyer.
+
+---
+
+## 15. Change Log
+
+### 2026‑11‑20
+- Practice tests load for admins (`session-fetch` admin bypass) and practice‑test answers save again (mastery trigger reads `staging_items`; had failed since 2025‑09).
+- Phones: one‑line countdown; “Test date passed” state; Lessons Library / Weak Areas tabs scroll sideways.
+
+### 2026‑11‑19
+- **Study plan v2:** pure rule‑based planner replaces the AI round‑robin generator — ranking by need, curriculum order within a subject, subject variety each week, timing buckets, Forms A–C 3/2/1 weeks out, final week + warm‑up, fit report and plan summary, nightly recalculation that never touches finished work. Every task type launches and checks off. New `profiles.target_score`, `plan_summary`; `attempts.time_ms`; `study_tasks.form_id`. Duplicate nightly cron removed.
+- **Diagnostic v2:** thorough = 2 questions × 103 skills; quick = 36 questions from the same pool; unseen first, passage groups whole, resumable; untimed for the student with time recorded; diagnostic % converted to 1–36 once via `actScore.ts`.
+- **Question bank:** `attempts`/`review_queue` reference `staging_items`; `v_staging_items_public` + `get_bank_answers()`; drills, lesson quizzes and spaced review grade against the bank; Practice Tests page lists Forms A–C + Coach Exams 1–5.
+- **Admin import:** additive only, column‑safe, real CSV parsing.
+- **Fixes:** local calendar dates; Analytics accuracy/careless rate/baseline/streak; drill target pace label; diagnostic results 404; countdown after the test date; 0% placeholder diagnostics no longer count; diagnostic usable on phones.
+- **Removed:** AP Chemistry (archived) and the unused in‑code crash‑course curriculum.
 
 ---
 
