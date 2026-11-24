@@ -2076,6 +2076,7 @@ export type Database = {
           staging_id: number
         }[]
       }
+      has_active_access: { Args: { p_user: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
