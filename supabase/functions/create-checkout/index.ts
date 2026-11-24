@@ -66,8 +66,6 @@ serve(async (req) => {
     const PRICE_IDS = getPriceIds();
     const priceId = PRICE_IDS[planType];
     logStep("Price ID resolved", { planType, message: `Using price: ${priceId}` });
-    const isSubscription = planType === "monthly";
-    
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     
     // Check if customer exists
@@ -89,33 +87,24 @@ serve(async (req) => {
           quantity: 1,
         },
       ],
-      mode: isSubscription ? "subscription" : "payment",
+      // Every plan is a subscription with a 7-day, card-required trial.
+      // Passes (90_day, 12_month) use prices billed every 90 / 365 days; the
+      // webhook sets cancel_at on creation so a pass never renews.
+      mode: "subscription",
       success_url: `${origin}/subscription-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/pricing`,
       metadata: {
         user_id: user.id,
         plan_type: planType,
       },
-      // For one-time payments, store metadata on payment intent
-      ...(isSubscription ? {} : {
-        payment_intent_data: {
-          metadata: {
-            user_id: user.id,
-            plan_type: planType,
-          },
+      subscription_data: {
+        trial_period_days: 7,
+        metadata: {
+          user_id: user.id,
+          plan_type: planType,
         },
-      }),
-      // For subscriptions, add 7-day trial with payment method required
-      ...(isSubscription ? {
-        subscription_data: {
-          trial_period_days: 7,
-          metadata: {
-            user_id: user.id,
-            plan_type: planType,
-          },
-        },
-        payment_method_collection: 'always',
-      } : {}),
+      },
+      payment_method_collection: 'always',
     };
 
     const session = await stripe.checkout.sessions.create(sessionParams);
