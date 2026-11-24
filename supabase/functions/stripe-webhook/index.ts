@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getCorsHeaders } from '../_shared/cors.ts';
-import { getPriceToPlan, PLAN_DURATIONS, isValidPlanType } from '../_shared/stripeConfig.ts';
+import { getPriceToPlan, PLAN_DURATIONS, isValidPlanType, passCancelAt } from '../_shared/stripeConfig.ts';
 import { requireEnv } from '../_shared/env.ts';
 
 // Safe fields that are allowed in logs (no PII)
@@ -138,6 +138,16 @@ serve(async (req) => {
 
         const priceId = subscription.items.data[0].price.id;
         const planType = PRICE_TO_PLAN[priceId] || "monthly";
+
+        // Passes end after one paid period instead of renewing.
+        const cancelAt = passCancelAt(planType, subscription.trial_end);
+        if (cancelAt && !subscription.cancel_at) {
+          await stripe.subscriptions.update(subscription.id, {
+            cancel_at: cancelAt,
+            proration_behavior: "none",
+          });
+          logStep("Pass set to end after one period", { userId, planType, cancelAt });
+        }
 
         await supabaseClient
           .from("subscriptions")

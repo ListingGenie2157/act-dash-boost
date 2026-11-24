@@ -43,3 +43,14 @@ export const PLAN_DURATIONS: Record<string, number> = {
   "90_day": 90,
   "12_month": 365,
 };
+
+/**
+ * Passes are Stripe subscriptions (billed every 90 / 365 days) with a 7-day
+ * trial, set to end after their single paid period so they never renew.
+ * Returns the unix-seconds cancel_at for a pass, or null for plans that renew.
+ */
+export function passCancelAt(planType: PlanType, trialEnd: number | null | undefined): number | null {
+  const days = PLAN_DURATIONS[planType];
+  if (!days || trialEnd == null) return null;
+  return trialEnd + days * 86_400;
+}

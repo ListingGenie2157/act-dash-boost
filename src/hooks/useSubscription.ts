@@ -61,9 +61,12 @@ export function useSubscription() {
       throw new Error(error.message);
     }
 
-    if (data?.url) {
-      window.open(data.url, '_blank');
+    if (!data?.url) {
+      throw new Error('Checkout did not return a URL');
     }
+    // Same tab: a new tab opened without a click is blocked by browsers,
+    // and Stripe returns to /subscription-success here.
+    window.location.assign(data.url);
   };
 
   const openCustomerPortal = async () => {
@@ -106,3 +109,11 @@ export const PLAN_PRICES: Record<string, { amount: number; label: string; saving
   '90_day': { amount: 89, label: '$89 one-time', savings: 'Save $28 vs 3 months' },
   '12_month': { amount: 199, label: '$199 one-time', savings: 'Save $269 vs 12 months' },
 };
+
+/** The trial terms shown wherever a family picks a plan. Every plan has the same 7-day, card-required trial. */
+export function trialTerms(planType: 'monthly' | '90_day' | '12_month'): string {
+  const after = planType === 'monthly'
+    ? `then $${PLAN_PRICES.monthly.amount}/month`
+    : `then $${PLAN_PRICES[planType].amount} once (doesn't renew)`;
+  return `7 days free, ${after}. Card required. Cancel anytime before the trial ends and you won't be charged.`;
+}

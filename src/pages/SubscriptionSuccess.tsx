@@ -56,6 +56,14 @@ export default function SubscriptionSuccess() {
     return () => clearTimeout(timer);
   }, [isSubscribed, pollAttempts, refetch]);
 
+  // Once the trial is active, /start sends new families to onboarding
+  // (returning subscribers to the dashboard).
+  useEffect(() => {
+    if (!isSubscribed) return;
+    const timer = setTimeout(() => navigate('/start', { replace: true }), 1500);
+    return () => clearTimeout(timer);
+  }, [isSubscribed, navigate]);
+
   const handleManualRetry = useCallback(() => {
     setPollAttempts(0);
     setShowManualRetry(false);
@@ -69,21 +77,21 @@ export default function SubscriptionSuccess() {
           <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center">
             <CheckCircle className="w-10 h-10 text-accent" />
           </div>
-          <CardTitle className="text-2xl">Welcome to ACT Prep!</CardTitle>
+          <CardTitle className="text-2xl">Welcome to Preppit!</CardTitle>
           <CardDescription>
-            Your subscription is now active. You have full access to all features.
+            Your 7-day free trial has started. You won't be charged until it ends.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground mb-4">
-            Get started with your personalized study plan and start improving your ACT score today.
+            Next, a few quick questions to set up your study plan.
           </p>
           
           {/* Polling/Loading State */}
           {!isSubscribed && !showManualRetry && (
             <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
-              Activating your subscription...
+              Starting your trial...
               {pollAttempts > 0 && (
                 <span className="text-xs">({pollAttempts}/{MAX_POLL_ATTEMPTS})</span>
               )}
@@ -117,18 +125,17 @@ export default function SubscriptionSuccess() {
           {isSubscribed && (
             <div className="flex items-center justify-center gap-2 text-sm text-accent">
               <CheckCircle className="w-4 h-4" />
-              Subscription active!
+              Trial active. Taking you to setup…
             </div>
           )}
         </CardContent>
-        <CardFooter className="flex flex-col gap-3">
-          <Button className="w-full" size="lg" onClick={() => navigate('/dashboard')}>
-            Go to Dashboard
-          </Button>
-          <Button variant="outline" className="w-full" onClick={() => navigate('/onboarding')}>
-            Complete Onboarding
-          </Button>
-        </CardFooter>
+        {isSubscribed && (
+          <CardFooter>
+            <Button className="w-full" size="lg" onClick={() => navigate('/start', { replace: true })}>
+              Continue
+            </Button>
+          </CardFooter>
+        )}
       </Card>
     </div>
   );

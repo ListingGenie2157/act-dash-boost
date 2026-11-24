@@ -15,6 +15,7 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [done, setDone] = useState(false);
 
   useEffect(() => {
     const checkOnboarding = async () => {
@@ -80,8 +81,7 @@ export default function Onboarding() {
         throw profileUpdateError;
       }
 
-      toast.success('Welcome to Preppit Pacing!');
-      navigate('/dashboard');
+      setDone(true);
     } catch (error) {
       reportError(error instanceof Error ? error : new Error(String(error)), { page: 'Onboarding' });
       toast.error('Failed to complete setup. Please try again.');
@@ -91,6 +91,33 @@ export default function Onboarding() {
   };
 
   if (checking) return <PageLoadingSpinner />;
+
+  if (done) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/5 flex items-center justify-center p-4">
+        <Card className="w-full max-w-lg border-primary/20 shadow-xl">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">You're set up, {form.firstName.trim()}.</CardTitle>
+            <CardDescription>
+              The diagnostic shows where you stand so your study plan starts in the right place.
+              The quick version takes about 35 minutes.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button className="w-full" size="lg" onClick={() => navigate('/diagnostic')}>
+              Take the diagnostic
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => navigate('/dashboard')}>
+              Skip for now
+            </Button>
+            <p className="text-xs text-muted-foreground text-center">
+              You can take it any time from your dashboard.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/5 flex items-center justify-center p-4">
