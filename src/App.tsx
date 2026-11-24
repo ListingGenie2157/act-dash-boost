@@ -18,6 +18,7 @@ import Login from "./pages/Login";
 import UpdatePassword from "./pages/UpdatePassword";
 import NotFound from "./pages/NotFound";
 import Pricing from "./pages/Pricing";
+import Start from "./pages/Start";
 import SubscriptionSuccess from "./pages/SubscriptionSuccess";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
@@ -98,6 +99,7 @@ const App = () => (
                 <Route path="/update-password" element={<UpdatePassword />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/subscription-success" element={<SubscriptionSuccess />} />
+                <Route path="/start" element={<RequireAuth><Start /></RequireAuth>} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />
                 

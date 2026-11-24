@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { parsePlan } from '@/lib/postAuthRoute';
+import { trialTerms } from '@/hooks/useSubscription';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,7 +21,10 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [searchParams] = useSearchParams();
+  const selectedPlan = parsePlan(searchParams.get('plan'));
+  const startPath = selectedPlan ? `/start?plan=${selectedPlan}` : '/start';
+  const [isSignUp, setIsSignUp] = useState(searchParams.get('mode') === 'signup');
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong'>('weak');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
@@ -61,7 +66,7 @@ export default function Login() {
         const normalizedEmail = normalizeEmail(email);
         const { data, error } = await supabase.auth.signUp({
           email: normalizedEmail, password,
-          options: { emailRedirectTo: `${window.location.origin}/onboarding`, data: { first_name: firstName.trim(), last_name: lastName.trim() } }
+          options: { emailRedirectTo: `${window.location.origin}${startPath}`, data: { first_name: firstName.trim(), last_name: lastName.trim() } }
         });
         if (error) setError(error.message);
         else if (data.user) setSuccess(true);
@@ -70,8 +75,7 @@ export default function Login() {
         const { data, error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
         if (error) setError(error.message);
         else if (data.session) {
-          const { data: profile } = await supabase.from('profiles').select('onboarding_complete').eq('id', data.user.id).single();
-          navigate(profile?.onboarding_complete ? '/dashboard' : '/onboarding');
+          navigate(startPath);
         }
       }
     } catch (err) {
@@ -238,6 +242,9 @@ export default function Login() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? (<><Loader2 className="w-4 h-4 animate-spin mr-2" />{isSignUp ? 'Creating...' : 'Signing In...'}</>) : (isSignUp ? 'Create Account' : 'Sign In')}
             </Button>
+            {isSignUp && selectedPlan && (
+              <p className="text-xs text-muted-foreground text-center">{trialTerms(selectedPlan)}</p>
+            )}
           </form>
 
           <div className="relative">

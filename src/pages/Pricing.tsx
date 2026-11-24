@@ -8,6 +8,7 @@ import { useSubscription, PLAN_NAMES, PLAN_PRICES } from '@/hooks/useSubscriptio
 import { Settings } from 'lucide-react';
 import { useAuthUser } from '@/hooks/queries/useAuth';
 import { toast } from 'sonner';
+import { PLAN_STORAGE_KEY } from '@/lib/postAuthRoute';
 
 const FEATURES = [
   'Full access to all 4 ACT subjects',
@@ -114,8 +115,13 @@ export default function Pricing() {
 
   const handleSelectPlan = async (planType: 'monthly' | '90_day' | '12_month') => {
     if (!user) {
-      toast.info('Please sign in to subscribe');
-      navigate('/login', { state: { from: '/pricing' } });
+      // Sign up first; /start then opens checkout for this plan.
+      try {
+        sessionStorage.setItem(PLAN_STORAGE_KEY, planType);
+      } catch {
+        // storage unavailable: the plan still travels in the URL
+      }
+      navigate(`/login?mode=signup&plan=${planType}`);
       return;
     }
 
