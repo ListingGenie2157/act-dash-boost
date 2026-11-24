@@ -30,4 +30,4 @@ COMMENT ON FUNCTION public.has_active_access(uuid) IS
 
 -- Rollback:
 --   DROP FUNCTION public.has_active_access(uuid);
---   (only after 20261123090100_lock_paid_content is rolled back; it depends on this function)
+--   (only after 20261124065140_lock_paid_content is rolled back; it depends on this function)
