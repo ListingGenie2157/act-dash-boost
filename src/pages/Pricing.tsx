@@ -4,7 +4,7 @@ import { Check, Zap, Shield, Clock, Star, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useSubscription, PLAN_NAMES, PLAN_PRICES } from '@/hooks/useSubscription';
+import { useSubscription, PLAN_NAMES, PLAN_PRICES, trialTerms } from '@/hooks/useSubscription';
 import { Settings } from 'lucide-react';
 import { useAuthUser } from '@/hooks/queries/useAuth';
 import { toast } from 'sonner';
@@ -33,7 +33,6 @@ interface PricingCardProps {
 
 function PricingCard({ planType, title, description, isPopular, isCurrentPlan, onSelect, isLoading }: PricingCardProps) {
   const price = PLAN_PRICES[planType];
-  const hasFreeTrial = planType === 'monthly';
   
   return (
     <Card className={`relative flex flex-col ${isPopular ? 'border-primary shadow-lg scale-105' : ''} ${isCurrentPlan ? 'border-green-500 bg-green-50/50 dark:bg-green-950/20' : ''}`}>
@@ -56,12 +55,11 @@ function PricingCard({ planType, title, description, isPopular, isCurrentPlan, o
           <span className="text-4xl font-bold">${price.amount}</span>
           {planType === 'monthly' && <span className="text-muted-foreground">/mo</span>}
         </div>
-        {hasFreeTrial && (
-          <Badge variant="secondary" className="mb-2 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-            <Clock className="w-3 h-3 mr-1 inline" />
-            7-day free trial
-          </Badge>
-        )}
+        <Badge variant="secondary" className="mb-2 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+          <Clock className="w-3 h-3 mr-1 inline" />
+          7-day free trial
+        </Badge>
+        <p className="text-xs text-muted-foreground mb-3">{trialTerms(planType)}</p>
         {price.savings && (
           <Badge variant="secondary" className="mb-4 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
             {price.savings}
@@ -95,10 +93,8 @@ function PricingCard({ planType, title, description, isPopular, isCurrentPlan, o
             </>
           ) : isCurrentPlan ? (
             'Current Plan'
-          ) : hasFreeTrial ? (
-            'Start Free Trial'
           ) : (
-            'Get Started'
+            'Start 7-day free trial'
           )}
         </Button>
       </CardFooter>

@@ -105,16 +105,16 @@ const App = () => (
                 
                 {/* Protected routes with sidebar layout */}
                 <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
-                  <Route path="/dashboard" element={<LazyLoader><LazyDashboard /></LazyLoader>} />
-                  <Route path="/onboarding" element={<LazyLoader><LazyOnboarding /></LazyLoader>} />
+                  <Route path="/dashboard" element={<RequireSubscription><LazyLoader><LazyDashboard /></LazyLoader></RequireSubscription>} />
+                  <Route path="/onboarding" element={<RequireSubscription><LazyLoader><LazyOnboarding /></LazyLoader></RequireSubscription>} />
                   
                   {/* Diagnostic assessment route */}
-                  <Route path="/diagnostic" element={<LazyLoader><LazyDiagnostic /></LazyLoader>} />
+                  <Route path="/diagnostic" element={<RequireSubscription><LazyLoader><LazyDiagnostic /></LazyLoader></RequireSubscription>} />
                   
                   {/* Diagnostic test routes */}
-                  <Route path="/diagnostic-test/:formId" element={<LazyLoader><LazyDiagnosticTest /></LazyLoader>} />
-                  <Route path="/diagnostic-results/:formId" element={<LazyLoader><LazyDiagnosticResults /></LazyLoader>} />
-                  <Route path="/diagnostic-results-complete" element={<LazyLoader><LazyDiagnosticResultsComplete /></LazyLoader>} />
+                  <Route path="/diagnostic-test/:formId" element={<RequireSubscription><LazyLoader><LazyDiagnosticTest /></LazyLoader></RequireSubscription>} />
+                  <Route path="/diagnostic-results/:formId" element={<RequireSubscription><LazyLoader><LazyDiagnosticResults /></LazyLoader></RequireSubscription>} />
+                  <Route path="/diagnostic-results-complete" element={<RequireSubscription><LazyLoader><LazyDiagnosticResultsComplete /></LazyLoader></RequireSubscription>} />
                   
                   {/* Simulation system */}
                   <Route path="/simulation" element={<RequireSubscription><LazyLoader><LazySimulation /></LazyLoader></RequireSubscription>} />
@@ -127,7 +127,7 @@ const App = () => (
                   <Route path="/cheatsheets/science" element={<RequireSubscription><LazyLoader><LazyScienceCheatsheet /></LazyLoader></RequireSubscription>} />
                   
                   {/* Analytics route */}
-                  <Route path="/analytics" element={<LazyLoader><LazyAnalytics /></LazyLoader>} />
+                  <Route path="/analytics" element={<RequireSubscription><LazyLoader><LazyAnalytics /></LazyLoader></RequireSubscription>} />
                   
                   {/* Admin routes */}
                   <Route path="/admin-import" element={<ProtectedAdminRoute><LazyLoader><LazyAdminImport /></LazyLoader></ProtectedAdminRoute>} />

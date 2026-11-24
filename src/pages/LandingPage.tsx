@@ -77,10 +77,10 @@ const LandingPage = () => {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mt-12 animate-fade-in" style={{ animationDelay: '300ms' }}>
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/pricing')}
               className="pp-btn-primary text-lg px-8 py-4 flex items-center justify-center gap-2 group"
             >
-              Start Free Today
+              Start 7-day free trial
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
             <button
@@ -153,10 +153,10 @@ const LandingPage = () => {
           <div className="space-y-4">
             <h3 className="text-2xl font-bold">Ready to boost your score?</h3>
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/pricing')}
               className="pp-btn-primary text-lg px-8 py-4 inline-flex items-center gap-2 group"
             >
-              Get Started Free
+              Start 7-day free trial
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
             <p className="text-sm" style={{ color: 'var(--pp-muted)' }}>
